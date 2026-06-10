@@ -44,6 +44,8 @@ const cron = require("node-cron");
 const agencyDirectory = require("./data/agencyDirectory");
 const maintenanceLog = require("./data/maintenanceLog");
 const dataForSeoConfig = require("./config/dataForSeo");
+const refreshGoogleAccessToken = require("./lib/googleAccessToken");
+const fetchGoogleReviews = require("./lib/googleReviews");
 const { Pool } = require("pg");
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL
@@ -51,6 +53,7 @@ const pool = new Pool({
 
 const app = express();
 const prisma = new PrismaClient();
+const getGoogleAccessToken = () => refreshGoogleAccessToken(prisma);
 
 app.use(cors());
 app.use(express.json());
@@ -4686,36 +4689,21 @@ app.get("/google/reviews", async (req, res) => {
         throw new Error("Aucun compte Google Business trouvé");
       }
 
-      const url = `https://mybusiness.googleapis.com/v4/${accountName}/${agency.googleLocationId}/reviews`;
-
-      const r = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          Accept: "application/json"
-        }
+      const reviews = await fetchGoogleReviews({
+        accessToken,
+        accountName,
+        googleLocationId: agency.googleLocationId
       });
-
-      const raw = await r.text();
-
-      let data;
-      try {
-        data = JSON.parse(raw);
-      } catch {
-        data = {
-          nonJson: true,
-          status: r.status,
-          contentType: r.headers.get("content-type"),
-          preview: raw.slice(0, 500),
-          url
-        };
-      }
 
       allReviews.push({
         agency: agency.name,
         city: agency.city,
         googleLocationId: agency.googleLocationId,
-        httpStatus: r.status,
-        data
+        httpStatus: 200,
+        data: {
+          reviews,
+          totalReviewCount: reviews.length
+        }
       });
     }
 
@@ -4742,6 +4730,7 @@ app.post("/google/import-reviews", async (req, res) => {
 
     let imported = 0;
     let skipped = 0;
+    let reconciled = 0;
     const details = [];
 
     for (const agency of agencies) {
@@ -4757,31 +4746,13 @@ app.post("/google/import-reviews", async (req, res) => {
         throw new Error("Aucun compte Google Business trouvé");
       }
 
-      const url = `https://mybusiness.googleapis.com/v4/${accountName}/${agency.googleLocationId}/reviews`;
-
-      const response = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          Accept: "application/json"
-        }
+      const reviews = await fetchGoogleReviews({
+        accessToken,
+        accountName,
+        googleLocationId: agency.googleLocationId
       });
 
-      const raw = await response.text();
-
-      let data;
-      try {
-        data = JSON.parse(raw);
-      } catch {
-        details.push({
-          agency: agency.name,
-          status: response.status,
-          error: "Réponse non JSON",
-          preview: raw.slice(0, 200)
-        });
-        continue;
-      }
-
-      for (const review of data.reviews || []) {
+      for (const review of reviews) {
         const googleReviewId = review.reviewId || review.name || null;
 
         if (!googleReviewId) {
@@ -4796,6 +4767,31 @@ app.post("/google/import-reviews", async (req, res) => {
         });
 
         if (exists) {
+          if (review.reviewReply) {
+            if (
+              exists.status !== "replied" ||
+              exists.reply !== review.reviewReply.comment
+            ) {
+              await prisma.googleReview.update({
+                where: { id: exists.id },
+                data: {
+                  status: "replied",
+                  reply: review.reviewReply.comment || null
+                }
+              });
+              reconciled++;
+            }
+          } else if (exists.status === "replied") {
+            await prisma.googleReview.update({
+              where: { id: exists.id },
+              data: {
+                status: "new",
+                reply: null
+              }
+            });
+            reconciled++;
+          }
+
           skipped++;
           continue;
         }
@@ -4827,7 +4823,7 @@ app.post("/google/import-reviews", async (req, res) => {
 
       details.push({
         agency: agency.name,
-        found: data.reviews?.length || 0
+        found: reviews.length
       });
     }
 
@@ -4835,6 +4831,7 @@ app.post("/google/import-reviews", async (req, res) => {
       success: true,
       imported,
       skipped,
+      reconciled,
       details
     });
   } catch (error) {
@@ -6461,4 +6458,3 @@ res.status(500)
 }
 
 });
-
