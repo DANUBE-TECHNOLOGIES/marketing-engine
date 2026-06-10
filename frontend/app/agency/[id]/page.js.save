@@ -1,0 +1,79 @@
+async function getJson(url) {
+  const res = await fetch(url, { cache: "no-store" });
+
+  if (!res.ok) {
+    throw new Error("Erreur API");
+  }
+
+  return res.json();
+}
+
+export default async function AgencyPage({ params }) {
+  const { id } = await params;
+  const agencyId = Number(id);
+
+  const agencies = await getJson("http://backend:4000/agencies");
+  const directories = await getJson("http://backend:4000/directories");
+  const listings = await getJson(`http://backend:4000/directory-listings/${agencyId}`);
+
+  const agency = agencies.find((a) => a.id === agencyId);
+
+  return (
+    <main className="min-h-screen bg-gray-100 p-8 text-gray-900">
+      <div className="max-w-7xl mx-auto">
+        <a href="/" className="underline">Retour dashboard</a>
+
+        <h1 className="text-3xl font-bold mt-4 mb-2">
+          {agency ? agency.name : "Agence introuvable"}
+        </h1>
+
+        <p className="mb-8 text-gray-600">
+          Module annuaires locaux
+        </p>
+
+        <div className="bg-white rounded-xl shadow p-6">
+          <p className="mb-4">
+            Nombre d’annuaires : {directories.length}
+          </p>
+
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-900 text-white">
+                <th className="text-left p-3">Annuaire</th>
+                <th className="text-left p-3">Catégorie</th>
+                <th className="text-left p-3">Impact</th>
+                <th className="text-left p-3">Statut</th>
+                <th className="text-left p-3">Action</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {directories.map((directory) => {
+                const listing = listings.find(
+                  (item) => item.directoryId === directory.id
+                );
+
+                return (
+                  <tr key={directory.id} className="border-b">
+                    <td className="p-3 font-semibold">{directory.name}</td>
+                    <td className="p-3">{directory.category}</td>
+                    <td className="p-3">{directory.impactScore}/5</td>
+                    <td className="p-3">{listing?.status || "todo"}</td>
+                    <td className="p-3">
+                      <a
+                        href={`/agency/${agencyId}/directory/${directory.id}`}
+                        className="bg-gray-900 text-white px-3 py-2 rounded-lg"
+                      >
+                        Modifier
+                      </a>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  );
+}

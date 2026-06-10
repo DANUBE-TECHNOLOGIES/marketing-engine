@@ -1,0 +1,70 @@
+import PageHeader from "../components/PageHeader";
+import ButtonLink from "../components/ButtonLink";
+
+async function getKeywords() {
+  const res = await fetch("http://backend:4000/rankings/keywords", {
+    cache: "no-store"
+  });
+
+  if (!res.ok) throw new Error("Erreur chargement rankings");
+
+  return res.json();
+}
+
+export default async function RankingsPage() {
+  const keywords = await getKeywords();
+
+  return (
+    <main className="min-h-screen bg-gray-100 p-8 text-gray-900">
+      <div className="max-w-7xl mx-auto">
+        <PageHeader
+          title="Rankings Google"
+          subtitle="Suivi des positions locales par agence."
+          action={<ButtonLink href="/rankings/new">Ajouter mot-clé</ButtonLink>}
+        />
+
+        <div className="bg-white rounded-xl shadow overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-900 text-white">
+              <tr>
+                <th className="p-4 text-left">Agence</th>
+                <th className="p-4 text-left">Ville</th>
+                <th className="p-4 text-left">Mot-clé</th>
+                <th className="p-4 text-left">Position</th>
+                <th className="p-4 text-left">Statut</th>
+<th className="p-4 text-left">Action</th>
+
+              </tr>
+            </thead>
+
+            <tbody>
+              {keywords.map((k) => {
+                const last = k.results[0];
+
+                return (
+                  <tr key={k.id} className="border-b hover:bg-gray-50">
+                    <td className="p-4 font-semibold">{k.agency.name}</td>
+                    <td className="p-4">{k.city}</td>
+                    <td className="p-4">{k.keyword}</td>
+                    <td className="p-4 font-bold">
+                      {last?.position || "-"}
+                    </td>
+                    <td className="p-4">
+                      {last?.found ? "Trouvé" : "Non trouvé"}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+
+          {keywords.length === 0 && (
+            <div className="p-8 text-center text-gray-500">
+              Aucun mot-clé suivi.
+            </div>
+          )}
+        </div>
+      </div>
+    </main>
+  );
+}

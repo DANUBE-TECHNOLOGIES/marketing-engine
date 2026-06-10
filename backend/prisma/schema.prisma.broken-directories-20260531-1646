@@ -1,0 +1,282 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Agency {
+  id                Int                @id @default(autoincrement())
+  name              String
+  seoLevel          String?            @default("RENFORCEMENT")
+  city              String
+  address           String
+  postalCode        String
+  phone             String
+  email             String
+  website           String?
+  googleReviewUrl   String?
+  googleLocationId  String?
+  createdAt         DateTime           @default(now())
+  networkActions    NetworkAction[]
+  realRankingChecks RealRankingCheck[]
+  reviewRequests    ReviewRequest[]
+
+  googlePosts       GooglePost[]
+  reviews           GoogleReview[]
+  keywords          RankingKeyword[]
+  directoryListings DirectoryListing[]
+  scoreHistory      AgencyScoreHistory[]
+  notifications     Notification[]
+  ReviewResponse    ReviewResponse[]
+
+  @@unique([name, city])
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  agencyId  Int?
+  type      String
+  level     String   @default("info")
+  title     String
+  message   String
+  status    String   @default("open")
+  link      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  agency Agency? @relation(fields: [agencyId], references: [id])
+}
+
+model AgencyScoreHistory {
+  id            Int      @id @default(autoincrement())
+  agencyId      Int
+  citationScore Int
+  globalScore   Int
+  reviewsCount  Int
+  rankingsCount Int
+  createdAt     DateTime @default(now())
+
+  agency Agency @relation(fields: [agencyId], references: [id])
+}
+
+model GoogleReview {
+  id             Int       @id @default(autoincrement())
+  agencyId       Int
+  authorName     String
+  rating         Int
+  comment        String?
+  reply          String?
+  status         String    @default("new")
+  source         String    @default("manual")
+  googleReviewId String?
+  publishedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  agency Agency @relation(fields: [agencyId], references: [id])
+}
+
+model RankingKeyword {
+  id               Int      @id @default(autoincrement())
+  agencyId         Int
+  keyword          String
+  city             String
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  dataforseoTaskId String?
+  lastCheckStatus  String?
+
+  agency  Agency          @relation(fields: [agencyId], references: [id])
+  results RankingResult[]
+}
+
+model RankingResult {
+  id        Int      @id @default(autoincrement())
+  keywordId Int
+  position  Int?
+  found     Boolean  @default(false)
+  checkedAt DateTime @default(now())
+
+  keyword RankingKeyword @relation(fields: [keywordId], references: [id])
+}
+
+model LocalDirectory {
+  id          Int      @id @default(autoincrement())
+  name        String
+  website     String
+  category    String   @default("general")
+  impactScore Int      @default(3)
+  difficulty  Int      @default(2)
+  priority    Int      @default(2)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  listings DirectoryListing[]
+
+  @@unique([name])
+}
+
+model GoogleToken {
+  id           Int      @id @default(autoincrement())
+  provider     String   @default("google")
+  accessToken  String?
+  refreshToken String?
+  expiryDate   BigInt?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model ReviewRequest {
+  id          Int       @id @default(autoincrement())
+  agencyId    Int
+  clientName  String
+  clientPhone String?
+  clientEmail String?
+  channel     String    @default("whatsapp")
+  status      String    @default("draft")
+  message     String
+  reviewUrl   String?
+  sentAt      DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  agency Agency @relation(fields: [agencyId], references: [id])
+}
+
+model GooglePost {
+  id                 Int       @id @default(autoincrement())
+  agencyId           Int
+  title              String
+  content            String
+  ctaLabel           String?
+  ctaUrl             String?
+  status             String    @default("draft")
+  plannedAt          DateTime?
+  publishedAt        DateTime?
+  googlePostName     String?
+  lastPublishError   String?
+  publishedUrl       String?
+  seoScore           Int?      @default(0)
+  seoKeyword         String?
+  imageCategory      String?
+  imageUrl           String?
+  duplicateStatus    String?
+  editorialSignature String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  agency Agency @relation(fields: [agencyId], references: [id])
+}
+
+model DirectoryListing {
+  id          Int     @id @default(autoincrement())
+  agencyId    Int
+  directoryId Int
+  listingUrl  String?
+  status      String  @default("todo")
+
+  nameCorrect     Boolean @default(false)
+  addressCorrect  Boolean @default(false)
+  phoneCorrect    Boolean @default(false)
+  websiteCorrect  Boolean @default(false)
+  hoursCorrect    Boolean @default(false)
+  categoryCorrect Boolean @default(false)
+
+  notes         String?
+  lastCheckedAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  agency    Agency         @relation(fields: [agencyId], references: [id])
+  directory LocalDirectory @relation(fields: [directoryId], references: [id])
+
+  @@unique([agencyId, directoryId])
+}
+
+model NetworkAction {
+  id Int @id @default(autoincrement())
+
+  agencyId Int?
+  agency   Agency? @relation(fields: [agencyId], references: [id])
+
+  lever       String
+  title       String
+  description String?
+
+  owner    String?
+  deadline DateTime?
+
+  status  String  @default("todo")
+  comment String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model RealRankingCheck {
+  id       Int     @id @default(autoincrement())
+  agencyId Int?
+  agency   Agency? @relation(fields: [agencyId], references: [id])
+
+  keyword          String
+  city             String
+  found            Boolean @default(false)
+  position         Int?
+  absolutePosition Int?
+  rating           Float?
+  reviews          Int?
+  title            String?
+  url              String?
+  cost             Float?
+
+  checkedAt DateTime @default(now())
+}
+
+model ReviewResponse {
+  id           Int       @id @default(autoincrement())
+  reviewId     Int?
+  agencyId     Int?
+  reviewAuthor String?
+  reviewRating Int?
+  reviewText   String?
+  responseText String?
+  status       String?   @default("draft")
+  publishedAt  DateTime?
+  createdAt    DateTime  @default(now())
+
+  agency Agency? @relation(fields: [agencyId], references: [id])
+}
+
+
+model Directory {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  website   String?
+  category  String?
+  active    Boolean  @default(true)
+
+  listings  DirectoryListing[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+
+model DirectoryAudit {
+  id           Int      @id @default(autoincrement())
+  listingId    Int
+
+  phoneFound   String?
+  addressFound String?
+  websiteFound String?
+
+  score        Int      @default(0)
+  auditDate    DateTime @default(now())
+
+  listing      DirectoryListing @relation(fields: [listingId], references: [id])
+
+  createdAt    DateTime @default(now())
+}

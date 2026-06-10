@@ -1,0 +1,13 @@
+.env
+backend/.env
+backend/node_modules/
+frontend/node_modules/
+frontend/.next/
+backups/
+logs/
+*.sql
+*.tar.gz
+backend/src/*.backup*
+backend/src/*.save*
+backend/src/*.stable*
+backend/src/*.before-*

@@ -1,0 +1,144 @@
+import PageHeader from "./components/PageHeader";
+import StatCard from "./components/StatCard";
+import PriorityBadge from "./components/PriorityBadge";
+import ButtonLink from "./components/ButtonLink";
+
+async function getDashboard() {
+  const res = await fetch("http://backend:4000/dashboard", {
+    cache: "no-store"
+  });
+
+  if (!res.ok) {
+    throw new Error("Erreur lors du chargement du dashboard");
+  }
+
+  return res.json();
+}
+
+async function getGooglePostPacks() {
+  const res = await fetch("http://backend:4000/google-post-packs", {
+    cache: "no-store"
+  });
+
+  if (!res.ok) {
+    throw new Error("Erreur lors du chargement des packs Google Posts");
+  }
+
+  const data = await res.json();
+  return data.posts || [];
+}
+
+export default async function Home() {
+  const agencies = await getDashboard();
+  const googlePostPacks = await getGooglePostPacks();
+
+  const averageScore = Math.round(
+    agencies.reduce((sum, a) => sum + a.citationScore, 0) /
+      Math.max(agencies.length, 1)
+  );
+
+  return (
+    <main className="min-h-screen bg-gray-100 p-8 text-gray-900">
+      <div className="max-w-7xl mx-auto">
+        <PageHeader
+          title="Dashboard"
+          subtitle="Vue d’ensemble SEO local du réseau Mondescale."
+          action={<ButtonLink href="/actions">Actions prioritaires</ButtonLink>}
+        />
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <StatCard label="Agences" value={agencies.length} />
+          <StatCard label="Score moyen" value={`${averageScore}%`} />
+          <StatCard
+            label="Priorités hautes"
+            value={agencies.filter((a) => a.priority === "Haute").length}
+          />
+          <StatCard
+            label="Annuaires par agence"
+            value={agencies[0]?.directoriesTotal || 0}
+          />
+        </div>
+
+        <div className="bg-white rounded-xl shadow overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-900 text-white">
+              <tr>
+                <th className="text-left p-4">Agence</th>
+                <th className="text-left p-4">Ville</th>
+                <th className="text-left p-4">Score</th>
+                <th className="text-left p-4">OK</th>
+                <th className="text-left p-4">À corriger</th>
+                <th className="text-left p-4">Absents</th>
+                <th className="text-left p-4">Critiques</th>
+                <th className="text-left p-4">Priorité</th>
+                <th className="text-left p-4">Action</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {agencies.map((agency) => (
+                <tr key={agency.id} className="border-b hover:bg-gray-50">
+                  <td className="p-4 font-semibold">{agency.name}</td>
+                  <td className="p-4">{agency.city}</td>
+                  <td className="p-4 font-bold">{agency.citationScore}%</td>
+                  <td className="p-4">
+                    {agency.directoriesOk} / {agency.directoriesTotal}
+                  </td>
+                  <td className="p-4">{agency.directoriesToCorrect}</td>
+                  <td className="p-4">{agency.directoriesMissing}</td>
+                  <td className="p-4">{agency.criticalMissingCount}</td>
+                  <td className="p-4">
+                    <PriorityBadge priority={agency.priority} />
+                  </td>
+                  <td className="p-4">
+                    <ButtonLink href={`/agency/${agency.id}`}>
+                      Voir détail
+                    </ButtonLink>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="mt-10">
+          <h2 className="text-2xl font-bold mb-6">
+            Pack Google Posts Réseau
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {googlePostPacks.map((post, index) => (
+              <div
+                key={index}
+                className="bg-white rounded-xl shadow p-5 border"
+              >
+                <div className="font-bold text-lg">
+                  {post.agencyName}
+                </div>
+
+                <div className="text-sm text-gray-500 mb-3">
+                  {post.city}
+                </div>
+
+                <div className="font-semibold mb-2">
+                  {post.title}
+                </div>
+
+                <div className="text-sm leading-6">
+                  {post.content}
+                </div>
+
+                <div className="mt-4">
+                  <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
+                    CTA : {post.cta}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+      </div>
+    </main>
+  );
+}
