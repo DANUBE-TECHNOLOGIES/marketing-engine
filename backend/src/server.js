@@ -51,12 +51,20 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL
 });
 
+const registerModules = require("./modules/register-modules");
+const { errorMiddleware } = require("./core/errors");
 const app = express();
 const prisma = new PrismaClient();
 const getGoogleAccessToken = () => refreshGoogleAccessToken(prisma);
 
 app.use(cors());
 app.use(express.json());
+
+
+/**
+ * Runtimes modulaires Mondescale.
+ */
+registerModules(app, { prisma });
 app.use(createAutomationLogsRoutes());
 app.use(createSeoEmailRoutes(prisma));
 app.use(createSeoReportRoutes(prisma));
@@ -4514,9 +4522,17 @@ app.get("/google-reviews-network", async (req, res) => {
 });
 
 
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Backend démarré sur le port ${PORT}`);
-});
+
+/**
+ * MARKETING KNOWLEDGE GRAPH — SPRINT 003B
+ */
+
+/**
+ * Gestion centralisée des erreurs des nouveaux modules.
+ * Ce middleware doit rester après les routes.
+ */
+
+
 
 
 app.get("/google/locations", async (req, res) => {
@@ -5249,9 +5265,6 @@ cron.schedule("0 3 * * *", async ()=>{
 });
 
 
-
-
-
 app.get("/executive-seo-dashboard", async (req,res)=>{
 
   try{
@@ -5347,11 +5360,6 @@ app.get("/executive-seo-dashboard", async (req,res)=>{
   }
 
 });
-
-
-
-
-
 
 
 app.post("/seo/evaluate", async (req,res)=>{
@@ -6125,9 +6133,6 @@ cron.schedule("15 8 * * *", async () => {
 });
 
 
-
-
-
 cron.schedule("30 7 * * *", async () => {
   try {
     await fetch(`http://localhost:${PORT}/google-posts/auto-approve-quality`, {
@@ -6177,9 +6182,6 @@ cron.schedule("0 8 * * *", async () => {
 });
 
 
-
-
-
 cron.schedule("30 8 * * *", async () => {
   try {
     await fetch(`http://localhost:${PORT}/google-posts/measure-impact`, {
@@ -6222,9 +6224,6 @@ console.error(e.message);
 });
 
 
-
-
-
 cron.schedule("5 8-19/2 * * *", async () => {
   try {
     await fetch(`http://localhost:${PORT}/google-posts/block-similar`, {
@@ -6242,13 +6241,6 @@ cron.schedule("5 8-19/2 * * *", async () => {
     console.error("[GOOGLE POSTS STAGGERED PUBLISH]", error.message);
   }
 });
-
-
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Backend démarré sur le port ${PORT}`);
-});
-
-
 
 
 app.post("/reviews/:id/publish", async (req, res) => {
@@ -6458,3 +6450,24 @@ res.status(500)
 }
 
 });
+
+/**
+ * Gestion centralisée des erreurs.
+ *
+ * Ce middleware doit rester après toutes les routes.
+ */
+app.use(errorMiddleware);
+
+/**
+ * Démarrage unique du backend.
+ */
+const server = app.listen(PORT, "0.0.0.0", () => {
+  console.log(
+    `[MONDESCALE PLATFORM] Backend démarré sur le port ${PORT}`
+  );
+});
+
+module.exports = {
+  app,
+  server,
+};
