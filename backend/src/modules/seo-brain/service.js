@@ -1,6 +1,10 @@
 "use strict";
 
 const { analyzePage, overlap } = require("./analyzers");
+const { scoreSiteSignals } = require("./scorer");
+const { findDestinationOpportunities } = require("./opportunities");
+const { buildRecommendations } = require("./recommendations");
+const { buildExecutionPlan } = require("./planner");
 
 function grade(score) {
   if (score >= 90) return "A";
@@ -21,7 +25,7 @@ class SeoBrainService {
   constructor(repository) { this.repository = repository; }
 
   async health() {
-    return { ok: true, version: "1.0.0", capability: "seo-brain", modes: ["page", "site", "portfolio"] };
+    return { ok: true, version: "2.0.0", capability: "seo-brain-orchestrator", modes: ["page", "site", "portfolio", "agency-plan"] };
   }
 
   buildPagePlan(page, peers = []) {
@@ -96,6 +100,37 @@ class SeoBrainService {
       priorities: actions.slice(0, 25),
       weakPages,
       pages
+    };
+  }
+
+  async agencyPlan(id, options = {}) {
+    const site = await this.repository.findSite(id);
+    if (!site) { const e = new Error("Mini-site introuvable"); e.status = 404; throw e; }
+    const campaigns = await this.repository.listCampaigns(id);
+    const destinations = await this.repository.listDestinations();
+    const pages = site.pages.map(page => this.buildPagePlan(page, site.pages));
+    const baseScore = pages.length ? Math.round(pages.reduce((s, p) => s + p.score, 0) / pages.length) : 0;
+    const siteReport = {
+      site: { id: site.id, name: site.name, slug: site.slug, status: site.status },
+      score: baseScore,
+      priorities: pages.flatMap(p => p.actions).sort((a, b) => b.estimatedGain - a.estimatedGain),
+      pages
+    };
+    const signals = scoreSiteSignals({ pages: site.pages, pagePlans: pages, campaigns, destinations });
+    const opportunities = findDestinationOpportunities({ site, destinations, campaigns, limit: options.opportunityLimit });
+    const recommendations = buildRecommendations({ siteReport, opportunities, campaigns });
+    const executionPlan = buildExecutionPlan(recommendations, options);
+    return {
+      generatedAt: new Date().toISOString(),
+      agency: site.agency ? { id: site.agency.id, name: site.agency.name, city: site.agency.city || null } : null,
+      site: siteReport.site,
+      score: signals.global,
+      grade: grade(signals.global),
+      dimensions: signals.dimensions,
+      summary: { pages: site.pages.length, campaigns: campaigns.length, opportunities: opportunities.length, recommendations: recommendations.length },
+      opportunities,
+      recommendations,
+      executionPlan
     };
   }
 

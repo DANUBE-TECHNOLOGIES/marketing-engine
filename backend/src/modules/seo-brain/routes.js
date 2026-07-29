@@ -11,6 +11,7 @@ module.exports = function createRoutes({ prisma }) {
   router.get("/seo-brain/health", wrap(async (_req, res) => res.json(await service.health())));
   router.post("/seo-brain/page/:id/analyze", wrap(async (req, res) => res.json(await service.analyzePage(req.params.id, req.body || {}))));
   router.post("/seo-brain/site/:id/analyze", wrap(async (req, res) => res.json(await service.analyzeSite(req.params.id, req.body || {}))));
+  router.post("/seo-brain/site/:id/plan", wrap(async (req, res) => res.json(await service.agencyPlan(req.params.id, req.body || {}))));
   router.get("/seo-brain/roadmap", wrap(async (req, res) => res.json(await service.roadmap(req.query))));
   return router;
 };
