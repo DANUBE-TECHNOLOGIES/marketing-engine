@@ -627,6 +627,8 @@ model Destination {
   themes DestinationTheme[]
   travelTypes DestinationTravelType[]
   tags DestinationTag[]
+  relationsFrom DestinationRelation[] @relation("DestinationRelationsFrom")
+  relationsTo DestinationRelation[] @relation("DestinationRelationsTo")
 
   @@index([status])
   @@index([country])
@@ -794,4 +796,44 @@ model DestinationTag {
   tag Tag @relation(fields:[tagId], references:[id], onDelete:Cascade)
   @@id([destinationId, tagId])
   @@index([tagId])
+}
+
+
+// ======================================================
+// KNOWLEDGE ENGINE v0.9.1
+// Bundle 004.2B
+// ======================================================
+model KnowledgeAlias {
+  id              String   @id @default(cuid())
+  entityType      String
+  entityId        String
+  alias           String
+  normalizedAlias String
+  locale          String   @default("fr")
+  isPrimary       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([entityType, entityId, normalizedAlias, locale])
+  @@index([entityType, entityId])
+  @@index([normalizedAlias])
+  @@index([locale])
+}
+
+model DestinationRelation {
+  id           String      @id @default(cuid())
+  sourceId     String
+  targetId     String
+  relationType String      @default("similar")
+  score        Int         @default(50)
+  origin       String      @default("manual")
+  metadata     Json?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  source       Destination @relation("DestinationRelationsFrom", fields: [sourceId], references: [id], onDelete: Cascade)
+  target       Destination @relation("DestinationRelationsTo", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceId, targetId, relationType])
+  @@index([sourceId, relationType, score])
+  @@index([targetId, relationType])
 }
