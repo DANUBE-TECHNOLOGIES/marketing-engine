@@ -884,3 +884,80 @@ model MarketingPublication {
   @@index([channel, status])
   @@index([status, scheduledAt])
 }
+
+// ======================================================
+// MSE-11.1 - SEO AUTOPILOT EXECUTION & AUDIT
+// ======================================================
+model SeoAutopilotRun {
+  id                      String   @id @default(cuid())
+  siteId                  String
+  status                  String   @default("planned")
+  mode                    String   @default("simulation")
+  policy                  Json
+  sourcePlan              Json
+  createdBy               String?
+  totalActions            Int      @default(0)
+  succeededActions        Int      @default(0)
+  failedActions           Int      @default(0)
+  awaitingApprovalActions Int      @default(0)
+  simulatedActions        Int      @default(0)
+  blockedActions          Int      @default(0)
+  startedAt               DateTime?
+  finishedAt              DateTime?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  actions     SeoAutopilotAction[]
+  auditEvents SeoAutopilotAuditEvent[]
+
+  @@index([siteId, status])
+  @@index([createdAt])
+}
+
+model SeoAutopilotAction {
+  id              String   @id @default(cuid())
+  runId           String
+  order           Int
+  type            String
+  title           String
+  priority        String   @default("medium")
+  executionMode   String   @default("simulation")
+  status          String   @default("planned")
+  recommendationId String?
+  targetPageId    String?
+  destinationSlug String?
+  payload         Json
+  result          Json?
+  error           Json?
+  attempts        Int      @default(0)
+  durationMs      Int?
+  startedAt       DateTime?
+  finishedAt      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  run         SeoAutopilotRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  auditEvents SeoAutopilotAuditEvent[]
+
+  @@unique([runId, order])
+  @@index([runId, status])
+  @@index([type, status])
+}
+
+model SeoAutopilotAuditEvent {
+  id        String   @id @default(cuid())
+  runId     String
+  actionId  String?
+  level     String   @default("info")
+  eventType String
+  message   String
+  data      Json?
+  createdAt DateTime @default(now())
+
+  run    SeoAutopilotRun    @relation(fields: [runId], references: [id], onDelete: Cascade)
+  action SeoAutopilotAction? @relation(fields: [actionId], references: [id], onDelete: Cascade)
+
+  @@index([runId, createdAt])
+  @@index([actionId])
+  @@index([level, eventType])
+}

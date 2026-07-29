@@ -16,6 +16,7 @@ const marketingAutomation = require("./marketing-automation");
 const editorialCalendar = require("./editorial-calendar");
 const publishers = require("./publishers");
 const seoBrain = require("./seo-brain");
+const seoAutopilot = require("./seo-autopilot");
 module.exports = function registerModules(app, { prisma }) {
   if (destinationEngine.routes) {
     app.use(destinationEngine.routes({ prisma }));
@@ -74,6 +75,10 @@ module.exports = function registerModules(app, { prisma }) {
 
   if (seoBrain.routes) {
     app.use(seoBrain.routes({ prisma }));
+  }
+
+  if (seoAutopilot.routes) {
+    app.use(seoAutopilot.routes({ prisma }));
   }
 
   if (agencySite.routes) {
