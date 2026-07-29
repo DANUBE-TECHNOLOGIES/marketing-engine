@@ -1,6 +1,13 @@
+const { buildBreadcrumbItems } = require("./seo/breadcrumbs");
+const { buildMetadata } = require("./seo/metadata");
+const { buildStructuredData } = require("./seo/structuredData");
+
 const BLOCK_DEFINITIONS = Object.freeze({
   hero: { label: "Hero", category: "header", required: ["title"] },
   "page-header": { label: "En-tête de page", category: "header", required: ["title"] },
+  breadcrumb: { label: "Fil d’Ariane", category: "seo", required: ["items"] },
+  intro: { label: "Introduction SEO", category: "seo", required: ["text"] },
+  climate: { label: "Climat", category: "travel", required: [] },
   richText: { label: "Texte éditorial", category: "content", required: [] },
   cards: { label: "Cartes", category: "content", required: ["items"] },
   faq: { label: "FAQ", category: "seo", required: ["items"] },
@@ -22,7 +29,7 @@ const TEMPLATE_DEFINITIONS = Object.freeze({
   destination: {
     label: "Destination SEO",
     pageType: "destination",
-    blocks: ["hero", "richText", "highlights", "cards", "faq", "destination-recommendations", "contact-cta"],
+    blocks: ["breadcrumb", "hero", "intro", "climate", "highlights", "cards", "faq", "destination-recommendations", "contact-cta"],
   },
   contact: {
     label: "Contact agence",
@@ -52,20 +59,20 @@ function validateBlock(block) {
   return { valid: errors.length === 0, errors };
 }
 
-function composePage(page, site) {
+function composePage(page, site, options = {}) {
   const blocks = (page?.sections || []).map(normalizeBlock).sort((a, b) => a.order - b.order);
   const validations = blocks.map((block) => ({ id: block.id, type: block.type, ...validateBlock(block) }));
+  const breadcrumbs = buildBreadcrumbItems({ site, page });
+  const metadata = buildMetadata({ site, page, blocks, baseUrl: options.baseUrl });
+  const structuredData = buildStructuredData({ site, page, blocks, breadcrumbs, baseUrl: options.baseUrl });
   return {
-    version: "1.0",
+    version: "1.1",
     site: site ? { id: site.id, name: site.name, slug: site.slug, basePath: site.basePath, theme: site.theme } : null,
     page: {
-      id: page?.id,
-      title: page?.title,
-      slug: page?.slug || "",
-      path: page?.path,
-      pageType: page?.pageType,
+      id: page?.id, title: page?.title, slug: page?.slug || "", path: page?.path, pageType: page?.pageType,
       seo: { title: page?.seoTitle, description: page?.metaDescription, h1: page?.h1, schemaType: page?.schemaType },
     },
+    seo: { metadata, breadcrumbs, structuredData },
     blocks,
     valid: validations.every((item) => item.valid),
     validations,

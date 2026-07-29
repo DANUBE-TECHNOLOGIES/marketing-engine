@@ -1,11 +1,15 @@
 import { getBlock } from "./blockRegistry";
+import { getSectionType } from "./shared/blockUtils";
 
 export default function PageRenderer({ sections = [] }) {
+  if (!Array.isArray(sections) || sections.length === 0) return null;
+
   return sections
     .slice()
-    .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
+    .sort((a, b) => (a.displayOrder ?? a.order ?? 0) - (b.displayOrder ?? b.order ?? 0))
     .map((section, index) => {
-      const Component = getBlock(section.sectionType);
-      return <Component key={section.id || `${section.sectionType}-${index}`} section={section} />;
+      const type = getSectionType(section);
+      const Component = getBlock(type);
+      return <Component key={section.id || `${type}-${index}`} section={section} />;
     });
 }
