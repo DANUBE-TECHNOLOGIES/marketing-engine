@@ -1,0 +1,6 @@
+const test=require("node:test"),assert=require("node:assert/strict"),path=require("node:path");const {ALLOWED_ENTITY_TYPES,assertEntityDocument}=require("../src/modules/knowledge-graph/validation");const {readDocuments}=require("../src/modules/knowledge-graph/importer");
+test("types autorisés",()=>{for(const t of ["country","destination","theme","faq"])assert.equal(ALLOWED_ENTITY_TYPES.has(t),true);});
+test("document minimal",()=>assert.equal(assertEntityDocument({type:"destination",slug:"budapest",title:"Budapest"}).slug,"budapest"));
+test("slug invalide",()=>assert.throws(()=>assertEntityDocument({type:"destination",slug:"Budapest France",title:"Budapest"}),/Slug invalide/));
+test("fixtures lisibles",async()=>{const docs=await readDocuments(path.resolve(__dirname,"../knowledge"));const slugs=docs.map(x=>x.document.slug);for(const s of ["hongrie","budapest","lac-balaton","city-break"])assert.ok(slugs.includes(s));assert.ok(docs.length>=6);});
+test("relations résolues",async()=>{const docs=await readDocuments(path.resolve(__dirname,"../knowledge")),slugs=new Set(docs.map(x=>x.document.slug));for(const {document:d} of docs)for(const r of d.relations||[])assert.equal(slugs.has(r.targetSlug),true,`${d.slug}->${r.targetSlug}`);});

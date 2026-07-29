@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+case "${1:-status}" in
+ status) python3 - "$ROOT/.mondescale/registry.json" <<'PY'
+import json,sys
+with open(sys.argv[1],encoding="utf-8") as f:d=json.load(f)
+for k,v in sorted(d.get("sprints",{}).items()):print(f"{k}\t{v.get('version','?')}\t{v.get('name','')}\t{v.get('status','')}")
+PY
+ ;;
+ verify) node --test "$ROOT/backend/src/modules/platform-core/core.test.js";node -c "$ROOT/backend/src/modules/register-modules.js";;
+ *) echo "Usage: ./bin/mondescale-sprint [status|verify]";exit 1;;
+esac

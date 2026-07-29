@@ -1,0 +1,1 @@
+/home/admin1/mondescale-local-engine/frontend/middleware.js

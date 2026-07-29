@@ -35,7 +35,6 @@ model Agency {
   seoSite AgencySeoSite?
 
   @@unique([name, city])
-  agencySites AgencySite[]
 }
 
 model Notification {
@@ -403,254 +402,57 @@ model AgencySeoPage {
 // ======================================================
 
 model MiniSite {
-  id         String  @id @default(cuid())
-  agencyId   String
-  name       String
-  slug       String  @unique
-  domain     String?
-  status     String  @default("draft")
-  templateId String?
+  id          String   @id @default(cuid())
+  agencyId    String
+  name        String
+  slug        String   @unique
+  domain      String?
+  status      String   @default("draft")
+  templateId  String?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  pages MiniSitePage[]
+  pages       MiniSitePage[]
 
   @@index([agencyId])
 }
 
 model MiniSitePage {
-  id String @id @default(cuid())
+  id          String   @id @default(cuid())
 
-  miniSiteId String
+  miniSiteId  String
 
-  title String
-  slug  String
-  type  String
+  title       String
+  slug        String
+  type        String
 
-  seoTitle String?
-  seoDesc  String?
+  seoTitle    String?
+  seoDesc     String?
 
-  content Json
+  content     Json
 
-  published Boolean @default(false)
+  published   Boolean  @default(false)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  miniSite MiniSite @relation(fields: [miniSiteId], references: [id], onDelete: Cascade)
+  miniSite    MiniSite @relation(fields: [miniSiteId], references: [id], onDelete: Cascade)
 
   @@unique([miniSiteId, slug])
   @@index([type])
 }
 
 model MiniSiteTemplate {
-  id String @id @default(cuid())
+  id          String   @id @default(cuid())
 
-  name String
-  code String @unique
+  name        String
+  code        String   @unique
 
   description String?
 
-  config Json
+  config      Json
 
-  createdAt DateTime @default(now())
-}
-
-// ======================================================
-// ASSET ENGINE
-// Source commune et versionnée des contenus Mondescale
-// ======================================================
-
-model Asset {
-  id             String    @id @default(cuid())
-  tenantId       String
-  type           String
-  status         String    @default("draft")
-  title          String
-  slug           String
-  summary        String?
-  payload        Json
-  metadata       Json?
-  tags           String[]  @default([])
-  currentVersion Int       @default(1)
-  createdBy      String?
-  updatedBy      String?
-  publishedAt    DateTime?
-  archivedAt     DateTime?
-  deletedAt      DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-
-  versions AssetVersion[]
-
-  @@unique([tenantId, slug])
-  @@index([tenantId])
-  @@index([tenantId, type])
-  @@index([tenantId, status])
-  @@index([createdAt])
-}
-
-model AssetVersion {
-  id        String   @id @default(cuid())
-  assetId   String
-  version   Int
-  title     String
-  summary   String?
-  payload   Json
-  metadata  Json?
-  tags      String[] @default([])
-  createdBy String?
-  createdAt DateTime @default(now())
-
-  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
-
-  @@unique([assetId, version])
-  @@index([assetId])
-  @@index([createdAt])
-}
-
-
-// ======================================================
-// SPRINT 007A - AGENCY SITE GENERATOR
-// ======================================================
-model AgencySite {
-  id          String   @id @default(cuid())
-  agencyId    Int      @unique
-  name        String
-  slug        String   @unique
-  basePath    String   @unique
-  status      String   @default("draft")
-  theme       String   @default("mondescale-default")
-  generatedAt DateTime?
-  publishedAt DateTime?
   createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  agency Agency           @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  pages  AgencySitePage[]
-
-  @@index([status])
 }
 
-model AgencySitePage {
-  id              String   @id @default(cuid())
-  siteId          String
-  parentId        String?
-  title           String
-  slug            String
-  path            String   @unique
-  pageType        String
-  menuTitle       String
-  menuLocation    String
-  displayOrder    Int
-  seoTitle        String
-  metaDescription String
-  h1              String
-  schemaType      String   @default("WebPage")
-  status          String   @default("draft")
-  published       Boolean  @default(false)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  site     AgencySite       @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  parent   AgencySitePage?  @relation("AgencySitePageTree", fields: [parentId], references: [id], onDelete: SetNull)
-  children AgencySitePage[] @relation("AgencySitePageTree")
-
-  @@unique([siteId, slug])
-  @@index([siteId])
-  @@index([parentId])
-  @@index([pageType])
-  @@index([menuLocation, displayOrder])
-  @@index([status])
-  sections AgencySiteSection[]
-}
-
-
-// SPRINT 007B - STRUCTURED PAGE CONTENT
-model AgencySiteSection {
-  id           String   @id @default(cuid())
-  pageId       String
-  sectionType  String
-  jsonContent  Json
-  displayOrder Int
-  status       String   @default("draft")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  page AgencySitePage @relation(fields: [pageId], references: [id], onDelete: Cascade)
-
-  @@unique([pageId, sectionType])
-  @@index([pageId, displayOrder])
-  @@index([sectionType])
-  @@index([status])
-}
-
-// ======================================================
-// DESTINATION ENGINE v0.8.0-alpha
-// ======================================================
-model Destination {
-  id             String   @id @default(cuid())
-  name           String
-  slug           String   @unique
-  country        String
-  region         String?
-  type           String   @default("destination")
-  status         String   @default("draft")
-  tagline        String?
-  summary        String?
-  heroImageUrl   String?
-  seoTitle       String?
-  seoDescription String?
-  latitude       Float?
-  longitude      Float?
-  bestTime       String?
-  idealDuration  String?
-  currency       String?
-  language       String?
-  highlights     String[] @default([])
-  audiences      String[] @default([])
-  metadata       Json?
-  publishedAt    DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  sections DestinationSection[]
-  faqs     DestinationFaq[]
-
-  @@index([status])
-  @@index([country])
-  @@index([type])
-}
-
-model DestinationSection {
-  id            String   @id @default(cuid())
-  destinationId String
-  key           String
-  position      Int      @default(0)
-  type          String
-  title         String?
-  content       Json
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  destination Destination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
-
-  @@unique([destinationId, key])
-  @@index([destinationId, position])
-}
-
-model DestinationFaq {
-  id            String   @id @default(cuid())
-  destinationId String
-  position      Int      @default(0)
-  question      String
-  answer        String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  destination Destination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
-
-  @@unique([destinationId, position])
-  @@index([destinationId, position])
-}

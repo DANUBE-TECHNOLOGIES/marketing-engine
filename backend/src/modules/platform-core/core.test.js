@@ -1,0 +1,11 @@
+"use strict";
+const test=require("node:test");
+const assert=require("node:assert/strict");
+const EventBus=require("../../core/platform/event-bus");
+const Registry=require("../../core/platform/service-registry");
+const Cache=require("../../core/platform/cache");
+const sdk=require("../../sdk");
+test("event bus",()=>{const bus=new EventBus();let received;bus.subscribe("test.created",e=>received=e);const e=bus.publish("test.created",{id:1});assert.equal(received.id,e.id);});
+test("registry",()=>{const r=new Registry();r.register("test",{}, {capabilities:["test.run"]});assert.deepEqual(r.providers("test.run"),["test"]);});
+test("cache",()=>{const c=new Cache();c.set("a",1,60);assert.equal(c.get("a"),1);});
+test("sdk",()=>{assert.equal(typeof sdk.events.publish,"function");assert.equal(typeof sdk.registry.describe,"function");});

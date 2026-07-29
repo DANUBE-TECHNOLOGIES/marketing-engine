@@ -1,0 +1,84 @@
+{
+  "type": "destination",
+  "slug": "budapest",
+  "title": "Budapest",
+  "summary": "Capitale hongroise sur le Danube, célèbre pour ses thermes, son Parlement, Buda et Pest.",
+  "status": "published",
+  "language": "fr",
+  "metadata": {
+    "country": "Hongrie",
+    "airportCodes": [
+      "BUD"
+    ],
+    "themes": [
+      "city-break",
+      "thermes",
+      "culture",
+      "gastronomie",
+      "danube"
+    ],
+    "recommendedStayDays": [
+      3,
+      4
+    ]
+  },
+  "blocks": [
+    {
+      "type": "introduction",
+      "title": "Pourquoi découvrir Budapest ?",
+      "content": {
+        "paragraphs": [
+          "Budapest réunit patrimoine monumental, culture thermale, gastronomie et vie urbaine."
+        ]
+      }
+    },
+    {
+      "type": "highlights",
+      "title": "Les incontournables",
+      "content": {
+        "items": [
+          "Parlement hongrois",
+          "Bastion des pêcheurs",
+          "Quartier du château de Buda",
+          "Bains Széchenyi",
+          "Grande Halle",
+          "Croisière sur le Danube"
+        ]
+      }
+    },
+    {
+      "type": "faq",
+      "title": "Questions fréquentes",
+      "content": {
+        "items": [
+          {
+            "question": "Combien de jours prévoir à Budapest ?",
+            "answer": "Trois à quatre jours permettent de découvrir les principaux quartiers et de profiter des thermes."
+          }
+        ]
+      }
+    }
+  ],
+  "relations": [
+    {
+      "type": "LOCATED_IN",
+      "targetSlug": "hongrie",
+      "position": 0
+    },
+    {
+      "type": "RELATED_TO",
+      "targetSlug": "city-break",
+      "position": 1
+    },
+    {
+      "type": "RELATED_TO",
+      "targetSlug": "thermes",
+      "position": 2
+    },
+    {
+      "type": "NEAR",
+      "targetSlug": "lac-balaton",
+      "position": 3
+    }
+  ]
+}

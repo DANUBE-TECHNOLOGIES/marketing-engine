@@ -3,8 +3,7 @@ import { NextResponse } from "next/server";
 export function middleware(request) {
   // MONDESCALE_PUBLIC_AGENCY_SITE: mini-sites publics, back-office toujours protégé.
   const mondescalePathname = request.nextUrl?.pathname || new URL(request.url).pathname;
-  if (pathname.startsWith("/agence") ||
-    mondescalePathname === "/agence" || mondescalePathname.startsWith("/agence/")) {
+  if (mondescalePathname === "/agence" || mondescalePathname.startsWith("/agence/")) {
     return NextResponse.next();
   }
 
@@ -54,5 +53,5 @@ export function middleware(request) {
 }
 
 export const config = {
-  matcher: ["/((?!agence(?:/|$)).*)"],
+  matcher: ["/:path*"],
 };

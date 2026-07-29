@@ -1,0 +1,48 @@
+{
+  "type": "country",
+  "slug": "hongrie",
+  "title": "Hongrie",
+  "summary": "Pays d'Europe centrale traversé par le Danube, réputé pour Budapest, ses villes thermales et le lac Balaton.",
+  "status": "published",
+  "language": "fr",
+  "metadata": {
+    "iso2": "HU",
+    "continent": "Europe",
+    "capital": "Budapest",
+    "currency": {
+      "name": "forint hongrois",
+      "code": "HUF"
+    },
+    "languages": [
+      "hongrois"
+    ],
+    "timezone": "Europe/Budapest",
+    "schengen": true
+  },
+  "blocks": [
+    {
+      "type": "practical",
+      "title": "Informations pratiques",
+      "content": {
+        "identity": "Carte nationale d'identité ou passeport en cours de validité pour les ressortissants français.",
+        "currency": "Forint hongrois (HUF).",
+        "language": "Hongrois ; anglais couramment utilisé dans les zones touristiques."
+      }
+    },
+    {
+      "type": "climate",
+      "title": "Climat",
+      "content": {
+        "summary": "Climat continental, avec des étés chauds et des hivers froids.",
+        "bestMonths": [
+          "avril",
+          "mai",
+          "juin",
+          "septembre",
+          "octobre"
+        ]
+      }
+    }
+  ],
+  "relations": []
+}

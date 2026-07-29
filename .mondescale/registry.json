@@ -1,0 +1,158 @@
+{
+  "platformVersion": "0.12.0",
+  "featurePacks": {
+    "FP-000": {
+      "name": "Platform Foundation",
+      "version": "1.0.0",
+      "installedAt": "2026-07-18T14:19:01.832972+00:00",
+      "backup": "20260718-141901",
+      "status": "installed"
+    },
+    "FP-007": {
+      "name": "AI Content Composer",
+      "version": "0.1.1",
+      "installedAt": "2026-07-19T08:56:19.744628+00:00",
+      "backup": "20260719-085619",
+      "status": "installed",
+      "dependencies": {
+        "FP-000": ">=1.0.0"
+      },
+      "endpoints": [
+        "GET /content-composer/health",
+        "POST /content-composer/preview"
+      ]
+    },
+    "FP-008": {
+      "name": "Core Services",
+      "version": "1.0.0",
+      "status": "installed",
+      "installedAt": "2026-07-20T15:33:07.572747+00:00",
+      "backup": "20260720-153303"
+    },
+    "FP-009": {
+      "name": "Mondescale SDK",
+      "version": "1.0.0",
+      "status": "installed",
+      "installedAt": "2026-07-20T15:33:07.572747+00:00",
+      "backup": "20260720-153303",
+      "dependencies": {
+        "FP-008": ">=1.0.0"
+      }
+    },
+    "FP-010": {
+      "name": "Domain Contracts",
+      "version": "1.0.0",
+      "status": "installed",
+      "installedAt": "2026-07-20T15:33:07.572747+00:00",
+      "backup": "20260720-153303",
+      "dependencies": {
+        "FP-008": ">=1.0.0",
+        "FP-009": ">=1.0.0"
+      }
+    },
+    "FP-011": {
+      "name": "Installer v2",
+      "version": "1.0.0",
+      "status": "installed",
+      "installedAt": "2026-07-20T15:33:07.572747+00:00",
+      "backup": "20260720-153303",
+      "dependencies": {
+        "FP-000": ">=1.0.0"
+      }
+    },
+    "FP-012": {
+      "name": "Knowledge Connector",
+      "version": "1.0.0",
+      "status": "installed",
+      "installedAt": "2026-07-20T16:11:03.784230+00:00",
+      "backup": "20260720-161102"
+    },
+    "FP-013": {
+      "name": "Prompt Engine",
+      "version": "1.0.0",
+      "status": "installed",
+      "installedAt": "2026-07-20T16:11:03.784230+00:00",
+      "backup": "20260720-161102"
+    },
+    "FP-014": {
+      "name": "AI Pipeline",
+      "version": "1.0.0",
+      "status": "installed",
+      "installedAt": "2026-07-20T16:11:03.784230+00:00",
+      "backup": "20260720-161102"
+    },
+    "FP-015": {
+      "name": "Content Composer v2",
+      "version": "2.0.0",
+      "status": "installed",
+      "installedAt": "2026-07-20T16:11:03.784230+00:00",
+      "backup": "20260720-161102"
+    },
+    "FP-016": {
+      "name": "Multi Page Generator",
+      "version": "1.0.0",
+      "status": "installed",
+      "installedAt": "2026-07-20T16:16:23.089699+00:00",
+      "backup": "20260720-161621"
+    },
+    "FP-017": {
+      "name": "Internal Linking Engine",
+      "version": "1.0.0",
+      "status": "installed",
+      "installedAt": "2026-07-20T16:16:23.089699+00:00",
+      "backup": "20260720-161621"
+    },
+    "FP-018": {
+      "name": "Schema Engine",
+      "version": "1.0.0",
+      "status": "installed",
+      "installedAt": "2026-07-20T16:16:23.089699+00:00",
+      "backup": "20260720-161621"
+    },
+    "FP-019": {
+      "name": "SEO Score Engine",
+      "version": "1.0.0",
+      "status": "installed",
+      "installedAt": "2026-07-20T16:16:23.089699+00:00",
+      "backup": "20260720-161621"
+    }
+  },
+  "sprints": {
+    "SPRINT-001": {
+      "name": "Mondescale Core",
+      "version": "0.10.0",
+      "status": "installed",
+      "installedAt": "2026-07-20T15:33:07.572747+00:00",
+      "featurePacks": [
+        "FP-008",
+        "FP-009",
+        "FP-010",
+        "FP-011"
+      ]
+    },
+    "SPRINT-002": {
+      "name": "AI Platform",
+      "version": "0.11.0",
+      "status": "installed",
+      "installedAt": "2026-07-20T16:11:03.784230+00:00",
+      "featurePacks": [
+        "FP-012",
+        "FP-013",
+        "FP-014",
+        "FP-015"
+      ]
+    },
+    "SPRINT-003": {
+      "name": "SEO Factory",
+      "version": "0.12.0",
+      "status": "installed",
+      "installedAt": "2026-07-20T16:16:23.089699+00:00",
+      "featurePacks": [
+        "FP-016",
+        "FP-017",
+        "FP-018",
+        "FP-019"
+      ]
+    }
+  }
+}

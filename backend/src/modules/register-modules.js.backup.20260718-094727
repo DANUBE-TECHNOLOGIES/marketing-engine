@@ -1,0 +1,16 @@
+const agencySeo = require("./agency-seo");
+const miniSite = require("./mini-site");
+
+module.exports = function registerModules(app, { prisma }) {
+
+  // Agency SEO
+  if (agencySeo.routes) {
+    app.use(agencySeo.routes({ prisma }));
+  }
+
+  // Mini Site
+  if (miniSite.routes) {
+    app.use(miniSite.routes({ prisma }));
+  }
+
+};

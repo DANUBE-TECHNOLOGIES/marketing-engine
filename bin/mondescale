@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PLATFORM="$ROOT/.mondescale"
+REGISTRY="$PLATFORM/registry.json"
+LOG="$PLATFORM/logs/installations.log"
+
+case "${1:-help}" in
+  version)
+    python3 - "$REGISTRY" <<'PY'
+import json,sys
+with open(sys.argv[1],encoding="utf-8") as f:d=json.load(f)
+print("Mondescale Platform",d.get("platformVersion","unknown"))
+PY
+    ;;
+  modules)
+    python3 - "$REGISTRY" <<'PY'
+import json,sys
+with open(sys.argv[1],encoding="utf-8") as f:d=json.load(f)
+for k,v in sorted(d.get("featurePacks",{}).items()):
+    print(f"{k}\t{v.get('version','?')}\t{v.get('name','')}\t{v.get('status','')}")
+PY
+    ;;
+  doctor)
+    errors=0
+    echo "MONDESCALE DOCTOR"
+    for p in backend backend/src backend/prisma backend/package.json backend/prisma/schema.prisma; do
+      if [[ -e "$ROOT/$p" ]]; then echo "✔ $p"; else echo "✘ $p absent"; errors=$((errors+1)); fi
+    done
+    for c in node npm python3; do
+      if command -v "$c" >/dev/null 2>&1; then echo "✔ $c : $($c --version 2>/dev/null | head -1)"; else echo "✘ $c absent"; errors=$((errors+1)); fi
+    done
+    if command -v docker >/dev/null 2>&1; then echo "✔ $(docker --version)"; else echo "→ Docker non détecté"; fi
+    [[ "$errors" -eq 0 ]] || exit 1
+    echo "Diagnostic terminé : aucun problème bloquant."
+    ;;
+  logs)
+    [[ -f "$LOG" ]] && tail -n 100 "$LOG" || echo "Aucun journal."
+    ;;
+  backup)
+    label="${2:-manual}"
+    dest="$PLATFORM/backups/$label-$(date +%Y%m%d-%H%M%S)"
+    mkdir -p "$dest"
+    cp "$REGISTRY" "$dest/registry.json"
+    [[ -f "$ROOT/backend/prisma/schema.prisma" ]] && cp "$ROOT/backend/prisma/schema.prisma" "$dest/schema.prisma"
+    [[ -f "$ROOT/backend/src/modules/register-modules.js" ]] && cp "$ROOT/backend/src/modules/register-modules.js" "$dest/register-modules.js"
+    echo "Sauvegarde créée : $dest"
+    ;;
+  help|-h|--help)
+    echo "Commandes : version | modules | doctor | logs | backup [label]"
+    ;;
+  *)
+    echo "Commande inconnue" >&2; exit 1
+    ;;
+esac

@@ -1,0 +1,35 @@
+[
+  {
+    "type": "theme",
+    "slug": "city-break",
+    "title": "City-break",
+    "summary": "Séjours urbains courts combinant culture, gastronomie et découverte.",
+    "status": "published",
+    "language": "fr",
+    "metadata": {},
+    "blocks": [],
+    "relations": []
+  },
+  {
+    "type": "theme",
+    "slug": "thermes",
+    "title": "Thermes et bien-être",
+    "summary": "Voyages centrés sur les bains thermaux, le spa et la détente.",
+    "status": "published",
+    "language": "fr",
+    "metadata": {},
+    "blocks": [],
+    "relations": []
+  },
+  {
+    "type": "theme",
+    "slug": "famille",
+    "title": "Voyage en famille",
+    "summary": "Destinations et expériences adaptées aux familles avec enfants.",
+    "status": "published",
+    "language": "fr",
+    "metadata": {},
+    "blocks": [],
+    "relations": []
+  }
+]

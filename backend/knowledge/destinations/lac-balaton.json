@@ -1,0 +1,63 @@
+{
+  "type": "destination",
+  "slug": "lac-balaton",
+  "title": "Lac Balaton",
+  "summary": "Grande destination balnéaire hongroise, appréciée pour ses plages, ses stations familiales et ses vignobles.",
+  "status": "published",
+  "language": "fr",
+  "metadata": {
+    "country": "Hongrie",
+    "themes": [
+      "balneaire",
+      "famille",
+      "nature",
+      "oenotourisme"
+    ],
+    "recommendedStayDays": [
+      5,
+      7
+    ]
+  },
+  "blocks": [
+    {
+      "type": "introduction",
+      "title": "Le lac Balaton",
+      "content": {
+        "paragraphs": [
+          "Le Balaton constitue la principale destination estivale de Hongrie."
+        ]
+      }
+    },
+    {
+      "type": "highlights",
+      "title": "À découvrir",
+      "content": {
+        "items": [
+          "Tihany",
+          "Balatonfüred",
+          "Siófok",
+          "Keszthely",
+          "Hévíz",
+          "Badacsony"
+        ]
+      }
+    }
+  ],
+  "relations": [
+    {
+      "type": "LOCATED_IN",
+      "targetSlug": "hongrie",
+      "position": 0
+    },
+    {
+      "type": "RELATED_TO",
+      "targetSlug": "famille",
+      "position": 1
+    },
+    {
+      "type": "NEAR",
+      "targetSlug": "budapest",
+      "position": 2
+    }
+  ]
+}

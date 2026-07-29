@@ -1,0 +1,14 @@
+"use strict";
+const logger=require("./logger");
+const EventBus=require("./event-bus");
+const ServiceRegistry=require("./service-registry");
+const MemoryCache=require("./cache");
+const config=require("./config");
+const contracts=require("./contracts");
+const registry=new ServiceRegistry();
+const events=new EventBus({logger});
+const cache=new MemoryCache();
+registry.register("platform.logger",logger,{capabilities:["platform.logging"]});
+registry.register("platform.events",events,{capabilities:["platform.events"]});
+registry.register("platform.cache",cache,{capabilities:["platform.cache"]});
+module.exports={version:"0.10.0",logger,events,registry,cache,config,contracts};

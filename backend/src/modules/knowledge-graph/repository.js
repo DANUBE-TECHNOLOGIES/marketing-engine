@@ -1,0 +1,15 @@
+class KnowledgeGraphRepository {
+  constructor(prisma){this.prisma=prisma;}
+  list({type,status="published",language="fr",search}={}){
+    const where={...(type?{type}:{}),...(status?{status}:{}),...(language?{language}:{}),...(search?{OR:[{title:{contains:search,mode:"insensitive"}},{slug:{contains:search,mode:"insensitive"}},{summary:{contains:search,mode:"insensitive"}}]}:{})};
+    return this.prisma.knowledgeEntity.findMany({where,orderBy:[{type:"asc"},{title:"asc"}],include:{contentBlocks:{orderBy:{position:"asc"}},mediaAssets:{orderBy:{position:"asc"}}}});
+  }
+  getBySlug(slug,language="fr"){
+    return this.prisma.knowledgeEntity.findUnique({where:{slug_language:{slug,language}},include:{contentBlocks:{orderBy:{position:"asc"}},mediaAssets:{orderBy:{position:"asc"}},outgoingRelations:{orderBy:{position:"asc"},include:{target:true}},incomingRelations:{orderBy:{position:"asc"},include:{source:true}}}});
+  }
+  upsertEntity(d){return this.prisma.knowledgeEntity.upsert({where:{slug_language:{slug:d.slug,language:d.language||"fr"}},create:{type:d.type,slug:d.slug,title:d.title,summary:d.summary||null,status:d.status||"published",language:d.language||"fr",metadata:d.metadata||{},publishedAt:(d.status||"published")==="published"?new Date():null},update:{type:d.type,title:d.title,summary:d.summary||null,status:d.status||"published",metadata:d.metadata||{},publishedAt:(d.status||"published")==="published"?new Date():null}});}
+  async replaceBlocks(entityId,d){await this.prisma.knowledgeContentBlock.deleteMany({where:{entityId}}); if(!d.blocks?.length)return[]; return Promise.all(d.blocks.map((b,i)=>this.prisma.knowledgeContentBlock.create({data:{entityId,type:b.type,title:b.title||null,content:b.content||{},position:Number.isInteger(b.position)?b.position:i,status:b.status||d.status||"published",language:d.language||"fr"}})));}
+  upsertRelation(sourceId,targetId,r){return this.prisma.knowledgeRelation.upsert({where:{sourceId_targetId_relationType:{sourceId,targetId,relationType:r.type}},create:{sourceId,targetId,relationType:r.type,position:r.position||0,metadata:r.metadata||{}},update:{position:r.position||0,metadata:r.metadata||{}}});}
+  async graph(slug,language="fr",depth=1){const root=await this.getBySlug(slug,language); if(!root)return null; const nodes=new Map([[root.id,root]]),edges=[]; let frontier=[root.id]; const max=Math.max(1,Math.min(Number(depth)||1,3)); for(let level=0;level<max;level++){if(!frontier.length)break; const rels=await this.prisma.knowledgeRelation.findMany({where:{OR:[{sourceId:{in:frontier}},{targetId:{in:frontier}}]},include:{source:true,target:true},orderBy:{position:"asc"}}); const next=[]; for(const r of rels){edges.push({id:r.id,sourceId:r.sourceId,targetId:r.targetId,type:r.relationType,metadata:r.metadata}); for(const e of [r.source,r.target]) if(!nodes.has(e.id)){nodes.set(e.id,e);next.push(e.id);}} frontier=next;} return{root:{id:root.id,slug:root.slug,title:root.title,type:root.type},nodes:[...nodes.values()].map(e=>({id:e.id,slug:e.slug,title:e.title,type:e.type,summary:e.summary,metadata:e.metadata})),edges};}
+}
+module.exports=KnowledgeGraphRepository;

@@ -3,7 +3,6 @@ const createAgencySeoModule = require("./agency-seo");
 const miniSite = require("./mini-site");
 const seoFactory = require("./seo-factory");
 const contentComposer = require("./content-composer");
-const destinationEngine = require("./destination-engine");
 
 const platformCore = require("./platform-core");
 const aiPlatform = require("./ai-platform");
@@ -12,10 +11,6 @@ const seoPlatform = require("./seo-platform");
 const knowledgeGraph = require("./knowledge-graph");
 const agencySite = require("./agency-site");
 module.exports = function registerModules(app, { prisma }) {
-  if (destinationEngine.routes) {
-    app.use(destinationEngine.routes({ prisma }));
-  }
-
   if (seoPlatform.routes) app.use(seoPlatform.routes({ prisma }));
 
   if (aiPlatform.routes) app.use(aiPlatform.routes({ prisma }));

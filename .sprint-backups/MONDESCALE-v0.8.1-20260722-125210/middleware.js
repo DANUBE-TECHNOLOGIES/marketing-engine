@@ -54,5 +54,5 @@ export function middleware(request) {
 }
 
 export const config = {
-  matcher: ["/((?!agence(?:/|$)).*)"],
+  matcher: ["/:path*"],
 };
