@@ -38,6 +38,7 @@ const createGooglePostsQueueRoutes = require("./routes/googlePostsQueue");
 const createGooglePostsEditorialRoutes = require("./routes/googlePostsEditorial");
 const createNetworkActionsRoutes = require("./routes/networkActions");
 const createNetworkAutomationRoutes = require("./routes/networkAutomation");
+const createPublicCatalogRoutes = require("./routes/publicCatalog");
 const cors = require("cors");
 const { PrismaClient } = require("@prisma/client");
 const cron = require("node-cron");
@@ -65,6 +66,7 @@ app.use(express.json());
  * Runtimes modulaires Mondescale.
  */
 registerModules(app, { prisma });
+app.use(createPublicCatalogRoutes(prisma));
 app.use(createAutomationLogsRoutes());
 app.use(createSeoEmailRoutes(prisma));
 app.use(createSeoReportRoutes(prisma));
