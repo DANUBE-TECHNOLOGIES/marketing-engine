@@ -837,3 +837,50 @@ model DestinationRelation {
   @@index([sourceId, relationType, score])
   @@index([targetId, relationType])
 }
+
+// ======================================================
+// MSE-09.0 - MARKETING AUTOMATION ENGINE
+// ======================================================
+model MarketingCampaign {
+  id              String   @id @default(cuid())
+  name            String
+  siteId          String?
+  sourcePageId    String?
+  destinationSlug String?
+  status          String   @default("draft")
+  objective       String   @default("traffic")
+  scheduledAt     DateTime?
+  source          Json
+  metadata        Json?
+  createdBy       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  publications MarketingPublication[]
+
+  @@index([siteId])
+  @@index([sourcePageId])
+  @@index([destinationSlug])
+  @@index([status, scheduledAt])
+}
+
+model MarketingPublication {
+  id          String   @id @default(cuid())
+  campaignId  String
+  channel     String
+  status      String   @default("draft")
+  scheduledAt DateTime?
+  publishedAt DateTime?
+  externalId  String?
+  payload     Json
+  error       String?
+  attempts    Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  campaign MarketingCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, channel])
+  @@index([channel, status])
+  @@index([status, scheduledAt])
+}

@@ -1,0 +1,41 @@
+{
+  "destinationSlug": "budapest",
+  "knowledge": {
+    "timezone": "Europe/Budapest",
+    "utcOffset": "+01:00",
+    "currencyCode": "HUF",
+    "languages": ["hongrois", "anglais"],
+    "flightDurationMin": 120,
+    "flightDurationMax": 150,
+    "idealDurationMin": 3,
+    "idealDurationMax": 5,
+    "bestMonths": [4, 5, 6, 9, 10],
+    "entryRequirements": { "euCitizens": "Carte nationale d'identité ou passeport en cours de validité." },
+    "healthAdvice": { "vaccination": "Aucune vaccination spécifique obligatoire." },
+    "practicalInfo": { "electricity": "230 V, prises de type C et F" },
+    "source": "mondescale",
+    "status": "review"
+  },
+  "climateMonths": [
+    { "month": 1, "temperatureMinC": -1, "temperatureMaxC": 4, "rainfallMm": 34, "comfortScore": 40 },
+    { "month": 5, "temperatureMinC": 12, "temperatureMaxC": 22, "rainfallMm": 70, "comfortScore": 88 },
+    { "month": 9, "temperatureMinC": 13, "temperatureMaxC": 23, "rainfallMm": 40, "comfortScore": 92 }
+  ],
+  "travelProfile": {
+    "familyScore": 75,
+    "coupleScore": 92,
+    "cultureScore": 95,
+    "nightlifeScore": 82,
+    "suitableFor": ["city-break", "couples", "culture", "week-end"]
+  },
+  "budgetProfile": {
+    "currencyCode": "EUR",
+    "dailyBudgetLow": 55,
+    "dailyBudgetMid": 110,
+    "dailyBudgetHigh": 220,
+    "flightBudgetLow": 90,
+    "flightBudgetMid": 180,
+    "flightBudgetHigh": 350,
+    "source": "mondescale"
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "version": "1.0",
+  "continents": [
+    {
+      "name": "Europe",
+      "countries": [
+        {
+          "name": "Hongrie",
+          "slug": "hongrie",
+          "iso2": "HU",
+          "iso3": "HUN",
+          "currency": "HUF",
+          "languages": ["hu"],
+          "status": "published",
+          "regions": [
+            {
+              "name": "Hongrie centrale",
+              "slug": "hongrie-centrale",
+              "status": "published",
+              "cities": [
+                {
+                  "name": "Budapest",
+                  "slug": "budapest",
+                  "status": "published",
+                  "destinations": [
+                    {
+                      "name": "Budapest",
+                      "slug": "budapest",
+                      "type": "city-break",
+                      "status": "published",
+                      "tagline": "La perle du Danube"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

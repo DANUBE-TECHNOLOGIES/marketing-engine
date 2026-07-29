@@ -11,8 +11,7 @@ const seoPlatform = require("./seo-platform");
 
 const knowledgeGraph = require("./knowledge-graph");
 const agencySite = require("./agency-site");
-const contentQuality = require("./content-quality");
-const marketingAutomation = require("./marketing-automation");
+const contentFactory = require("./content-factory");
 module.exports = function registerModules(app, { prisma }) {
   if (destinationEngine.routes) {
     app.use(destinationEngine.routes({ prisma }));
@@ -53,15 +52,11 @@ module.exports = function registerModules(app, { prisma }) {
   }
 
 
-  if (contentQuality.routes) {
-    app.use(contentQuality.routes({ prisma }));
-  }
-
-  if (marketingAutomation.routes) {
-    app.use(marketingAutomation.routes({ prisma }));
-  }
-
   if (agencySite.routes) {
     app.use(agencySite.routes({ prisma }));
+  }
+
+  if (contentFactory.routes) {
+    app.use(contentFactory.routes({ prisma }));
   }
 };

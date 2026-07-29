@@ -2,8 +2,6 @@ const express = require("express");
 const { BLOCK_DEFINITIONS, TEMPLATE_DEFINITIONS, composePage } = require("../lib/pageBuilder");
 const { composeDestinationPage, buildPageCreateData } = require("../lib/miniSiteComposer");
 const { normalizeDestinationSlugs, clampLimit, buildBatchPlan, summarizeBatch } = require("../lib/miniSiteBatchComposer");
-const { buildInternalLinkPlan, buildRecommendationSectionData } = require("../lib/miniSiteInternalLinker");
-const { buildContentGraph } = require("../lib/contentGraph");
 
 module.exports = function createPageBuilderRoutes(prisma) {
   if (!prisma) throw new Error("Page Builder requires Prisma");
@@ -13,7 +11,7 @@ module.exports = function createPageBuilderRoutes(prisma) {
     const [sites, pages, sections] = await Promise.all([
       prisma.agencySite.count(), prisma.agencySitePage.count(), prisma.agencySiteSection.count(),
     ]);
-    res.json({ ok: true, version: "0.13.0", capability: "page-builder", counts: { sites, pages, sections } });
+    res.json({ ok: true, version: "0.11.0", capability: "page-builder", counts: { sites, pages, sections } });
   });
 
   router.get("/page-builder/blocks", (_req, res) => {
@@ -116,103 +114,6 @@ module.exports = function createPageBuilderRoutes(prisma) {
       }
       const summary = summarizeBatch(results);
       res.status(summary.failed ? 207 : 200).json({ ok: summary.failed === 0, site: { id: site.id, slug: site.slug, name: site.name }, summary, items: results });
-    } catch (error) { next(error); }
-  });
-
-  router.get("/page-builder/internal-links", async (req, res, next) => {
-    try {
-      const siteSlug = String(req.query.site || "").trim();
-      if (!siteSlug) return res.status(400).json({ error: "Le paramètre site est requis." });
-      const site = await prisma.agencySite.findUnique({ where: { slug: siteSlug } });
-      if (!site) return res.status(404).json({ error: "Mini-site introuvable." });
-      const [destinations, pages] = await Promise.all([
-        prisma.destination.findMany({ where: { status: "published" }, include: { themes: true, travelTypes: true, relationsFrom: { include: { target: true }, orderBy: { score: "desc" } } }, take: 500 }),
-        prisma.agencySitePage.findMany({ where: { siteId: site.id, pageType: "destination" }, orderBy: { title: "asc" } }),
-      ]);
-      res.json({ ok: true, site: { id: site.id, slug: site.slug, name: site.name }, ...buildInternalLinkPlan({ destinations, pages, siteSlug, limit: req.query.limit }) });
-    } catch (error) { next(error); }
-  });
-
-  router.post("/page-builder/internal-links/sync", async (req, res, next) => {
-    try {
-      const { siteSlug, publish = false, limit = 6 } = req.body || {};
-      if (!siteSlug) return res.status(400).json({ error: "siteSlug is required" });
-      const site = await prisma.agencySite.findUnique({ where: { slug: siteSlug } });
-      if (!site) return res.status(404).json({ error: "Mini-site introuvable." });
-      const [destinations, pages] = await Promise.all([
-        prisma.destination.findMany({ where: { status: "published" }, include: { themes: true, travelTypes: true, relationsFrom: { include: { target: true }, orderBy: { score: "desc" } } }, take: 500 }),
-        prisma.agencySitePage.findMany({ where: { siteId: site.id, pageType: "destination" }, include: { sections: true }, orderBy: { title: "asc" } }),
-      ]);
-      const plan = buildInternalLinkPlan({ destinations, pages, siteSlug, limit });
-      const results = [];
-      for (const item of plan.items) {
-        try {
-          const section = buildRecommendationSectionData(item.links, publish ? "published" : "draft");
-          const saved = await prisma.agencySiteSection.upsert({
-            where: { pageId_sectionType: { pageId: item.pageId, sectionType: section.sectionType } },
-            create: { ...section, page: { connect: { id: item.pageId } } },
-            update: { jsonContent: section.jsonContent, displayOrder: section.displayOrder, status: section.status },
-          });
-          results.push({ pageId: item.pageId, slug: item.slug, links: item.links.length, sectionId: saved.id, status: saved.status });
-        } catch (error) { results.push({ pageId: item.pageId, slug: item.slug, error: error.message }); }
-      }
-      const failed = results.filter((item) => item.error).length;
-      res.status(failed ? 207 : 200).json({ ok: failed === 0, site: { id: site.id, slug: site.slug, name: site.name }, summary: { pages: results.length, updated: results.length - failed, failed, links: results.reduce((sum, item) => sum + (item.links || 0), 0), orphans: plan.summary.orphans }, items: results });
-    } catch (error) { next(error); }
-  });
-
-  async function loadContentGraph(siteSlug) {
-    const [countries, regions, cities, destinations, themes, travelTypes, tags, site] = await Promise.all([
-      prisma.country.findMany({ where: { status: "published" } }),
-      prisma.region.findMany({ where: { status: "published" } }),
-      prisma.city.findMany({ where: { status: "published" } }),
-      prisma.destination.findMany({
-        where: { status: "published" },
-        include: {
-          themes: true,
-          travelTypes: true,
-          tags: true,
-          relationsFrom: true,
-        },
-      }),
-      prisma.theme.findMany({ where: { status: "published" } }),
-      prisma.travelType.findMany({ where: { status: "published" } }),
-      prisma.tag.findMany({ where: { status: "active" } }),
-      siteSlug ? prisma.agencySite.findUnique({
-        where: { slug: siteSlug },
-        include: { pages: true },
-      }) : Promise.resolve(null),
-    ]);
-    if (siteSlug && !site) return null;
-    return {
-      site: site ? { id: site.id, slug: site.slug, name: site.name } : null,
-      graph: buildContentGraph({ countries, regions, cities, destinations, themes, travelTypes, tags, pages: site?.pages || [] }),
-    };
-  }
-
-  router.get("/page-builder/content-graph", async (req, res, next) => {
-    try {
-      const result = await loadContentGraph(String(req.query.site || "").trim() || null);
-      if (!result) return res.status(404).json({ error: "Mini-site introuvable." });
-      const type = String(req.query.type || "").trim();
-      const status = String(req.query.status || "").trim();
-      const nodes = result.graph.nodes.filter((node) => (!type || node.type === type) && (!status || node.status === status));
-      const nodeIds = new Set(nodes.map((node) => node.graphId));
-      const edges = type || status
-        ? result.graph.edges.filter((edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target))
-        : result.graph.edges;
-      res.json({ ok: true, site: result.site, graph: { ...result.graph, nodes, edges } });
-    } catch (error) { next(error); }
-  });
-
-  router.get("/page-builder/content-graph/node/:type/:id", async (req, res, next) => {
-    try {
-      const result = await loadContentGraph(String(req.query.site || "").trim() || null);
-      if (!result) return res.status(404).json({ error: "Mini-site introuvable." });
-      const graphId = `${req.params.type}:${req.params.id}`;
-      const neighborhood = getNodeNeighborhood(result.graph, graphId, req.query.depth || 1);
-      if (!neighborhood.root) return res.status(404).json({ error: "Nœud introuvable.", graphId });
-      res.json({ ok: true, site: result.site, graphId, depth: Math.max(0, Math.min(Number(req.query.depth) || 1, 3)), ...neighborhood });
     } catch (error) { next(error); }
   });
 

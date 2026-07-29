@@ -3,7 +3,6 @@ const { BLOCK_DEFINITIONS, TEMPLATE_DEFINITIONS, composePage } = require("../lib
 const { composeDestinationPage, buildPageCreateData } = require("../lib/miniSiteComposer");
 const { normalizeDestinationSlugs, clampLimit, buildBatchPlan, summarizeBatch } = require("../lib/miniSiteBatchComposer");
 const { buildInternalLinkPlan, buildRecommendationSectionData } = require("../lib/miniSiteInternalLinker");
-const { buildContentGraph } = require("../lib/contentGraph");
 
 module.exports = function createPageBuilderRoutes(prisma) {
   if (!prisma) throw new Error("Page Builder requires Prisma");
