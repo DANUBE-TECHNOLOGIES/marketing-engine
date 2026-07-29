@@ -13,3 +13,10 @@ logs/
 *.sql
 *.tar.gz
 *-install-report.txt
+
+# Sauvegardes locales de développement
+.feature-backups/
+.sprint-backups/
+.fp-*-last-backup
+*.bak-*
+*.zip
