@@ -1,6 +1,7 @@
 const express = require("express");
 const createAutomationLogsRoutes = require("./routes/automationLogs");
 const createKnowledgeGraphRoutes = require("./routes/knowledgeGraph");
+const createPageBuilderRoutes = require("./routes/pageBuilder");
 const createSeoEmailRoutes = require("./routes/seoEmail");
 const createSeoReportRoutes = require("./routes/seoReport");
 const createDailyAutomationRoutes = require("./routes/dailyAutomation");
@@ -70,6 +71,7 @@ registerModules(app, { prisma });
 app.use(createPublicCatalogRoutes(prisma));
 app.use(createAutomationLogsRoutes());
 app.use(createKnowledgeGraphRoutes(prisma));
+app.use(createPageBuilderRoutes(prisma));
 app.use(createSeoEmailRoutes(prisma));
 app.use(createSeoReportRoutes(prisma));
 app.use(createDailyAutomationRoutes(prisma, process.env.PORT || 4000));
