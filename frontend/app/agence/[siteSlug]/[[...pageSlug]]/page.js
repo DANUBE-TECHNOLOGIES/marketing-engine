@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import AgencySiteShell from "../../../../components/agency-site/AgencySiteShell";
 import { getAgencyPage, getAgencySite } from "../../../../lib/agency-site-api";
 import "../../../../components/agency-site/agency-site.css";
+import JsonLd from "../../../../components/JsonLd";
+import { buildBreadcrumbSchema, buildTravelAgencySchema } from "../../../../lib/seo/json-ld";
 
 export async function generateMetadata({ params }) {
   const resolved = await params;
@@ -17,5 +19,22 @@ export default async function AgencySitePage({ params }) {
   if ((resolved.pageSlug?.length || 0) > 1) notFound();
   const [site, page] = await Promise.all([getAgencySite(resolved.siteSlug), getAgencyPage(resolved.siteSlug, pageSlug)]);
   if (!site || !page) notFound();
-  return <AgencySiteShell site={site} page={page}/>;
+  const breadcrumbItems = [
+    { name: "Accueil", path: site.basePath },
+  ];
+
+  if (page.path !== site.basePath) {
+    breadcrumbItems.push({
+      name: page.title,
+      path: page.path,
+    });
+  }
+
+  return (
+    <>
+      <JsonLd data={buildTravelAgencySchema(site)} />
+      <JsonLd data={buildBreadcrumbSchema(breadcrumbItems)} />
+      <AgencySiteShell site={site} page={page} />
+    </>
+  );
 }

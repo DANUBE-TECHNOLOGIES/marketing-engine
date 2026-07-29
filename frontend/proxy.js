@@ -14,6 +14,9 @@ export function proxy(request) {
     pathname.startsWith("/brand") ||
     pathname.startsWith("/_next/") ||
     pathname === "/favicon.ico" ||
+    pathname === "/robots.txt" ||
+    pathname === "/sitemap.xml" ||
+    pathname === "/manifest.webmanifest" ||
     pathname === "/api/google/callback"
   ) {
     return NextResponse.next();
