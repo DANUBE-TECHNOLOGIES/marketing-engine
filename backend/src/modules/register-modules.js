@@ -13,6 +13,7 @@ const knowledgeGraph = require("./knowledge-graph");
 const agencySite = require("./agency-site");
 const contentQuality = require("./content-quality");
 const marketingAutomation = require("./marketing-automation");
+const publishers = require("./publishers");
 module.exports = function registerModules(app, { prisma }) {
   if (destinationEngine.routes) {
     app.use(destinationEngine.routes({ prisma }));
@@ -59,6 +60,10 @@ module.exports = function registerModules(app, { prisma }) {
 
   if (marketingAutomation.routes) {
     app.use(marketingAutomation.routes({ prisma }));
+  }
+
+  if (publishers.googleBusiness?.routes) {
+    app.use(publishers.googleBusiness.routes({ prisma }));
   }
 
   if (agencySite.routes) {
