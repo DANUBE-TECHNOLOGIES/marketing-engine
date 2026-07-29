@@ -7,8 +7,26 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  status    String   @default("active")
+  plan      String   @default("starter")
+  settings  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  agencies Agency[]
+
+  @@index([status])
+  @@index([plan])
+}
+
 model Agency {
   id                Int                @id @default(autoincrement())
+  tenantId          String?
   name              String
   seoLevel          String?            @default("RENFORCEMENT")
   city              String
@@ -20,6 +38,7 @@ model Agency {
   googleReviewUrl   String?
   googleLocationId  String?
   createdAt         DateTime           @default(now())
+  tenant            Tenant?            @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   networkActions    NetworkAction[]
   realRankingChecks RealRankingCheck[]
   reviewRequests    ReviewRequest[]
@@ -34,7 +53,8 @@ model Agency {
 
   seoSite AgencySeoSite?
 
-  @@unique([name, city])
+  @@unique([tenantId, name, city])
+  @@index([tenantId])
   agencySites AgencySite[]
 }
 

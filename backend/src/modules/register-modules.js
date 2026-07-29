@@ -17,7 +17,12 @@ const editorialCalendar = require("./editorial-calendar");
 const publishers = require("./publishers");
 const seoBrain = require("./seo-brain");
 const seoAutopilot = require("./seo-autopilot");
+const tenantCore = require("./tenant-core");
 module.exports = function registerModules(app, { prisma }) {
+  if (tenantCore.routes) {
+    app.use(tenantCore.routes({ prisma }));
+  }
+
   if (destinationEngine.routes) {
     app.use(destinationEngine.routes({ prisma }));
   }
