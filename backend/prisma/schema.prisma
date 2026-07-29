@@ -618,6 +618,16 @@ model Destination {
   sections DestinationSection[]
   faqs     DestinationFaq[]
 
+  countryId String?
+  regionId String?
+  cityId String?
+  countryRef Country? @relation(fields:[countryId], references:[id], onDelete:SetNull)
+  regionRef Region? @relation(fields:[regionId], references:[id], onDelete:SetNull)
+  cityRef City? @relation(fields:[cityId], references:[id], onDelete:SetNull)
+  themes DestinationTheme[]
+  travelTypes DestinationTravelType[]
+  tags DestinationTag[]
+
   @@index([status])
   @@index([country])
   @@index([type])
@@ -653,4 +663,135 @@ model DestinationFaq {
 
   @@unique([destinationId, position])
   @@index([destinationId, position])
+}
+
+
+// ======================================================
+// KNOWLEDGE GRAPH FOUNDATION v0.9.0
+// Bundle 004.2A
+// ======================================================
+model Country {
+  id String @id @default(cuid())
+  name String
+  slug String @unique
+  iso2 String? @unique
+  iso3 String? @unique
+  continent String?
+  currency String?
+  languages String[] @default([])
+  timezone String?
+  status String @default("draft")
+  metadata Json?
+  publishedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  regions Region[]
+  cities City[]
+  destinations Destination[]
+  @@index([status])
+  @@index([continent])
+}
+model Region {
+  id String @id @default(cuid())
+  countryId String
+  name String
+  slug String
+  code String?
+  status String @default("draft")
+  metadata Json?
+  publishedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  country Country @relation(fields:[countryId], references:[id], onDelete:Cascade)
+  cities City[]
+  destinations Destination[]
+  @@unique([countryId, slug])
+  @@index([countryId])
+  @@index([status])
+}
+model City {
+  id String @id @default(cuid())
+  countryId String
+  regionId String?
+  name String
+  slug String
+  latitude Float?
+  longitude Float?
+  status String @default("draft")
+  metadata Json?
+  publishedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  country Country @relation(fields:[countryId], references:[id], onDelete:Cascade)
+  region Region? @relation(fields:[regionId], references:[id], onDelete:SetNull)
+  destinations Destination[]
+  @@unique([countryId, slug])
+  @@index([countryId])
+  @@index([regionId])
+  @@index([status])
+}
+model Theme {
+  id String @id @default(cuid())
+  name String
+  slug String @unique
+  description String?
+  status String @default("draft")
+  metadata Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  destinations DestinationTheme[]
+  @@index([status])
+}
+model TravelType {
+  id String @id @default(cuid())
+  name String
+  slug String @unique
+  description String?
+  status String @default("draft")
+  metadata Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  destinations DestinationTravelType[]
+  @@index([status])
+}
+model Tag {
+  id String @id @default(cuid())
+  name String
+  slug String @unique
+  description String?
+  status String @default("active")
+  metadata Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  destinations DestinationTag[]
+  @@index([status])
+}
+model DestinationTheme {
+  destinationId String
+  themeId String
+  weight Int @default(100)
+  createdAt DateTime @default(now())
+  destination Destination @relation(fields:[destinationId], references:[id], onDelete:Cascade)
+  theme Theme @relation(fields:[themeId], references:[id], onDelete:Cascade)
+  @@id([destinationId, themeId])
+  @@index([themeId])
+}
+model DestinationTravelType {
+  destinationId String
+  travelTypeId String
+  weight Int @default(100)
+  createdAt DateTime @default(now())
+  destination Destination @relation(fields:[destinationId], references:[id], onDelete:Cascade)
+  travelType TravelType @relation(fields:[travelTypeId], references:[id], onDelete:Cascade)
+  @@id([destinationId, travelTypeId])
+  @@index([travelTypeId])
+}
+model DestinationTag {
+  destinationId String
+  tagId String
+  createdAt DateTime @default(now())
+  destination Destination @relation(fields:[destinationId], references:[id], onDelete:Cascade)
+  tag Tag @relation(fields:[tagId], references:[id], onDelete:Cascade)
+  @@id([destinationId, tagId])
+  @@index([tagId])
 }
