@@ -4,7 +4,7 @@ const ContentBuilder = require("./builders/content-builder");
 const NavigationBuilder = require("./builders/navigation-builder");
 const SitemapBuilder = require("./builders/sitemap-builder");
 class AgencySiteService {
-  constructor(prisma) { this.repo = new AgencySiteRepository(prisma); this.siteBuilder = new SiteBuilder(); this.contentBuilder = new ContentBuilder(); this.navigationBuilder = new NavigationBuilder(); this.sitemapBuilder = new SitemapBuilder(); }
+  constructor(prisma, tenantId) { this.repo = new AgencySiteRepository(prisma, tenantId); this.siteBuilder = new SiteBuilder(); this.contentBuilder = new ContentBuilder(); this.navigationBuilder = new NavigationBuilder(); this.sitemapBuilder = new SitemapBuilder(); }
   async generate(agencyId, options = {}) {
     const agency = await this.repo.getAgency(agencyId);
     if (!agency) { const e = new Error(`Agence ${agencyId} introuvable`); e.statusCode = 404; throw e; }

@@ -4,5 +4,6 @@ module.exports = {
   ...require("./context"),
   ...require("./middleware"),
   ...require("./repository"),
+  ...require("./scoped-repository"),
   ...require("./service"),
 };

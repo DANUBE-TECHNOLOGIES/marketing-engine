@@ -23,6 +23,9 @@ module.exports = function registerModules(app, { prisma }) {
     app.use(tenantCore.routes({ prisma }));
   }
 
+  const tenantService = new tenantCore.TenantService(new tenantCore.TenantRepository(prisma));
+  app.use(tenantCore.createTenantMiddleware(tenantService));
+
   if (destinationEngine.routes) {
     app.use(destinationEngine.routes({ prisma }));
   }
