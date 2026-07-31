@@ -123,3 +123,58 @@ test("TravelCoreImporter simule l'import d'un pays", async () => {
   assert.equal(report.failed, 0);
   assert.equal(report.items[0].slug, "maurice");
 });
+
+const {
+  normalizeSearchValue,
+  calculateScore,
+  mergeSearchItems,
+} = require("../src/modules/travel-core");
+
+test("normalizeSearchValue supprime les accents", () => {
+  assert.equal(normalizeSearchValue("Île Maurice"), "ile maurice");
+});
+
+test("calculateScore privilégie une correspondance exacte", () => {
+  const exact = calculateScore("Maurice", {
+    type: "country",
+    name: "Maurice",
+    slug: "maurice",
+    status: "published",
+  });
+
+  const partial = calculateScore("Maurice", {
+    type: "destination",
+    name: "Voyage à Maurice",
+    slug: "voyage-maurice",
+    status: "published",
+  });
+
+  assert.ok(exact > partial);
+});
+
+test("mergeSearchItems déduplique les correspondances alias", () => {
+  const direct = [
+    {
+      type: "country",
+      id: "country-1",
+      name: "Maurice",
+      slug: "maurice",
+      status: "published",
+    },
+  ];
+
+  const aliases = [
+    {
+      type: "country",
+      id: "country-1",
+      name: "Maurice",
+      slug: "maurice",
+      status: "published",
+    },
+  ];
+
+  const results = mergeSearchItems("République de Maurice", direct, aliases);
+
+  assert.equal(results.length, 1);
+  assert.equal(results[0].matchedBy, "alias");
+});

@@ -6,4 +6,5 @@ module.exports = {
   ...require("./service"),
   ...require("./validation"),
   ...require("./importer"),
+  ...require("./search-engine"),
 };

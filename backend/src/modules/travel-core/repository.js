@@ -203,6 +203,81 @@ class TravelCoreRepository {
     return { countries, regions, cities, destinations };
   }
 
+
+  async searchAliases(query, limit = 50) {
+    const normalizedQuery = String(query || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+
+    const aliases = await this.prisma.knowledgeAlias.findMany({
+      where: {
+        normalizedAlias: {
+          contains: normalizedQuery,
+          mode: "insensitive",
+        },
+        entityType: {
+          in: ["country", "region", "city", "destination"],
+        },
+      },
+      orderBy: [
+        { isPrimary: "desc" },
+        { normalizedAlias: "asc" },
+      ],
+      take: limit,
+    });
+
+    const grouped = {
+      country: [],
+      region: [],
+      city: [],
+      destination: [],
+    };
+
+    for (const alias of aliases) {
+      grouped[alias.entityType].push(alias.entityId);
+    }
+
+    const [countries, regions, cities, destinations] = await Promise.all([
+      grouped.country.length
+        ? this.prisma.country.findMany({
+            where: { id: { in: [...new Set(grouped.country)] } },
+          })
+        : [],
+
+      grouped.region.length
+        ? this.prisma.region.findMany({
+            where: { id: { in: [...new Set(grouped.region)] } },
+            include: { country: true },
+          })
+        : [],
+
+      grouped.city.length
+        ? this.prisma.city.findMany({
+            where: { id: { in: [...new Set(grouped.city)] } },
+            include: { country: true, region: true },
+          })
+        : [],
+
+      grouped.destination.length
+        ? this.prisma.destination.findMany({
+            where: {
+              tenantId: this.tenantId,
+              id: { in: [...new Set(grouped.destination)] },
+            },
+            include: {
+              countryRef: true,
+              regionRef: true,
+              cityRef: true,
+            },
+          })
+        : [],
+    ]);
+
+    return { countries, regions, cities, destinations };
+  }
+
   async overview() {
     const [countries, regions, cities, destinations] = await Promise.all([
       this.prisma.country.count(),
