@@ -62,3 +62,64 @@ test("TravelCoreService signale une destination absente", async () => {
     { code: "DESTINATION_NOT_FOUND" }
   );
 });
+
+const {
+  parseCsv,
+  parsePayload,
+  slugify,
+  TravelCoreImporter,
+} = require("../src/modules/travel-core");
+
+test("slugify normalise les accents et caractères spéciaux", () => {
+  assert.equal(slugify("Île Maurice"), "ile-maurice");
+  assert.equal(slugify("Ozoir-la-Ferrière"), "ozoir-la-ferriere");
+});
+
+test("parseCsv accepte le point-virgule", () => {
+  const rows = parseCsv(
+    "name;iso2;continent\nMaurice;MU;Afrique\nSeychelles;SC;Afrique"
+  );
+
+  assert.equal(rows.length, 2);
+  assert.equal(rows[0].name, "Maurice");
+  assert.equal(rows[1].iso2, "SC");
+});
+
+test("parsePayload active le dry-run par défaut", () => {
+  const input = parsePayload({
+    entityType: "countries",
+    format: "json",
+    data: [{ name: "Maurice" }],
+  });
+
+  assert.equal(input.dryRun, true);
+  assert.equal(input.rows.length, 1);
+});
+
+test("TravelCoreImporter simule l'import d'un pays", async () => {
+  const prisma = {
+    country: {
+      findUnique: async () => null,
+    },
+  };
+
+  const importer = new TravelCoreImporter(prisma, "tenant_mondescale");
+
+  const report = await importer.import({
+    entityType: "countries",
+    format: "json",
+    dryRun: true,
+    data: [
+      {
+        name: "Maurice",
+        iso2: "MU",
+        iso3: "MUS",
+        continent: "Afrique",
+      },
+    ],
+  });
+
+  assert.equal(report.created, 1);
+  assert.equal(report.failed, 0);
+  assert.equal(report.items[0].slug, "maurice");
+});

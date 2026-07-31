@@ -3,6 +3,7 @@
 const express = require("express");
 const TravelCoreRepository = require("./repository");
 const { TravelCoreService } = require("./service");
+const { TravelCoreImporter } = require("./importer");
 
 module.exports = function createTravelCoreRoutes({ prisma }) {
   if (!prisma) throw new Error("Travel Core routes require Prisma");
@@ -110,6 +111,27 @@ module.exports = function createTravelCoreRoutes({ prisma }) {
       res.json({
         ok: true,
         ...(await serviceFor(req).search(req.query)),
+      });
+    })
+  );
+
+
+  router.post(
+    "/travel-core/v1/import",
+    route(async (req, res) => {
+      if (!req.tenantId) {
+        const error = new Error("Contexte tenant absent.");
+        error.statusCode = 400;
+        error.code = "TENANT_REQUIRED";
+        throw error;
+      }
+
+      const importer = new TravelCoreImporter(prisma, req.tenantId);
+      const report = await importer.import(req.body);
+
+      res.status(report.dryRun ? 200 : 201).json({
+        ok: report.failed === 0,
+        report,
       });
     })
   );

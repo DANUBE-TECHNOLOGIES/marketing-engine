@@ -5,4 +5,5 @@ module.exports = {
   TravelCoreRepository: require("./repository"),
   ...require("./service"),
   ...require("./validation"),
+  ...require("./importer"),
 };
