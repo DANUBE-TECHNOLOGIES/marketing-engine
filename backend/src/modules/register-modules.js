@@ -23,6 +23,9 @@ const miniSiteBuilder = require("./mini-site-builder");
 const siteProvisioning = require("./site-provisioning");
 const campaignManager = require("./campaign-manager");
 const contentGeneration = require("./content-generation");
+const travelCore = require("./travel-core");
+const aiSeoGenerator = require("./ai-seo-generator");
+const aiContent = require("./ai-content");
 module.exports = function registerModules(app, { prisma }) {
   if (tenantCore.routes) {
     app.use(tenantCore.routes({ prisma }));
@@ -49,6 +52,18 @@ module.exports = function registerModules(app, { prisma }) {
 
   if (contentGeneration.routes) {
     app.use(contentGeneration.routes({ prisma }));
+  }
+
+  if (travelCore.routes) {
+    app.use(travelCore.routes({ prisma }));
+  }
+
+  if (aiSeoGenerator.routes) {
+    app.use(aiSeoGenerator.routes({ prisma }));
+  }
+
+  if (aiContent.routes) {
+    app.use(aiContent.routes({ prisma }));
   }
 
   if (destinationEngine.routes) {
