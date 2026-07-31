@@ -7,6 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+
 model Tenant {
   id        String   @id @default(cuid())
   name      String
@@ -17,12 +18,13 @@ model Tenant {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  agencies           Agency[]
-  agencySites        AgencySite[]
-  miniSites          MiniSite[]
+  agencies          Agency[]
+  agencySites       AgencySite[]
+  miniSites         MiniSite[]
   marketingCampaigns MarketingCampaign[]
-  seoAutopilotRuns   SeoAutopilotRun[]
-  destinations       Destination[]
+  seoAutopilotRuns  SeoAutopilotRun[]
+  destinations      Destination[]
+  contentGenerationJobs ContentGenerationJob[]
 
   @@index([status])
   @@index([plan])
@@ -55,11 +57,12 @@ model Agency {
   notifications     Notification[]
   ReviewResponse    ReviewResponse[]
 
-  seoSite     AgencySeoSite?
-  agencySites AgencySite[]
+  seoSite AgencySeoSite?
 
   @@unique([tenantId, name, city])
   @@index([tenantId])
+  agencySites AgencySite[]
+  campaignAgencies CampaignAgency[]
 }
 
 model Notification {
@@ -440,7 +443,7 @@ model MiniSite {
   updatedAt DateTime @updatedAt
 
   pages  MiniSitePage[]
-  tenant Tenant         @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
   @@unique([tenantId, slug])
   @@index([tenantId])
@@ -538,22 +541,23 @@ model AssetVersion {
   @@index([createdAt])
 }
 
+
 // ======================================================
 // SPRINT 007A - AGENCY SITE GENERATOR
 // ======================================================
 model AgencySite {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   tenantId    String
-  agencyId    Int       @unique
+  agencyId    Int      @unique
   name        String
   slug        String
   basePath    String
-  status      String    @default("draft")
-  theme       String    @default("mondescale-default")
+  status      String   @default("draft")
+  theme       String   @default("mondescale-default")
   generatedAt DateTime?
   publishedAt DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   agency Agency           @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   tenant Tenant           @relation(fields: [tenantId], references: [id], onDelete: Restrict)
@@ -585,10 +589,9 @@ model AgencySitePage {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  site     AgencySite          @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  parent   AgencySitePage?     @relation("AgencySitePageTree", fields: [parentId], references: [id], onDelete: SetNull)
-  children AgencySitePage[]    @relation("AgencySitePageTree")
-  sections AgencySiteSection[]
+  site     AgencySite       @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  parent   AgencySitePage?  @relation("AgencySitePageTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children AgencySitePage[] @relation("AgencySitePageTree")
 
   @@unique([siteId, slug])
   @@index([siteId])
@@ -596,9 +599,36 @@ model AgencySitePage {
   @@index([pageType])
   @@index([menuLocation, displayOrder])
   @@index([status])
+  sections AgencySiteSection[]
+  blocks   PageBlock[]
 }
 
+
 // SPRINT 007B - STRUCTURED PAGE CONTENT
+
+model PageBlock {
+  id            String   @id @default(cuid())
+  pageId        String
+  blockType     String
+  name          String?
+  content       Json
+  settings      Json     @default("{}")
+  seo           Json     @default("{}")
+  displayOrder  Int
+  status        String   @default("draft")
+  visibleDesktop Boolean @default(true)
+  visibleMobile  Boolean @default(true)
+  version       Int      @default(1)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  page AgencySitePage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([pageId, displayOrder])
+  @@index([pageId, status])
+  @@index([blockType])
+}
+
 model AgencySiteSection {
   id           String   @id @default(cuid())
   pageId       String
@@ -621,14 +651,14 @@ model AgencySiteSection {
 // DESTINATION ENGINE v0.8.0-alpha
 // ======================================================
 model Destination {
-  id             String    @id @default(cuid())
+  id             String   @id @default(cuid())
   tenantId       String
   name           String
   slug           String
   country        String
   region         String?
-  type           String    @default("destination")
-  status         String    @default("draft")
+  type           String   @default("destination")
+  status         String   @default("draft")
   tagline        String?
   summary        String?
   heroImageUrl   String?
@@ -640,28 +670,29 @@ model Destination {
   idealDuration  String?
   currency       String?
   language       String?
-  highlights     String[]  @default([])
-  audiences      String[]  @default([])
+  highlights     String[] @default([])
+  audiences      String[] @default([])
   metadata       Json?
   publishedAt    DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   sections DestinationSection[]
   faqs     DestinationFaq[]
-  tenant   Tenant               @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
-  countryId     String?
-  regionId      String?
-  cityId        String?
-  countryRef    Country?                @relation(fields: [countryId], references: [id], onDelete: SetNull)
-  regionRef     Region?                 @relation(fields: [regionId], references: [id], onDelete: SetNull)
-  cityRef       City?                   @relation(fields: [cityId], references: [id], onDelete: SetNull)
-  themes        DestinationTheme[]
-  travelTypes   DestinationTravelType[]
-  tags          DestinationTag[]
-  relationsFrom DestinationRelation[]   @relation("DestinationRelationsFrom")
-  relationsTo   DestinationRelation[]   @relation("DestinationRelationsTo")
+  countryId String?
+  regionId String?
+  cityId String?
+  countryRef Country? @relation(fields:[countryId], references:[id], onDelete:SetNull)
+  regionRef Region? @relation(fields:[regionId], references:[id], onDelete:SetNull)
+  cityRef City? @relation(fields:[cityId], references:[id], onDelete:SetNull)
+  themes DestinationTheme[]
+  travelTypes DestinationTravelType[]
+  tags DestinationTag[]
+  campaignDestinations CampaignDestination[]
+  relationsFrom DestinationRelation[] @relation("DestinationRelationsFrom")
+  relationsTo DestinationRelation[] @relation("DestinationRelationsTo")
 
   @@unique([tenantId, slug])
   @@index([tenantId])
@@ -702,152 +733,137 @@ model DestinationFaq {
   @@index([destinationId, position])
 }
 
+
 // ======================================================
 // KNOWLEDGE GRAPH FOUNDATION v0.9.0
 // Bundle 004.2A
 // ======================================================
 model Country {
-  id           String        @id @default(cuid())
-  name         String
-  slug         String        @unique
-  iso2         String?       @unique
-  iso3         String?       @unique
-  continent    String?
-  currency     String?
-  languages    String[]      @default([])
-  timezone     String?
-  status       String        @default("draft")
-  metadata     Json?
-  publishedAt  DateTime?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  regions      Region[]
-  cities       City[]
+  id String @id @default(cuid())
+  name String
+  slug String @unique
+  iso2 String? @unique
+  iso3 String? @unique
+  continent String?
+  currency String?
+  languages String[] @default([])
+  timezone String?
+  status String @default("draft")
+  metadata Json?
+  publishedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  regions Region[]
+  cities City[]
   destinations Destination[]
-
   @@index([status])
   @@index([continent])
 }
-
 model Region {
-  id           String        @id @default(cuid())
-  countryId    String
-  name         String
-  slug         String
-  code         String?
-  status       String        @default("draft")
-  metadata     Json?
-  publishedAt  DateTime?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  country      Country       @relation(fields: [countryId], references: [id], onDelete: Cascade)
-  cities       City[]
+  id String @id @default(cuid())
+  countryId String
+  name String
+  slug String
+  code String?
+  status String @default("draft")
+  metadata Json?
+  publishedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  country Country @relation(fields:[countryId], references:[id], onDelete:Cascade)
+  cities City[]
   destinations Destination[]
-
   @@unique([countryId, slug])
   @@index([countryId])
   @@index([status])
 }
-
 model City {
-  id           String        @id @default(cuid())
-  countryId    String
-  regionId     String?
-  name         String
-  slug         String
-  latitude     Float?
-  longitude    Float?
-  status       String        @default("draft")
-  metadata     Json?
-  publishedAt  DateTime?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  country      Country       @relation(fields: [countryId], references: [id], onDelete: Cascade)
-  region       Region?       @relation(fields: [regionId], references: [id], onDelete: SetNull)
+  id String @id @default(cuid())
+  countryId String
+  regionId String?
+  name String
+  slug String
+  latitude Float?
+  longitude Float?
+  status String @default("draft")
+  metadata Json?
+  publishedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  country Country @relation(fields:[countryId], references:[id], onDelete:Cascade)
+  region Region? @relation(fields:[regionId], references:[id], onDelete:SetNull)
   destinations Destination[]
-
   @@unique([countryId, slug])
   @@index([countryId])
   @@index([regionId])
   @@index([status])
 }
-
 model Theme {
-  id           String             @id @default(cuid())
-  name         String
-  slug         String             @unique
-  description  String?
-  status       String             @default("draft")
-  metadata     Json?
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
+  id String @id @default(cuid())
+  name String
+  slug String @unique
+  description String?
+  status String @default("draft")
+  metadata Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   destinations DestinationTheme[]
-
   @@index([status])
 }
-
 model TravelType {
-  id           String                  @id @default(cuid())
-  name         String
-  slug         String                  @unique
-  description  String?
-  status       String                  @default("draft")
-  metadata     Json?
-  createdAt    DateTime                @default(now())
-  updatedAt    DateTime                @updatedAt
+  id String @id @default(cuid())
+  name String
+  slug String @unique
+  description String?
+  status String @default("draft")
+  metadata Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   destinations DestinationTravelType[]
-
   @@index([status])
 }
-
 model Tag {
-  id           String           @id @default(cuid())
-  name         String
-  slug         String           @unique
-  description  String?
-  status       String           @default("active")
-  metadata     Json?
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
+  id String @id @default(cuid())
+  name String
+  slug String @unique
+  description String?
+  status String @default("active")
+  metadata Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   destinations DestinationTag[]
-
   @@index([status])
 }
-
 model DestinationTheme {
   destinationId String
-  themeId       String
-  weight        Int         @default(100)
-  createdAt     DateTime    @default(now())
-  destination   Destination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
-  theme         Theme       @relation(fields: [themeId], references: [id], onDelete: Cascade)
-
+  themeId String
+  weight Int @default(100)
+  createdAt DateTime @default(now())
+  destination Destination @relation(fields:[destinationId], references:[id], onDelete:Cascade)
+  theme Theme @relation(fields:[themeId], references:[id], onDelete:Cascade)
   @@id([destinationId, themeId])
   @@index([themeId])
 }
-
 model DestinationTravelType {
   destinationId String
-  travelTypeId  String
-  weight        Int         @default(100)
-  createdAt     DateTime    @default(now())
-  destination   Destination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
-  travelType    TravelType  @relation(fields: [travelTypeId], references: [id], onDelete: Cascade)
-
+  travelTypeId String
+  weight Int @default(100)
+  createdAt DateTime @default(now())
+  destination Destination @relation(fields:[destinationId], references:[id], onDelete:Cascade)
+  travelType TravelType @relation(fields:[travelTypeId], references:[id], onDelete:Cascade)
   @@id([destinationId, travelTypeId])
   @@index([travelTypeId])
 }
-
 model DestinationTag {
   destinationId String
-  tagId         String
-  createdAt     DateTime    @default(now())
-  destination   Destination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
-  tag           Tag         @relation(fields: [tagId], references: [id], onDelete: Cascade)
-
+  tagId String
+  createdAt DateTime @default(now())
+  destination Destination @relation(fields:[destinationId], references:[id], onDelete:Cascade)
+  tag Tag @relation(fields:[tagId], references:[id], onDelete:Cascade)
   @@id([destinationId, tagId])
   @@index([tagId])
 }
+
 
 // ======================================================
 // KNOWLEDGE ENGINE v0.9.1
@@ -892,23 +908,32 @@ model DestinationRelation {
 // MSE-09.0 - MARKETING AUTOMATION ENGINE
 // ======================================================
 model MarketingCampaign {
-  id              String    @id @default(cuid())
+  id              String   @id @default(cuid())
   tenantId        String
   name            String
   siteId          String?
   sourcePageId    String?
   destinationSlug String?
-  status          String    @default("draft")
-  objective       String    @default("traffic")
+  status          String   @default("draft")
+  objective       String   @default("traffic")
   scheduledAt     DateTime?
   source          Json
   metadata        Json?
   createdBy       String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  description     String?
+  startDate       DateTime?
+  endDate         DateTime?
+  progress        Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   publications MarketingPublication[]
-  tenant       Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  agencies     CampaignAgency[]
+  destinations CampaignDestination[]
+  tasks        CampaignTask[]
+  assets       CampaignAsset[]
+  generationJobs ContentGenerationJob[]
+  tenant       Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
   @@index([tenantId])
   @@index([siteId])
@@ -917,19 +942,113 @@ model MarketingCampaign {
   @@index([status, scheduledAt])
 }
 
+
+
+model ContentGenerationJob {
+  id             String   @id @default(cuid())
+  tenantId       String
+  campaignId     String
+  status         String   @default("queued")
+  priority       String   @default("normal")
+  progress       Int      @default(0)
+  totalTasks     Int      @default(0)
+  completedTasks Int      @default(0)
+  failedTasks    Int      @default(0)
+  requestedBy    String?
+  options        Json     @default("{}")
+  error          String?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  tenant   Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  campaign MarketingCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status, priority])
+  @@index([campaignId, status])
+  @@index([createdAt])
+}
+
+model CampaignAgency {
+  campaignId String
+  agencyId   Int
+  createdAt  DateTime @default(now())
+
+  campaign MarketingCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  agency   Agency            @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@id([campaignId, agencyId])
+  @@index([agencyId])
+}
+
+model CampaignDestination {
+  campaignId   String
+  destinationId String
+  createdAt    DateTime @default(now())
+
+  campaign   MarketingCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  destination Destination       @relation(fields: [destinationId], references: [id], onDelete: Cascade)
+
+  @@id([campaignId, destinationId])
+  @@index([destinationId])
+}
+
+model CampaignTask {
+  id          String   @id @default(cuid())
+  campaignId  String
+  key         String
+  type        String
+  channel     String?
+  status      String   @default("pending")
+  progress    Int      @default(0)
+  payload     Json     @default("{}")
+  error       String?
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  campaign MarketingCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, key])
+  @@index([campaignId, status])
+  @@index([type, status])
+}
+
+model CampaignAsset {
+  id          String   @id @default(cuid())
+  campaignId  String
+  taskId      String?
+  type        String
+  channel     String?
+  status      String   @default("draft")
+  title       String?
+  payload     Json     @default("{}")
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  campaign MarketingCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId, status])
+  @@index([type, channel])
+  @@index([taskId])
+}
+
 model MarketingPublication {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   campaignId  String
   channel     String
-  status      String    @default("draft")
+  status      String   @default("draft")
   scheduledAt DateTime?
   publishedAt DateTime?
   externalId  String?
   payload     Json
   error       String?
-  attempts    Int       @default(0)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  attempts    Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   campaign MarketingCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 
@@ -942,28 +1061,28 @@ model MarketingPublication {
 // MSE-11.1 - SEO AUTOPILOT EXECUTION & AUDIT
 // ======================================================
 model SeoAutopilotRun {
-  id                      String    @id @default(cuid())
+  id                      String   @id @default(cuid())
   tenantId                String
   siteId                  String
-  status                  String    @default("planned")
-  mode                    String    @default("simulation")
+  status                  String   @default("planned")
+  mode                    String   @default("simulation")
   policy                  Json
   sourcePlan              Json
   createdBy               String?
-  totalActions            Int       @default(0)
-  succeededActions        Int       @default(0)
-  failedActions           Int       @default(0)
-  awaitingApprovalActions Int       @default(0)
-  simulatedActions        Int       @default(0)
-  blockedActions          Int       @default(0)
+  totalActions            Int      @default(0)
+  succeededActions        Int      @default(0)
+  failedActions           Int      @default(0)
+  awaitingApprovalActions Int      @default(0)
+  simulatedActions        Int      @default(0)
+  blockedActions          Int      @default(0)
   startedAt               DateTime?
   finishedAt              DateTime?
-  createdAt               DateTime  @default(now())
-  updatedAt               DateTime  @updatedAt
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
 
   actions     SeoAutopilotAction[]
   auditEvents SeoAutopilotAuditEvent[]
-  tenant      Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  tenant      Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
   @@index([tenantId])
   @@index([tenantId, siteId, status])
@@ -971,28 +1090,28 @@ model SeoAutopilotRun {
 }
 
 model SeoAutopilotAction {
-  id               String    @id @default(cuid())
-  runId            String
-  order            Int
-  type             String
-  title            String
-  priority         String    @default("medium")
-  executionMode    String    @default("simulation")
-  status           String    @default("planned")
+  id              String   @id @default(cuid())
+  runId           String
+  order           Int
+  type            String
+  title           String
+  priority        String   @default("medium")
+  executionMode   String   @default("simulation")
+  status          String   @default("planned")
   recommendationId String?
-  targetPageId     String?
-  destinationSlug  String?
-  payload          Json
-  result           Json?
-  error            Json?
-  attempts         Int       @default(0)
-  durationMs       Int?
-  startedAt        DateTime?
-  finishedAt       DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  targetPageId    String?
+  destinationSlug String?
+  payload         Json
+  result          Json?
+  error           Json?
+  attempts        Int      @default(0)
+  durationMs      Int?
+  startedAt       DateTime?
+  finishedAt      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  run         SeoAutopilotRun          @relation(fields: [runId], references: [id], onDelete: Cascade)
+  run         SeoAutopilotRun @relation(fields: [runId], references: [id], onDelete: Cascade)
   auditEvents SeoAutopilotAuditEvent[]
 
   @@unique([runId, order])
@@ -1010,10 +1129,39 @@ model SeoAutopilotAuditEvent {
   data      Json?
   createdAt DateTime @default(now())
 
-  run    SeoAutopilotRun     @relation(fields: [runId], references: [id], onDelete: Cascade)
+  run    SeoAutopilotRun    @relation(fields: [runId], references: [id], onDelete: Cascade)
   action SeoAutopilotAction? @relation(fields: [actionId], references: [id], onDelete: Cascade)
 
   @@index([runId, createdAt])
   @@index([actionId])
   @@index([level, eventType])
+}
+
+model Brand {
+  id                 String   @id @default(cuid())
+  tenantId           String   @unique
+  displayName        String
+  legalName          String?
+  logoUrl            String?
+  logoDarkUrl        String?
+  faviconUrl         String?
+  primaryColor       String   @default("#0B5FFF")
+  secondaryColor     String   @default("#102A43")
+  accentColor        String   @default("#FFB703")
+  backgroundColor    String   @default("#FFFFFF")
+  textColor          String   @default("#102A43")
+  fontFamily         String   @default("Inter, Arial, sans-serif")
+  domain             String?  @unique
+  supportEmail       String?
+  supportPhone       String?
+  address            String?
+  socialLinks        Json?
+  emailSettings      Json?
+  metadata           Json?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([displayName])
 }

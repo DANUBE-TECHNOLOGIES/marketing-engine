@@ -18,6 +18,11 @@ const publishers = require("./publishers");
 const seoBrain = require("./seo-brain");
 const seoAutopilot = require("./seo-autopilot");
 const tenantCore = require("./tenant-core");
+const brand = require("./brand");
+const miniSiteBuilder = require("./mini-site-builder");
+const siteProvisioning = require("./site-provisioning");
+const campaignManager = require("./campaign-manager");
+const contentGeneration = require("./content-generation");
 module.exports = function registerModules(app, { prisma }) {
   if (tenantCore.routes) {
     app.use(tenantCore.routes({ prisma }));
@@ -25,6 +30,26 @@ module.exports = function registerModules(app, { prisma }) {
 
   const tenantService = new tenantCore.TenantService(new tenantCore.TenantRepository(prisma));
   app.use(tenantCore.createTenantMiddleware(tenantService));
+
+  if (brand.routes) {
+    app.use(brand.routes({ prisma }));
+  }
+
+  if (miniSiteBuilder.routes) {
+    app.use(miniSiteBuilder.routes({ prisma }));
+  }
+
+  if (siteProvisioning.routes) {
+    app.use(siteProvisioning.routes({ prisma }));
+  }
+
+  if (campaignManager.routes) {
+    app.use(campaignManager.routes({ prisma }));
+  }
+
+  if (contentGeneration.routes) {
+    app.use(contentGeneration.routes({ prisma }));
+  }
 
   if (destinationEngine.routes) {
     app.use(destinationEngine.routes({ prisma }));

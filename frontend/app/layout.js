@@ -20,6 +20,7 @@ export default function RootLayout({ children }) {
             <div className="flex flex-wrap gap-4 text-sm">
               <a href="/" className="hover:underline">Dashboard</a>
               <a href="/actions" className="hover:underline">Actions</a>
+              <a href="/campaigns" className="hover:underline">Campagnes</a>
               <a href="/agencies" className="hover:underline">Agences</a>
               <a href="/directories" className="hover:underline">Annuaires</a>
 <a href="/reviews" className="hover:underline">Avis Google</a>
