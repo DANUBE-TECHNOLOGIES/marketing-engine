@@ -221,3 +221,33 @@
 body > nav {
   display: none;
 }
+
+.public-site-review-rating {
+  color: #f5a400;
+  font-size: 1.3rem;
+  letter-spacing: 0.12em;
+}
+
+.public-site-map-frame {
+  overflow: hidden;
+  min-height: 380px;
+  border: 1px solid #e3eaf1;
+  border-radius: 18px;
+  background: #eef2f6;
+}
+
+.public-site-map-frame iframe {
+  width: 100%;
+  min-height: 380px;
+  border: 0;
+}
+
+.public-site-cta {
+  background: #102a43;
+  color: white;
+}
+
+.public-site-cta h2,
+.public-site-cta p {
+  color: white;
+}
