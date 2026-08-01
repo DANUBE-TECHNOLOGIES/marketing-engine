@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const BLOCK_LIBRARY = [
   {
@@ -217,9 +217,90 @@ function BlockPreview({ block }) {
 }
 
 export default function WebsiteBuilderClient() {
-  const [blocks, setBlocks] = useState(INITIAL_BLOCKS);
-  const [selectedId, setSelectedId] = useState(INITIAL_BLOCKS[0].id);
+  const [blocks, setBlocks] = useState([]);
+  const [selectedId, setSelectedId] = useState(null);
   const [savedAt, setSavedAt] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  const agencyId = 5;
+  const pageSlug = "home";
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadPage() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await fetch(
+          `/api/website-builder/agencies/${agencyId}/pages/${pageSlug}`,
+          {
+            cache: "no-store",
+          }
+        );
+
+        const payload = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            payload?.error?.debug?.message ||
+            payload?.error?.message ||
+            "Impossible de charger la page."
+          );
+        }
+
+        const loadedBlocks = (payload.sections || []).map(
+          (section) => ({
+            id: section.id,
+            type: section.sectionType,
+            label:
+              section.jsonContent?.title ||
+              section.sectionType,
+            enabled: section.status !== "hidden",
+            settings: {
+              ...(section.jsonContent || {}),
+              title:
+                section.jsonContent?.title ||
+                section.sectionType,
+            },
+          })
+        );
+
+        if (!active) return;
+
+        setBlocks(
+          loadedBlocks.length
+            ? loadedBlocks
+            : INITIAL_BLOCKS
+        );
+
+        setSelectedId(
+          (
+            loadedBlocks.length
+              ? loadedBlocks
+              : INITIAL_BLOCKS
+          )[0]?.id || null
+        );
+      } catch (loadError) {
+        if (active) {
+          setError(loadError.message);
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadPage();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const selectedBlock = useMemo(
     () => blocks.find((block) => block.id === selectedId) || null,
@@ -289,14 +370,82 @@ export default function WebsiteBuilderClient() {
     }
   }
 
-  function saveDraft() {
-    setSavedAt(
-      new Intl.DateTimeFormat("fr-FR", {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-      }).format(new Date())
-    );
+  async function saveDraft() {
+    try {
+      setSaving(true);
+      setError(null);
+
+      const response = await fetch(
+        `/api/website-builder/agencies/${agencyId}/pages/${pageSlug}`,
+        {
+          method: "PUT",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            sections: blocks.map((block) => ({
+              sectionType: block.type,
+              jsonContent: {
+                ...block.settings,
+                title:
+                  block.settings?.title ||
+                  block.label,
+              },
+              enabled: block.enabled,
+            })),
+          }),
+        }
+      );
+
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          payload?.error?.debug?.message ||
+          payload?.error?.message ||
+          "Impossible d’enregistrer la page."
+        );
+      }
+
+      const savedBlocks = (payload.sections || []).map(
+        (section) => ({
+          id: section.id,
+          type: section.sectionType,
+          label:
+            section.jsonContent?.title ||
+            section.sectionType,
+          enabled: section.status !== "hidden",
+          settings: {
+            ...(section.jsonContent || {}),
+            title:
+              section.jsonContent?.title ||
+              section.sectionType,
+          },
+        })
+      );
+
+      setBlocks(savedBlocks);
+
+      setSelectedId((current) =>
+        savedBlocks.some(
+          (block) => block.id === current
+        )
+          ? current
+          : savedBlocks[0]?.id || null
+      );
+
+      setSavedAt(
+        new Intl.DateTimeFormat("fr-FR", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        }).format(new Date())
+      );
+    } catch (saveError) {
+      setError(saveError.message);
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -327,12 +476,26 @@ export default function WebsiteBuilderClient() {
             type="button"
             className="wb-button"
             onClick={saveDraft}
+            disabled={saving || loading}
           >
-            Enregistrer
+            {saving
+              ? "Enregistrement…"
+              : "Enregistrer"}
           </button>
         </div>
       </header>
 
+      {error ? (
+        <div className="wb-error-banner">
+          {error}
+        </div>
+      ) : null}
+
+      {loading ? (
+        <div className="wb-loading">
+          Chargement de la page d’accueil…
+        </div>
+      ) : (
       <div className="wb-workspace">
         <aside className="wb-sidebar">
           <div className="wb-panel-heading">
@@ -567,6 +730,7 @@ export default function WebsiteBuilderClient() {
           )}
         </aside>
       </div>
+      )}
     </div>
   );
 }

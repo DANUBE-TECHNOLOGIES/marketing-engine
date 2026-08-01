@@ -40,6 +40,75 @@ class AgencySiteService {
     if (!page) { const e = new Error(`Page publique ${slug || "accueil"} introuvable`); e.statusCode = 404; throw e; }
     return page;
   }
+
+  async replacePageSections(agencyId, slug = "", input = {}) {
+    const page = await this.repo.findPage(agencyId, slug);
+
+    if (!page) {
+      const error = new Error(
+        `Page ${slug || "accueil"} introuvable`
+      );
+      error.statusCode = 404;
+      error.code = "AGENCY_SITE_PAGE_NOT_FOUND";
+      throw error;
+    }
+
+    const sections = Array.isArray(input.sections)
+      ? input.sections
+      : null;
+
+    if (!sections) {
+      const error = new Error(
+        "Le champ sections doit être un tableau."
+      );
+      error.statusCode = 400;
+      error.code = "INVALID_AGENCY_SITE_SECTIONS";
+      throw error;
+    }
+
+    if (sections.length > 100) {
+      const error = new Error(
+        "Une page ne peut pas contenir plus de 100 blocs."
+      );
+      error.statusCode = 400;
+      error.code = "AGENCY_SITE_SECTION_LIMIT";
+      throw error;
+    }
+
+    const normalized = sections.map((section, index) => {
+      const sectionType = String(
+        section.sectionType || section.type || ""
+      ).trim();
+
+      if (!sectionType) {
+        const error = new Error(
+          `Le type du bloc ${index + 1} est obligatoire.`
+        );
+        error.statusCode = 400;
+        error.code = "AGENCY_SITE_SECTION_TYPE_REQUIRED";
+        throw error;
+      }
+
+      return {
+        sectionType,
+        jsonContent:
+          section.jsonContent &&
+          typeof section.jsonContent === "object"
+            ? section.jsonContent
+            : {},
+        status:
+          section.enabled === false
+            ? "hidden"
+            : "draft",
+      };
+    });
+
+    return this.repo.replacePageSections(
+      page.id,
+      normalized
+    );
+  }
+
   async sitemap(agencyId, origin) { const site = await this.get(agencyId); return this.sitemapBuilder.build(site, site.pages, origin); }
   async robots(agencyId, origin) { const site = await this.get(agencyId); return this.sitemapBuilder.robots(site, origin); }
 }

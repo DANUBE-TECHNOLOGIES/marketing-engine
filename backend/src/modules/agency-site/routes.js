@@ -9,6 +9,41 @@ module.exports = ({ prisma }) => {
   router.get("/agencies/:id/site", async (req,res,next) => { try { res.json(await serviceFor(req).get(req.params.id)); } catch(e) { next(e); } });
   router.get("/agencies/:id/site/pages/home", async (req,res,next) => { try { res.json(await serviceFor(req).page(req.params.id, "")); } catch(e) { next(e); } });
   router.get("/agencies/:id/site/pages/:slug", async (req,res,next) => { try { res.json(await serviceFor(req).page(req.params.id, req.params.slug)); } catch(e) { next(e); } });
+
+  router.put(
+    "/agencies/:id/site/pages/home/sections",
+    async (req, res, next) => {
+      try {
+        res.json(
+          await serviceFor(req).replacePageSections(
+            req.params.id,
+            "",
+            req.body || {}
+          )
+        );
+      } catch (error) {
+        next(error);
+      }
+    }
+  );
+
+  router.put(
+    "/agencies/:id/site/pages/:slug/sections",
+    async (req, res, next) => {
+      try {
+        res.json(
+          await serviceFor(req).replacePageSections(
+            req.params.id,
+            req.params.slug,
+            req.body || {}
+          )
+        );
+      } catch (error) {
+        next(error);
+      }
+    }
+  );
+
   router.get("/public/agency-sites/:siteSlug", async (req,res,next) => { try { res.json(await serviceFor(req).publicSite(req.params.siteSlug)); } catch(e) { next(e); } });
   router.get("/public/agency-sites/:siteSlug/pages/home", async (req,res,next) => { try { res.json(await serviceFor(req).publicPage(req.params.siteSlug, "")); } catch(e) { next(e); } });
   router.get("/public/agency-sites/:siteSlug/pages/:slug", async (req,res,next) => { try { res.json(await serviceFor(req).publicPage(req.params.siteSlug, req.params.slug)); } catch(e) { next(e); } });
