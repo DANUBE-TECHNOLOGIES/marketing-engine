@@ -1112,3 +1112,124 @@ body > nav {
       var(--public-primary)
     );
 }
+
+.public-site-agency-profile {
+  display: grid;
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  margin-top: 38px;
+}
+
+.public-site-agency-card {
+  padding: 26px;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  border: 1px solid var(--public-border);
+  border-radius: 20px;
+  background: white;
+  box-shadow:
+    0 16px 42px rgba(16, 42, 67, 0.07);
+}
+
+.public-site-agency-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  background:
+    var(--public-soft-blue);
+  color:
+    var(
+      --brand-primary,
+      var(--public-primary)
+    );
+  font-size: 1.1rem;
+  font-weight: 900;
+}
+
+.public-site-agency-card > div {
+  display: grid;
+  gap: 7px;
+}
+
+.public-site-agency-card small {
+  color: var(--public-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.public-site-agency-card p {
+  margin: 0;
+  color: var(--public-muted);
+  line-height: 1.65;
+}
+
+.public-site-agency-card a {
+  color:
+    var(
+      --brand-primary,
+      var(--public-primary)
+    );
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.public-site-agency-value {
+  font-size: 1.15rem;
+}
+
+.public-site-agency-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.public-site-button-outline {
+  border-color:
+    var(
+      --brand-primary,
+      var(--public-primary)
+    );
+  background: transparent;
+  color:
+    var(
+      --brand-primary,
+      var(--public-primary)
+    );
+  box-shadow: none;
+}
+
+.public-site-map-address {
+  margin-top: 18px;
+  padding: 18px 22px;
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  border: 1px solid var(--public-border);
+  border-radius: 14px;
+  background: white;
+}
+
+.public-site-map-address span {
+  color: var(--public-muted);
+}
+
+@media (max-width: 900px) {
+  .public-site-agency-profile {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .public-site-map-address {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

@@ -181,6 +181,20 @@ class AgencySiteRepository extends TenantScopedRepository {
     return this.prisma.agencySite.findFirst({
       where: this.scope({ slug: siteSlug }),
       include: {
+        agency: {
+          select: {
+            id: true,
+            name: true,
+            city: true,
+            address: true,
+            postalCode: true,
+            phone: true,
+            email: true,
+            website: true,
+            googleReviewUrl: true,
+            googleLocationId: true,
+          },
+        },
         pages: {
           orderBy: { displayOrder: "asc" },
           include: {
@@ -196,29 +210,61 @@ class AgencySiteRepository extends TenantScopedRepository {
   findPublicPage(siteSlug, slug) {
     return this.prisma.agencySitePage.findFirst({
       where: {
-        site: this.scope({ slug: siteSlug }),
+        site: {
+          is: this.scope({
+            slug: siteSlug,
+          }),
+        },
         slug,
       },
       include: {
         sections: {
           orderBy: { displayOrder: "asc" },
         },
-        site: true,
+        site: {
+          include: {
+            agency: {
+              select: {
+                id: true,
+                name: true,
+                city: true,
+                address: true,
+                postalCode: true,
+                phone: true,
+                email: true,
+                website: true,
+                googleReviewUrl: true,
+                googleLocationId: true,
+              },
+            },
+          },
+        },
       },
     });
   }
 
   findPage(agencyId, slug) {
+    const normalizedAgencyId = Number(agencyId);
+
+    if (!Number.isInteger(normalizedAgencyId)) {
+      return null;
+    }
+
     return this.prisma.agencySitePage.findFirst({
       where: {
-        site: this.scope({
-          agencyId: Number(agencyId),
-        }),
+        site: {
+          is: {
+            agencyId: normalizedAgencyId,
+            tenantId: this.tenantId,
+          },
+        },
         slug,
       },
       include: {
         sections: {
-          orderBy: { displayOrder: "asc" },
+          orderBy: {
+            displayOrder: "asc",
+          },
         },
         site: true,
       },

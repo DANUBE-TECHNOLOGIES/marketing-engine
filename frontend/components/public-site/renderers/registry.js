@@ -5,6 +5,8 @@ import StatsRenderer from "./StatsRenderer";
 import PartnersRenderer from "./PartnersRenderer";
 import AppointmentRenderer from "./AppointmentRenderer";
 import FaqRenderer from "./FaqRenderer";
+import ContactRenderer from "./ContactRenderer";
+import MapRenderer from "./MapRenderer";
 import ReviewsRenderer from "./ReviewsRenderer";
 
 export const PUBLIC_RENDERER_REGISTRY = {
@@ -16,6 +18,8 @@ export const PUBLIC_RENDERER_REGISTRY = {
   appointment: AppointmentRenderer,
   faq: FaqRenderer,
   reviews: ReviewsRenderer,
+  contact: ContactRenderer,
+  map: MapRenderer,
 };
 
 export function getPublicRenderer(type) {

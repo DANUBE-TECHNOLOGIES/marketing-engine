@@ -552,12 +552,25 @@ Merci beaucoup pour votre confiance.`;
           20
         );
 
+        const tenantSlug = String(
+          req.headers["x-tenant-slug"] ||
+          "mondescale"
+        )
+          .trim()
+          .toLowerCase();
+
         const site =
           await prisma.agencySite.findFirst({
             where: {
               slug: String(
                 req.params.siteSlug || ""
               ).trim(),
+
+              tenant: {
+                is: {
+                  slug: tenantSlug,
+                },
+              },
             },
             include: {
               agency: {
