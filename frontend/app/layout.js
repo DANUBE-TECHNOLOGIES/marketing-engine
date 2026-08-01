@@ -21,6 +21,7 @@ export default function RootLayout({ children }) {
               <a href="/" className="hover:underline">Dashboard</a>
               <a href="/actions" className="hover:underline">Actions</a>
               <a href="/campaigns" className="hover:underline">Campagnes</a>
+              <a href="/website-builder" className="hover:underline">Website Builder</a>
               <a href="/agencies" className="hover:underline">Agences</a>
               <a href="/directories" className="hover:underline">Annuaires</a>
 <a href="/reviews" className="hover:underline">Avis Google</a>
