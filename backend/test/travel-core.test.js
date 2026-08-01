@@ -178,3 +178,83 @@ test("mergeSearchItems déduplique les correspondances alias", () => {
   assert.equal(results.length, 1);
   assert.equal(results[0].matchedBy, "alias");
 });
+
+const {
+  buildDestinationContext,
+  calculateCompleteness,
+} = require("../src/modules/travel-core");
+
+test("calculateCompleteness identifie les informations manquantes", () => {
+  const result = calculateCompleteness({
+    summary: "Présentation",
+    tagline: "Tagline",
+    seoTitle: "Titre",
+    seoDescription: "Description",
+    bestTime: "Mai à décembre",
+    idealDuration: "10 jours",
+    currency: "MUR",
+    language: "français",
+    latitude: -20.2,
+    longitude: 57.5,
+    highlights: ["lagons"],
+    audiences: ["familles"],
+    sections: [],
+    faqs: [],
+    themes: [],
+    relationsFrom: [],
+  });
+
+  assert.ok(result.score > 50);
+  assert.ok(result.missing.includes("faqs"));
+  assert.ok(result.missing.includes("relations"));
+});
+
+test("buildDestinationContext consolide les données voyage", () => {
+  const context = buildDestinationContext({
+    id: "destination-1",
+    name: "Île Maurice",
+    slug: "ile-maurice",
+    type: "island",
+    status: "published",
+    tagline: "Lagons et douceur de vivre",
+    summary: "Une destination de l'océan Indien.",
+    seoTitle: "Voyage à l'Île Maurice",
+    seoDescription: "Découvrez l'Île Maurice.",
+    bestTime: "Mai à décembre",
+    idealDuration: "8 à 12 jours",
+    currency: "MUR",
+    language: "français",
+    latitude: -20.2,
+    longitude: 57.5,
+    highlights: ["lagons", "plages"],
+    audiences: ["couples", "familles"],
+    country: "Maurice",
+    countryRef: {
+      id: "country-1",
+      name: "Maurice",
+      slug: "maurice",
+      iso2: "MU",
+      iso3: "MUS",
+      continent: "Afrique",
+      currency: "MUR",
+      languages: ["français"],
+      timezone: "Indian/Mauritius",
+    },
+    regionRef: null,
+    cityRef: null,
+    sections: [],
+    faqs: [],
+    themes: [],
+    travelTypes: [],
+    tags: [],
+    relationsFrom: [],
+  });
+
+  assert.equal(context.identity.name, "Île Maurice");
+  assert.equal(context.geography.country.iso2, "MU");
+  assert.equal(context.practical.timezone, "Indian/Mauritius");
+  assert.equal(
+    context.seo.suggestedPath,
+    "/destinations/ile-maurice"
+  );
+});

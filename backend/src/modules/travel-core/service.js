@@ -4,6 +4,9 @@ const { parseLimit, requireSearchQuery } = require("./validation");
 const {
   mergeSearchItems,
 } = require("./search-engine");
+const {
+  buildDestinationContext,
+} = require("./context-builder");
 
 class TravelCoreService {
   constructor(repository) {
@@ -70,6 +73,16 @@ class TravelCoreService {
       throw error;
     }
     return destination;
+  }
+
+
+  async getDestinationContext(idOrSlug, query = {}) {
+    const destination = await this.getDestination(idOrSlug);
+
+    return buildDestinationContext(destination, {
+      includeRaw:
+        String(query.includeRaw || "").toLowerCase() === "true",
+    });
   }
 
   async search(query = {}) {

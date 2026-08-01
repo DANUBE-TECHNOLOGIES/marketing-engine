@@ -95,6 +95,20 @@ module.exports = function createTravelCoreRoutes({ prisma }) {
     })
   );
 
+
+  router.get(
+    "/travel-core/v1/destinations/:id/context",
+    route(async (req, res) => {
+      res.json({
+        ok: true,
+        context: await serviceFor(req).getDestinationContext(
+          req.params.id,
+          req.query
+        ),
+      });
+    })
+  );
+
   router.get(
     "/travel-core/v1/destinations/:id",
     route(async (req, res) => {

@@ -7,4 +7,5 @@ module.exports = {
   ...require("./validation"),
   ...require("./importer"),
   ...require("./search-engine"),
+  ...require("./context-builder"),
 };
