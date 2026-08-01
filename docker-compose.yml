@@ -54,6 +54,9 @@ services:
       GOOGLE_REDIRECT_URI: "${GOOGLE_REDIRECT_URI}"
       BASIC_AUTH_USERNAME: "${BASIC_AUTH_USERNAME}"
       BASIC_AUTH_PASSWORD: "${BASIC_AUTH_PASSWORD}"
+      BACKEND_INTERNAL_URL: "http://backend:4000"
+      NEXT_PUBLIC_TENANT_SLUG: "mondescale"
+      INTERNAL_FRONTEND_URL: "http://localhost:3000"
 
 volumes:
   postgres_data:

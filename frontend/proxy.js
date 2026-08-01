@@ -4,62 +4,88 @@ export function proxy(request) {
   const pathname =
     request.nextUrl?.pathname || new URL(request.url).pathname;
 
-  // Mini-sites publics.
-  if (pathname === "/agence" || pathname.startsWith("/agence/")) {
-    return NextResponse.next();
-  }
-
-  // Ressources Next.js et routes publiques techniques.
-  if (
-    pathname.startsWith("/brand") ||
+  const isPublicRoute =
+    pathname === "/agence" ||
+    pathname.startsWith("/agence/") ||
+    pathname === "/sites" ||
+    pathname.startsWith("/sites/") ||
+    pathname === "/api/public-sites" ||
+    pathname.startsWith("/api/public-sites/") ||
+    pathname === "/brand" ||
+    pathname.startsWith("/brand/") ||
     pathname.startsWith("/_next/") ||
     pathname === "/favicon.ico" ||
     pathname === "/robots.txt" ||
     pathname === "/sitemap.xml" ||
-    pathname === "/manifest.webmanifest" ||
-    pathname === "/api/google/callback"
-  ) {
+    pathname === "/api/google/callback";
+
+  if (isPublicRoute) {
     return NextResponse.next();
   }
 
-  const basicAuth = request.headers.get("authorization");
-  const username = process.env.BASIC_AUTH_USERNAME;
-  const password = process.env.BASIC_AUTH_PASSWORD;
+  const authorization =
+    request.headers.get("authorization");
 
-  if (!username || !password) {
+  const expectedUsername =
+    process.env.BASIC_AUTH_USERNAME;
+
+  const expectedPassword =
+    process.env.BASIC_AUTH_PASSWORD;
+
+  if (!expectedUsername || !expectedPassword) {
     return new NextResponse(
       "Configuration d'authentification manquante",
       { status: 503 }
     );
   }
 
-  if (basicAuth?.startsWith("Basic ")) {
+  if (authorization?.startsWith("Basic ")) {
     try {
-      const authValue = basicAuth.slice(6);
-      const decoded = atob(authValue);
-      const separator = decoded.indexOf(":");
+      const encodedCredentials =
+        authorization.slice(6);
 
-      if (separator >= 0) {
-        const user = decoded.slice(0, separator);
-        const pwd = decoded.slice(separator + 1);
+      const decodedCredentials =
+        atob(encodedCredentials);
 
-        if (user === username && pwd === password) {
+      const separatorIndex =
+        decodedCredentials.indexOf(":");
+
+      if (separatorIndex >= 0) {
+        const username =
+          decodedCredentials.slice(
+            0,
+            separatorIndex
+          );
+
+        const password =
+          decodedCredentials.slice(
+            separatorIndex + 1
+          );
+
+        if (
+          username === expectedUsername &&
+          password === expectedPassword
+        ) {
           return NextResponse.next();
         }
       }
     } catch {
-      // Une entête Basic malformée est simplement refusée.
+      // Authentification incorrecte ou malformée.
     }
   }
 
-  return new NextResponse("Authentification requise", {
-    status: 401,
-    headers: {
-      "WWW-Authenticate": 'Basic realm="Mondescale Local Engine"',
-    },
-  });
+  return new NextResponse(
+    "Authentification requise",
+    {
+      status: 401,
+      headers: {
+        "WWW-Authenticate":
+          'Basic realm="Mondescale Local Engine"',
+      },
+    }
+  );
 }
 
 export const config = {
-  matcher: ["/((?!agence(?:/|$)).*)"],
+  matcher: ["/:path*"],
 };
