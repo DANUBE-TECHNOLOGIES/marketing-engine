@@ -21,24 +21,23 @@ function extractSlug(path = "") {
 }
 
 function pageHref(siteSlug, page) {
-  const pageSlug =
+  const slug =
     page.slug !== undefined
       ? page.slug
       : extractSlug(page.path);
 
-  if (
-    !pageSlug ||
-    page.title === "Accueil"
-  ) {
+  if (!slug || page.title === "Accueil") {
     return `/sites/${siteSlug}`;
   }
 
-  return `/sites/${siteSlug}/${pageSlug}`;
+  return `/sites/${siteSlug}/${slug}`;
 }
 
-export default function PublicSiteHeader({
-  site,
-}) {
+function telephoneHref(phone) {
+  return `tel:${String(phone || "").replace(/\s+/g, "")}`;
+}
+
+export default function PublicSiteHeader({ site }) {
   const pages = normalizeNavigation(site).filter(
     (page) =>
       page.title &&
@@ -46,36 +45,89 @@ export default function PublicSiteHeader({
       page.title !== "Confidentialité"
   );
 
-  return (
-    <header className="public-site-header">
-      <div className="public-site-container public-site-header-inner">
-        <Link
-          href={`/sites/${site.slug}`}
-          className="public-site-brand"
-        >
-          <span className="public-site-brand-name">
-            {site.name}
-          </span>
-        </Link>
+  const agency = site.agency || {};
 
-        <nav
-          className="public-site-navigation"
-          aria-label="Navigation principale"
-        >
-          {pages.map((page, index) => (
-            <Link
-              key={
-                page.id ||
-                page.path ||
-                `${page.title}-${index}`
-              }
-              href={pageHref(site.slug, page)}
-            >
-              {page.title}
-            </Link>
-          ))}
-        </nav>
+  return (
+    <>
+      <div className="public-site-trustbar">
+        <div className="public-site-container public-site-trustbar-inner">
+          <span>
+            Votre agence de voyages de proximité
+          </span>
+
+          <div className="public-site-trustbar-items">
+            <span>Conseils personnalisés</span>
+            <span>Accompagnement avant, pendant et après</span>
+          </div>
+        </div>
       </div>
-    </header>
+
+      <header className="public-site-header">
+        <div className="public-site-container public-site-header-inner">
+          <Link
+            href={`/sites/${site.slug}`}
+            className="public-site-brand"
+          >
+            <span className="public-site-brand-mark">
+              M
+            </span>
+
+            <span className="public-site-brand-copy">
+              <strong>
+                {site.name}
+              </strong>
+
+              {agency.city ? (
+                <small>
+                  Agence de voyages à {agency.city}
+                </small>
+              ) : null}
+            </span>
+          </Link>
+
+          <nav
+            className="public-site-navigation"
+            aria-label="Navigation principale"
+          >
+            {pages.map((page, index) => (
+              <Link
+                key={
+                  page.id ||
+                  page.path ||
+                  `${page.title}-${index}`
+                }
+                href={pageHref(site.slug, page)}
+              >
+                {page.title}
+              </Link>
+            ))}
+          </nav>
+
+          <div className="public-site-header-actions">
+            {agency.phone ? (
+              <a
+                className="public-site-header-phone"
+                href={telephoneHref(agency.phone)}
+              >
+                <span className="public-site-header-phone-label">
+                  Appelez-nous
+                </span>
+
+                <strong>
+                  {agency.phone}
+                </strong>
+              </a>
+            ) : null}
+
+            <Link
+              className="public-site-header-cta"
+              href={`/sites/${site.slug}/contact`}
+            >
+              Demander un devis
+            </Link>
+          </div>
+        </div>
+      </header>
+    </>
   );
 }

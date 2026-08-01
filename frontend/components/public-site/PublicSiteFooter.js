@@ -1,15 +1,36 @@
 import Link from "next/link";
 
-export default function PublicSiteFooter({
-  site,
-}) {
+function telephoneHref(phone) {
+  return `tel:${String(phone || "").replace(/\s+/g, "")}`;
+}
+
+export default function PublicSiteFooter({ site }) {
   const agency = site.agency || {};
 
   return (
     <footer className="public-site-footer">
-      <div className="public-site-container public-site-footer-grid">
+      <div className="public-site-footer-decoration" />
+
+      <div className="public-site-container public-site-footer-main">
+        <div className="public-site-footer-brand">
+          <span className="public-site-footer-mark">
+            M
+          </span>
+
+          <div>
+            <strong>
+              {site.name}
+            </strong>
+
+            <p>
+              Votre agence vous accompagne dans la création
+              de voyages uniques, adaptés à vos envies.
+            </p>
+          </div>
+        </div>
+
         <div>
-          <strong>{site.name}</strong>
+          <h3>Votre agence</h3>
 
           {agency.address ? (
             <p>
@@ -18,17 +39,10 @@ export default function PublicSiteFooter({
               {agency.postalCode} {agency.city}
             </p>
           ) : null}
-        </div>
 
-        <div>
           {agency.phone ? (
             <p>
-              <a
-                href={`tel:${agency.phone.replace(
-                  /\s+/g,
-                  ""
-                )}`}
-              >
+              <a href={telephoneHref(agency.phone)}>
                 {agency.phone}
               </a>
             </p>
@@ -43,19 +57,55 @@ export default function PublicSiteFooter({
           ) : null}
         </div>
 
-        <div className="public-site-footer-links">
-          <Link
-            href={`/sites/${site.slug}/mentions-legales`}
-          >
-            Mentions légales
-          </Link>
+        <div>
+          <h3>Préparer votre voyage</h3>
 
-          <Link
-            href={`/sites/${site.slug}/confidentialite`}
-          >
-            Confidentialité
-          </Link>
+          <div className="public-site-footer-links">
+            <Link href={`/sites/${site.slug}/services`}>
+              Nos services
+            </Link>
+
+            <Link href={`/sites/${site.slug}/inspirations`}>
+              Inspirations voyage
+            </Link>
+
+            <Link href={`/sites/${site.slug}/avis`}>
+              Avis clients
+            </Link>
+
+            <Link href={`/sites/${site.slug}/contact`}>
+              Nous contacter
+            </Link>
+          </div>
         </div>
+
+        <div>
+          <h3>Informations</h3>
+
+          <div className="public-site-footer-links">
+            <Link
+              href={`/sites/${site.slug}/mentions-legales`}
+            >
+              Mentions légales
+            </Link>
+
+            <Link
+              href={`/sites/${site.slug}/confidentialite`}
+            >
+              Politique de confidentialité
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      <div className="public-site-container public-site-footer-bottom">
+        <span>
+          © {new Date().getFullYear()} {site.name}
+        </span>
+
+        <span>
+          Voyages, conseils et accompagnement personnalisé
+        </span>
       </div>
     </footer>
   );
