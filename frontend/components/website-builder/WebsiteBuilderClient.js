@@ -3,6 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import SectionLibrary from "./SectionLibrary";
 import SectionInspector from "./SectionInspector";
+import TemplateLibrary from "./TemplateLibrary";
+import {
+  instantiatePageTemplate,
+} from "../../lib/website-builder/page-templates";
 import {
   createSectionBlock,
 } from "../../lib/website-builder/section-library";
@@ -245,6 +249,8 @@ export default function WebsiteBuilderClient() {
   const [isDirty, setIsDirty] = useState(false);
   const [previewDevice, setPreviewDevice] =
     useState("desktop");
+  const [templateLibraryOpen, setTemplateLibraryOpen] =
+    useState(false);
 
   const [sites, setSites] = useState([]);
   const [selectedAgencyId, setSelectedAgencyId] =
@@ -586,6 +592,48 @@ export default function WebsiteBuilderClient() {
     );
   }
 
+  function applyPageTemplate(template) {
+    const hasExistingBlocks =
+      blocks.length > 0;
+
+    if (
+      hasExistingBlocks &&
+      !window.confirm(
+        `Le modèle « ${template.name} » remplacera ` +
+        "tous les blocs actuels de cette page. Continuer ?"
+      )
+    ) {
+      return;
+    }
+
+    const agency = selectedSite?.agency || {};
+
+    const generatedBlocks =
+      instantiatePageTemplate(
+        template,
+        {
+          agencyName:
+            selectedSite?.name ||
+            agency.name ||
+            "Votre agence",
+          city:
+            agency.city ||
+            "votre ville",
+        }
+      );
+
+    applyBlocksChange(
+      generatedBlocks
+    );
+
+    setSelectedId(
+      generatedBlocks[0]?.id ||
+      null
+    );
+
+    setTemplateLibraryOpen(false);
+  }
+
   function duplicateBlock(id) {
     const source = blocks.find(
       (block) => block.id === id
@@ -880,6 +928,16 @@ export default function WebsiteBuilderClient() {
             </span>
           ) : null}
 
+          <button
+            type="button"
+            className="wb-button wb-button-secondary"
+            onClick={() =>
+              setTemplateLibraryOpen(true)
+            }
+          >
+            Modèles
+          </button>
+
           <a
             className="wb-button wb-button-secondary"
             href={
@@ -1118,6 +1176,14 @@ export default function WebsiteBuilderClient() {
         </aside>
       </div>
       )}
+
+      <TemplateLibrary
+        open={templateLibraryOpen}
+        onClose={() =>
+          setTemplateLibraryOpen(false)
+        }
+        onApply={applyPageTemplate}
+      />
     </div>
   );
 }

@@ -944,3 +944,227 @@
     display: none;
   }
 }
+
+.wb-template-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  background: rgba(7, 29, 48, 0.72);
+  backdrop-filter: blur(8px);
+}
+
+.wb-template-modal {
+  width: min(1120px, 100%);
+  max-height: calc(100vh - 56px);
+  overflow: auto;
+  border-radius: 22px;
+  background: white;
+  box-shadow:
+    0 40px 100px rgba(7, 29, 48, 0.32);
+}
+
+.wb-template-modal-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 24px 28px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 30px;
+  border-bottom: 1px solid var(--wb-border);
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(14px);
+}
+
+.wb-template-modal-header h2 {
+  margin: 5px 0 7px;
+  font-size: 1.65rem;
+}
+
+.wb-template-modal-header p {
+  margin: 0;
+  color: var(--wb-muted);
+}
+
+.wb-template-close {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--wb-border);
+  border-radius: 50%;
+  background: white;
+  color: var(--wb-navy);
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.wb-page-template-grid {
+  padding: 28px;
+  display: grid;
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+  gap: 22px;
+}
+
+.wb-page-template-card {
+  overflow: hidden;
+  border: 1px solid var(--wb-border);
+  border-radius: 18px;
+  background: white;
+  box-shadow:
+    0 14px 36px rgba(16, 42, 67, 0.07);
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.wb-page-template-card:hover {
+  transform: translateY(-5px);
+  box-shadow:
+    0 24px 54px rgba(16, 42, 67, 0.14);
+}
+
+.wb-page-template-card.is-featured {
+  border-color: rgba(11, 95, 255, 0.42);
+}
+
+.wb-page-template-cover {
+  position: relative;
+  min-height: 220px;
+  overflow: hidden;
+  padding: 18px;
+  background:
+    radial-gradient(
+      circle at 80% 15%,
+      var(--template-accent),
+      transparent 28%
+    ),
+    linear-gradient(
+      145deg,
+      var(--template-secondary),
+      var(--template-primary)
+    );
+}
+
+.wb-page-template-icon {
+  position: relative;
+  z-index: 1;
+  color: white;
+  font-size: 2rem;
+}
+
+.wb-page-template-featured {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: white;
+  color: var(--template-primary);
+  font-size: 0.58rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.wb-page-template-wireframe {
+  position: absolute;
+  right: 20px;
+  bottom: 0;
+  left: 20px;
+  display: grid;
+  gap: 7px;
+  padding: 14px;
+  border-radius: 14px 14px 0 0;
+  background: rgba(255, 255, 255, 0.93);
+  box-shadow:
+    0 -10px 40px rgba(0, 0, 0, 0.16);
+}
+
+.wb-page-template-wireframe span {
+  height: 18px;
+  border-radius: 5px;
+  background: #dfe7ef;
+}
+
+.wb-page-template-wireframe span:first-child {
+  height: 42px;
+  background:
+    linear-gradient(
+      90deg,
+      var(--template-primary),
+      var(--template-secondary)
+    );
+}
+
+.wb-page-template-wireframe span:nth-child(3) {
+  width: 72%;
+}
+
+.wb-page-template-wireframe span:nth-child(4) {
+  width: 48%;
+}
+
+.wb-page-template-content {
+  padding: 22px;
+}
+
+.wb-page-template-content h3 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.wb-page-template-content p {
+  min-height: 66px;
+  margin: 9px 0 16px;
+  color: var(--wb-muted);
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+
+.wb-page-template-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 18px;
+  color: var(--wb-muted);
+  font-size: 0.7rem;
+}
+
+.wb-template-colors {
+  display: flex;
+  gap: 5px;
+}
+
+.wb-template-colors i {
+  width: 16px;
+  height: 16px;
+  border: 2px solid white;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 1px var(--wb-border);
+}
+
+.wb-page-template-content button {
+  width: 100%;
+  padding: 10px 13px;
+  border: 1px solid var(--wb-blue);
+  border-radius: 9px;
+  background: var(--wb-blue);
+  color: white;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+@media (max-width: 900px) {
+  .wb-page-template-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .wb-template-modal-backdrop {
+    padding: 12px;
+  }
+}
