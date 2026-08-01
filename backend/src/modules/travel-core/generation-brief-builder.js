@@ -8,6 +8,7 @@ const SUPPORTED_CHANNELS = new Set([
   "instagram",
   "linkedin",
   "newsletter",
+  "hero-image",
 ]);
 
 function normalizeChannel(value) {
@@ -121,6 +122,20 @@ function channelInstructions(channel) {
         "Points forts",
         "Conseils",
         "CTA principal",
+      ],
+    },
+
+    "hero-image": {
+      objective:
+        "Créer un brief visuel pour une image hero de destination.",
+      recommendedLength: "Brief visuel structuré",
+      sections: [
+        "Sujet principal",
+        "Décor",
+        "Ambiance",
+        "Composition",
+        "Contraintes de marque",
+        "Texte à éviter dans l'image",
       ],
     },
   };

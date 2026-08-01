@@ -4,4 +4,5 @@ module.exports = {
   ...require("./service"),
   ContentGenerationRepository: require("./repository"),
   ...require("./travel-core-executor"),
+  ...require("./deterministic-composer"),
 };

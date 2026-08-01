@@ -41,7 +41,7 @@ module.exports = ({ prisma }) => {
       res.json({
         ...service(req).health(),
         executor: "travel-core",
-        executorVersion: "18.1.8",
+        executorVersion: "18.1.9",
       });
     }
   );

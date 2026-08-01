@@ -5,6 +5,10 @@ const {
   buildGenerationBrief,
 } = require("../travel-core");
 
+const {
+  composeDeterministicContent,
+} = require("./deterministic-composer");
+
 function httpError(message, statusCode, code) {
   return Object.assign(
     new Error(message),
@@ -217,6 +221,9 @@ function createTravelCoreExecutor({
       ? `${task.channel || task.type} — ${destination.name}`
       : `${task.channel || task.type} — ${campaign.name}`;
 
+    const generatedContent =
+      composeDeterministicContent(brief);
+
     const asset = await repository.upsertAssetForTask(
       task.id,
       {
@@ -233,12 +240,13 @@ function createTravelCoreExecutor({
 
         payload: {
           brief,
-          generatedContent: null,
+          generatedContent,
         },
 
         metadata: {
           source: "travel-core",
-          executorVersion: "18.1.8",
+          executorVersion: "18.1.9",
+          generator: "deterministic",
           destinationId:
             destination?.id || null,
           destinationSlug:
@@ -260,7 +268,8 @@ function createTravelCoreExecutor({
         task.channel ||
         task.type,
       status: asset.status,
-      generated: false,
+      generated: true,
+      generator: "deterministic",
       briefCreated: true,
     };
   };

@@ -218,6 +218,16 @@ test(
     );
 
     assert.equal(
+      result.generated,
+      true
+    );
+
+    assert.equal(
+      result.generator,
+      "deterministic"
+    );
+
+    assert.equal(
       savedAssets[0].status,
       "review"
     );
