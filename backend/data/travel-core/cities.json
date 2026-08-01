@@ -1,0 +1,83 @@
+[
+  {
+    "name": "Grand Baie",
+    "slug": "grand-baie",
+    "countrySlug": "maurice",
+    "regionSlug": "riviere-du-rempart",
+    "latitude": -20.0167,
+    "longitude": 57.5833,
+    "status": "published"
+  },
+  {
+    "name": "Le Morne",
+    "slug": "le-morne",
+    "countrySlug": "maurice",
+    "regionSlug": "riviere-noire",
+    "latitude": -20.4444,
+    "longitude": 57.3283,
+    "status": "published"
+  },
+  {
+    "name": "Victoria",
+    "slug": "victoria",
+    "countrySlug": "seychelles",
+    "regionSlug": "mahe",
+    "latitude": -4.6191,
+    "longitude": 55.4513,
+    "status": "published"
+  },
+  {
+    "name": "Malé",
+    "slug": "male",
+    "countrySlug": "maldives",
+    "regionSlug": "atoll-male-nord",
+    "latitude": 4.1755,
+    "longitude": 73.5093,
+    "status": "published"
+  },
+  {
+    "name": "Stone Town",
+    "slug": "stone-town",
+    "countrySlug": "tanzanie",
+    "regionSlug": "zanzibar",
+    "latitude": -6.1622,
+    "longitude": 39.1921,
+    "status": "published"
+  },
+  {
+    "name": "Tokyo",
+    "slug": "tokyo",
+    "countrySlug": "japon",
+    "regionSlug": "region-tokyo",
+    "latitude": 35.6762,
+    "longitude": 139.6503,
+    "status": "published"
+  },
+  {
+    "name": "Kyoto",
+    "slug": "kyoto",
+    "countrySlug": "japon",
+    "regionSlug": "kansai",
+    "latitude": 35.0116,
+    "longitude": 135.7681,
+    "status": "published"
+  },
+  {
+    "name": "Montréal",
+    "slug": "montreal",
+    "countrySlug": "canada",
+    "regionSlug": "quebec",
+    "latitude": 45.5017,
+    "longitude": -73.5673,
+    "status": "published"
+  },
+  {
+    "name": "Toronto",
+    "slug": "toronto",
+    "countrySlug": "canada",
+    "regionSlug": "ontario",
+    "latitude": 43.6532,
+    "longitude": -79.3832,
+    "status": "published"
+  }
+]

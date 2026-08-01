@@ -9,7 +9,9 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "knowledge:import": "node scripts/knowledge-import.js",
-    "knowledge:validate": "node scripts/knowledge-import.js --dry-run"
+    "knowledge:validate": "node scripts/knowledge-import.js --dry-run",
+    "travel-core:seed:dry-run": "TRAVEL_CORE_DRY_RUN=true node scripts/import-travel-core-reference.js",
+    "travel-core:seed": "TRAVEL_CORE_DRY_RUN=false node scripts/import-travel-core-reference.js"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",

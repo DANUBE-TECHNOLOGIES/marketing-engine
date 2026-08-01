@@ -1,0 +1,68 @@
+[
+  {
+    "name": "Maurice",
+    "slug": "maurice",
+    "iso2": "MU",
+    "iso3": "MUS",
+    "continent": "Afrique",
+    "currency": "MUR",
+    "languages": ["français", "anglais", "créole mauricien"],
+    "timezone": "Indian/Mauritius",
+    "status": "published"
+  },
+  {
+    "name": "Seychelles",
+    "slug": "seychelles",
+    "iso2": "SC",
+    "iso3": "SYC",
+    "continent": "Afrique",
+    "currency": "SCR",
+    "languages": ["français", "anglais", "créole seychellois"],
+    "timezone": "Indian/Mahe",
+    "status": "published"
+  },
+  {
+    "name": "Maldives",
+    "slug": "maldives",
+    "iso2": "MV",
+    "iso3": "MDV",
+    "continent": "Asie",
+    "currency": "MVR",
+    "languages": ["divehi", "anglais"],
+    "timezone": "Indian/Maldives",
+    "status": "published"
+  },
+  {
+    "name": "Tanzanie",
+    "slug": "tanzanie",
+    "iso2": "TZ",
+    "iso3": "TZA",
+    "continent": "Afrique",
+    "currency": "TZS",
+    "languages": ["swahili", "anglais"],
+    "timezone": "Africa/Dar_es_Salaam",
+    "status": "published"
+  },
+  {
+    "name": "Japon",
+    "slug": "japon",
+    "iso2": "JP",
+    "iso3": "JPN",
+    "continent": "Asie",
+    "currency": "JPY",
+    "languages": ["japonais"],
+    "timezone": "Asia/Tokyo",
+    "status": "published"
+  },
+  {
+    "name": "Canada",
+    "slug": "canada",
+    "iso2": "CA",
+    "iso3": "CAN",
+    "continent": "Amérique du Nord",
+    "currency": "CAD",
+    "languages": ["français", "anglais"],
+    "timezone": "America/Toronto",
+    "status": "published"
+  }
+]
