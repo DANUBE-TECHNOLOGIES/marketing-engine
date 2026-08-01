@@ -3,6 +3,20 @@ const AgencySiteService = require("./service");
 module.exports = ({ prisma }) => {
   const router = express.Router();
   const serviceFor = (req) => new AgencySiteService(prisma, req.tenantId);
+
+  router.get(
+    "/agency-sites",
+    async (req, res, next) => {
+      try {
+        res.json(
+          await serviceFor(req).listSites()
+        );
+      } catch (error) {
+        next(error);
+      }
+    }
+  );
+
   router.post("/agencies/:id/site/generate", async (req,res,next) => { try { res.status(201).json(await serviceFor(req).generate(req.params.id, req.body || {})); } catch(e) { next(e); } });
   router.post("/agencies/:id/site/compose", async (req,res,next) => { try { res.json(await serviceFor(req).compose(req.params.id)); } catch(e) { next(e); } });
   router.post("/agencies/:id/site/rebuild", async (req,res,next) => { try { res.json(await serviceFor(req).rebuild(req.params.id, req.body || {})); } catch(e) { next(e); } });

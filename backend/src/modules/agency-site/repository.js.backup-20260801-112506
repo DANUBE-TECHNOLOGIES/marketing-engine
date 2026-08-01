@@ -9,34 +9,6 @@ class AgencySiteRepository extends TenantScopedRepository {
     });
   }
 
-
-  listSites() {
-    return this.prisma.agencySite.findMany({
-      where: {
-        tenantId: this.tenantId,
-      },
-      orderBy: {
-        name: "asc",
-      },
-      include: {
-        agency: true,
-        pages: {
-          orderBy: {
-            displayOrder: "asc",
-          },
-          select: {
-            id: true,
-            title: true,
-            slug: true,
-            path: true,
-            status: true,
-            displayOrder: true,
-          },
-        },
-      },
-    });
-  }
-
   findByAgencyId(agencyId) {
     return this.prisma.agencySite.findFirst({
       where: this.scope({
@@ -243,53 +215,20 @@ class AgencySiteRepository extends TenantScopedRepository {
       return null;
     }
 
-    /*
-     * Prisma impose une unicité sur :
-     * pageId + sectionType.
-     *
-     * Le Website Builder autorise plusieurs blocs du même type.
-     * Nous générons donc une clé technique unique tout en conservant
-     * le véritable type dans jsonContent.__builderType.
-     */
-    const typeCounts = new Map();
-
-    const normalizedSections = sections.map((section, index) => {
-      const baseType = String(
-        section.jsonContent?.__builderType ||
-        section.sectionType ||
-        "section"
-      )
-        .replace(/--\d+$/, "")
-        .trim();
-
-      const count = (typeCounts.get(baseType) || 0) + 1;
-      typeCounts.set(baseType, count);
-
-      const uniqueSectionType =
-        count === 1
-          ? baseType
-          : `${baseType}--${count}`;
-
-      return {
-        pageId,
-        sectionType: uniqueSectionType,
-        jsonContent: {
-          ...(section.jsonContent || {}),
-          __builderType: baseType,
-        },
-        displayOrder: index,
-        status: section.status || "draft",
-      };
-    });
-
     await this.prisma.$transaction(async (tx) => {
       await tx.agencySiteSection.deleteMany({
         where: { pageId },
       });
 
-      if (normalizedSections.length > 0) {
+      if (sections.length > 0) {
         await tx.agencySiteSection.createMany({
-          data: normalizedSections,
+          data: sections.map((section, index) => ({
+            pageId,
+            sectionType: section.sectionType,
+            jsonContent: section.jsonContent,
+            displayOrder: index,
+            status: section.status || "draft",
+          })),
         });
       }
     });

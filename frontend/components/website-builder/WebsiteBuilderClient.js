@@ -144,8 +144,29 @@ function BlockPreview({ block }) {
   const title = block.settings?.title || block.label;
 
   if (block.type === "hero") {
+    const backgroundImage =
+      block.settings?.backgroundImage || "";
+
+    const backgroundPosition =
+      block.settings?.backgroundPosition || "center";
+
+    const overlayOpacity =
+      Number(block.settings?.overlayOpacity ?? 68) / 100;
+
     return (
-      <div className="wb-preview wb-preview-hero">
+      <div
+        className="wb-preview wb-preview-hero"
+        style={{
+          backgroundImage: backgroundImage
+            ? `linear-gradient(
+                rgba(8, 31, 52, ${overlayOpacity}),
+                rgba(8, 31, 52, ${overlayOpacity})
+              ),
+              url("${backgroundImage}")`
+            : undefined,
+          backgroundPosition,
+        }}
+      >
         <span className="wb-preview-kicker">Agence de voyages</span>
         <h2>{title}</h2>
         <p>{block.settings?.subtitle}</p>
@@ -224,8 +245,24 @@ export default function WebsiteBuilderClient() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
-  const agencyId = 5;
-  const pageSlug = "home";
+  const [sites, setSites] = useState([]);
+  const [selectedAgencyId, setSelectedAgencyId] =
+    useState(null);
+  const [selectedPageSlug, setSelectedPageSlug] =
+    useState("home");
+
+  const selectedSite = useMemo(
+    () =>
+      sites.find(
+        (site) =>
+          String(site.agencyId) ===
+          String(selectedAgencyId)
+      ) || null,
+    [sites, selectedAgencyId]
+  );
+
+  const agencyId = selectedAgencyId;
+  const pageSlug = selectedPageSlug;
 
   useEffect(() => {
     let active = true;
@@ -255,7 +292,10 @@ export default function WebsiteBuilderClient() {
         const loadedBlocks = (payload.sections || []).map(
           (section) => ({
             id: section.id,
-            type: section.sectionType,
+            type:
+              section.jsonContent?.__builderType ||
+              String(section.sectionType || "")
+                .replace(/--\d+$/, ""),
             label:
               section.jsonContent?.title ||
               section.sectionType,
@@ -387,6 +427,7 @@ export default function WebsiteBuilderClient() {
               sectionType: block.type,
               jsonContent: {
                 ...block.settings,
+                __builderType: block.type,
                 title:
                   block.settings?.title ||
                   block.label,
@@ -410,7 +451,10 @@ export default function WebsiteBuilderClient() {
       const savedBlocks = (payload.sections || []).map(
         (section) => ({
           id: section.id,
-          type: section.sectionType,
+          type:
+            section.jsonContent?.__builderType ||
+            String(section.sectionType || "")
+              .replace(/--\d+$/, ""),
           label:
             section.jsonContent?.title ||
             section.sectionType,
@@ -451,9 +495,63 @@ export default function WebsiteBuilderClient() {
   return (
     <div className="wb-shell">
       <header className="wb-topbar">
-        <div>
-          <p className="wb-eyebrow">Mondescale Website Builder</p>
-          <h1>Page d’accueil — Ozoir-la-Ferrière</h1>
+        <div className="wb-site-selector">
+          <p className="wb-eyebrow">
+            Mondescale Website Builder
+          </p>
+
+          <div className="wb-selector-row">
+            <label>
+              Agence
+              <select
+                value={selectedAgencyId || ""}
+                onChange={(event) => {
+                  setSelectedAgencyId(
+                    event.target.value
+                  );
+                  setSelectedPageSlug("home");
+                  setSavedAt(null);
+                }}
+              >
+                {sites.map((site) => (
+                  <option
+                    key={site.id}
+                    value={site.agencyId}
+                  >
+                    {site.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label>
+              Page
+              <select
+                value={selectedPageSlug}
+                onChange={(event) => {
+                  setSelectedPageSlug(
+                    event.target.value
+                  );
+                  setSavedAt(null);
+                }}
+              >
+                {(selectedSite?.pages || []).map(
+                  (page) => (
+                    <option
+                      key={page.id}
+                      value={
+                        page.slug === ""
+                          ? "home"
+                          : page.slug
+                      }
+                    >
+                      {page.title}
+                    </option>
+                  )
+                )}
+              </select>
+            </label>
+          </div>
         </div>
 
         <div className="wb-topbar-actions">
@@ -465,7 +563,15 @@ export default function WebsiteBuilderClient() {
 
           <a
             className="wb-button wb-button-secondary"
-            href="/sites/ambassade-fram-mondescale-ozoir-la-ferriere"
+            href={
+              selectedSite
+                ? `/sites/${selectedSite.slug}${
+                    pageSlug === "home"
+                      ? ""
+                      : `/${pageSlug}`
+                  }`
+                : "#"
+            }
             target="_blank"
             rel="noreferrer"
           >
@@ -671,6 +777,87 @@ export default function WebsiteBuilderClient() {
                         )
                       }
                     />
+                  </label>
+
+                  <label>
+                    URL de l’image
+                    <input
+                      type="url"
+                      placeholder="https://..."
+                      value={
+                        selectedBlock.settings?.backgroundImage || ""
+                      }
+                      onChange={(event) =>
+                        updateSelectedBlock(
+                          "backgroundImage",
+                          event.target.value
+                        )
+                      }
+                    />
+                  </label>
+
+                  <label>
+                    Texte alternatif de l’image
+                    <input
+                      value={
+                        selectedBlock.settings?.imageAlt || ""
+                      }
+                      onChange={(event) =>
+                        updateSelectedBlock(
+                          "imageAlt",
+                          event.target.value
+                        )
+                      }
+                      placeholder="Plage tropicale au coucher du soleil"
+                    />
+                  </label>
+
+                  <label>
+                    Position de l’image
+                    <select
+                      value={
+                        selectedBlock.settings?.backgroundPosition ||
+                        "center"
+                      }
+                      onChange={(event) =>
+                        updateSelectedBlock(
+                          "backgroundPosition",
+                          event.target.value
+                        )
+                      }
+                    >
+                      <option value="center">Centrée</option>
+                      <option value="top">Haut</option>
+                      <option value="bottom">Bas</option>
+                      <option value="left">Gauche</option>
+                      <option value="right">Droite</option>
+                    </select>
+                  </label>
+
+                  <label>
+                    Intensité de l’overlay
+                    <div className="wb-range-field">
+                      <input
+                        type="range"
+                        min="20"
+                        max="90"
+                        step="5"
+                        value={
+                          selectedBlock.settings?.overlayOpacity ??
+                          68
+                        }
+                        onChange={(event) =>
+                          updateSelectedBlock(
+                            "overlayOpacity",
+                            Number(event.target.value)
+                          )
+                        }
+                      />
+                      <span>
+                        {selectedBlock.settings?.overlayOpacity ??
+                          68} %
+                      </span>
+                    </div>
                   </label>
 
                   <label>

@@ -5,6 +5,21 @@ const NavigationBuilder = require("./builders/navigation-builder");
 const SitemapBuilder = require("./builders/sitemap-builder");
 class AgencySiteService {
   constructor(prisma, tenantId) { this.repo = new AgencySiteRepository(prisma, tenantId); this.siteBuilder = new SiteBuilder(); this.contentBuilder = new ContentBuilder(); this.navigationBuilder = new NavigationBuilder(); this.sitemapBuilder = new SitemapBuilder(); }
+
+  async listSites() {
+    const sites = await this.repo.listSites();
+
+    return sites.map((site) => ({
+      id: site.id,
+      name: site.name,
+      slug: site.slug,
+      status: site.status,
+      agencyId: site.agencyId,
+      agency: site.agency,
+      pages: site.pages,
+    }));
+  }
+
   async generate(agencyId, options = {}) {
     const agency = await this.repo.getAgency(agencyId);
     if (!agency) { const e = new Error(`Agence ${agencyId} introuvable`); e.statusCode = 404; throw e; }
