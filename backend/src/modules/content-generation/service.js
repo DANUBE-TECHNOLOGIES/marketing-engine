@@ -2,6 +2,7 @@
 
 const ContentGenerationRepository = require("./repository");
 const { validateCreateJob } = require("./validation");
+const { AiSeoGeneratorService } = require("../ai-seo-generator/service");
 
 function httpError(message, statusCode, code) {
   return Object.assign(new Error(message), { statusCode, code });
@@ -10,11 +11,12 @@ function httpError(message, statusCode, code) {
 class ContentGenerationService {
   constructor(prismaOrRepo, tenantId, { executor } = {}) {
     this.repo = prismaOrRepo?.getCampaign ? prismaOrRepo : new ContentGenerationRepository(prismaOrRepo, tenantId);
-    this.executor = executor || (async task => ({ taskId: task.id, generated: true }));
+    this.generator = new AiSeoGeneratorService();
+    this.executor = executor || (async (task, context) => this.generator.generate(task, context));
   }
 
   health() {
-    return { ok: true, version: "16.1.0", capability: "content-generation-jobs", queue: "database" };
+    return { ok: true, version: "16.2.0", capability: "content-generation-jobs", queue: "database", generator: this.generator.health() };
   }
 
   async list(filters = {}) {
@@ -72,7 +74,8 @@ class ContentGenerationService {
       if (fresh.status === "cancelled") return fresh;
       try {
         await this.repo.updateTask(task.id, { status: "running", startedAt: new Date(), error: null });
-        await this.executor(task, { job: fresh, campaign: fresh.campaign });
+        const asset = await this.executor(task, { job: fresh, campaign: fresh.campaign });
+        if (asset && this.repo.upsertAsset) await this.repo.upsertAsset(asset);
         completed += 1;
         await this.repo.updateTask(task.id, { status: "completed", progress: 100, completedAt: new Date() });
       } catch (error) {
