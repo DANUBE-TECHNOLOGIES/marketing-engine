@@ -1,3 +1,7 @@
+import {
+  getPublicRenderer,
+} from "./renderers/registry";
+
 function sectionContent(section) {
   const content =
     section?.jsonContent ||
@@ -12,7 +16,10 @@ function sectionContent(section) {
 }
 
 function sectionType(section) {
+  const content = sectionContent(section);
+
   return String(
+    content.__builderType ||
     section?.sectionType ||
     section?.type ||
     section?.key ||
@@ -72,8 +79,48 @@ function HeroSection({ section, site }) {
     site.agency?.description ||
     "Votre agence vous accompagne dans la création de vos plus beaux voyages.";
 
+  const backgroundImage =
+    content.backgroundImage || null;
+
+  const backgroundPosition =
+    content.backgroundPosition || "center";
+
+  const overlayOpacity =
+    Math.min(
+      Math.max(
+        Number(content.overlayOpacity ?? 68),
+        20
+      ),
+      90
+    ) / 100;
+
+  const heroStyle = backgroundImage
+    ? {
+        backgroundImage: `
+          linear-gradient(
+            90deg,
+            rgba(8, 31, 52, ${overlayOpacity}) 0%,
+            rgba(8, 31, 52, ${Math.max(
+              overlayOpacity - 0.12,
+              0.2
+            )}) 48%,
+            rgba(8, 31, 52, ${Math.max(
+              overlayOpacity - 0.35,
+              0.08
+            )}) 100%
+          ),
+          url("${backgroundImage}")
+        `,
+        backgroundPosition,
+      }
+    : undefined;
+
   return (
-    <section className="public-site-hero">
+    <section
+      className="public-site-hero"
+      style={heroStyle}
+      aria-label={content.imageAlt || undefined}
+    >
       <div className="public-site-container">
         <p className="public-site-eyebrow">
           Agence de voyages
@@ -372,6 +419,20 @@ export default function PublicSiteSections({
       const key =
         section.id ||
         `${type || "section"}-${index}`;
+
+      const RegistryRenderer =
+        getPublicRenderer(type);
+
+      if (RegistryRenderer) {
+        return (
+          <RegistryRenderer
+            key={key}
+            section={section}
+            site={site}
+            page={page}
+          />
+        );
+      }
 
       if (type.includes("hero")) {
         return (
