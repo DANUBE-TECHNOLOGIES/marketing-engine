@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import SectionLibrary from "./SectionLibrary";
+import SectionInspector from "./SectionInspector";
 import {
   createSectionBlock,
 } from "../../lib/website-builder/section-library";
@@ -809,191 +810,32 @@ export default function WebsiteBuilderClient() {
         <aside className="wb-inspector">
           <div className="wb-panel-heading">
             <span>Propriétés</span>
+
             <small>
-              {selectedBlock ? selectedBlock.type : "Aucune sélection"}
+              {selectedBlock
+                ? selectedBlock.type
+                : "Aucune sélection"}
             </small>
           </div>
 
-          {selectedBlock ? (
-            <div className="wb-inspector-form">
-              <label>
-                Nom interne
-                <input
-                  value={selectedBlock.label}
-                  onChange={(event) =>
-                    setBlocks((current) =>
-                      current.map((block) =>
-                        block.id === selectedBlock.id
-                          ? { ...block, label: event.target.value }
-                          : block
-                      )
-                    )
-                  }
-                />
-              </label>
-
-              <label>
-                Titre
-                <input
-                  value={selectedBlock.settings?.title || ""}
-                  onChange={(event) =>
-                    updateSelectedBlock("title", event.target.value)
-                  }
-                />
-              </label>
-
-              {selectedBlock.type === "hero" ? (
-                <>
-                  <label>
-                    Sous-titre
-                    <textarea
-                      rows="5"
-                      value={selectedBlock.settings?.subtitle || ""}
-                      onChange={(event) =>
-                        updateSelectedBlock(
-                          "subtitle",
-                          event.target.value
-                        )
+          <SectionInspector
+            block={selectedBlock}
+            onRename={(label) =>
+              setBlocks((current) =>
+                current.map((block) =>
+                  block.id === selectedId
+                    ? {
+                        ...block,
+                        label,
                       }
-                    />
-                  </label>
-
-                  <label>
-                    URL de l’image
-                    <input
-                      type="url"
-                      placeholder="https://..."
-                      value={
-                        selectedBlock.settings?.backgroundImage || ""
-                      }
-                      onChange={(event) =>
-                        updateSelectedBlock(
-                          "backgroundImage",
-                          event.target.value
-                        )
-                      }
-                    />
-                  </label>
-
-                  <label>
-                    Texte alternatif de l’image
-                    <input
-                      value={
-                        selectedBlock.settings?.imageAlt || ""
-                      }
-                      onChange={(event) =>
-                        updateSelectedBlock(
-                          "imageAlt",
-                          event.target.value
-                        )
-                      }
-                      placeholder="Plage tropicale au coucher du soleil"
-                    />
-                  </label>
-
-                  <label>
-                    Position de l’image
-                    <select
-                      value={
-                        selectedBlock.settings?.backgroundPosition ||
-                        "center"
-                      }
-                      onChange={(event) =>
-                        updateSelectedBlock(
-                          "backgroundPosition",
-                          event.target.value
-                        )
-                      }
-                    >
-                      <option value="center">Centrée</option>
-                      <option value="top">Haut</option>
-                      <option value="bottom">Bas</option>
-                      <option value="left">Gauche</option>
-                      <option value="right">Droite</option>
-                    </select>
-                  </label>
-
-                  <label>
-                    Intensité de l’overlay
-                    <div className="wb-range-field">
-                      <input
-                        type="range"
-                        min="20"
-                        max="90"
-                        step="5"
-                        value={
-                          selectedBlock.settings?.overlayOpacity ??
-                          68
-                        }
-                        onChange={(event) =>
-                          updateSelectedBlock(
-                            "overlayOpacity",
-                            Number(event.target.value)
-                          )
-                        }
-                      />
-                      <span>
-                        {selectedBlock.settings?.overlayOpacity ??
-                          68} %
-                      </span>
-                    </div>
-                  </label>
-
-                  <label>
-                    Bouton principal
-                    <input
-                      value={
-                        selectedBlock.settings?.primaryButton || ""
-                      }
-                      onChange={(event) =>
-                        updateSelectedBlock(
-                          "primaryButton",
-                          event.target.value
-                        )
-                      }
-                    />
-                  </label>
-
-                  <label>
-                    Bouton secondaire
-                    <input
-                      value={
-                        selectedBlock.settings?.secondaryButton || ""
-                      }
-                      onChange={(event) =>
-                        updateSelectedBlock(
-                          "secondaryButton",
-                          event.target.value
-                        )
-                      }
-                    />
-                  </label>
-                </>
-              ) : (
-                <label>
-                  Texte
-                  <textarea
-                    rows="7"
-                    value={selectedBlock.settings?.text || ""}
-                    onChange={(event) =>
-                      updateSelectedBlock("text", event.target.value)
-                    }
-                  />
-                </label>
-              )}
-
-              <div className="wb-inspector-note">
-                Les modifications sont actuellement conservées dans
-                l’éditeur. Le raccordement à l’API sera réalisé dans le
-                prochain patch.
-              </div>
-            </div>
-          ) : (
-            <div className="wb-inspector-empty">
-              Sélectionne un bloc dans le canevas pour modifier ses
-              propriétés.
-            </div>
-          )}
+                    : block
+                )
+              )
+            }
+            onSettingChange={
+              updateSelectedBlock
+            }
+          />
         </aside>
       </div>
       )}
