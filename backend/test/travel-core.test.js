@@ -258,3 +258,98 @@ test("buildDestinationContext consolide les données voyage", () => {
     "/destinations/ile-maurice"
   );
 });
+
+const {
+  normalizeChannel,
+  buildGenerationBrief,
+} = require("../src/modules/travel-core");
+
+test("normalizeChannel refuse un canal inconnu", () => {
+  assert.throws(
+    () => normalizeChannel("tiktok"),
+    { code: "UNSUPPORTED_GENERATION_CHANNEL" }
+  );
+});
+
+test("buildGenerationBrief produit un brief SEO contrôlé", () => {
+  const brief = buildGenerationBrief(
+    {
+      identity: {
+        name: "Île Maurice",
+        slug: "ile-maurice",
+        type: "island",
+        tagline: "Lagons et douceur de vivre",
+        summary: "Une destination de l'océan Indien.",
+      },
+
+      geography: {
+        country: {
+          name: "Maurice",
+          iso2: "MU",
+        },
+      },
+
+      practical: {
+        bestTime: "Mai à décembre",
+        idealDuration: "8 à 12 jours",
+        currency: "MUR",
+        language: "français",
+      },
+
+      marketing: {
+        highlights: ["lagons", "plages"],
+        audiences: ["couples", "familles"],
+        themes: [],
+        travelTypes: [],
+        tags: [],
+      },
+
+      seo: {
+        title: "Voyage à l'Île Maurice",
+        description: "Découvrez l'Île Maurice.",
+        canonicalSlug: "ile-maurice",
+        suggestedPath: "/destinations/ile-maurice",
+      },
+
+      content: {
+        sections: [],
+        faqs: [],
+      },
+
+      relatedDestinations: [],
+
+      completeness: {
+        score: 73,
+        missing: ["faqs", "relations"],
+      },
+    },
+    {
+      channel: "landing-page",
+      agencyName: "Mondescale Bois-Colombes",
+      city: "Bois-Colombes",
+    }
+  );
+
+  assert.equal(brief.channel, "landing-page");
+  assert.equal(
+    brief.subject.destination,
+    "Île Maurice"
+  );
+  assert.equal(
+    brief.publisher.agencyName,
+    "Mondescale Bois-Colombes"
+  );
+  assert.equal(
+    brief.seo.primaryKeyword,
+    "voyage Île Maurice"
+  );
+  assert.ok(
+    brief.editorialRules.some((rule) =>
+      rule.includes("Ne pas inventer")
+    )
+  );
+  assert.deepEqual(
+    brief.unavailableFacts,
+    ["faqs", "relations"]
+  );
+});

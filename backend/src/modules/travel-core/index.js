@@ -8,4 +8,5 @@ module.exports = {
   ...require("./importer"),
   ...require("./search-engine"),
   ...require("./context-builder"),
+  ...require("./generation-brief-builder"),
 };

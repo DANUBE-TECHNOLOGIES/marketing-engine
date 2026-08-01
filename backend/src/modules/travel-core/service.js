@@ -7,6 +7,9 @@ const {
 const {
   buildDestinationContext,
 } = require("./context-builder");
+const {
+  buildGenerationBrief,
+} = require("./generation-brief-builder");
 
 class TravelCoreService {
   constructor(repository) {
@@ -75,6 +78,21 @@ class TravelCoreService {
     return destination;
   }
 
+
+
+  async getGenerationBrief(idOrSlug, input = {}) {
+    const context = await this.getDestinationContext(
+      idOrSlug,
+      input
+    );
+
+    return buildGenerationBrief(context, {
+      channel: input.channel,
+      agencyName: input.agencyName,
+      city: input.city,
+      tone: input.tone,
+    });
+  }
 
   async getDestinationContext(idOrSlug, query = {}) {
     const destination = await this.getDestination(idOrSlug);
