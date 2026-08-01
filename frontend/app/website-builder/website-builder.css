@@ -569,3 +569,187 @@
     width: 100%;
   }
 }
+
+.wb-section-library {
+  padding: 12px;
+}
+
+.wb-category-tabs {
+  display: flex;
+  gap: 6px;
+  padding-bottom: 12px;
+  overflow-x: auto;
+}
+
+.wb-category-tabs button {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border: 1px solid var(--wb-border);
+  border-radius: 999px;
+  background: white;
+  color: var(--wb-muted);
+  font-size: 0.72rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.wb-category-tabs button:hover,
+.wb-category-tabs button.is-active {
+  border-color: var(--wb-blue);
+  background: var(--wb-blue-soft);
+  color: var(--wb-blue);
+}
+
+.wb-template-grid {
+  display: grid;
+  gap: 11px;
+}
+
+.wb-template-card {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 74px 1fr 22px;
+  align-items: center;
+  gap: 11px;
+  min-height: 88px;
+  padding: 9px;
+  border: 1px solid var(--wb-border);
+  border-radius: 13px;
+  background: white;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.wb-template-card:hover {
+  border-color: rgba(11, 95, 255, 0.48);
+  box-shadow:
+    0 12px 28px rgba(16, 42, 67, 0.1);
+  transform: translateY(-2px);
+}
+
+.wb-template-card.is-featured {
+  border-color: rgba(11, 95, 255, 0.3);
+  background:
+    linear-gradient(
+      135deg,
+      #ffffff,
+      #f2f7ff
+    );
+}
+
+.wb-template-preview {
+  position: relative;
+  min-height: 68px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 9px;
+  background:
+    linear-gradient(
+      145deg,
+      #e9eff5,
+      #ccd9e6
+    );
+}
+
+.wb-template-preview-hero {
+  background:
+    linear-gradient(
+      135deg,
+      #102a43,
+      #0b5fff
+    );
+}
+
+.wb-template-preview-reviews {
+  background:
+    linear-gradient(
+      145deg,
+      #fff6d9,
+      #ffe8a1
+    );
+}
+
+.wb-template-preview-destinations,
+.wb-template-preview-offers,
+.wb-template-preview-inspirations {
+  background:
+    linear-gradient(
+      145deg,
+      #dff5eb,
+      #a9ddc7
+    );
+}
+
+.wb-template-preview-contact,
+.wb-template-preview-map,
+.wb-template-preview-appointment {
+  background:
+    linear-gradient(
+      145deg,
+      #edf4ff,
+      #c7dcff
+    );
+}
+
+.wb-template-icon {
+  color: var(--wb-navy);
+  font-size: 1.45rem;
+  font-weight: 900;
+}
+
+.wb-template-preview-hero .wb-template-icon {
+  color: white;
+}
+
+.wb-template-badge {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  padding: 3px 5px;
+  border-radius: 999px;
+  background: var(--wb-blue);
+  color: white;
+  font-size: 0.48rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.wb-template-copy strong,
+.wb-template-copy small {
+  display: block;
+}
+
+.wb-template-copy strong {
+  color: var(--wb-navy);
+  font-size: 0.82rem;
+}
+
+.wb-template-copy small {
+  margin-top: 4px;
+  color: var(--wb-muted);
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
+.wb-data-source {
+  display: inline-flex;
+  margin-top: 6px;
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: #e9f7ef;
+  color: #257549;
+  font-size: 0.58rem;
+  font-weight: 800;
+}
+
+.wb-template-add {
+  color: var(--wb-blue);
+  font-size: 1.25rem;
+  font-weight: 900;
+}

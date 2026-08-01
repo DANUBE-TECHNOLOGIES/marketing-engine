@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import SectionLibrary from "./SectionLibrary";
+import {
+  createSectionBlock,
+} from "../../lib/website-builder/section-library";
 
 const BLOCK_LIBRARY = [
   {
@@ -128,17 +132,6 @@ const INITIAL_BLOCKS = [
   },
 ];
 
-function createBlock(definition) {
-  return {
-    id: `${definition.type}-${Date.now()}`,
-    type: definition.type,
-    label: definition.label,
-    enabled: true,
-    settings: {
-      title: definition.label,
-    },
-  };
-}
 
 function BlockPreview({ block }) {
   const title = block.settings?.title || block.label;
@@ -244,6 +237,8 @@ export default function WebsiteBuilderClient() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [activeLibraryCategory, setActiveLibraryCategory] =
+    useState("all");
 
   const [sites, setSites] = useState([]);
   const [selectedAgencyId, setSelectedAgencyId] =
@@ -265,6 +260,92 @@ export default function WebsiteBuilderClient() {
   const pageSlug = selectedPageSlug;
 
   useEffect(() => {
+    let active = true;
+
+    async function loadSites() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await fetch(
+          "/api/website-builder/sites",
+          {
+            cache: "no-store",
+          }
+        );
+
+        const payload = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            payload?.error?.debug?.message ||
+            payload?.error?.message ||
+            "Impossible de charger les mini-sites."
+          );
+        }
+
+        const availableSites = Array.isArray(payload)
+          ? payload.filter(
+              (site) =>
+                Number.isInteger(
+                  Number(site.agencyId)
+                )
+            )
+          : [];
+
+        if (!active) {
+          return;
+        }
+
+        setSites(availableSites);
+
+        setSelectedAgencyId((current) => {
+          if (
+            current &&
+            availableSites.some(
+              (site) =>
+                String(site.agencyId) ===
+                String(current)
+            )
+          ) {
+            return String(current);
+          }
+
+          return availableSites[0]?.agencyId !== undefined
+            ? String(availableSites[0].agencyId)
+            : null;
+        });
+
+        if (availableSites.length === 0) {
+          setLoading(false);
+          setError(
+            "Aucun mini-site agence n’est disponible."
+          );
+        }
+      } catch (loadError) {
+        if (active) {
+          setError(loadError.message);
+          setLoading(false);
+        }
+      }
+    }
+
+    loadSites();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (
+      !agencyId ||
+      !pageSlug ||
+      !Number.isInteger(Number(agencyId))
+    ) {
+      return;
+    }
+
     let active = true;
 
     async function loadPage() {
@@ -299,6 +380,12 @@ export default function WebsiteBuilderClient() {
             label:
               section.jsonContent?.title ||
               section.sectionType,
+            templateId:
+              section.jsonContent?.__templateId ||
+              null,
+            variant:
+              section.jsonContent?.__variant ||
+              null,
             enabled: section.status !== "hidden",
             settings: {
               ...(section.jsonContent || {}),
@@ -340,7 +427,7 @@ export default function WebsiteBuilderClient() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [agencyId, pageSlug]);
 
   const selectedBlock = useMemo(
     () => blocks.find((block) => block.id === selectedId) || null,
@@ -348,7 +435,7 @@ export default function WebsiteBuilderClient() {
   );
 
   function addBlock(definition) {
-    const block = createBlock(definition);
+    const block = createSectionBlock(definition);
     setBlocks((current) => [...current, block]);
     setSelectedId(block.id);
   }
@@ -428,6 +515,14 @@ export default function WebsiteBuilderClient() {
               jsonContent: {
                 ...block.settings,
                 __builderType: block.type,
+                __templateId:
+                  block.templateId ||
+                  block.settings?.__templateId ||
+                  null,
+                __variant:
+                  block.variant ||
+                  block.settings?.__variant ||
+                  null,
                 title:
                   block.settings?.title ||
                   block.label,
@@ -606,30 +701,14 @@ export default function WebsiteBuilderClient() {
         <aside className="wb-sidebar">
           <div className="wb-panel-heading">
             <span>Blocs disponibles</span>
-            <small>{BLOCK_LIBRARY.length} blocs</small>
+            <small>Bibliothèque premium</small>
           </div>
 
-          <div className="wb-block-library">
-            {BLOCK_LIBRARY.map((definition) => (
-              <button
-                type="button"
-                className="wb-library-item"
-                key={definition.type}
-                onClick={() => addBlock(definition)}
-              >
-                <span className="wb-library-icon">
-                  {definition.icon}
-                </span>
-
-                <span>
-                  <strong>{definition.label}</strong>
-                  <small>{definition.description}</small>
-                </span>
-
-                <span className="wb-library-add">+</span>
-              </button>
-            ))}
-          </div>
+          <SectionLibrary
+            activeCategory={activeLibraryCategory}
+            onCategoryChange={setActiveLibraryCategory}
+            onAdd={addBlock}
+          />
         </aside>
 
         <main className="wb-canvas-column">
