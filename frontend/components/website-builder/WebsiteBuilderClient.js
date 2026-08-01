@@ -240,6 +240,11 @@ export default function WebsiteBuilderClient() {
   const [error, setError] = useState(null);
   const [activeLibraryCategory, setActiveLibraryCategory] =
     useState("all");
+  const [history, setHistory] = useState([]);
+  const [future, setFuture] = useState([]);
+  const [isDirty, setIsDirty] = useState(false);
+  const [previewDevice, setPreviewDevice] =
+    useState("desktop");
 
   const [sites, setSites] = useState([]);
   const [selectedAgencyId, setSelectedAgencyId] =
@@ -412,6 +417,10 @@ export default function WebsiteBuilderClient() {
               : INITIAL_BLOCKS
           )[0]?.id || null
         );
+
+        setHistory([]);
+        setFuture([]);
+        setIsDirty(false);
       } catch (loadError) {
         if (active) {
           setError(loadError.message);
@@ -430,19 +439,199 @@ export default function WebsiteBuilderClient() {
     };
   }, [agencyId, pageSlug]);
 
+  useEffect(() => {
+    function handleKeyDown(event) {
+      const modifier =
+        event.metaKey || event.ctrlKey;
+
+      if (!modifier) {
+        return;
+      }
+
+      if (
+        event.key.toLowerCase() === "z" &&
+        event.shiftKey
+      ) {
+        event.preventDefault();
+        redo();
+        return;
+      }
+
+      if (
+        event.key.toLowerCase() === "z"
+      ) {
+        event.preventDefault();
+        undo();
+      }
+    }
+
+    window.addEventListener(
+      "keydown",
+      handleKeyDown
+    );
+
+    return () => {
+      window.removeEventListener(
+        "keydown",
+        handleKeyDown
+      );
+    };
+  }, [history, future, blocks]);
+
+  useEffect(() => {
+    function handleBeforeUnload(event) {
+      if (!isDirty) {
+        return;
+      }
+
+      event.preventDefault();
+      event.returnValue = "";
+    }
+
+    window.addEventListener(
+      "beforeunload",
+      handleBeforeUnload
+    );
+
+    return () => {
+      window.removeEventListener(
+        "beforeunload",
+        handleBeforeUnload
+      );
+    };
+  }, [isDirty]);
+
   const selectedBlock = useMemo(
     () => blocks.find((block) => block.id === selectedId) || null,
     [blocks, selectedId]
   );
 
+  function snapshotBlocks(currentBlocks) {
+    return structuredClone(currentBlocks);
+  }
+
+  function applyBlocksChange(updater) {
+    setBlocks((current) => {
+      const next =
+        typeof updater === "function"
+          ? updater(current)
+          : updater;
+
+      setHistory((previous) => [
+        ...previous.slice(-49),
+        snapshotBlocks(current),
+      ]);
+
+      setFuture([]);
+      setIsDirty(true);
+
+      return next;
+    });
+  }
+
+  function undo() {
+    if (!history.length) {
+      return;
+    }
+
+    const previous =
+      history[history.length - 1];
+
+    setFuture((current) => [
+      snapshotBlocks(blocks),
+      ...current.slice(0, 49),
+    ]);
+
+    setHistory((current) =>
+      current.slice(0, -1)
+    );
+
+    setBlocks(snapshotBlocks(previous));
+    setIsDirty(true);
+
+    setSelectedId((current) =>
+      previous.some(
+        (block) => block.id === current
+      )
+        ? current
+        : previous[0]?.id || null
+    );
+  }
+
+  function redo() {
+    if (!future.length) {
+      return;
+    }
+
+    const next = future[0];
+
+    setHistory((current) => [
+      ...current.slice(-49),
+      snapshotBlocks(blocks),
+    ]);
+
+    setFuture((current) =>
+      current.slice(1)
+    );
+
+    setBlocks(snapshotBlocks(next));
+    setIsDirty(true);
+
+    setSelectedId((current) =>
+      next.some(
+        (block) => block.id === current
+      )
+        ? current
+        : next[0]?.id || null
+    );
+  }
+
+  function duplicateBlock(id) {
+    const source = blocks.find(
+      (block) => block.id === id
+    );
+
+    if (!source) {
+      return;
+    }
+
+    const duplicate = {
+      ...structuredClone(source),
+      id: `${source.type}-${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2, 8)}`,
+      label: `${source.label} — copie`,
+    };
+
+    applyBlocksChange((current) => {
+      const index = current.findIndex(
+        (block) => block.id === id
+      );
+
+      const copy = [...current];
+
+      copy.splice(
+        index + 1,
+        0,
+        duplicate
+      );
+
+      return copy;
+    });
+
+    setSelectedId(duplicate.id);
+  }
+
   function addBlock(definition) {
     const block = createSectionBlock(definition);
-    setBlocks((current) => [...current, block]);
+    applyBlocksChange(
+      (current) => [...current, block]
+    );
     setSelectedId(block.id);
   }
 
   function updateSelectedBlock(field, value) {
-    setBlocks((current) =>
+    applyBlocksChange((current) =>
       current.map((block) =>
         block.id === selectedId
           ? {
@@ -458,7 +647,7 @@ export default function WebsiteBuilderClient() {
   }
 
   function toggleBlock(id) {
-    setBlocks((current) =>
+    applyBlocksChange((current) =>
       current.map((block) =>
         block.id === id
           ? { ...block, enabled: !block.enabled }
@@ -468,7 +657,7 @@ export default function WebsiteBuilderClient() {
   }
 
   function moveBlock(id, direction) {
-    setBlocks((current) => {
+    applyBlocksChange((current) => {
       const index = current.findIndex((block) => block.id === id);
       const targetIndex = index + direction;
 
@@ -491,7 +680,12 @@ export default function WebsiteBuilderClient() {
   }
 
   function removeBlock(id) {
-    setBlocks((current) => current.filter((block) => block.id !== id));
+    applyBlocksChange(
+      (current) =>
+        current.filter(
+          (block) => block.id !== id
+        )
+    );
 
     if (selectedId === id) {
       setSelectedId(null);
@@ -581,6 +775,10 @@ export default function WebsiteBuilderClient() {
           second: "2-digit",
         }).format(new Date())
       );
+
+      setHistory([]);
+      setFuture([]);
+      setIsDirty(false);
     } catch (saveError) {
       setError(saveError.message);
     } finally {
@@ -651,6 +849,31 @@ export default function WebsiteBuilderClient() {
         </div>
 
         <div className="wb-topbar-actions">
+          <div className="wb-history-actions">
+            <button
+              type="button"
+              onClick={undo}
+              disabled={!history.length}
+              title="Annuler — Cmd/Ctrl + Z"
+            >
+              ↶
+            </button>
+
+            <button
+              type="button"
+              onClick={redo}
+              disabled={!future.length}
+              title="Rétablir — Cmd/Ctrl + Shift + Z"
+            >
+              ↷
+            </button>
+          </div>
+
+          {isDirty ? (
+            <span className="wb-dirty-status">
+              Modifications non enregistrées
+            </span>
+          ) : null}
           {savedAt ? (
             <span className="wb-save-status">
               Brouillon enregistré à {savedAt}
@@ -719,12 +942,58 @@ export default function WebsiteBuilderClient() {
               <span>{blocks.length} blocs</span>
             </div>
 
-            <span className="wb-device-selector">
-              Bureau · 1440 px
-            </span>
+            <div
+              className="wb-device-selector"
+              role="group"
+              aria-label="Taille de l’aperçu"
+            >
+              <button
+                type="button"
+                className={
+                  previewDevice === "desktop"
+                    ? "is-active"
+                    : ""
+                }
+                onClick={() =>
+                  setPreviewDevice("desktop")
+                }
+              >
+                Bureau
+              </button>
+
+              <button
+                type="button"
+                className={
+                  previewDevice === "tablet"
+                    ? "is-active"
+                    : ""
+                }
+                onClick={() =>
+                  setPreviewDevice("tablet")
+                }
+              >
+                Tablette
+              </button>
+
+              <button
+                type="button"
+                className={
+                  previewDevice === "mobile"
+                    ? "is-active"
+                    : ""
+                }
+                onClick={() =>
+                  setPreviewDevice("mobile")
+                }
+              >
+                Mobile
+              </button>
+            </div>
           </div>
 
-          <div className="wb-canvas">
+          <div
+            className={`wb-canvas wb-canvas-${previewDevice}`}
+          >
             {blocks.map((block, index) => (
               <article
                 key={block.id}
@@ -767,6 +1036,16 @@ export default function WebsiteBuilderClient() {
                       aria-label="Descendre le bloc"
                     >
                       ↓
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        duplicateBlock(block.id);
+                      }}
+                    >
+                      Dupliquer
                     </button>
 
                     <button
@@ -821,7 +1100,7 @@ export default function WebsiteBuilderClient() {
           <SectionInspector
             block={selectedBlock}
             onRename={(label) =>
-              setBlocks((current) =>
+              applyBlocksChange((current) =>
                 current.map((block) =>
                   block.id === selectedId
                     ? {

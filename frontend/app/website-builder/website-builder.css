@@ -836,3 +836,111 @@
   font-size: 0.7rem;
   line-height: 1.45;
 }
+
+.wb-history-actions {
+  display: flex;
+  gap: 5px;
+}
+
+.wb-history-actions button {
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--wb-border);
+  border-radius: 8px;
+  background: white;
+  color: var(--wb-navy);
+  font-size: 1.15rem;
+  cursor: pointer;
+}
+
+.wb-history-actions button:hover:not(:disabled) {
+  border-color: var(--wb-blue);
+  color: var(--wb-blue);
+}
+
+.wb-history-actions button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.wb-dirty-status {
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: #fff4d8;
+  color: #9a6100;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.wb-device-selector {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 10px;
+  background: #eef2f6;
+}
+
+.wb-device-selector button {
+  padding: 6px 9px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--wb-muted);
+  font-size: 0.7rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.wb-device-selector button.is-active {
+  background: white;
+  color: var(--wb-blue);
+  box-shadow:
+    0 3px 10px rgba(16, 42, 67, 0.1);
+}
+
+.wb-canvas {
+  transition:
+    width 220ms ease,
+    max-width 220ms ease;
+}
+
+.wb-canvas-desktop {
+  max-width: 920px;
+}
+
+.wb-canvas-tablet {
+  max-width: 720px;
+}
+
+.wb-canvas-mobile {
+  max-width: 390px;
+}
+
+.wb-canvas-mobile .wb-block-toolbar {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wb-canvas-mobile .wb-block-actions {
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.wb-canvas-mobile .wb-preview {
+  padding: 24px 18px;
+}
+
+.wb-canvas-mobile .wb-preview-grid {
+  grid-template-columns: 1fr;
+}
+
+.wb-canvas-mobile .wb-preview-contact {
+  grid-template-columns: 1fr;
+}
+
+@media (max-width: 1000px) {
+  .wb-dirty-status {
+    display: none;
+  }
+}
