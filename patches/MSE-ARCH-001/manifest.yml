@@ -1,0 +1,13 @@
+id: MSE-ARCH-001
+title: Architecture Repository Foundation
+version: 1.0.0
+description: Vision, ADR, capability map, domain model, roadmap and standards
+requires:
+  - node
+  - git
+steps:
+  - backup
+  - create-architecture
+  - validate-files
+  - catalog
+rollback: true
