@@ -13,6 +13,7 @@ const COMMANDS = {
   list: require("./commands/list"),
   show: require("./commands/show"),
   patch: require("./commands/patch"),
+  backup: require("./commands/backup"),
 };
 
 function help() {
