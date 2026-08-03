@@ -13,6 +13,7 @@ const COMMANDS = {
   list: require("./commands/list"),
   show: require("./commands/show"),
   patch: require("./commands/patch"),
+  prisma: require("./commands/prisma"),
   backup: require("./commands/backup"),
 };
 
