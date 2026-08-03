@@ -1,0 +1,16 @@
+{
+  "installed": [
+    {
+      "id": "MSE-DEV-001.02",
+      "version": "0.2.0",
+      "title": "Patch Execution Engine",
+      "installedAt": "2026-08-03T08:02:21.673Z"
+    }
+  ],
+  "lastRun": {
+    "id": "MSE-DEV-001.02",
+    "version": "0.2.0",
+    "status": "success",
+    "finishedAt": "2026-08-03T08:02:21.673Z"
+  }
+}

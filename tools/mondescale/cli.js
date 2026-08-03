@@ -12,6 +12,7 @@ const COMMANDS = {
   doctor: require("./commands/doctor"),
   list: require("./commands/list"),
   show: require("./commands/show"),
+  patch: require("./commands/patch"),
 };
 
 function help() {

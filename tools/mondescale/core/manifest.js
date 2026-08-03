@@ -134,9 +134,15 @@ function catalog(root) {
   });
 }
 
+
+function findPatchById(root, id) {
+  return catalog(root).find((manifest) => manifest.id === id) || null;
+}
+
 module.exports = {
   loadManifest,
   findManifestFiles,
   validateManifest,
   catalog,
+  findPatchById,
 };

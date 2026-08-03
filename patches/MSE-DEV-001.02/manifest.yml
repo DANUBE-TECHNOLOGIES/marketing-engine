@@ -1,0 +1,12 @@
+id: MSE-DEV-001.02
+title: Patch Execution Engine
+version: 0.2.0
+description: Exécution sécurisée de patch.sh et historique local
+requires:
+  - node
+  - git
+steps:
+  - validate-manifest
+  - execute-patch
+  - record-state
+rollback: false
