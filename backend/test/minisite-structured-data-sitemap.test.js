@@ -93,7 +93,7 @@ test(
 );
 
 test(
-  "génère uniquement les URLs publiées",
+  "génère uniquement les URLs publiées sur le chemin canonique agence",
   () => {
     const result =
       buildPublicSitemap({
@@ -193,7 +193,7 @@ test(
       result.entries.some(
         (entry) =>
           entry.url.endsWith(
-            "/sites/agence-test"
+            "/agence/agence-test"
           )
       )
     );
@@ -202,9 +202,19 @@ test(
       result.entries.some(
         (entry) =>
           entry.url.endsWith(
-            "/sites/agence-test/services"
+            "/agence/agence-test/services"
           )
       )
+    );
+
+    assert.equal(
+      result.entries.some(
+        (entry) =>
+          entry.url.includes(
+            "/sites/"
+          )
+      ),
+      false
     );
 
     assert.equal(
