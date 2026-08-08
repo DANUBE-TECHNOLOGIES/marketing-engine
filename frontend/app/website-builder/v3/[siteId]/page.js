@@ -1,5 +1,8 @@
 import VisualBuilderV3 from "../../../../components/page-builder-v3/VisualBuilderV3";
 
+import "../../../sites/[siteSlug]/public-site.css";
+import "../../../../components/public-site/brand-runtime.css";
+
 export const dynamic = "force-dynamic";
 
 export default async function VisualBuilderV3Page({
