@@ -245,3 +245,31 @@ test(
     );
   }
 );
+
+test(
+  "MSE-25.3 redirige définitivement les anciennes URLs /sites",
+  () => {
+    const legacyHome = source(
+      "../frontend/app/sites/[siteSlug]/page.js"
+    );
+
+    const legacyPage = source(
+      "../frontend/app/sites/[siteSlug]/[pageSlug]/page.js"
+    );
+
+    for (const legacy of [
+      legacyHome,
+      legacyPage,
+    ]) {
+      assert.match(
+        legacy,
+        /permanentRedirect/
+      );
+
+      assert.match(
+        legacy,
+        /`\/agence\//
+      );
+    }
+  }
+);
