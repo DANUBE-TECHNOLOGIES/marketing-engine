@@ -23,7 +23,7 @@ test("MSE-25.3 la preview V2 appelle le proxy d'hydratation sans perdre son fall
   assert.match(source, /payload\?\.page/);
 });
 
-test("MSE-25.3 le proxy Next relaie vers public-site-read en no-store", () => {
+test("MSE-25.3 le proxy Next relaie vers public-site-read en no-store et sans tenant codé en dur", () => {
   const source = read(
     "frontend/app/api/public-site-preview/[siteSlug]/route.js"
   );
@@ -31,6 +31,12 @@ test("MSE-25.3 le proxy Next relaie vers public-site-read en no-store", () => {
   assert.match(source, /public-site-read\/sites\/\$\{encodeURIComponent\(siteSlug\)\}\/preview-hydrate/);
   assert.match(source, /"Cache-Control":\s*"private, no-store"/);
   assert.match(source, /cache:\s*"no-store"/);
+  assert.match(source, /"x-tenant-id"/);
+  assert.match(source, /"x-tenant-slug"/);
+  assert.doesNotMatch(
+    source,
+    /headers\.set\(\s*["']x-tenant-slug["']\s*,\s*["']mondescale["']/
+  );
 });
 
 test("MSE-25.3 le menu de preview reprend les pages publiées et la page courante sur /agence", () => {
