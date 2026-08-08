@@ -14,6 +14,7 @@ import {
 } from "../../../lib/public-brand-legal-runtime";
 
 import "../../sites/[siteSlug]/public-site.css";
+import "../../../components/public-site/brand-runtime.css";
 
 export default async function PublicAgencySiteLayout({ children, params }) {
   const { siteSlug } = await params;
