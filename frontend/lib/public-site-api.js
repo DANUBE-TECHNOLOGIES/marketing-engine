@@ -1,3 +1,7 @@
+import {
+  getPublicHours,
+} from "./public-hours-api";
+
 const INTERNAL_API_URL =
   process.env.INTERNAL_FRONTEND_URL ||
   process.env.NEXT_PUBLIC_APP_URL ||
@@ -72,11 +76,23 @@ function pageFromContract(payload) {
 
 export const publicSiteApi = {
   async getSite(siteSlug) {
-    return siteFromContract(
-      await request(
+    const [payload, hours] = await Promise.all([
+      request(
         `/${encodeURIComponent(siteSlug)}`
-      )
-    );
+      ),
+      getPublicHours(siteSlug).catch(() => null),
+    ]);
+
+    const site = siteFromContract(payload);
+
+    if (!site || typeof site !== "object") {
+      return site;
+    }
+
+    return {
+      ...site,
+      hours,
+    };
   },
 
   async getHome(siteSlug) {
