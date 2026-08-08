@@ -189,3 +189,59 @@ test(
     );
   }
 );
+
+test(
+  "MSE-25.3 aligne sitemap et JSON-LD sur /agence",
+  () => {
+    const utils = source(
+      "src/modules/minisite-structured-data/utils.js"
+    );
+
+    const webpage = source(
+      "src/modules/minisite-structured-data/webpage.js"
+    );
+
+    const sitemap = source(
+      "../frontend/app/sitemap.js"
+    );
+
+    const robots = source(
+      "../frontend/app/robots.js"
+    );
+
+    assert.match(
+      utils,
+      /["']agence["']/
+    );
+
+    assert.doesNotMatch(
+      webpage,
+      /["']sites["']/
+    );
+
+    assert.match(
+      sitemap,
+      /\/agence\//
+    );
+
+    assert.match(
+      sitemap,
+      /fetchMiniSiteSitemap/
+    );
+
+    assert.match(
+      robots,
+      /["']\/agence\/["']/
+    );
+
+    assert.match(
+      robots,
+      /["']\/sites\/["']/
+    );
+
+    assert.match(
+      robots,
+      /\/sitemap\.xml/
+    );
+  }
+);
