@@ -73,7 +73,7 @@ function BrandIdentityOverview({
 }) {
   const siteUrl =
     agency?.siteSlug
-      ? `/sites/${agency.siteSlug}`
+      ? `/agence/${encodeURIComponent(agency.siteSlug)}`
       : null;
 
   return (
@@ -670,8 +670,11 @@ export default function BrandStudioWorkspace({
         }
 
         .brand-overview__agency > span {
-          color: #6b7380;
-          font-size: 13px;
+          color: #707885;
+          font-size: 12px;
+          font-weight: 750;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
         }
 
         .brand-overview__agency > strong {
@@ -679,164 +682,125 @@ export default function BrandStudioWorkspace({
         }
 
         .brand-overview__agency > small {
-          color: #646c78;
+          color: #666f7d;
         }
 
         .brand-overview__cards {
           display: grid;
           grid-template-columns: repeat(4, minmax(0, 1fr));
-          gap: 15px;
+          gap: 14px;
         }
 
         .brand-capability-card {
-          display: flex;
-          flex-direction: column;
-          min-height: 245px;
-          padding: 21px;
-          border: 1px solid #e0e4e9;
+          min-height: 230px;
+          padding: 20px;
+          border: 1px solid #e1e4e9;
           border-radius: 13px;
-          background: #f8f9fa;
+          background: #fafafa;
         }
 
         .brand-capability-card__number {
-          color: #7a8290;
+          display: inline-flex;
+          margin-bottom: 25px;
+          color: #9299a5;
           font-size: 12px;
           font-weight: 800;
-          letter-spacing: 0.1em;
+          letter-spacing: 0.08em;
         }
 
         .brand-capability-card h3 {
-          margin: 25px 0 10px;
-          font-size: 21px;
+          margin: 0 0 10px;
+          font-size: 18px;
         }
 
         .brand-capability-card p {
           margin: 0;
-          color: #5d6571;
+          color: #646c79;
           line-height: 1.55;
         }
 
         .brand-capability-card button {
-          margin-top: auto;
-          padding: 10px 13px;
-          border: 0;
+          margin-top: 17px;
+          padding: 9px 12px;
+          border: 1px solid #cfd4da;
           border-radius: 8px;
-          background: #17191f;
-          color: #fff;
-          font-weight: 750;
+          background: #fff;
+          color: #20242b;
+          font-weight: 700;
           cursor: pointer;
         }
 
         .brand-capability-card__status {
           display: inline-flex;
-          align-self: flex-start;
-          margin-top: auto;
+          margin-top: 18px;
           padding: 7px 9px;
           border-radius: 999px;
-          background: #dff3e5;
-          color: #175d2d;
+          background: #e7f3ea;
+          color: #216437;
           font-size: 12px;
           font-weight: 750;
         }
 
         .brand-runtime-panel {
           display: grid;
-          grid-template-columns: minmax(260px, 0.8fr) minmax(380px, 1.2fr);
+          grid-template-columns: 1fr 1fr;
           gap: 30px;
-          margin-top: 20px;
-          padding: 25px;
-          border-radius: 14px;
-          background: #17191f;
+          margin-top: 18px;
+          padding: 23px;
+          border-radius: 13px;
+          background: #181b21;
           color: #fff;
         }
 
         .brand-runtime-panel h3 {
-          margin-top: 0;
+          margin: 0 0 8px;
+          font-size: 19px;
         }
 
         .brand-runtime-panel p {
-          margin-bottom: 0;
-          color: #cfd3da;
-          line-height: 1.55;
+          margin: 0;
+          color: #c5cad2;
+          line-height: 1.6;
         }
 
         .brand-runtime-panel ul {
           display: grid;
           grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 10px 24px;
+          gap: 7px 18px;
           margin: 0;
           padding-left: 20px;
-          color: #d7dae0;
-          line-height: 1.5;
+          color: #d6d9df;
         }
 
-        :global(
-          .brand-workspace__content
-          .brand-media-manager
-        ),
-        :global(
-          .brand-workspace__content
-          .legal-profile-manager
-        ) {
-          min-height: auto;
-          padding: 0;
-          background: transparent;
-        }
+        @media (max-width: 1100px) {
+          .brand-workspace__hero,
+          .brand-identity-manager__layout,
+          .brand-runtime-panel {
+            grid-template-columns: 1fr;
+          }
 
-        :global(
-          .brand-workspace__content
-          .brand-media-manager__header
-        ),
-        :global(
-          .brand-workspace__content
-          .legal-profile-manager__header
-        ) {
-          display: none;
-        }
-
-        @media (max-width: 1150px) {
+          .brand-workspace__tabs,
           .brand-overview__cards {
             grid-template-columns: repeat(2, minmax(0, 1fr));
           }
         }
 
-        @media (max-width: 900px) {
+        @media (max-width: 680px) {
           .brand-workspace {
-            padding: 20px;
+            padding: 18px;
           }
 
           .brand-workspace__hero {
-            grid-template-columns: 1fr;
+            padding: 22px;
           }
 
-          .brand-workspace__tabs {
-            grid-template-columns: 1fr;
-          }
-
-          .brand-workspace-tab {
-            min-height: auto;
-          }
-
-          .brand-runtime-panel {
-            grid-template-columns: 1fr;
-          }
-        }
-
-        @media (max-width: 650px) {
-          .brand-overview__header {
-            display: grid;
-          }
-
-          .brand-overview__agency {
-            display: grid;
-          }
-
+          .brand-workspace__tabs,
           .brand-overview__cards {
             grid-template-columns: 1fr;
           }
 
-          .brand-runtime-panel ul {
-            grid-template-columns: 1fr;
+          .brand-overview__header {
+            flex-direction: column;
           }
         }
       `}</style>
