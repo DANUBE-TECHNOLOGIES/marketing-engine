@@ -112,9 +112,9 @@ export default function DestinationsRenderer({
           <p>{content.text}</p>
         ) : null}
 
-        <div className="public-site-destination-grid">
-          {items.length ? (
-            items.map((item, index) => (
+        {items.length ? (
+          <div className="public-site-destination-grid">
+            {items.map((item, index) => (
               <DestinationCard
                 key={
                   item.id ||
@@ -125,32 +125,15 @@ export default function DestinationsRenderer({
                 item={item}
                 site={site}
               />
-            ))
-          ) : (
-            <>
-              <article className="public-site-destination-card">
-                <div>
-                  <span>Océan Indien</span>
-                  <h3>Île Maurice</h3>
-                </div>
-              </article>
-
-              <article className="public-site-destination-card">
-                <div>
-                  <span>Évasion</span>
-                  <h3>Maldives</h3>
-                </div>
-              </article>
-
-              <article className="public-site-destination-card">
-                <div>
-                  <span>Découverte</span>
-                  <h3>Japon</h3>
-                </div>
-              </article>
-            </>
-          )}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="public-site-empty-premium">
+            <strong>
+              Aucune destination n’est publiée dans cette sélection.
+            </strong>
+          </div>
+        )}
       </div>
     </section>
   );
