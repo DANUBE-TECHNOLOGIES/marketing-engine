@@ -30,7 +30,7 @@ test("le renderer public couvre les blocs cœur du Visual Builder V3", () => {
   }
 });
 
-test("la preview V3 utilise le renderer public et le runtime Brand Studio", () => {
+test("la future preview V3 est déjà raccordée au renderer public et au runtime Brand Studio", () => {
   const preview = source("components/page-builder-v3/PagePreviewModal.js");
 
   assert.match(
@@ -52,9 +52,14 @@ test("la preview V3 utilise le renderer public et le runtime Brand Studio", () =
   );
 });
 
-test("la route V3 charge le design system public", () => {
+test("la route V3 défectueuse est isolée derrière l’éditeur V2 opérationnel", () => {
   const page = source("app/website-builder/v3/[siteId]/page.js");
 
-  assert.match(page, /public-site\.css/);
-  assert.match(page, /brand-runtime\.css/);
+  assert.match(page, /permanentRedirect/);
+  assert.match(page, /\/website-builder\/editor\//);
+  assert.doesNotMatch(
+    page,
+    /VisualBuilderV3/,
+    "La route V3 ne doit pas importer le composant corrompu tant qu'il n'est pas réparé."
+  );
 });
