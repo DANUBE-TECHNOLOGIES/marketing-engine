@@ -133,11 +133,22 @@ function normalizeColor(
     : fallback;
 }
 
+/*
+ * Le backend Brand Profile expose deux formes selon l'opération :
+ * - GET  -> { shared, override, resolved, inherited, ... }
+ * - PUT  -> { saved, profile, resolved, inherited }
+ *
+ * Le renderer Brand Studio doit toujours consommer le profil résolu.
+ * Avant MSE-25.3, le GET ignorait `resolved`, ce qui faisait retomber
+ * l'interface sur DEFAULT_IDENTITY après chaque rechargement de page.
+ */
 function profileSource(
   payload
 ) {
   return (
+    payload?.resolved ||
     payload?.profile ||
+    payload?.data?.resolved ||
     payload?.data?.profile ||
     payload?.data ||
     payload ||
@@ -435,18 +446,10 @@ async function saveBrandIdentity({
 
     {
       url:
-        "/api/brand-profile",
+        `/api/brand-profile?agencyId=${normalizedAgencyId}`,
 
       method:
         "PUT",
-    },
-
-    {
-      url:
-        "/api/brand-profile",
-
-      method:
-        "POST",
     },
   ];
 
@@ -474,6 +477,9 @@ async function saveBrandIdentity({
             JSON.stringify(
               payload
             ),
+
+          cache:
+            "no-store",
         }
       );
 
@@ -485,10 +491,17 @@ async function saveBrandIdentity({
     }
 
     try {
-      return normalizeBrandIdentity(
-        await parseJsonResponse(
-          response
-        )
+      await parseJsonResponse(
+        response
+      );
+
+      /*
+       * On relit immédiatement la source persistée : le succès affiché
+       * dans l'UI représente ainsi l'état réellement stocké, et non
+       * seulement l'écho du PUT.
+       */
+      return await fetchBrandIdentity(
+        normalizedAgencyId
       );
     } catch (error) {
       lastError =
