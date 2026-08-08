@@ -54,10 +54,59 @@ function runtimeBrandAssets(payload) {
 
 export default function PublicPagePreview({ page, site }) {
   const [brandRuntime, setBrandRuntime] = useState(null);
+  const [hydratedPage, setHydratedPage] = useState(page || null);
+
+  useEffect(() => {
+    setHydratedPage(page || null);
+
+    if (!site?.slug || !page) {
+      return undefined;
+    }
+
+    let active = true;
+    const controller = new AbortController();
+
+    const timer = setTimeout(async () => {
+      try {
+        const response = await fetch(
+          `/api/public-site-preview/${encodeURIComponent(site.slug)}`,
+          {
+            method: "POST",
+            headers: {
+              accept: "application/json",
+              "content-type": "application/json",
+              "x-tenant-slug": "mondescale",
+            },
+            body: JSON.stringify({ page }),
+            cache: "no-store",
+            signal: controller.signal,
+          }
+        );
+
+        if (!response.ok) return;
+
+        const payload = await response.json();
+
+        if (active && payload?.page) {
+          setHydratedPage(payload.page);
+        }
+      } catch (error) {
+        if (error?.name !== "AbortError") {
+          // L'aperçu local reste utilisable si l'hydratation dynamique échoue.
+        }
+      }
+    }, 180);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [page, site?.slug]);
 
   const previewPage = useMemo(
-    () => (page ? toPublicPreviewPage(page) : null),
-    [page]
+    () => (hydratedPage ? toPublicPreviewPage(hydratedPage) : null),
+    [hydratedPage]
   );
 
   const brandVariables = useMemo(
