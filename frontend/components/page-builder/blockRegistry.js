@@ -15,11 +15,11 @@ export function registerBlock(type, component) {
   if (!type || typeof component !== "function") {
     throw new Error("Invalid page-builder block registration");
   }
-  registry.set(type, component);
+  registry.set(String(type).trim().toLowerCase(), component);
 }
 
 export function getBlock(type) {
-  return registry.get(type) || SectionRenderer;
+  return registry.get(String(type || "").trim().toLowerCase()) || SectionRenderer;
 }
 
 export function listBlocks() {
@@ -30,7 +30,7 @@ registerBlock("hero", HeroBlock);
 registerBlock("page-header", PageHeaderBlock);
 registerBlock("breadcrumb", BreadcrumbBlock);
 registerBlock("intro", IntroBlock);
-registerBlock("richText", IntroBlock);
+registerBlock("richtext", IntroBlock);
 registerBlock("agency-introduction", IntroBlock);
 registerBlock("agency-story", IntroBlock);
 registerBlock("destinations-introduction", IntroBlock);
