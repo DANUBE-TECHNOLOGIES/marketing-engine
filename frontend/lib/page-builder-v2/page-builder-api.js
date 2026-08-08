@@ -29,6 +29,12 @@ function extractSites(payload) {
   return [];
 }
 
+function pageApiSlug(page) {
+  return page?.slug
+    ? encodeURIComponent(page.slug)
+    : "home";
+}
+
 export async function fetchSite(siteId) {
   const response = await fetch("/api/website-builder/sites", {
     method: "GET",
@@ -65,14 +71,14 @@ export async function fetchSite(siteId) {
 }
 
 export async function fetchPageDetails(site, page) {
-  if (!site?.agencyId || !page?.slug) {
+  if (!site?.agencyId || !page) {
     return normalizePage(page);
   }
 
   const response = await fetch(
     `/api/website-builder/agencies/${encodeURIComponent(
       site.agencyId
-    )}/pages/${encodeURIComponent(page.slug)}`,
+    )}/pages/${pageApiSlug(page)}`,
     {
       method: "GET",
       headers: {
@@ -124,7 +130,7 @@ export async function savePage(site, page) {
   const url =
     `/api/website-builder/agencies/${encodeURIComponent(
       site.agencyId
-    )}/pages/${encodeURIComponent(page.slug)}`;
+    )}/pages/${pageApiSlug(page)}`;
 
   const serialized = serializePage(page);
 
@@ -166,12 +172,6 @@ export async function savePage(site, page) {
     result.payload ||
     body
   );
-}
-
-function pageApiSlug(page) {
-  return page?.slug
-    ? encodeURIComponent(page.slug)
-    : "home";
 }
 
 export async function fetchPageVersions(site, page) {
