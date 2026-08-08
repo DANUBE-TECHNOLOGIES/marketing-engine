@@ -29,10 +29,10 @@ function pageHref(siteSlug, page) {
       : extractSlug(page.path);
 
   if (!slug || page.title === "Accueil") {
-    return `/sites/${siteSlug}`;
+    return `/agence/${siteSlug}`;
   }
 
-  return `/sites/${siteSlug}/${slug}`;
+  return `/agence/${siteSlug}/${slug}`;
 }
 
 function telephoneHref(phone) {
@@ -72,18 +72,14 @@ export default function PublicSiteHeader({
     <>
       <div className="public-site-trustbar">
         <div className="public-site-container public-site-trustbar-inner">
-          <span>
-            Votre agence de voyages de proximité
-          </span>
+          <span>Votre agence de voyages de proximité</span>
 
           <div className="public-site-trustbar-items">
             {hours?.status ? (
               <span
                 className={[
                   "public-site-opening-status",
-                  hours.status.isOpen
-                    ? "is-open"
-                    : "is-closed",
+                  hours.status.isOpen ? "is-open" : "is-closed",
                 ].join(" ")}
               >
                 <i />
@@ -92,48 +88,32 @@ export default function PublicSiteHeader({
             ) : null}
 
             <span>Conseils personnalisés</span>
-            <span>
-              Accompagnement avant, pendant et après
-            </span>
+            <span>Accompagnement avant, pendant et après</span>
           </div>
         </div>
       </div>
 
       <header className="public-site-header">
-      <PublicBrandLogo
-        brand={
-          resolvedPublicBrand
-        }
-        brandAssets={
-          resolvedPublicBrandAssets
-        }
-        site={
-          site
-        }
-        agency={
-          agency
-        }
-        className="public-site-header__brand-logo"
-      />
+        <PublicBrandLogo
+          brand={resolvedPublicBrand}
+          brandAssets={resolvedPublicBrandAssets}
+          site={site}
+          agency={agency}
+          className="public-site-header__brand-logo"
+        />
 
         <div className="public-site-container public-site-header-inner">
           <Link
-            href={`/sites/${site.slug}`}
+            href={`/agence/${site.slug}`}
             className="public-site-brand"
           >
-            <span className="public-site-brand-mark">
-              M
-            </span>
+            <span className="public-site-brand-mark">M</span>
 
             <span className="public-site-brand-copy">
-              <strong>
-                {site.name}
-              </strong>
+              <strong>{site.name}</strong>
 
               {agency.city ? (
-                <small>
-                  Agence de voyages à {agency.city}
-                </small>
+                <small>Agence de voyages à {agency.city}</small>
               ) : null}
             </span>
           </Link>
@@ -165,16 +145,13 @@ export default function PublicSiteHeader({
                 <span className="public-site-header-phone-label">
                   Appelez-nous
                 </span>
-
-                <strong>
-                  {agency.phone}
-                </strong>
+                <strong>{agency.phone}</strong>
               </a>
             ) : null}
 
             <Link
               className="public-site-header-cta"
-              href={`/sites/${site.slug}/contact`}
+              href={`/agence/${site.slug}/contact`}
             >
               Demander un devis
             </Link>
