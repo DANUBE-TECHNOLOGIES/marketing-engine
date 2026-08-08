@@ -34,7 +34,10 @@ export default function ContactRenderer({
     site?.agency || {};
 
   return (
-    <section className="public-site-section public-site-contact">
+    <section
+      id="contact"
+      className="public-site-section public-site-contact"
+    >
       <div className="public-site-container">
         <p className="public-site-section-kicker">
           Votre agence
