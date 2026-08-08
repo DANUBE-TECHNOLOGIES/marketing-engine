@@ -444,6 +444,15 @@ function BlockProperties({
         />
       ) : null}
 
+      {"introduction" in content ? (
+        <TextInput
+          label="Introduction"
+          value={content.introduction}
+          multiline
+          onChange={(value) => set("introduction", value)}
+        />
+      ) : null}
+
       {"html" in content ? (
         <TextInput
           label="Contenu"
@@ -514,6 +523,54 @@ function BlockProperties({
             { value: "3", label: "3 colonnes" },
             { value: "4", label: "4 colonnes" },
           ]}
+        />
+      ) : null}
+
+      {"limit" in content ? (
+        <SelectInput
+          label="Nombre maximum d’éléments"
+          value={String(content.limit || 6)}
+          onChange={(value) => set("limit", Number(value))}
+          options={[
+            { value: "3", label: "3 éléments" },
+            { value: "6", label: "6 éléments" },
+            { value: "9", label: "9 éléments" },
+            { value: "12", label: "12 éléments" },
+          ]}
+        />
+      ) : null}
+
+      {block.type === "testimonials" &&
+      "source" in content ? (
+        <SelectInput
+          label="Source des avis"
+          value={content.source || "google"}
+          onChange={(value) => set("source", value)}
+          options={[
+            { value: "google", label: "Avis Google" },
+            { value: "manual", label: "Témoignages manuels" },
+          ]}
+        />
+      ) : null}
+
+      {"size" in content ? (
+        <SelectInput
+          label="Espacement"
+          value={content.size || "medium"}
+          onChange={(value) => set("size", value)}
+          options={[
+            { value: "small", label: "Petit" },
+            { value: "medium", label: "Moyen" },
+            { value: "large", label: "Grand" },
+          ]}
+        />
+      ) : null}
+
+      {"line" in content ? (
+        <ToggleInput
+          label="Afficher une ligne"
+          checked={content.line}
+          onChange={(value) => set("line", value)}
         />
       ) : null}
 
