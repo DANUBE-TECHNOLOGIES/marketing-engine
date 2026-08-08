@@ -7,7 +7,7 @@ const {
   hydratePreviewPage,
 } = require("../src/modules/public-site-read/preview-hydrator");
 
-test("MSE-25.3 hydrate la preview V2 avec les données publiques du bon site", async () => {
+test("MSE-25.3 hydrate la preview V2 avec les données publiques du bon site sans perdre les brouillons", async () => {
   const prisma = {
     agencySite: {
       async findFirst(query) {
@@ -38,12 +38,14 @@ test("MSE-25.3 hydrate la preview V2 avec les données publiques du bon site", a
     googleReview: {
       async findMany(query) {
         assert.equal(query.where.agencyId, 12);
+        assert.equal(query.where.publishedAt.not, null);
         return [
           {
             id: 99,
             authorName: "Client test",
             rating: 5,
             comment: "Excellent accompagnement.",
+            publishedAt: new Date("2026-08-01T10:00:00.000Z"),
           },
         ];
       },
@@ -59,6 +61,7 @@ test("MSE-25.3 hydrate la preview V2 avec les données publiques du bon site", a
         {
           id: "destinations-1",
           type: "destinations",
+          status: "draft",
           content: {
             destinationIds: ["dest-1"],
             limit: 6,
@@ -67,6 +70,7 @@ test("MSE-25.3 hydrate la preview V2 avec les données publiques du bon site", a
         {
           id: "reviews-1",
           type: "testimonials",
+          status: "review",
           content: {
             source: "google",
             limit: 3,
@@ -78,6 +82,8 @@ test("MSE-25.3 hydrate la preview V2 avec les données publiques du bon site", a
 
   assert.equal(result.context.tenantId, "tenant-a");
   assert.equal(result.context.agencyId, 12);
+  assert.equal(result.page.blocks[0].status, "draft");
+  assert.equal(result.page.blocks[1].status, "review");
   assert.equal(
     result.page.blocks[0].content.destinations[0].slug,
     "maurice"
