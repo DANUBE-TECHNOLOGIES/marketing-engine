@@ -74,6 +74,7 @@ async function hydratePreviewPage({
     tenantId: context.tenantId,
     agencyId: context.agencyId,
     pages: [sourcePage],
+    includeUnpublishedBlocks: true,
   });
 
   return {
