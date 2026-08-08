@@ -37,6 +37,32 @@ function blockType(block) {
   ).toLowerCase();
 }
 
+function isPublicBlock(block) {
+  const status = String(block?.status || "").trim().toLowerCase();
+
+  if (!status) {
+    return true;
+  }
+
+  return [
+    "published",
+    "publish",
+    "visible",
+    "live",
+    "online",
+    "active",
+  ].includes(status);
+}
+
+function filterPublicBlocks(pages = []) {
+  return pages.map((page) => ({
+    ...page,
+    blocks: Array.isArray(page?.blocks)
+      ? page.blocks.filter(isPublicBlock)
+      : [],
+  }));
+}
+
 function destinationCard(destination) {
   return {
     id: destination.id,
@@ -265,16 +291,21 @@ async function hydratePublicDynamicBlocks({
   tenantId,
   agencyId,
   pages = [],
+  includeUnpublishedBlocks = false,
 } = {}) {
   if (!Array.isArray(pages) || !pages.length) {
     return [];
   }
 
-  const references = collectDestinationReferences(pages);
-  const reviewLimit = googleReviewLimit(pages);
+  const sourcePages = includeUnpublishedBlocks
+    ? pages
+    : filterPublicBlocks(pages);
+
+  const references = collectDestinationReferences(sourcePages);
+  const reviewLimit = googleReviewLimit(sourcePages);
 
   if (!references.length && !reviewLimit) {
-    return pages;
+    return sourcePages;
   }
 
   const [destinations, reviews] = await Promise.all([
@@ -293,10 +324,10 @@ async function hydratePublicDynamicBlocks({
   const withDestinations =
     references.length
       ? hydrateDestinationBlocks(
-          pages,
+          sourcePages,
           destinations
         )
-      : pages;
+      : sourcePages;
 
   return reviewLimit
     ? hydrateGoogleReviewBlocks(
@@ -311,6 +342,8 @@ module.exports = {
   cleanReferences,
   normalizeLimit,
   blockType,
+  isPublicBlock,
+  filterPublicBlocks,
   destinationCard,
   reviewCard,
   collectDestinationReferences,
