@@ -4,6 +4,7 @@ const {
   cleanText,
   pageUrl,
   removeEmpty,
+  siteUrl,
 } = require("./utils");
 
 function buildWebPage({
@@ -81,19 +82,10 @@ function siteUrlForReference(
   publicOrigin,
   siteSlug
 ) {
-  return [
-    String(
-      publicOrigin ||
-      ""
-    ).replace(/\/+$/g, ""),
-    "sites",
-    String(
-      siteSlug ||
-      ""
-    ).replace(/^\/+|\/+$/g, ""),
-  ]
-    .filter(Boolean)
-    .join("/");
+  return siteUrl(
+    publicOrigin,
+    siteSlug
+  );
 }
 
 function buildWebSite({
