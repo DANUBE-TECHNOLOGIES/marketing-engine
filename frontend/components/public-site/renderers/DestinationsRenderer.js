@@ -20,7 +20,6 @@ function destinationHref(site, item) {
 function DestinationCard({
   item,
   site,
-  index,
 }) {
   const href =
     destinationHref(
@@ -64,34 +63,21 @@ function DestinationCard({
   );
 
   if (!href) {
-    return (
-      <div
-        key={
-          item.id ||
-          item.title ||
-          index
-        }
-      >
-        {card}
-      </div>
-    );
+    return card;
   }
 
   return (
     <Link
-      key={
-        item.id ||
-        item.slug ||
-        item.title ||
-        index
-      }
       href={href}
-      className="public-site-destination-link"
       aria-label={`Découvrir ${
         item.title ||
         item.name ||
         "cette destination"
       }`}
+      style={{
+        color: "inherit",
+        textDecoration: "none",
+      }}
     >
       {card}
     </Link>
@@ -138,7 +124,6 @@ export default function DestinationsRenderer({
                 }
                 item={item}
                 site={site}
-                index={index}
               />
             ))
           ) : (
