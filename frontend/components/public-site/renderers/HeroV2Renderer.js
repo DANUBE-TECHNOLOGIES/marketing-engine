@@ -15,6 +15,12 @@ function ctaLabel(cta, legacyLabel, fallback) {
   );
 }
 
+function normalizeAlignment(value) {
+  return ["left", "center", "right"].includes(value)
+    ? value
+    : "left";
+}
+
 export default function HeroV2Renderer({
   section,
   site,
@@ -33,6 +39,7 @@ export default function HeroV2Renderer({
     site?.agency?.description ||
     "Votre agence vous accompagne dans la création de vos plus beaux voyages.";
 
+  const alignment = normalizeAlignment(content.alignment);
   const backgroundImage =
     content.backgroundImage ||
     content.imageUrl ||
@@ -84,6 +91,13 @@ export default function HeroV2Renderer({
       ? sitePageHref(site, "contact")
       : null;
 
+  const contentStyle = {
+    textAlign: alignment,
+  };
+
+  const centered = alignment === "center";
+  const rightAligned = alignment === "right";
+
   return (
     <section
       className="public-site-hero"
@@ -92,19 +106,51 @@ export default function HeroV2Renderer({
         content.imageAlt || undefined
       }
     >
-      <div className="public-site-container">
+      <div
+        className="public-site-container"
+        style={contentStyle}
+      >
         <p className="public-site-eyebrow">
           {content.eyebrow ||
             "Agence de voyages"}
         </p>
 
-        <h1>{title}</h1>
+        <h1
+          style={
+            centered
+              ? { marginInline: "auto" }
+              : rightAligned
+                ? { marginLeft: "auto" }
+                : undefined
+          }
+        >
+          {title}
+        </h1>
 
-        <p className="public-site-hero-text">
+        <p
+          className="public-site-hero-text"
+          style={
+            centered
+              ? { marginInline: "auto" }
+              : rightAligned
+                ? { marginLeft: "auto" }
+                : undefined
+          }
+        >
           {subtitle}
         </p>
 
-        <div className="public-site-hero-actions">
+        <div
+          className="public-site-hero-actions"
+          style={{
+            justifyContent:
+              centered
+                ? "center"
+                : rightAligned
+                  ? "flex-end"
+                  : "flex-start",
+          }}
+        >
           {primaryHref ? (
             <a
               className="public-site-button"
