@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 
 import { publicSiteApi } from "../../../lib/public-site-api";
 import { getPublicBrandTheme } from "../../../lib/public-brand-api";
-import { getPublicHours } from "../../../lib/public-hours-api";
 import PublicSiteHeader from "../../../components/public-site/PublicSiteHeader";
 import PublicSiteFooter from "../../../components/public-site/PublicSiteFooter";
 import MiniSiteStructuredData from "../../../components/public-site/MiniSiteStructuredData";
@@ -25,13 +24,11 @@ export default async function PublicAgencySiteLayout({ children, params }) {
 
   let site;
   let legacyBrandTheme = null;
-  let hours = null;
 
   try {
-    [site, legacyBrandTheme, hours] = await Promise.all([
+    [site, legacyBrandTheme] = await Promise.all([
       publicSiteApi.getSite(siteSlug),
       getPublicBrandTheme(),
-      getPublicHours(siteSlug),
     ]);
   } catch (error) {
     if (error?.statusCode === 404) {
@@ -40,6 +37,8 @@ export default async function PublicAgencySiteLayout({ children, params }) {
 
     throw error;
   }
+
+  const hours = site?.hours || null;
 
   const cssVariables = {
     ...(legacyBrandTheme?.cssVariables || {}),
