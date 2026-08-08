@@ -76,7 +76,7 @@ export default function OffersRenderer({
                   ) : null}
 
                   <a
-                    href={`/sites/${site.slug}/contact`}
+                    href={`/agence/${site.slug}/contact`}
                     className="public-site-inline-link"
                   >
                     Demander un devis →
