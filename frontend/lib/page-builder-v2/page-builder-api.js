@@ -134,6 +134,7 @@ export async function savePage(site, page) {
       slug: serialized.slug,
       title: serialized.title,
       status: serialized.status,
+      published: serialized.published,
       seoTitle: serialized.seoTitle,
       seoDescription:
         serialized.seoDescription,
