@@ -22,6 +22,39 @@ function toPublicPreviewPage(page) {
   };
 }
 
+function previewNavigation(site, currentPage) {
+  if (!site?.slug || !Array.isArray(site?.pages)) {
+    return Array.isArray(site?.navigation)
+      ? site.navigation
+      : [];
+  }
+
+  const root = `/agence/${encodeURIComponent(site.slug)}`;
+
+  return site.pages
+    .filter(
+      (page) =>
+        page?.id === currentPage?.id ||
+        page?.status === "published" ||
+        page?.published === true
+    )
+    .map((page, index) => {
+      const slug = String(page?.slug || "")
+        .trim()
+        .replace(/^\/+|\/+$/g, "");
+
+      return {
+        id: page.id,
+        slug,
+        title: page.title || "Page",
+        path: slug
+          ? `${root}/${encodeURIComponent(slug)}`
+          : root,
+        displayOrder: index,
+      };
+    });
+}
+
 function runtimeCssVariables(payload) {
   const variables = payload?.runtime?.brand?.cssVariables;
 
@@ -110,15 +143,21 @@ export default function PublicPagePreview({ page, site }) {
     [hydratedPage]
   );
 
+  const navigation = useMemo(
+    () => previewNavigation(site, page),
+    [site, page]
+  );
+
   const previewSite = useMemo(
     () =>
       site
         ? {
             ...site,
+            navigation,
             hours,
           }
         : site,
-    [site, hours]
+    [site, navigation, hours]
   );
 
   const brandVariables = useMemo(
@@ -249,3 +288,8 @@ export default function PublicPagePreview({ page, site }) {
     </div>
   );
 }
+
+export {
+  previewNavigation,
+  toPublicPreviewPage,
+};
