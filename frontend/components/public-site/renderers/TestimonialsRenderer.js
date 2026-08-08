@@ -16,15 +16,23 @@ function stars(rating) {
     "☆".repeat(5 - normalized);
 }
 
+function normalizeLimit(value, fallback = 6) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(1, Math.min(24, Math.trunc(parsed)));
+}
+
 export default function TestimonialsRenderer({
   section,
 }) {
   const content =
     getSectionContent(section);
 
+  const limit = normalizeLimit(content.limit);
+
   const items =
     Array.isArray(content.items)
-      ? content.items
+      ? content.items.slice(0, limit)
       : [];
 
   return (
