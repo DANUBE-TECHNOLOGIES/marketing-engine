@@ -1,0 +1,42 @@
+/*
+ * MSE-25.3 — Operational Website Studio
+ *
+ * Pont unique entre le contrat Brand Studio V2 et le design system public.
+ * Les variables sont définies sur .public-site-shell afin de surcharger
+ * proprement les valeurs historiques déclarées dans :root sans modifier
+ * les composants du renderer un par un.
+ */
+.public-site-shell {
+  --public-primary: var(--brand-primary, #0b5fff);
+  --public-secondary: var(--brand-secondary, #102a43);
+  --public-accent: var(--brand-accent, #ff9f1c);
+  --public-background: var(--brand-background, #ffffff);
+  --public-text: var(--brand-text, #17324d);
+
+  background: var(--public-background);
+  color: var(--public-text);
+  font-family: var(--brand-body-font, Inter, Arial, sans-serif);
+}
+
+.public-site-shell h1,
+.public-site-shell h2,
+.public-site-shell h3,
+.public-site-shell h4,
+.public-site-shell h5,
+.public-site-shell h6,
+.public-site-shell .public-site-brand-copy strong,
+.public-site-shell .public-site-footer-brand strong {
+  font-family: var(--brand-heading-font, Inter, Arial, sans-serif);
+}
+
+.public-site-shell .public-site-header-cta,
+.public-site-shell .public-site-button,
+.public-site-shell button {
+  border-radius: var(--brand-button-radius, 999px);
+}
+
+.public-site-shell .public-site-card,
+.public-site-shell .public-site-contact-grid,
+.public-site-shell .public-site-map-frame {
+  color: var(--public-text);
+}
