@@ -1,15 +1,22 @@
 import { getBlock } from "./blockRegistry";
-import { getSectionType } from "./shared/blockUtils";
+import { getSectionType, sortSections } from "./shared/blockUtils";
 
-export default function PageRenderer({ sections = [] }) {
-  if (!Array.isArray(sections) || sections.length === 0) return null;
+export default function PageRenderer({ sections = [], site = null, page = null }) {
+  const normalizedSections = sortSections(sections);
 
-  return sections
-    .slice()
-    .sort((a, b) => (a.displayOrder ?? a.order ?? 0) - (b.displayOrder ?? b.order ?? 0))
-    .map((section, index) => {
-      const type = getSectionType(section);
-      const Component = getBlock(type);
-      return <Component key={section.id || `${type}-${index}`} section={section} />;
-    });
+  if (normalizedSections.length === 0) return null;
+
+  return normalizedSections.map((section, index) => {
+    const type = getSectionType(section);
+    const Component = getBlock(type);
+
+    return (
+      <Component
+        key={section.id || `${type}-${index}`}
+        section={section}
+        site={site}
+        page={page}
+      />
+    );
+  });
 }
