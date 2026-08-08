@@ -109,7 +109,6 @@ export default function PublicPagePreview({ page, site }) {
             headers: {
               accept: "application/json",
               "content-type": "application/json",
-              "x-tenant-slug": "mondescale",
             },
             body: JSON.stringify({ page }),
             cache: "no-store",
