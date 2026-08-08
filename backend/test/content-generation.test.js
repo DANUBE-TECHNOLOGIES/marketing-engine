@@ -17,6 +17,7 @@ function repoFixture() {
     update: async (id, data) => (job = { ...job, ...data, campaign }),
     updateCampaign: async (id, data) => Object.assign(campaign, data),
     updateTask: async (id, data) => Object.assign(campaign.tasks.find(t => t.id === id), data),
+    upsertAsset: async data => data,
   };
 }
 

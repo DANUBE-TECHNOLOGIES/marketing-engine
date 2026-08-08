@@ -11,9 +11,13 @@ const seoPlatform = require("./seo-platform");
 
 const knowledgeGraph = require("./knowledge-graph");
 const agencySite = require("./agency-site");
+const agencyProfile = require("./agency-profile");
+const googleBusinessPhotos = require("./google-business-photos");
 const contentQuality = require("./content-quality");
 const marketingAutomation = require("./marketing-automation");
 const editorialCalendar = require("./editorial-calendar");
+const editorialAi = require("./editorial-ai");
+const networkSiteProvisioning = require("./network-site-provisioning");
 const publishers = require("./publishers");
 const seoBrain = require("./seo-brain");
 const seoAutopilot = require("./seo-autopilot");
@@ -26,6 +30,11 @@ const contentGeneration = require("./content-generation");
 const travelCore = require("./travel-core");
 const aiSeoGenerator = require("./ai-seo-generator");
 const aiContent = require("./ai-content");
+const pageBuilderPersistence = require("./page-builder-persistence");
+const minisiteBlueprint = require("./minisite-blueprint");
+const minisiteBlueprintPersistence = require("./minisite-blueprint-persistence");
+const minisiteSeoEnrichment = require("./minisite-seo-enrichment");
+const minisiteStructuredData = require("./minisite-structured-data");
 module.exports = function registerModules(app, { prisma }) {
   if (tenantCore.routes) {
     app.use(tenantCore.routes({ prisma }));
@@ -117,6 +126,22 @@ module.exports = function registerModules(app, { prisma }) {
     app.use(editorialCalendar.routes({ prisma }));
   }
 
+  if (editorialAi.routes) {
+    app.use(
+      editorialAi.routes({
+        prisma,
+      })
+    );
+  }
+
+  if (networkSiteProvisioning.routes) {
+    app.use(
+      networkSiteProvisioning.routes({
+        prisma,
+      })
+    );
+  }
+
   if (publishers.googleBusiness?.routes) {
     app.use(publishers.googleBusiness.routes({ prisma }));
   }
@@ -129,7 +154,58 @@ module.exports = function registerModules(app, { prisma }) {
     app.use(seoAutopilot.routes({ prisma }));
   }
 
+  if (agencyProfile.routes) {
+    app.use(agencyProfile.routes({ prisma }));
+  }
+
+  if (googleBusinessPhotos.routes) {
+    app.use(googleBusinessPhotos.routes({ prisma }));
+  }
+
+
+  if (pageBuilderPersistence.routes) {
+    app.use(
+      pageBuilderPersistence.routes({ prisma })
+    );
+  }
+
   if (agencySite.routes) {
     app.use(agencySite.routes({ prisma }));
   }
+
+  if (minisiteBlueprint.routes) {
+    app.use(
+      minisiteBlueprint.routes({
+        prisma,
+      })
+    );
+  }
+
+
+  if (minisiteBlueprintPersistence.routes) {
+    app.use(
+      minisiteBlueprintPersistence.routes({
+        prisma,
+      })
+    );
+  }
+
+
+  if (minisiteSeoEnrichment.routes) {
+    app.use(
+      minisiteSeoEnrichment.routes({
+        prisma,
+      })
+    );
+  }
+
+
+  if (minisiteStructuredData.routes) {
+    app.use(
+      minisiteStructuredData.routes({
+        prisma,
+      })
+    );
+  }
+
 };

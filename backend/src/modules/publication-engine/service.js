@@ -21,13 +21,74 @@ function createPublicationService(prisma) {
     return page;
   }
 
-  async function saveVersion(tx, page, { actor = null, reason = null, source = "manual" } = {}) {
-    const latest = await tx.pagePublicationVersion.findFirst({ where: { pageId: page.id }, orderBy: { version: "desc" }, select: { version: true } });
-    const snapshot = createSnapshot(page);
-    return tx.pagePublicationVersion.create({
-      data: { pageId: page.id, version: (latest?.version || 0) + 1, status: page.status, snapshot, checksum: hashSnapshot(snapshot), actor, reason, source },
+  async function saveVersion(
+  tx,
+  page,
+  {
+    actor = null,
+    reason = null,
+    source = "manual",
+  } = {}
+) {
+  const latest =
+    await tx.agencySitePageVersion.findFirst({
+      where: {
+        pageId:
+          page.id,
+      },
+
+      orderBy: {
+        version:
+          "desc",
+      },
+
+      select: {
+        version:
+          true,
+      },
     });
-  }
+
+  const snapshot =
+    createSnapshot(
+      page
+    );
+
+  const createdBy =
+    actor?.id
+      ? String(
+          actor.id
+        )
+      : actor?.name
+        ? String(
+            actor.name
+          )
+        : null;
+
+  // Conservé dans le contrat pour compatibilité des appelants.
+  // AgencySitePageVersion ne possède pas de colonne "source".
+  void source;
+
+  return tx.agencySitePageVersion.create({
+    data: {
+      pageId:
+        page.id,
+
+      version:
+        (
+          latest?.version ||
+          0
+        ) + 1,
+
+      snapshot,
+
+      reason:
+        reason ||
+        null,
+
+      createdBy,
+    },
+  });
+}
 
   async function event(tx, pageId, type, fromStatus, toStatus, metadata, actor) {
     return tx.pagePublicationEvent.create({ data: { pageId, type, fromStatus, toStatus, metadata: metadata || undefined, actor } });
@@ -52,7 +113,7 @@ function createPublicationService(prisma) {
 
   async function rollback(pageId, versionNumber, options = {}) {
     const current = await loadPage(pageId);
-    const version = await prisma.pagePublicationVersion.findUnique({ where: { pageId_version: { pageId, version: Number(versionNumber) } } });
+    const version = await prisma.agencySitePageVersion.findUnique({ where: { pageId_version: { pageId, version: Number(versionNumber) } } });
     if (!version) { const error = new Error("Version introuvable."); error.statusCode = 404; throw error; }
     const restored = restoreData(version.snapshot);
     return prisma.$transaction(async (tx) => {

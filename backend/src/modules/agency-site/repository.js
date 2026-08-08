@@ -153,6 +153,182 @@ class AgencySiteRepository extends TenantScopedRepository {
     });
   }
 
+  async createSectionIfMissing(
+    pageId,
+    section
+  ) {
+    const normalizedPageId =
+      String(
+        pageId ||
+        ""
+      ).trim();
+
+    const sectionType =
+      String(
+        section?.sectionType ||
+        ""
+      ).trim();
+
+    if (
+      !normalizedPageId ||
+      !sectionType
+    ) {
+      const error =
+        new Error(
+          "pageId et sectionType sont obligatoires."
+        );
+
+      error.statusCode =
+        400;
+
+      error.code =
+        "INVALID_SECTION_CREATE";
+
+      throw error;
+    }
+
+    /*
+     * Isolation tenant :
+     * on certifie d'abord que la page appartient
+     * bien à un site du tenant courant.
+     */
+    const page =
+      await this.prisma
+        .agencySitePage
+        .findFirst({
+          where: {
+            id:
+              normalizedPageId,
+
+            site: {
+              tenantId:
+                this.tenantId,
+            },
+          },
+
+          select: {
+            id:
+              true,
+          },
+        });
+
+    if (!page) {
+      const error =
+        new Error(
+          `Page ${normalizedPageId} introuvable pour ce tenant.`
+        );
+
+      error.statusCode =
+        404;
+
+      error.code =
+        "AGENCY_SITE_PAGE_NOT_FOUND";
+
+      throw error;
+    }
+
+    const uniqueWhere = {
+      pageId_sectionType: {
+        pageId:
+          normalizedPageId,
+
+        sectionType,
+      },
+    };
+
+    const existing =
+      await this.prisma
+        .agencySiteSection
+        .findUnique({
+          where:
+            uniqueWhere,
+        });
+
+    if (existing) {
+      return {
+        created:
+          false,
+
+        reason:
+          "SECTION_ALREADY_EXISTS",
+
+        section:
+          existing,
+      };
+    }
+
+    try {
+      const created =
+        await this.prisma
+          .agencySiteSection
+          .create({
+            data: {
+              pageId:
+                normalizedPageId,
+
+              sectionType,
+
+              jsonContent:
+                section.content ??
+                {},
+
+              displayOrder:
+                Number(
+                  section.displayOrder ||
+                  0
+                ),
+
+              status:
+                "draft",
+            },
+          });
+
+      return {
+        created:
+          true,
+
+        reason:
+          "SECTION_CREATED",
+
+        section:
+          created,
+      };
+    } catch (error) {
+      /*
+       * Protection concurrence :
+       * si une autre exécution crée la même section
+       * entre notre lecture et notre create(), on
+       * conserve la section concurrente et on ne fait
+       * jamais d'UPDATE.
+       */
+      if (
+        error?.code ===
+        "P2002"
+      ) {
+        const concurrent =
+          await this.prisma
+            .agencySiteSection
+            .findUnique({
+              where:
+                uniqueWhere,
+            });
+
+        return {
+          created:
+            false,
+
+          reason:
+            "SECTION_CREATED_CONCURRENTLY",
+
+          section:
+            concurrent,
+        };
+      }
+
+      throw error;
+    }
+  }
+
   deletePages(siteId) {
     return this.prisma.agencySitePage.deleteMany({
       where: {

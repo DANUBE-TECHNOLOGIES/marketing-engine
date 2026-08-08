@@ -1,0 +1,154 @@
+"use strict";
+
+function truncate(
+  value,
+  max
+) {
+  const normalized =
+    String(
+      value ||
+      ""
+    ).trim();
+
+  if (
+    normalized.length <=
+    max
+  ) {
+    return normalized;
+  }
+
+  return normalized
+    .slice(
+      0,
+      max - 1
+    )
+    .trimEnd() +
+    "…";
+}
+
+function buildGeneralSeo(
+  pageType,
+  context
+) {
+  const {
+    agency,
+  } =
+    context;
+
+  switch (
+    String(
+      pageType ||
+      ""
+    ).toUpperCase()
+  ) {
+    case "HOME":
+      return {
+        title:
+          truncate(
+            `Agence de voyages à ${agency.city} | ${agency.name}`,
+            65
+          ),
+
+        description:
+          truncate(
+            `Préparez votre prochain voyage avec ${agency.name}, votre agence de voyages à ${agency.city}. Séjours, circuits, croisières et voyages sur mesure.`,
+            160
+          ),
+
+        h1:
+          `Votre agence de voyages à ${agency.city}`,
+
+        schemaType:
+          "TravelAgency",
+      };
+
+    case "AGENCY":
+      return {
+        title:
+          truncate(
+            `Notre agence de voyages à ${agency.city} | ${agency.name}`,
+            65
+          ),
+
+        description:
+          truncate(
+            `Découvrez ${agency.name}, votre agence de voyages à ${agency.city}, son accompagnement et ses coordonnées.`,
+            160
+          ),
+
+        h1:
+          `Notre agence de voyages à ${agency.city}`,
+
+        schemaType:
+          "AboutPage",
+      };
+
+    case "SERVICES":
+      return {
+        title:
+          truncate(
+            `Services de votre agence de voyages à ${agency.city}`,
+            65
+          ),
+
+        description:
+          truncate(
+            `Séjours, circuits, croisières et voyages sur mesure : découvrez les services proposés par ${agency.name}.`,
+            160
+          ),
+
+        h1:
+          "Nos services voyage",
+
+        schemaType:
+          "Service",
+      };
+
+    case "CONTACT":
+      return {
+        title:
+          truncate(
+            `Contact | ${agency.name} à ${agency.city}`,
+            65
+          ),
+
+        description:
+          truncate(
+            `Contactez ${agency.name} à ${agency.city} pour préparer votre prochain voyage et échanger avec un conseiller.`,
+            160
+          ),
+
+        h1:
+          `Contactez notre agence à ${agency.city}`,
+
+        schemaType:
+          "ContactPage",
+      };
+
+    default:
+      return {
+        title:
+          truncate(
+            `${agency.name} | ${agency.city}`,
+            65
+          ),
+
+        description:
+          truncate(
+            `${agency.name}, votre agence de voyages à ${agency.city}.`,
+            160
+          ),
+
+        h1:
+          agency.name,
+
+        schemaType:
+          "WebPage",
+      };
+  }
+}
+
+module.exports = {
+  truncate,
+  buildGeneralSeo,
+};

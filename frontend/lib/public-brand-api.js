@@ -28,3 +28,19 @@ export async function getPublicBrandTheme() {
 
   return response.json();
 }
+
+/*
+ * Brand Studio V2 — Runtime public Brand + Legal.
+ *
+ * Conservé dans ce module afin que les renderers historiques puissent
+ * progressivement adopter le nouveau contrat sans connaître Prisma.
+ */
+export {
+  fetchPublicBrandLegalRuntime,
+  mergePublicMetadata,
+  resolveLegalPageHtml,
+  runtimeBrandAssets,
+  runtimeCssVariables,
+  runtimeLegalPages,
+  runtimeMetadata,
+} from "./public-brand-legal-runtime.js";

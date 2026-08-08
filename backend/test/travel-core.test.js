@@ -41,6 +41,12 @@ test("TravelCoreService retourne une recherche unifiée", async () => {
         },
       ],
     }),
+    searchAliases: async () => ({
+      countries: [],
+      regions: [],
+      cities: [],
+      destinations: [],
+    }),
   };
 
   const service = new TravelCoreService(repository);

@@ -7,6 +7,7 @@ import AppointmentRenderer from "./AppointmentRenderer";
 import FaqRenderer from "./FaqRenderer";
 import ContactRenderer from "./ContactRenderer";
 import MapRenderer from "./MapRenderer";
+import HoursRenderer from "./HoursRenderer";
 import ReviewsRenderer from "./ReviewsRenderer";
 
 export const PUBLIC_RENDERER_REGISTRY = {
@@ -20,6 +21,7 @@ export const PUBLIC_RENDERER_REGISTRY = {
   reviews: ReviewsRenderer,
   contact: ContactRenderer,
   map: MapRenderer,
+  hours: HoursRenderer,
 };
 
 export function getPublicRenderer(type) {

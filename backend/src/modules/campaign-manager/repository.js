@@ -10,5 +10,39 @@ class CampaignRepository {
  async update(id,data,agencyIds,destinationIds){ const current=await this.get(id); if(!current)return null; return this.prisma.$transaction(async tx=>{ if(agencyIds){ await tx.campaignAgency.deleteMany({where:{campaignId:id}}); if(agencyIds.length) await tx.campaignAgency.createMany({data:agencyIds.map(agencyId=>({campaignId:id,agencyId}))}); } if(destinationIds){ await tx.campaignDestination.deleteMany({where:{campaignId:id}}); if(destinationIds.length) await tx.campaignDestination.createMany({data:destinationIds.map(destinationId=>({campaignId:id,destinationId}))}); } await tx.marketingCampaign.update({where:{id},data}); return tx.marketingCampaign.findUnique({where:{id},include:this.include()}); }); }
  async remove(id){ const current=await this.get(id); if(!current)return null; return this.prisma.marketingCampaign.delete({where:{id}}); }
  createTasks(campaignId,tasks){ return this.prisma.$transaction(tasks.map(task=>this.prisma.campaignTask.upsert({where:{campaignId_key:{campaignId,key:task.key}},update:{type:task.type,channel:task.channel,payload:task.payload},create:{campaignId,...task}}))); }
+ getAsset(campaignId, assetId){
+  return this.prisma.campaignAsset.findFirst({
+   where:{
+    id:assetId,
+    campaignId,
+    campaign:{
+     tenantId:this.tenantId
+    }
+   }
+  });
+ }
+
+ updateAsset(assetId,data){
+  return this.prisma.campaignAsset.update({
+   where:{id:assetId},
+   data
+  });
+ }
+
+ listAssets(campaignId,{status,channel,type}={}){
+  return this.prisma.campaignAsset.findMany({
+   where:{
+    campaignId,
+    campaign:{
+     tenantId:this.tenantId
+    },
+    ...(status?{status}:{}),
+    ...(channel?{channel}:{}),
+    ...(type?{type}:{})
+   },
+   orderBy:{createdAt:"desc"}
+  });
+ }
+
 }
 module.exports=CampaignRepository;

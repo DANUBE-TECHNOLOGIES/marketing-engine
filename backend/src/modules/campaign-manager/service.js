@@ -1,6 +1,10 @@
 "use strict";
 const CampaignRepository=require("./repository");
 const {CHANNELS,validateCampaignInput}=require("./validation");
+const {
+ validateAssetDecision,
+ buildReviewMetadata
+}=require("./asset-review");
 const DEFAULT_CHANNELS=["landing-page","faq","facebook","instagram","google-business","newsletter","hero-image"];
 class CampaignService {
  constructor(prismaOrRepo,tenantId){ this.repo=prismaOrRepo?.list?prismaOrRepo:new CampaignRepository(prismaOrRepo,tenantId); }
@@ -14,5 +18,107 @@ class CampaignService {
  async remove(id){ const deleted=await this.repo.remove(id); if(!deleted) throw Object.assign(new Error("Campagne introuvable."),{statusCode:404,code:"CAMPAIGN_NOT_FOUND"}); return {deleted:true,id}; }
  buildTasks(campaign,channels){ const destinations=campaign.destinations||[]; const targets=destinations.length?destinations:[{destination:{id:"generic",slug:"campagne",name:campaign.name}}]; return targets.flatMap(({destination})=>channels.map(channel=>({key:`${destination.id}:${channel}`,type:channel==="landing-page"||channel==="faq"?"seo":channel==="newsletter"?"email":channel==="hero-image"?"visual":"social",channel,payload:{destinationId:destination.id,destinationSlug:destination.slug,destinationName:destination.name,campaignName:campaign.name}}))); }
  async generate(id,input={}){ const campaign=await this.get(id); const channels=input.channels?validateCampaignInput({name:campaign.name,channels:input.channels}).channels:DEFAULT_CHANNELS; const tasks=this.buildTasks(campaign,channels); await this.repo.createTasks(id,tasks); await this.repo.update(id,{status:"planned",progress:0},null,null); return this.get(id); }
+ async listAssets(id,filters={}){
+  await this.get(id);
+  return this.repo.listAssets(id,{
+   status:filters.status||undefined,
+   channel:filters.channel||undefined,
+   type:filters.type||undefined
+  });
+ }
+
+ async getAsset(campaignId,assetId){
+  await this.get(campaignId);
+
+  const asset=
+   await this.repo.getAsset(
+    campaignId,
+    assetId
+   );
+
+  if(!asset){
+   throw Object.assign(
+    new Error("Contenu de campagne introuvable."),
+    {
+     statusCode:404,
+     code:"CAMPAIGN_ASSET_NOT_FOUND"
+    }
+   );
+  }
+
+  return asset;
+ }
+
+ async reviewAsset(
+  campaignId,
+  assetId,
+  input={}
+ ){
+  const asset=
+   await this.getAsset(
+    campaignId,
+    assetId
+   );
+
+  const decision=
+   validateAssetDecision(input);
+
+  if(
+   asset.status==="approved" &&
+   decision.status==="review"
+  ){
+   throw Object.assign(
+    new Error(
+     "Un contenu approuvé ne peut pas revenir automatiquement en relecture."
+    ),
+    {
+     statusCode:409,
+     code:"APPROVED_ASSET_REVIEW_LOCKED"
+    }
+   );
+  }
+
+  return this.repo.updateAsset(
+   asset.id,
+   {
+    status:decision.status,
+    metadata:buildReviewMetadata(
+     asset.metadata,
+     decision
+    )
+   }
+  );
+ }
+
+ async approveAsset(
+  campaignId,
+  assetId,
+  input={}
+ ){
+  return this.reviewAsset(
+   campaignId,
+   assetId,
+   {
+    ...input,
+    status:"approved"
+   }
+  );
+ }
+
+ async rejectAsset(
+  campaignId,
+  assetId,
+  input={}
+ ){
+  return this.reviewAsset(
+   campaignId,
+   assetId,
+   {
+    ...input,
+    status:"rejected"
+   }
+  );
+ }
+
 }
 module.exports={CampaignService,DEFAULT_CHANNELS};

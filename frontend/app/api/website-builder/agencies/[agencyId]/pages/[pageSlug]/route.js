@@ -23,7 +23,7 @@ async function forward(request, context) {
 
   const suffix =
     request.method === "PUT"
-      ? "/sections"
+      ? "/blocks"
       : "";
 
   const response = await fetch(

@@ -10,17 +10,86 @@ const site = { id: "site-1", agencyId: "1", name: "Voyages Mondescale", slug: "v
 function fakePrisma({ existing = [] } = {}) {
   const pages = [...existing];
   let seq = 0;
-  const tx = {
-    miniSitePage: {
-      findMany: async ({ where }) => pages.filter((page) => page.miniSiteId === where.miniSiteId && (!where.slug?.in || where.slug.in.includes(page.slug))).map((page) => ({ ...page })),
-      deleteMany: async ({ where }) => { const before = pages.length; for (let i = pages.length - 1; i >= 0; i--) if (pages[i].miniSiteId === where.miniSiteId && where.slug.in.includes(pages[i].slug)) pages.splice(i, 1); return { count: before - pages.length }; },
-      createMany: async ({ data }) => { data.forEach((item) => pages.push({ id: `p-${++seq}`, createdAt: new Date(), updatedAt: new Date(), ...item })); return { count: data.length }; },
+
+  const findSite = async ({ where }) => {
+    if (where.id !== site.id) return null;
+
+    return {
+      ...site,
+      pages: pages
+        .filter((page) => page.miniSiteId === site.id)
+        .map((page) => ({ ...page })),
+    };
+  };
+
+  const miniSitePage = {
+    findMany: async ({ where }) =>
+      pages
+        .filter(
+          (page) =>
+            page.miniSiteId === where.miniSiteId &&
+            (
+              !where.slug?.in ||
+              where.slug.in.includes(page.slug)
+            )
+        )
+        .map((page) => ({ ...page })),
+
+    deleteMany: async ({ where }) => {
+      const before = pages.length;
+
+      for (let index = pages.length - 1; index >= 0; index -= 1) {
+        const page = pages[index];
+
+        if (
+          page.miniSiteId === where.miniSiteId &&
+          where.slug.in.includes(page.slug)
+        ) {
+          pages.splice(index, 1);
+        }
+      }
+
+      return { count: before - pages.length };
+    },
+
+    createMany: async ({ data }) => {
+      for (const item of data) {
+        pages.push({
+          id: `p-${++seq}`,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          ...item,
+        });
+      }
+
+      return { count: data.length };
     },
   };
+
+  const tx = {
+    miniSite: {
+      findFirst: async ({ where }) =>
+        where.id === site.id
+          ? { id: site.id }
+          : null,
+    },
+
+    miniSitePage,
+  };
+
   return {
-    agency: { findUnique: async ({ where }) => where.id === 1 ? agency : null },
-    miniSite: { findUnique: async ({ where }) => where.id === site.id ? { ...site, pages: pages.filter((p) => p.miniSiteId === site.id) } : null },
-    miniSitePage: { findMany: tx.miniSitePage.findMany },
+    agency: {
+      findUnique: async ({ where }) =>
+        where.id === 1 ? agency : null,
+    },
+
+    miniSite: {
+      findUnique: findSite,
+      findFirst: findSite,
+    },
+
+    miniSitePage,
+
     $transaction: async (callback) => callback(tx),
   };
 }

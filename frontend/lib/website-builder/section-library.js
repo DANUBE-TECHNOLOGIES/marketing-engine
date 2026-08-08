@@ -337,6 +337,21 @@ export const SECTION_LIBRARY = [
       ],
     },
   },
+
+  {
+    id: "agency-hours",
+    category: "seo",
+    type: "hours",
+    variant: "google-business",
+    label: "Horaires Google",
+    description:
+      "Horaires hebdomadaires et statut ouvert ou fermé",
+    icon: "◷",
+    dataSource: "google-business-hours",
+    defaults: {
+      title: "Horaires de l’agence",
+    },
+  },
   {
     id: "seo-map",
     category: "seo",

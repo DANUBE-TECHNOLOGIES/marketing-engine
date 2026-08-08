@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import PublicBrandLogo from "./PublicBrandLogo";
+
 function normalizeNavigation(site) {
   if (Array.isArray(site.navigation)) {
     return site.navigation;
@@ -37,7 +39,26 @@ function telephoneHref(phone) {
   return `tel:${String(phone || "").replace(/\s+/g, "")}`;
 }
 
-export default function PublicSiteHeader({ site }) {
+export default function PublicSiteHeader({
+  site,
+  hours,
+  brand,
+  brandRuntime,
+  brandAssets,
+}) {
+  const resolvedPublicBrand =
+    brand ||
+    brandRuntime?.runtime?.brand ||
+    site?.brand ||
+    site?.branding ||
+    site?.brandProfile ||
+    null;
+
+  const resolvedPublicBrandAssets =
+    brandAssets ||
+    resolvedPublicBrand?.assets ||
+    {};
+
   const pages = normalizeNavigation(site).filter(
     (page) =>
       page.title &&
@@ -56,13 +77,45 @@ export default function PublicSiteHeader({ site }) {
           </span>
 
           <div className="public-site-trustbar-items">
+            {hours?.status ? (
+              <span
+                className={[
+                  "public-site-opening-status",
+                  hours.status.isOpen
+                    ? "is-open"
+                    : "is-closed",
+                ].join(" ")}
+              >
+                <i />
+                {hours.status.label}
+              </span>
+            ) : null}
+
             <span>Conseils personnalisés</span>
-            <span>Accompagnement avant, pendant et après</span>
+            <span>
+              Accompagnement avant, pendant et après
+            </span>
           </div>
         </div>
       </div>
 
       <header className="public-site-header">
+      <PublicBrandLogo
+        brand={
+          resolvedPublicBrand
+        }
+        brandAssets={
+          resolvedPublicBrandAssets
+        }
+        site={
+          site
+        }
+        agency={
+          agency
+        }
+        className="public-site-header__brand-logo"
+      />
+
         <div className="public-site-container public-site-header-inner">
           <Link
             href={`/sites/${site.slug}`}

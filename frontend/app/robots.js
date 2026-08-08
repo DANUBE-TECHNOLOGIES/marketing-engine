@@ -1,25 +1,39 @@
-import { absoluteUrl, getPublicSiteUrl } from "../lib/seo/site-url";
+const PUBLIC_ORIGIN =
+  String(
+    process.env
+      .NEXT_PUBLIC_SITE_ORIGIN ||
+    "https://agences.mondescale.com"
+  ).replace(
+    /\/+$/g,
+    ""
+  );
 
 export default function robots() {
   return {
     rules: [
       {
-        userAgent: "*",
+        userAgent:
+          "*",
+
         allow: [
           "/",
           "/agence/",
         ],
+
         disallow: [
           "/api/",
+          "/website-builder/",
           "/admin/",
-          "/dashboard/",
-          "/seo-keywords-db/",
-          "/dataforseo-preview/",
-          "/_next/",
+          "/login",
+          "/sites/",
         ],
       },
     ],
-    sitemap: absoluteUrl("/sitemap.xml"),
-    host: getPublicSiteUrl(),
+
+    sitemap:
+      `${PUBLIC_ORIGIN}/sitemap.xml`,
+
+    host:
+      PUBLIC_ORIGIN,
   };
 }

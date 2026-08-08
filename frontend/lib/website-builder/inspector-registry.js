@@ -324,6 +324,17 @@ export const INSPECTOR_REGISTRY = {
     fields: COMMON_FIELDS,
   },
 
+
+  hours: {
+    fields: [
+      {
+        key: "title",
+        label: "Titre",
+        control: "text",
+      },
+    ],
+  },
+
   map: {
     fields: [
       {

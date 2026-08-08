@@ -20,3 +20,66 @@ logs/
 .fp-*-last-backup
 *.bak-*
 *.zip
+
+storage/brand-assets/
+backend/storage/brand-assets/*
+!backend/storage/brand-assets/.gitkeep
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+node_modules/
+**/node_modules/
+.next/
+**/.next/
+dist/
+**/dist/
+coverage/
+**/coverage/
+reports/
+*.log
+*.dump
+*.sql.gz
+.DS_Store
+
+# ------------------------------------------------------------
+# MONDESCALE - local development artefacts
+# ------------------------------------------------------------
+
+# Environment / secrets
+!.env.example
+
+# Local backups
+**/*.backup
+**/*.backup-*
+**/*.bak
+**/*.bak-*
+**/*-backup
+**/*-backup-*
+**/schema.prisma.backup*
+**/proxy.js.backup*
+**/layout.js.backup*
+**/public-site.css.backup*
+**/PublicSiteHeader.js.backup*
+**/PublicSiteFooter.js.backup*
+**/PublicSiteSections.js.backup*
+**/WebsiteBuilderClient.js.backup*
+**/repository.js.backup*
+**/reviews.js.backup*
+
+# Generated reports
+
+# Runtime history / test state
+storage/site-publication-history/*.jsonl
+backend/storage/site-publication-history/*.jsonl
+
+# Keep required storage directories
+!storage/site-publication-history/.gitkeep
+!backend/storage/site-publication-history/.gitkeep
+
+# Dependencies/build
+
+# Logs / dumps
+
+# OS

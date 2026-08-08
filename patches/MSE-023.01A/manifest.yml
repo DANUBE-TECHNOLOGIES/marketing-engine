@@ -1,0 +1,14 @@
+id: MSE-023.01A
+title: Google Business Photos Foundation
+version: 0.1.0
+description: Modèle, cache, synchronisation et API des photos Google Business
+requires:
+  - node
+  - docker
+  - prisma
+steps:
+  - backup
+  - apply
+  - prisma-validate
+  - tests
+rollback: true

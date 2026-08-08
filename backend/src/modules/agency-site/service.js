@@ -34,6 +34,366 @@ class AgencySiteService {
     }
     return this.get(agencyId);
   }
+  async ensureRequiredPages(
+    agencyId,
+    requiredKeys = [
+      "home",
+      "agence",
+      "services",
+      "contact",
+    ]
+  ) {
+    const agency =
+      await this.repo.getAgency(
+        agencyId
+      );
+
+    if (!agency) {
+      const error =
+        new Error(
+          `Agence ${agencyId} introuvable`
+        );
+
+      error.statusCode =
+        404;
+
+      throw error;
+    }
+
+    const current =
+      await this.repo.findByAgencyId(
+        agencyId
+      );
+
+    if (!current) {
+      /*
+       * Aucun site :
+       * ici seulement, la génération initiale complète
+       * reste le comportement normal.
+       */
+      const generated =
+        await this.generate(
+          agencyId
+        );
+
+      return {
+        created:
+          generated?.pages?.length ||
+          0,
+
+        skipped:
+          0,
+
+        missing:
+          [],
+
+        generatedSite:
+          true,
+
+        site:
+          generated,
+      };
+    }
+
+    const definition =
+      this.siteBuilder.build(
+        agency,
+        current.slug
+      );
+
+    const wanted =
+      new Set(
+        (
+          requiredKeys ||
+          []
+        )
+          .map(
+            value =>
+              String(
+                value ||
+                ""
+              )
+                .trim()
+                .toLowerCase()
+          )
+          .filter(
+            Boolean
+          )
+      );
+
+    /*
+     * Index des pages déjà existantes.
+     *
+     * Attention :
+     * la HOME réelle utilise slug="" dans AgencySitePage.
+     * Son identité stable dans le builder est page.key="home".
+     */
+    const existingBySlug =
+      new Map(
+        (
+          current.pages ||
+          []
+        ).map(
+          page => [
+            String(
+              page.slug ??
+              ""
+            ),
+            page,
+          ]
+        )
+      );
+
+    const definitionByKey =
+      new Map(
+        (
+          definition.pages ||
+          []
+        ).map(
+          page => [
+            String(
+              page.key ||
+              ""
+            )
+              .trim()
+              .toLowerCase(),
+            page,
+          ]
+        )
+      );
+
+    const pageIdsByKey =
+      new Map();
+
+    /*
+     * Reconstituer les IDs des pages existantes à partir
+     * du builder permet de résoudre un éventuel parentId
+     * sans modifier ces pages.
+     */
+    for (
+      const [
+        key,
+        definitionPage
+      ]
+      of definitionByKey
+    ) {
+      const existing =
+        existingBySlug.get(
+          String(
+            definitionPage.slug ??
+            ""
+          )
+        );
+
+      if (existing) {
+        pageIdsByKey.set(
+          key,
+          existing.id
+        );
+      }
+    }
+
+    let created =
+      0;
+
+    let skipped =
+      0;
+
+    const createdPages =
+      [];
+
+    const stillMissing =
+      [];
+
+    for (
+      const key
+      of wanted
+    ) {
+      const page =
+        definitionByKey.get(
+          key
+        );
+
+      if (!page) {
+        stillMissing.push(
+          key
+        );
+
+        continue;
+      }
+
+      const slug =
+        String(
+          page.slug ??
+          ""
+        );
+
+      const existing =
+        existingBySlug.get(
+          slug
+        );
+
+      if (existing) {
+        skipped +=
+          1;
+
+        pageIdsByKey.set(
+          key,
+          existing.id
+        );
+
+        continue;
+      }
+
+      const parentId =
+        page.parentKey
+          ? pageIdsByKey.get(
+              String(
+                page.parentKey
+              )
+                .trim()
+                .toLowerCase()
+            ) ||
+            null
+          : null;
+
+      /*
+       * upsertPage est utilisé uniquement sur une page
+       * dont nous avons certifié l'absence.
+       *
+       * On n'exécute donc jamais sa branche UPDATE
+       * sur une page existante.
+       */
+      const saved =
+        await this.repo.upsertPage(
+          current.id,
+          page,
+          parentId
+        );
+
+      pageIdsByKey.set(
+        key,
+        saved.id
+      );
+
+      existingBySlug.set(
+        slug,
+        saved
+      );
+
+      /*
+       * Les sections ne sont générées que pour
+       * CETTE nouvelle page.
+       *
+       * Aucun contenu existant n'est réécrit.
+       */
+      const sections =
+        this.contentBuilder.build(
+          page,
+          agency,
+          current
+        );
+
+      for (
+        const section
+        of sections
+      ) {
+        await this.repo.upsertSection(
+          saved.id,
+          section
+        );
+      }
+
+      created +=
+        1;
+
+      createdPages.push({
+        id:
+          saved.id,
+
+        key,
+
+        slug,
+
+        pageType:
+          page.pageType,
+      });
+    }
+
+    const refreshed =
+      await this.get(
+        agencyId
+      );
+
+    return {
+      created,
+
+      skipped,
+
+      missing:
+        stillMissing,
+
+      generatedSite:
+        false,
+
+      createdPages,
+
+      site:
+        refreshed,
+    };
+  }
+
+  async ensureDefaultContent(
+    agencyId
+  ) {
+    const agency =
+      await this.repo
+        .getAgency(
+          agencyId
+        );
+
+    if (!agency) {
+      const error =
+        new Error(
+          `Agence ${agencyId} introuvable`
+        );
+
+      error.statusCode =
+        404;
+
+      throw error;
+    }
+
+    const site =
+      await this.repo
+        .findByAgencyId(
+          agencyId
+        );
+
+    if (!site) {
+      const error =
+        new Error(
+          `Mini-site de l'agence ${agencyId} introuvable`
+        );
+
+      error.statusCode =
+        404;
+
+      throw error;
+    }
+
+    const writer =
+      new DefaultContentWriter({
+        repository:
+          this.repo,
+      });
+
+    return writer.ensure({
+      agency,
+      site,
+    });
+  }
+
   async compose(agencyId) {
     const agency = await this.repo.getAgency(agencyId);
     if (!agency) { const e = new Error(`Agence ${agencyId} introuvable`); e.statusCode = 404; throw e; }
@@ -57,7 +417,21 @@ class AgencySiteService {
   }
 
   async replacePageSections(agencyId, slug = "", input = {}) {
-    const page = await this.repo.findPage(agencyId, slug);
+    const normalizedAgencyId = Number(agencyId);
+
+    if (!Number.isInteger(normalizedAgencyId)) {
+      const error = new Error(
+        "Identifiant d’agence invalide."
+      );
+      error.statusCode = 400;
+      error.code = "INVALID_AGENCY_ID";
+      throw error;
+    }
+
+    const page = await this.repo.findPage(
+      normalizedAgencyId,
+      slug
+    );
 
     if (!page) {
       const error = new Error(
@@ -128,3 +502,10 @@ class AgencySiteService {
   async robots(agencyId, origin) { const site = await this.get(agencyId); return this.sitemapBuilder.robots(site, origin); }
 }
 module.exports = AgencySiteService;
+
+const {
+  DefaultContentWriter,
+} =
+  require(
+    "./default-content-writer"
+  );
