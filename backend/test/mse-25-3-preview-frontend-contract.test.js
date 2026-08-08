@@ -32,3 +32,16 @@ test("MSE-25.3 le proxy Next relaie vers public-site-read en no-store", () => {
   assert.match(source, /"Cache-Control":\s*"private, no-store"/);
   assert.match(source, /cache:\s*"no-store"/);
 });
+
+test("MSE-25.3 le menu de preview reprend les pages publiées et la page courante sur /agence", () => {
+  const source = read(
+    "frontend/components/page-builder-v2/PublicPagePreview.js"
+  );
+
+  assert.match(source, /function\s+previewNavigation\(/);
+  assert.match(source, /`\/agence\/\$\{encodeURIComponent\(site\.slug\)\}`/);
+  assert.match(source, /page\?\.id === currentPage\?\.id/);
+  assert.match(source, /page\?\.status === "published"/);
+  assert.match(source, /page\?\.published === true/);
+  assert.match(source, /navigation,\s*hours/);
+});
