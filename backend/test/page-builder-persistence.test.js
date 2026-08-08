@@ -9,6 +9,12 @@ const {
   "../src/modules/page-builder-persistence/validation"
 );
 
+const {
+  normalizePageBuilderPayload,
+} = require(
+  "../src/modules/page-builder-persistence/payload-normalizer"
+);
+
 const PageBuilderPersistenceService =
   require(
     "../src/modules/page-builder-persistence/service"
@@ -102,6 +108,73 @@ test(
         code:
           "DUPLICATE_SINGLETON_BLOCK",
       }
+    );
+  }
+);
+
+test(
+  "le statut published active le contrat public",
+  () => {
+    const normalized =
+      normalizePageBuilderPayload({
+        body: {
+          page: {
+            title: "Accueil",
+            status: "published",
+          },
+          blocks: [],
+        },
+        params: {
+          agencyId: "12",
+          pageSlug: "home",
+        },
+        existingPage: {
+          slug: "",
+          published: false,
+        },
+      });
+
+    assert.equal(
+      normalized.status,
+      "published"
+    );
+    assert.equal(
+      normalized.published,
+      true
+    );
+  }
+);
+
+test(
+  "un retour en brouillon retire la publication",
+  () => {
+    const normalized =
+      normalizePageBuilderPayload({
+        body: {
+          page: {
+            title: "Accueil",
+            status: "draft",
+          },
+          blocks: [],
+        },
+        params: {
+          agencyId: "12",
+          pageSlug: "home",
+        },
+        existingPage: {
+          slug: "",
+          status: "published",
+          published: true,
+        },
+      });
+
+    assert.equal(
+      normalized.status,
+      "draft"
+    );
+    assert.equal(
+      normalized.published,
+      false
     );
   }
 );
