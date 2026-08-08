@@ -66,3 +66,27 @@ test(
     );
   }
 );
+
+test(
+  "MSE-25.3 relie les cartes destination aux pages publiques existantes",
+  () => {
+    const destinations = source(
+      "components/public-site/renderers/DestinationsRenderer.js"
+    );
+
+    assert.match(
+      destinations,
+      /`\/agence\/\$\{encodeURIComponent\(site\.slug\)\}`/
+    );
+
+    assert.match(
+      destinations,
+      /`\/destination\/\$\{encodeURIComponent\(item\.slug\)\}`/
+    );
+
+    assert.doesNotMatch(
+      destinations,
+      /\/sites\//
+    );
+  }
+);
