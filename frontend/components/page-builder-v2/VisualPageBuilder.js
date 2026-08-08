@@ -9,6 +9,7 @@ import {
 } from "react";
 
 import styles from "./VisualPageBuilder.module.css";
+import PreviewCanvas from "./PreviewCanvas";
 
 import {
   BLOCK_CATALOG,
@@ -1306,112 +1307,118 @@ export default function VisualPageBuilder({ siteId }) {
               </div>
 
               <div className={styles.pageCanvas}>
-                {loadingPage ? (
-                  <div className={styles.canvasLoading}>
-                    Chargement de la page…
-                  </div>
-                ) : null}
+                <PreviewCanvas
+                  previewMode={previewMode}
+                  page={activePage}
+                  site={site}
+                >
+                  {loadingPage ? (
+                    <div className={styles.canvasLoading}>
+                      Chargement de la page…
+                    </div>
+                  ) : null}
 
-                {!activePage?.blocks.length ? (
-                  <div className={styles.emptyCanvas}>
-                    <span>＋</span>
-                    <h2>Cette page est vide</h2>
-                    <p>
-                      Ajoutez un premier bloc pour commencer
-                      sa construction.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setLibraryOpen(true)}
-                    >
-                      Ajouter un bloc
-                    </button>
-                  </div>
-                ) : (
-                  activePage.blocks.map(
-                    (block, index) => (
-                      <article
-                        key={block.id}
-                        className={`${styles.blockWrapper} ${
-                          selectedBlockId === block.id
-                            ? styles.selectedBlock
-                            : ""
-                        } ${
-                          block.status === "hidden"
-                            ? styles.hiddenBlock
-                            : ""
-                        }`}
-                        onClick={() =>
-                          !previewMode &&
-                          setSelectedBlockId(block.id)
-                        }
+                  {!activePage?.blocks.length ? (
+                    <div className={styles.emptyCanvas}>
+                      <span>＋</span>
+                      <h2>Cette page est vide</h2>
+                      <p>
+                        Ajoutez un premier bloc pour commencer
+                        sa construction.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setLibraryOpen(true)}
                       >
-                        {!previewMode ? (
-                          <div
-                            className={styles.blockToolbar}
-                            onClick={(event) =>
-                              event.stopPropagation()
-                            }
-                          >
-                            <span>
-                              {getBlockDefinition(block.type)
-                                ?.label || block.type}
-                            </span>
+                        Ajouter un bloc
+                      </button>
+                    </div>
+                  ) : (
+                    activePage.blocks.map(
+                      (block, index) => (
+                        <article
+                          key={block.id}
+                          className={`${styles.blockWrapper} ${
+                            selectedBlockId === block.id
+                              ? styles.selectedBlock
+                              : ""
+                          } ${
+                            block.status === "hidden"
+                              ? styles.hiddenBlock
+                              : ""
+                          }`}
+                          onClick={() =>
+                            !previewMode &&
+                            setSelectedBlockId(block.id)
+                          }
+                        >
+                          {!previewMode ? (
+                            <div
+                              className={styles.blockToolbar}
+                              onClick={(event) =>
+                                event.stopPropagation()
+                              }
+                            >
+                              <span>
+                                {getBlockDefinition(block.type)
+                                  ?.label || block.type}
+                              </span>
 
-                            <div>
-                              <button
-                                type="button"
-                                disabled={index === 0}
-                                onClick={() =>
-                                  moveBlock(block.id, -1)
-                                }
-                                title="Monter"
-                              >
-                                ↑
-                              </button>
+                              <div>
+                                <button
+                                  type="button"
+                                  disabled={index === 0}
+                                  onClick={() =>
+                                    moveBlock(block.id, -1)
+                                  }
+                                  title="Monter"
+                                >
+                                  ↑
+                                </button>
 
-                              <button
-                                type="button"
-                                disabled={
-                                  index ===
-                                  activePage.blocks.length - 1
-                                }
-                                onClick={() =>
-                                  moveBlock(block.id, 1)
-                                }
-                                title="Descendre"
-                              >
-                                ↓
-                              </button>
+                                <button
+                                  type="button"
+                                  disabled={
+                                    index ===
+                                    activePage.blocks.length - 1
+                                  }
+                                  onClick={() =>
+                                    moveBlock(block.id, 1)
+                                  }
+                                  title="Descendre"
+                                >
+                                  ↓
+                                </button>
 
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  duplicateBlock(block.id)
-                                }
-                                title="Dupliquer"
-                              >
-                                ⧉
-                              </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    duplicateBlock(block.id)
+                                  }
+                                  title="Dupliquer"
+                                >
+                                  ⧉
+                                </button>
 
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  deleteBlock(block.id)
-                                }
-                                title="Supprimer"
-                              >
-                                ×
-                              </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    deleteBlock(block.id)
+                                  }
+                                  title="Supprimer"
+                                >
+                                  ×
+                                </button>
+                              </div>
                             </div>
-                          </div>
-                        ) : null}
+                          ) : null}
 
-                        <BlockPreview block={block} />
-                      </article>
+                          <BlockPreview block={block} />
+                        </article>
+                      )
                     )
-                  )
-                )}
+                  )}
+                </PreviewCanvas>
               </div>
             </div>
           </div>
