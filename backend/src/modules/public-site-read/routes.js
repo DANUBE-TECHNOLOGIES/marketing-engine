@@ -11,6 +11,50 @@ const {
   PublicSiteReadService,
 } = require("./service");
 
+const {
+  hydratePublicDynamicBlocks,
+} = require("./dynamic-block-hydrator");
+
+function replacePageReference(reference, pages) {
+  if (!reference) return null;
+
+  return (
+    pages.find(
+      (page) => page.id === reference.id
+    ) || reference
+  );
+}
+
+async function hydrateContract({
+  database,
+  contract,
+}) {
+  const pages =
+    await hydratePublicDynamicBlocks({
+      prisma: database,
+      tenantId:
+        contract?.site?.tenantId ||
+        null,
+      pages:
+        contract?.pages || [],
+    });
+
+  return {
+    ...contract,
+    pages,
+    homePage:
+      replacePageReference(
+        contract?.homePage,
+        pages
+      ),
+    page:
+      replacePageReference(
+        contract?.page,
+        pages
+      ),
+  };
+}
+
 function createPublicSiteReadRouter({
   prisma,
 } = {}) {
@@ -57,11 +101,18 @@ function createPublicSiteReadRouter({
       next
     ) => {
       try {
-        const contract =
+        const baseContract =
           await service.bySlug(
             request.params
               .siteSlug
           );
+
+        const contract =
+          await hydrateContract({
+            database,
+            contract:
+              baseContract,
+          });
 
         response.set(
           "Cache-Control",
@@ -82,4 +133,6 @@ function createPublicSiteReadRouter({
 
 module.exports = {
   createPublicSiteReadRouter,
+  hydrateContract,
+  replacePageReference,
 };
