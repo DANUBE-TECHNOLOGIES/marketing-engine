@@ -24,7 +24,7 @@ test("MSE-25.3 fournit au Designer V2 un aperçu basé sur le renderer public", 
 
   assert.match(
     preview,
-    /<PublicSiteSections page=\{previewPage\} site=\{site\} \/>/
+    /<PublicSiteSections[\s\S]*?page=\{previewPage\}[\s\S]*?site=\{site\}[\s\S]*?\/>/
   );
 
   assert.match(
@@ -35,6 +35,37 @@ test("MSE-25.3 fournit au Designer V2 un aperçu basé sur le renderer public", 
   assert.match(
     preview,
     /public-brand-legal\/sites/
+  );
+});
+
+test("MSE-25.3 reproduit la coque publique complète dans l'aperçu V2", () => {
+  const preview = source(
+    "components/page-builder-v2/PublicPagePreview.js"
+  );
+
+  assert.match(
+    preview,
+    /import PublicSiteHeader from ["']\.\.\/public-site\/PublicSiteHeader["']/
+  );
+
+  assert.match(
+    preview,
+    /import PublicSiteFooter from ["']\.\.\/public-site\/PublicSiteFooter["']/
+  );
+
+  assert.match(
+    preview,
+    /<PublicSiteHeader[\s\S]*?brandRuntime=\{brandRuntime\}[\s\S]*?site=\{site\}/
+  );
+
+  assert.match(
+    preview,
+    /<PublicSiteFooter site=\{site\} \/>/
+  );
+
+  assert.match(
+    preview,
+    /runtimeCssVariables\(brandRuntime\)/
   );
 });
 
