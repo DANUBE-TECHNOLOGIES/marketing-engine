@@ -55,6 +55,7 @@ function runtimeBrandAssets(payload) {
 export default function PublicPagePreview({ page, site }) {
   const [brandRuntime, setBrandRuntime] = useState(null);
   const [hydratedPage, setHydratedPage] = useState(page || null);
+  const [hours, setHours] = useState(site?.hours || null);
 
   useEffect(() => {
     setHydratedPage(page || null);
@@ -109,6 +110,17 @@ export default function PublicPagePreview({ page, site }) {
     [hydratedPage]
   );
 
+  const previewSite = useMemo(
+    () =>
+      site
+        ? {
+            ...site,
+            hours,
+          }
+        : site,
+    [site, hours]
+  );
+
   const brandVariables = useMemo(
     () => runtimeCssVariables(brandRuntime),
     [brandRuntime]
@@ -159,7 +171,53 @@ export default function PublicPagePreview({ page, site }) {
     };
   }, [site?.slug]);
 
-  if (!site || !previewPage) {
+  useEffect(() => {
+    setHours(site?.hours || null);
+
+    if (!site?.slug) {
+      return undefined;
+    }
+
+    let active = true;
+    const controller = new AbortController();
+
+    async function loadHours() {
+      try {
+        const response = await fetch(
+          `/api/public-site-hours/${encodeURIComponent(site.slug)}`,
+          {
+            headers: {
+              accept: "application/json",
+              "x-tenant-slug": "mondescale",
+            },
+            cache: "no-store",
+            signal: controller.signal,
+          }
+        );
+
+        if (!response.ok) return;
+
+        const payload = await response.json();
+
+        if (active && payload?.hours) {
+          setHours(payload.hours);
+        }
+      } catch (error) {
+        if (error?.name !== "AbortError") {
+          // Le reste de la preview ne dépend pas du service horaires.
+        }
+      }
+    }
+
+    loadHours();
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [site?.slug, site?.hours]);
+
+  if (!previewSite || !previewPage) {
     return null;
   }
 
@@ -176,18 +234,18 @@ export default function PublicPagePreview({ page, site }) {
         brand={brandRuntime?.runtime?.brand || null}
         brandRuntime={brandRuntime}
         brandAssets={brandAssets}
-        site={site}
-        hours={null}
+        site={previewSite}
+        hours={hours}
       />
 
       <main>
         <PublicSiteSections
           page={previewPage}
-          site={site}
+          site={previewSite}
         />
       </main>
 
-      <PublicSiteFooter site={site} />
+      <PublicSiteFooter site={previewSite} />
     </div>
   );
 }
