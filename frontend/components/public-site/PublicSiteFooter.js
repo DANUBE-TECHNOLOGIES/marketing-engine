@@ -6,6 +6,7 @@ function telephoneHref(phone) {
 
 export default function PublicSiteFooter({ site }) {
   const agency = site.agency || {};
+  const basePath = `/agence/${site.slug}`;
 
   return (
     <footer className="public-site-footer">
@@ -13,18 +14,13 @@ export default function PublicSiteFooter({ site }) {
 
       <div className="public-site-container public-site-footer-main">
         <div className="public-site-footer-brand">
-          <span className="public-site-footer-mark">
-            M
-          </span>
+          <span className="public-site-footer-mark">M</span>
 
           <div>
-            <strong>
-              {site.name}
-            </strong>
-
+            <strong>{site.name}</strong>
             <p>
-              Votre agence vous accompagne dans la création
-              de voyages uniques, adaptés à vos envies.
+              Votre agence vous accompagne dans la création de voyages uniques,
+              adaptés à vos envies.
             </p>
           </div>
         </div>
@@ -42,17 +38,13 @@ export default function PublicSiteFooter({ site }) {
 
           {agency.phone ? (
             <p>
-              <a href={telephoneHref(agency.phone)}>
-                {agency.phone}
-              </a>
+              <a href={telephoneHref(agency.phone)}>{agency.phone}</a>
             </p>
           ) : null}
 
           {agency.email ? (
             <p>
-              <a href={`mailto:${agency.email}`}>
-                {agency.email}
-              </a>
+              <a href={`mailto:${agency.email}`}>{agency.email}</a>
             </p>
           ) : null}
         </div>
@@ -61,21 +53,10 @@ export default function PublicSiteFooter({ site }) {
           <h3>Préparer votre voyage</h3>
 
           <div className="public-site-footer-links">
-            <Link href={`/sites/${site.slug}/services`}>
-              Nos services
-            </Link>
-
-            <Link href={`/sites/${site.slug}/inspirations`}>
-              Inspirations voyage
-            </Link>
-
-            <Link href={`/sites/${site.slug}/avis`}>
-              Avis clients
-            </Link>
-
-            <Link href={`/sites/${site.slug}/contact`}>
-              Nous contacter
-            </Link>
+            <Link href={`${basePath}/services`}>Nos services</Link>
+            <Link href={`${basePath}/inspirations`}>Inspirations voyage</Link>
+            <Link href={`${basePath}/avis`}>Avis clients</Link>
+            <Link href={`${basePath}/contact`}>Nous contacter</Link>
           </div>
         </div>
 
@@ -83,15 +64,8 @@ export default function PublicSiteFooter({ site }) {
           <h3>Informations</h3>
 
           <div className="public-site-footer-links">
-            <Link
-              href={`/sites/${site.slug}/mentions-legales`}
-            >
-              Mentions légales
-            </Link>
-
-            <Link
-              href={`/sites/${site.slug}/confidentialite`}
-            >
+            <Link href={`${basePath}/mentions-legales`}>Mentions légales</Link>
+            <Link href={`${basePath}/confidentialite`}>
               Politique de confidentialité
             </Link>
           </div>
@@ -99,13 +73,8 @@ export default function PublicSiteFooter({ site }) {
       </div>
 
       <div className="public-site-container public-site-footer-bottom">
-        <span>
-          © {new Date().getFullYear()} {site.name}
-        </span>
-
-        <span>
-          Voyages, conseils et accompagnement personnalisé
-        </span>
+        <span>© {new Date().getFullYear()} {site.name}</span>
+        <span>Voyages, conseils et accompagnement personnalisé</span>
       </div>
     </footer>
   );
