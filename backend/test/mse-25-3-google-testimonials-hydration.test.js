@@ -27,7 +27,7 @@ function testimonialBlock({
   };
 }
 
-test("MSE-25.3 hydrate les avis Google de l'agence et respecte la limite V2", async () => {
+test("MSE-25.3 hydrate les avis Google publiés de l'agence et respecte la limite V2", async () => {
   let query = null;
 
   const prisma = {
@@ -42,6 +42,8 @@ test("MSE-25.3 hydrate les avis Google de l'agence et respecte la limite V2", as
             authorName: "Alice",
             rating: 5,
             comment: "Très bonne agence.",
+            publishedAt: new Date("2026-08-03T10:00:00.000Z"),
+            status: "new",
           },
           {
             id: 11,
@@ -49,6 +51,8 @@ test("MSE-25.3 hydrate les avis Google de l'agence et respecte la limite V2", as
             authorName: "Bob",
             rating: 4,
             comment: "Très bons conseils.",
+            publishedAt: new Date("2026-08-02T10:00:00.000Z"),
+            status: "replied",
           },
           {
             id: 12,
@@ -56,6 +60,8 @@ test("MSE-25.3 hydrate les avis Google de l'agence et respecte la limite V2", as
             authorName: "Claire",
             rating: 5,
             comment: "Excellent suivi.",
+            publishedAt: new Date("2026-08-01T10:00:00.000Z"),
+            status: "pending_validation",
           },
         ];
       },
@@ -78,6 +84,8 @@ test("MSE-25.3 hydrate les avis Google de l'agence et respecte la limite V2", as
 
   assert.equal(query.where.agencyId, 42);
   assert.equal(query.where.comment.not, null);
+  assert.equal(query.where.publishedAt.not, null);
+  assert.equal(query.where.status, undefined);
   assert.equal(query.take, 2);
 
   assert.deepEqual(
