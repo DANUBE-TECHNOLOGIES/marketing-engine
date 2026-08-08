@@ -13,25 +13,15 @@ import PublicBrandLegalRuntime from "../../../components/public-site/PublicBrand
 import {
   fetchPublicBrandLegalRuntime,
   runtimeBrandAssets,
+  runtimeCssVariables,
 } from "../../../lib/public-brand-legal-runtime";
-export default async function PublicAgencySiteLayout({
-  children,
-  params,
-}) {
-  const brandLegalResolvedParams =
-    await params;
 
-  const publicBrandLegalRuntime =
-    await fetchPublicBrandLegalRuntime(
-      brandLegalResolvedParams.siteSlug
-    );
-
-  const publicBrandAssets =
-    runtimeBrandAssets(
-      publicBrandLegalRuntime
-    );
-
+export default async function PublicAgencySiteLayout({ children, params }) {
   const { siteSlug } = await params;
+
+  const publicBrandLegalRuntime = await fetchPublicBrandLegalRuntime(siteSlug);
+  const publicBrandAssets = runtimeBrandAssets(publicBrandLegalRuntime);
+  const runtimeTheme = runtimeCssVariables(publicBrandLegalRuntime);
 
   let site;
   let brandTheme = null;
@@ -44,50 +34,39 @@ export default async function PublicAgencySiteLayout({
       getPublicHours(siteSlug),
     ]);
   } catch (error) {
-    if (error.statusCode === 404) {
+    if (error?.statusCode === 404) {
       notFound();
     }
 
     throw error;
   }
 
+  const cssVariables = {
+    ...(brandTheme?.cssVariables || {}),
+    ...runtimeTheme,
+  };
+
   return (
-    <PublicBrandLegalRuntime
-      runtime={
-        publicBrandLegalRuntime
-      }
-    >
+    <PublicBrandLegalRuntime runtime={publicBrandLegalRuntime}>
+      <div
+        className="public-site-shell"
+        style={Object.keys(cssVariables).length ? cssVariables : undefined}
+      >
+        <PublicSiteHeader
+          brand={publicBrandLegalRuntime?.runtime?.brand || null}
+          brandRuntime={publicBrandLegalRuntime}
+          brandAssets={publicBrandAssets}
+          site={site}
+          hours={hours}
+        />
 
-    <div
-      className="public-site-shell"
-      style={
-        brandTheme?.cssVariables || undefined
-      }
-    >
-      <PublicSiteHeader
-          brand={
-            publicBrandLegalRuntime
-              ?.runtime
-              ?.brand ||
-            null
-          }
+        <main>
+          <MiniSiteStructuredData params={params} />
+          {children}
+        </main>
 
-          brandRuntime={
-            publicBrandLegalRuntime
-          }
-          brandAssets={
-            publicBrandAssets
-          }
-        site={site}
-        hours={hours}
-      />
-
-      <main><MiniSiteStructuredData params={params} />
-        {children}</main>
-
-      <PublicSiteFooter site={site} />
-    </div>
-
+        <PublicSiteFooter site={site} />
+      </div>
     </PublicBrandLegalRuntime>
   );
 }
