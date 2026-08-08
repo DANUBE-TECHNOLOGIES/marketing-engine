@@ -41,13 +41,13 @@ export default function CtaV2Renderer({
           label:
             content.primaryButton,
           href:
-            "/contact",
+            "contact",
         }
       : {
           label:
             "Demander un devis",
           href:
-            "/contact",
+            "contact",
         });
 
   const secondaryCta =
