@@ -35,6 +35,10 @@ async function hydrateContract({
       tenantId:
         contract?.site?.tenantId ||
         null,
+      agencyId:
+        contract?.site?.agencyId ||
+        contract?.agency?.id ||
+        null,
       pages:
         contract?.pages || [],
     });
