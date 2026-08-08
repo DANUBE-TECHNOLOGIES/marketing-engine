@@ -21,6 +21,16 @@ function cleanReferences(value) {
     });
 }
 
+function normalizeLimit(value, fallback = 6) {
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+
+  return Math.max(1, Math.min(24, Math.trunc(parsed)));
+}
+
 function destinationCard(destination) {
   return {
     id: destination.id,
@@ -131,9 +141,12 @@ function hydrateDestinationBlocks(pages, destinations) {
         return block;
       }
 
+      const limit = normalizeLimit(content.limit);
+
       const resolved = references
         .map((reference) => byReference.get(reference))
         .filter(Boolean)
+        .slice(0, limit)
         .map(destinationCard);
 
       return {
@@ -177,6 +190,7 @@ async function hydratePublicDynamicBlocks({
 module.exports = {
   asObject,
   cleanReferences,
+  normalizeLimit,
   destinationCard,
   collectDestinationReferences,
   loadPublishedDestinations,
