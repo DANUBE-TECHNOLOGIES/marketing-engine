@@ -468,6 +468,7 @@ class PublicSiteReadService {
     const homePage =
       visiblePages.find(
         (page) =>
+          page.slug === "" ||
           [
             "accueil",
             "home",
@@ -479,6 +480,9 @@ class PublicSiteReadService {
       ) ||
       visiblePages[0] ||
       null;
+
+    const canonicalBasePath =
+      `/agence/${site.slug}`;
 
     return {
       version:
@@ -505,8 +509,7 @@ class PublicSiteReadService {
           "",
 
         basePath:
-          site.basePath ??
-          `/sites/${site.slug}`,
+          canonicalBasePath,
 
         status:
           site.status ??
@@ -548,8 +551,8 @@ class PublicSiteReadService {
             path:
               page.slug ===
                 homePage?.slug
-                ? `/sites/${site.slug}`
-                : `/sites/${site.slug}/${page.slug}`,
+                ? canonicalBasePath
+                : `${canonicalBasePath}/${page.slug}`,
 
             displayOrder:
               page.displayOrder,
