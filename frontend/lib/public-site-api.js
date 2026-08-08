@@ -38,24 +38,67 @@ async function request(path) {
   return payload;
 }
 
+function siteFromContract(payload) {
+  const site =
+    payload?.site &&
+    typeof payload.site === "object"
+      ? payload.site
+      : payload;
+
+  if (
+    !site ||
+    typeof site !== "object"
+  ) {
+    return site;
+  }
+
+  return {
+    ...site,
+    navigation:
+      payload?.navigation ||
+      site.navigation ||
+      [],
+  };
+}
+
+function pageFromContract(payload) {
+  return (
+    payload?.page ||
+    payload?.currentPage ||
+    payload?.requestedPage ||
+    payload
+  );
+}
+
 export const publicSiteApi = {
-  getSite(siteSlug) {
-    return request(
-      `/${encodeURIComponent(siteSlug)}`
+  async getSite(siteSlug) {
+    return siteFromContract(
+      await request(
+        `/${encodeURIComponent(siteSlug)}`
+      )
     );
   },
 
-  getHome(siteSlug) {
-    return request(
-      `/${encodeURIComponent(siteSlug)}/pages/home`
+  async getHome(siteSlug) {
+    return pageFromContract(
+      await request(
+        `/${encodeURIComponent(siteSlug)}/pages/home`
+      )
     );
   },
 
-  getPage(siteSlug, pageSlug) {
-    return request(
-      `/${encodeURIComponent(siteSlug)}/pages/${encodeURIComponent(
-        pageSlug
-      )}`
+  async getPage(siteSlug, pageSlug) {
+    return pageFromContract(
+      await request(
+        `/${encodeURIComponent(siteSlug)}/pages/${encodeURIComponent(
+          pageSlug
+        )}`
+      )
     );
   },
+};
+
+export {
+  pageFromContract,
+  siteFromContract,
 };
