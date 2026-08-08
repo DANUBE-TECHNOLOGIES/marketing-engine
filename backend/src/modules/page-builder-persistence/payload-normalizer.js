@@ -112,6 +112,41 @@ function normalizePublished({
     true;
 }
 
+function normalizeBlockPublication(
+  blocks,
+  pagePublished
+) {
+  if (!pagePublished) {
+    return blocks;
+  }
+
+  return blocks.map(
+    (block) => {
+      const status =
+        cleanText(
+          block?.status ||
+          "draft"
+        ).toLowerCase();
+
+      if (
+        status === "hidden" ||
+        status === "archived"
+      ) {
+        return {
+          ...block,
+          status,
+        };
+      }
+
+      return {
+        ...block,
+        status:
+          "published",
+      };
+    }
+  );
+}
+
 function normalizePageBuilderPayload({
   body,
   params,
@@ -167,6 +202,24 @@ function normalizePageBuilderPayload({
       "draft"
     );
 
+  const published =
+    normalizePublished({
+      input,
+      page,
+      existing,
+      status,
+    });
+
+  const blocks =
+    normalizeBlockPublication(
+      normalizeBlocks(
+        input.blocks ||
+        page.blocks ||
+        existing.blocks
+      ),
+      published
+    );
+
   return {
     ...existing,
     ...input,
@@ -203,25 +256,15 @@ function normalizePageBuilderPayload({
 
     status,
 
-    published:
-      normalizePublished({
-        input,
-        page,
-        existing,
-        status,
-      }),
+    published,
 
-    blocks:
-      normalizeBlocks(
-        input.blocks ||
-        page.blocks ||
-        existing.blocks
-      ),
+    blocks,
   };
 }
 
 module.exports = {
   cleanText,
+  normalizeBlockPublication,
   normalizeBlocks,
   normalizePageBuilderPayload,
   normalizePublished,
