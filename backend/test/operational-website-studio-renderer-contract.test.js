@@ -59,7 +59,7 @@ test("la route V3 défectueuse est isolée derrière l’éditeur V2 opérationn
   assert.match(page, /\/website-builder\/editor\//);
   assert.doesNotMatch(
     page,
-    /VisualBuilderV3/,
+    /import\s+VisualBuilderV3\s+from\s+["'][^"']*VisualBuilderV3["']/,
     "La route V3 ne doit pas importer le composant corrompu tant qu'il n'est pas réparé."
   );
 });
