@@ -1,9 +1,41 @@
 export function getSectionContent(section) {
-  return section?.jsonContent || section?.content || {};
+  const content = section?.jsonContent || section?.content || {};
+
+  return content && typeof content === "object" && !Array.isArray(content)
+    ? content
+    : {};
 }
 
 export function getSectionType(section) {
-  return section?.sectionType || section?.type || "richText";
+  const content = getSectionContent(section);
+
+  return String(
+    content.__builderType ||
+      section?.sectionType ||
+      section?.type ||
+      section?.key ||
+      "richText"
+  )
+    .trim()
+    .toLowerCase();
+}
+
+export function isSectionVisible(section) {
+  return String(section?.status || "visible").toLowerCase() !== "hidden";
+}
+
+export function sortSections(sections = []) {
+  if (!Array.isArray(sections)) return [];
+
+  return sections
+    .filter(Boolean)
+    .filter(isSectionVisible)
+    .slice()
+    .sort(
+      (a, b) =>
+        (a?.displayOrder ?? a?.order ?? 0) -
+        (b?.displayOrder ?? b?.order ?? 0)
+    );
 }
 
 export function normalizeItems(items) {
