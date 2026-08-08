@@ -31,6 +31,12 @@ function normalizeLimit(value, fallback = 6) {
   return Math.max(1, Math.min(24, Math.trunc(parsed)));
 }
 
+function blockType(block) {
+  return String(
+    block?.blockType || block?.type || ""
+  ).toLowerCase();
+}
+
 function destinationCard(destination) {
   return {
     id: destination.id,
@@ -57,17 +63,26 @@ function destinationCard(destination) {
   };
 }
 
+function reviewCard(review) {
+  return {
+    id: review.id,
+    author:
+      review.authorName ||
+      "Client Mondescale",
+    rating:
+      Number(review.rating) || 5,
+    text:
+      review.comment || "",
+  };
+}
+
 function collectDestinationReferences(pages = []) {
   const references = [];
   const seen = new Set();
 
   for (const page of pages) {
     for (const block of page?.blocks || []) {
-      const type = String(
-        block?.blockType || block?.type || ""
-      ).toLowerCase();
-
-      if (type !== "destinations") continue;
+      if (blockType(block) !== "destinations") continue;
 
       const content = asObject(block.content);
 
@@ -80,6 +95,29 @@ function collectDestinationReferences(pages = []) {
   }
 
   return references;
+}
+
+function googleReviewLimit(pages = []) {
+  let limit = 0;
+
+  for (const page of pages) {
+    for (const block of page?.blocks || []) {
+      if (blockType(block) !== "testimonials") continue;
+
+      const content = asObject(block.content);
+
+      if (String(content.source || "google").toLowerCase() !== "google") {
+        continue;
+      }
+
+      limit = Math.max(
+        limit,
+        normalizeLimit(content.limit)
+      );
+    }
+  }
+
+  return limit;
 }
 
 async function loadPublishedDestinations({
@@ -115,6 +153,38 @@ async function loadPublishedDestinations({
   });
 }
 
+async function loadGoogleReviews({
+  prisma,
+  agencyId,
+  limit,
+}) {
+  if (
+    !prisma?.googleReview ||
+    !agencyId ||
+    !limit
+  ) {
+    return [];
+  }
+
+  return prisma.googleReview.findMany({
+    where: {
+      agencyId,
+      comment: {
+        not: null,
+      },
+    },
+    orderBy: [
+      {
+        publishedAt: "desc",
+      },
+      {
+        createdAt: "desc",
+      },
+    ],
+    take: limit,
+  });
+}
+
 function hydrateDestinationBlocks(pages, destinations) {
   const byReference = new Map();
 
@@ -126,11 +196,7 @@ function hydrateDestinationBlocks(pages, destinations) {
   return pages.map((page) => ({
     ...page,
     blocks: (page.blocks || []).map((block) => {
-      const type = String(
-        block?.blockType || block?.type || ""
-      ).toLowerCase();
-
-      if (type !== "destinations") {
+      if (blockType(block) !== "destinations") {
         return block;
       }
 
@@ -160,9 +226,41 @@ function hydrateDestinationBlocks(pages, destinations) {
   }));
 }
 
+function hydrateGoogleReviewBlocks(pages, reviews) {
+  const items = reviews.map(reviewCard);
+
+  return pages.map((page) => ({
+    ...page,
+    blocks: (page.blocks || []).map((block) => {
+      if (blockType(block) !== "testimonials") {
+        return block;
+      }
+
+      const content = asObject(block.content);
+
+      if (String(content.source || "google").toLowerCase() !== "google") {
+        return block;
+      }
+
+      return {
+        ...block,
+        content: {
+          ...content,
+          items:
+            items.slice(
+              0,
+              normalizeLimit(content.limit)
+            ),
+        },
+      };
+    }),
+  }));
+}
+
 async function hydratePublicDynamicBlocks({
   prisma,
   tenantId,
+  agencyId,
   pages = [],
 } = {}) {
   if (!Array.isArray(pages) || !pages.length) {
@@ -170,30 +268,53 @@ async function hydratePublicDynamicBlocks({
   }
 
   const references = collectDestinationReferences(pages);
+  const reviewLimit = googleReviewLimit(pages);
 
-  if (!references.length) {
+  if (!references.length && !reviewLimit) {
     return pages;
   }
 
-  const destinations = await loadPublishedDestinations({
-    prisma,
-    tenantId,
-    references,
-  });
+  const [destinations, reviews] = await Promise.all([
+    loadPublishedDestinations({
+      prisma,
+      tenantId,
+      references,
+    }),
+    loadGoogleReviews({
+      prisma,
+      agencyId,
+      limit: reviewLimit,
+    }),
+  ]);
 
-  return hydrateDestinationBlocks(
-    pages,
-    destinations
-  );
+  const withDestinations =
+    references.length
+      ? hydrateDestinationBlocks(
+          pages,
+          destinations
+        )
+      : pages;
+
+  return reviewLimit
+    ? hydrateGoogleReviewBlocks(
+        withDestinations,
+        reviews
+      )
+    : withDestinations;
 }
 
 module.exports = {
   asObject,
   cleanReferences,
   normalizeLimit,
+  blockType,
   destinationCard,
+  reviewCard,
   collectDestinationReferences,
+  googleReviewLimit,
   loadPublishedDestinations,
+  loadGoogleReviews,
   hydrateDestinationBlocks,
+  hydrateGoogleReviewBlocks,
   hydratePublicDynamicBlocks,
 };
