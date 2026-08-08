@@ -57,6 +57,8 @@ export function normalizePage(page, index = 0) {
     page?.content?.blocks ||
     [];
 
+  const status = String(page?.status || "draft");
+
   return {
     id: String(page?.id || createLocalId("page")),
     slug: String(page?.slug || `page-${index + 1}`),
@@ -66,7 +68,11 @@ export function normalizePage(page, index = 0) {
       page?.seoTitle ||
       `Page ${index + 1}`
     ),
-    status: String(page?.status || "draft"),
+    status,
+    published:
+      typeof page?.published === "boolean"
+        ? page.published
+        : status === "published",
     seoTitle: String(page?.seoTitle || page?.title || ""),
     seoDescription: String(
       page?.seoDescription ||
@@ -149,6 +155,14 @@ export function serializePage(page) {
     slug: page.slug,
     title: page.title,
     status: page.status,
+    published:
+      page.status === "published"
+        ? true
+        : page.status === "draft" ||
+            page.status === "review" ||
+            page.status === "archived"
+          ? false
+          : page.published === true,
     seoTitle: page.seoTitle,
     seoDescription: page.seoDescription,
     blocks: reorderBlocks(page.blocks).map((block) => ({
