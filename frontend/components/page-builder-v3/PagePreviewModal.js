@@ -1,320 +1,88 @@
 "use client";
 
 import {
+  useEffect,
   useMemo,
   useState,
 } from "react";
 
 import styles from "./VisualBuilderV3.module.css";
+import PublicSiteSections from "../public-site/PublicSiteSections";
 
 import {
   validatePublication,
   visibleBlocksForViewport,
 } from "../../lib/page-builder-v3/index.mjs";
 
-function PreviewBlock({
-  block,
-}) {
-  const content =
-    block.content || {};
+function toPublicPreviewPage(
+  page,
+  blocks
+) {
+  return {
+    ...page,
 
-  if (block.type === "hero") {
-    return (
-      <section
-        className={
-          styles.previewHero
-        }
-      >
-        {content.eyebrow ? (
-          <small>
-            {content.eyebrow}
-          </small>
-        ) : null}
+    sections: blocks.map(
+      (block, index) => ({
+        id:
+          block.id ||
+          `preview-${index}`,
 
-        <h1>
-          {content.title ||
-            "Titre principal"}
-        </h1>
+        sectionType:
+          block.type ||
+          "rich_text",
 
-        {content.subtitle ? (
-          <p>
-            {content.subtitle}
-          </p>
-        ) : null}
+        status:
+          block.status === "hidden"
+            ? "hidden"
+            : "draft",
 
-        {content.primaryCta?.label ? (
-          <a
-            href={
-              content.primaryCta
-                .href || "#"
-            }
-          >
-            {
-              content.primaryCta
-                .label
-            }
-          </a>
-        ) : null}
-      </section>
-    );
-  }
+        displayOrder:
+          block.position ??
+          index,
+
+        jsonContent: {
+          ...(block.content || {}),
+
+          __builderType:
+            block.type ||
+            "rich_text",
+        },
+      })
+    ),
+  };
+}
+
+function runtimeCssVariables(
+  payload
+) {
+  const variables =
+    payload?.runtime?.brand
+      ?.cssVariables;
 
   if (
-    block.type === "rich_text"
+    !variables ||
+    typeof variables !== "object" ||
+    Array.isArray(variables)
   ) {
-    return (
-      <section
-        className={
-          styles.previewSection
-        }
-      >
-        {content.title ? (
-          <h2>
-            {content.title}
-          </h2>
-        ) : null}
-
-        <div
-          dangerouslySetInnerHTML={{
-            __html:
-              content.html || "",
-          }}
-        />
-      </section>
-    );
+    return {};
   }
 
-  if (
-    block.type === "image_text"
-  ) {
-    return (
-      <section
-        className={
-          styles.previewImageText
-        }
-        data-position={
-          content.imagePosition ||
-          "left"
-        }
-      >
-        <div>
-          {content.imageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={
-                content.imageUrl
-              }
-              alt={
-                content.imageAlt ||
-                ""
-              }
-            />
-          ) : (
-            <span>
-              Image
-            </span>
-          )}
-        </div>
-
-        <article>
-          <h2>
-            {content.title}
-          </h2>
-          <p>
-            {content.text}
-          </p>
-        </article>
-      </section>
-    );
-  }
-
-  if (
-    block.type === "features"
-  ) {
-    return (
-      <section
-        className={
-          styles.previewSection
-        }
-      >
-        <h2>
-          {content.title ||
-            "Les points forts"}
-        </h2>
-
-        <div
-          className={
-            styles.previewCards
-          }
-        >
-          {(content.items || [])
-            .map(
-              (item, index) => (
-                <article
-                  key={index}
-                >
-                  <span>
-                    {item.icon ||
-                      "✦"}
-                  </span>
-                  <h3>
-                    {item.title}
-                  </h3>
-                  <p>
-                    {item.text}
-                  </p>
-                </article>
-              )
-            )}
-        </div>
-      </section>
-    );
-  }
-
-  if (
-    block.type === "gallery"
-  ) {
-    return (
-      <section
-        className={
-          styles.previewSection
-        }
-      >
-        <h2>
-          {content.title ||
-            "Galerie"}
-        </h2>
-
-        <div
-          className={
-            styles.previewGallery
-          }
-        >
-          {(content.images || [])
-            .map(
-              (image, index) => (
-                <figure
-                  key={index}
-                >
-                  {image.url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={image.url}
-                      alt={
-                        image.alt ||
-                        ""
-                      }
-                    />
-                  ) : (
-                    <span>
-                      Image
-                    </span>
-                  )}
-
-                  {image.caption ? (
-                    <figcaption>
-                      {
-                        image.caption
-                      }
-                    </figcaption>
-                  ) : null}
-                </figure>
-              )
-            )}
-        </div>
-      </section>
-    );
-  }
-
-  if (block.type === "faq") {
-    return (
-      <section
-        className={
-          styles.previewSection
-        }
-      >
-        <h2>
-          {content.title ||
-            "Questions fréquentes"}
-        </h2>
-
-        {(content.items || [])
-          .map(
-            (item, index) => (
-              <details
-                key={index}
-              >
-                <summary>
-                  {
-                    item.question
-                  }
-                </summary>
-                <p>
-                  {item.answer}
-                </p>
-              </details>
-            )
-          )}
-      </section>
-    );
-  }
-
-  if (block.type === "cta") {
-    return (
-      <section
-        className={
-          styles.previewCta
-        }
-      >
-        <h2>
-          {content.title}
-        </h2>
-
-        <p>
-          {content.text}
-        </p>
-
-        {content.primaryCta?.label ? (
-          <a
-            href={
-              content.primaryCta
-                .href || "#"
-            }
-          >
-            {
-              content.primaryCta
-                .label
-            }
-          </a>
-        ) : null}
-      </section>
-    );
-  }
-
-  if (
-    block.type === "agency"
-  ) {
-    return (
-      <section
-        className={
-          styles.previewAgency
-        }
-      >
-        <h2>
-          {content.title ||
-            "Votre agence"}
-        </h2>
-
-        <p>
-          Votre conseiller vous
-          accompagne avant, pendant
-          et après votre voyage.
-        </p>
-      </section>
-    );
-  }
-
-  return null;
+  return Object.fromEntries(
+    Object.entries(variables)
+      .filter(
+        ([key, value]) =>
+          /^--[a-zA-Z0-9_-]+$/.test(key) &&
+          value !== null &&
+          value !== undefined &&
+          value !== ""
+      )
+      .map(
+        ([key, value]) => [
+          key,
+          String(value),
+        ]
+      )
+  );
 }
 
 export default function PagePreviewModal({
@@ -327,6 +95,9 @@ export default function PagePreviewModal({
 }) {
   const [viewport, setViewport] =
     useState("desktop");
+
+  const [brandVariables, setBrandVariables] =
+    useState({});
 
   const validation = useMemo(
     () =>
@@ -355,6 +126,89 @@ export default function PagePreviewModal({
       viewport,
     ]
   );
+
+  const previewPage = useMemo(
+    () =>
+      editor?.page
+        ? toPublicPreviewPage(
+            editor.page,
+            blocks
+          )
+        : null,
+    [
+      editor?.page,
+      blocks,
+    ]
+  );
+
+  useEffect(() => {
+    if (
+      !open ||
+      !site?.slug
+    ) {
+      setBrandVariables({});
+      return;
+    }
+
+    let active = true;
+
+    async function loadBrandRuntime() {
+      try {
+        const response =
+          await fetch(
+            `/api/public-brand-legal/sites/${encodeURIComponent(
+              site.slug
+            )}`,
+            {
+              headers: {
+                accept:
+                  "application/json",
+
+                "x-tenant-slug":
+                  "mondescale",
+              },
+
+              cache:
+                "no-store",
+            }
+          );
+
+        if (
+          !response.ok
+        ) {
+          if (active) {
+            setBrandVariables({});
+          }
+
+          return;
+        }
+
+        const payload =
+          await response.json();
+
+        if (active) {
+          setBrandVariables(
+            runtimeCssVariables(
+              payload
+            )
+          );
+        }
+      } catch {
+        if (active) {
+          setBrandVariables({});
+        }
+      }
+    }
+
+    loadBrandRuntime();
+
+    return () => {
+      active = false;
+    };
+  }, [
+    open,
+    site?.slug,
+  ]);
 
   if (
     !open ||
@@ -531,7 +385,7 @@ export default function PagePreviewModal({
                 <small>
                   {site?.domain ||
                     site?.customDomain ||
-                    "mini-site.local"}
+                    "agences.mondescale.com"}
                   /
                   {editor.page.slug}
                 </small>
@@ -542,29 +396,39 @@ export default function PagePreviewModal({
                   styles.previewPage
                 }
               >
-                {blocks.map(
-                  (block) => (
-                    <PreviewBlock
-                      key={
-                        block.id
+                <div
+                  className="public-site-shell"
+                  style={
+                    Object.keys(
+                      brandVariables
+                    ).length
+                      ? brandVariables
+                      : undefined
+                  }
+                >
+                  {site &&
+                  previewPage ? (
+                    <PublicSiteSections
+                      page={
+                        previewPage
                       }
-                      block={
-                        block
+                      site={
+                        site
                       }
                     />
-                  )
-                )}
+                  ) : null}
 
-                {!blocks.length ? (
-                  <div
-                    className={
-                      styles.previewEmpty
-                    }
-                  >
-                    Aucun bloc visible
-                    dans ce format.
-                  </div>
-                ) : null}
+                  {!blocks.length ? (
+                    <div
+                      className={
+                        styles.previewEmpty
+                      }
+                    >
+                      Aucun bloc visible
+                      dans ce format.
+                    </div>
+                  ) : null}
+                </div>
               </div>
             </div>
           </main>
