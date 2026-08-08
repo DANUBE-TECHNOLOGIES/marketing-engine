@@ -106,6 +106,31 @@ class PageBuilderPersistenceRepository {
         },
       });
 
+      /*
+       * Le Designer V2 porte l'intention de publication de la page.
+       * Le renderer public exige également que l'AgencySite soit publié.
+       * Dès qu'une page est publiée, on ouvre donc le site au contrat
+       * public. Une page repassée en brouillon ne dépublie pas le site :
+       * les autres pages publiées doivent rester accessibles.
+       */
+      if (input.page.published === true) {
+        await tx.agencySite.updateMany({
+          where: {
+            id: page.siteId,
+            ...(this.tenantId
+              ? { tenantId: this.tenantId }
+              : {}),
+            status: {
+              not: "published",
+            },
+          },
+          data: {
+            status: "published",
+            publishedAt: new Date(),
+          },
+        });
+      }
+
       await tx.pageBlock.deleteMany({
         where: {
           pageId: page.id,
@@ -250,6 +275,7 @@ class PageBuilderPersistenceRepository {
           },
 
           include: {
+            site: true,
             blocks: {
               orderBy: {
                 displayOrder:
@@ -281,6 +307,7 @@ class PageBuilderPersistenceRepository {
         },
 
         include: {
+          site: true,
           blocks: {
             orderBy: {
               displayOrder:
