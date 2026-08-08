@@ -11,6 +11,8 @@ const {
   buildFaqPage,
   buildStructuredDataPlan,
   buildTravelAgency,
+  buildWebPage,
+  buildWebSite,
   extractFaqItems,
   validateGraph,
 } = require(
@@ -50,15 +52,20 @@ const site = {
   agency,
 };
 
+const publicOrigin =
+  "https://agences.mondescale.com";
+
+const canonicalSiteUrl =
+  `${publicOrigin}/agence/${site.slug}`;
+
 test(
-  "génère TravelAgency et LocalBusiness",
+  "génère TravelAgency et LocalBusiness sur l'URL canonique",
   () => {
     const result =
       buildTravelAgency({
         agency,
         site,
-        publicOrigin:
-          "https://agences.mondescale.com",
+        publicOrigin,
       });
 
     assert.ok(
@@ -86,6 +93,70 @@ test(
         .addressCountry,
       "FR"
     );
+
+    assert.equal(
+      result.url,
+      canonicalSiteUrl
+    );
+
+    assert.equal(
+      result["@id"],
+      `${canonicalSiteUrl}#travel-agency`
+    );
+  }
+);
+
+test(
+  "génère WebSite et WebPage sur /agence",
+  () => {
+    const website =
+      buildWebSite({
+        agency,
+        site,
+        publicOrigin,
+      });
+
+    const webpage =
+      buildWebPage({
+        agency,
+        site,
+        page: {
+          slug:
+            "services",
+          title:
+            "Nos services",
+          seoTitle:
+            "Services voyage",
+          metaDescription:
+            "Nos services voyage.",
+        },
+        publicOrigin,
+      });
+
+    assert.equal(
+      website.url,
+      canonicalSiteUrl
+    );
+
+    assert.equal(
+      website["@id"],
+      `${canonicalSiteUrl}#website`
+    );
+
+    assert.equal(
+      webpage.url,
+      `${canonicalSiteUrl}/services`
+    );
+
+    assert.equal(
+      webpage.isPartOf["@id"],
+      `${canonicalSiteUrl}#website`
+    );
+
+    assert.equal(
+      webpage.about["@id"],
+      `${canonicalSiteUrl}#travel-agency`
+    );
   }
 );
 
@@ -102,14 +173,19 @@ test(
           title:
             "Accueil",
         },
-        publicOrigin:
-          "https://agences.mondescale.com",
+        publicOrigin,
       });
 
     assert.equal(
       result.itemListElement
         .length,
       1
+    );
+
+    assert.equal(
+      result.itemListElement[0]
+        .item,
+      canonicalSiteUrl
     );
   }
 );
@@ -127,14 +203,19 @@ test(
           title:
             "Nos services",
         },
-        publicOrigin:
-          "https://agences.mondescale.com",
+        publicOrigin,
       });
 
     assert.equal(
       result.itemListElement
         .length,
       2
+    );
+
+    assert.equal(
+      result.itemListElement[1]
+        .item,
+      `${canonicalSiteUrl}/services`
     );
   }
 );
@@ -188,8 +269,7 @@ test(
           blocks: [],
         },
 
-        publicOrigin:
-          "https://agences.mondescale.com",
+        publicOrigin,
       });
 
     assert.equal(
@@ -270,8 +350,7 @@ test(
   () => {
     const result =
       buildStructuredDataPlan({
-        publicOrigin:
-          "https://agences.mondescale.com",
+        publicOrigin,
 
         sites: [
           {
