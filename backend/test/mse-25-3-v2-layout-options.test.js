@@ -19,6 +19,7 @@ test("MSE-25.3 le registry public prend en charge les options de mise en page V2
   assert.match(registry, /rich_text:\s*RichTextV2Renderer/);
   assert.match(registry, /image_text:\s*ImageTextV2Renderer/);
   assert.match(registry, /gallery:\s*GalleryV2Renderer/);
+  assert.match(registry, /features:\s*FeaturesV2Renderer/);
 });
 
 test("MSE-25.3 respecte alignment dans le texte enrichi et le hero", () => {
@@ -45,12 +46,17 @@ test("MSE-25.3 respecte imagePosition sans casser la grille responsive", () => {
   assert.match(renderer, /repeat\(auto-fit, minmax\(280px, 1fr\)\)/);
 });
 
-test("MSE-25.3 respecte columns dans la galerie avec une grille auto-fit", () => {
-  const renderer = source(
+test("MSE-25.3 respecte columns dans la galerie et les points forts", () => {
+  const gallery = source(
     "frontend/components/public-site/renderers/GalleryV2Renderer.js"
   );
+  const features = source(
+    "frontend/components/public-site/renderers/FeaturesV2Renderer.js"
+  );
 
-  assert.match(renderer, /normalizeColumns\(content\.columns\)/);
-  assert.match(renderer, /data-columns=\{columns\}/);
-  assert.match(renderer, /repeat\(auto-fit, minmax/);
+  for (const renderer of [gallery, features]) {
+    assert.match(renderer, /normalizeColumns\(content\.columns\)/);
+    assert.match(renderer, /data-columns=\{columns\}/);
+    assert.match(renderer, /repeat\(auto-fit, minmax/);
+  }
 });
