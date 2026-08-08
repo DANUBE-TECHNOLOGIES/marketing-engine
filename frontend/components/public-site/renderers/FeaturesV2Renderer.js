@@ -3,6 +3,19 @@ import {
   getSectionTitle,
 } from "./helpers";
 
+function normalizeColumns(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 3;
+  return Math.max(1, Math.min(4, Math.trunc(parsed)));
+}
+
+function minimumCardWidth(columns) {
+  if (columns >= 4) return 200;
+  if (columns === 3) return 250;
+  if (columns === 2) return 340;
+  return 520;
+}
+
 export default function FeaturesV2Renderer({
   section,
 }) {
@@ -15,6 +28,8 @@ export default function FeaturesV2Renderer({
     content.text ||
     content.description ||
     "";
+  const columns = normalizeColumns(content.columns);
+  const minimum = minimumCardWidth(columns);
 
   return (
     <section className="public-site-section public-site-features">
@@ -33,7 +48,14 @@ export default function FeaturesV2Renderer({
         ) : null}
 
         {items.length ? (
-          <div className="public-site-card-grid">
+          <div
+            className="public-site-card-grid"
+            data-columns={columns}
+            style={{
+              gridTemplateColumns:
+                `repeat(auto-fit, minmax(min(100%, ${minimum}px), 1fr))`,
+            }}
+          >
             {items.map((item, index) => (
               <article
                 className="public-site-card public-site-feature-card"
