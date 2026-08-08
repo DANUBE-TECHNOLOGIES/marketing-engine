@@ -3,14 +3,6 @@ import {
   getSectionTitle,
 } from "./helpers";
 
-function columnCount(value) {
-  const parsed = Number(value);
-
-  if (!Number.isFinite(parsed)) return 3;
-
-  return Math.min(4, Math.max(1, Math.round(parsed)));
-}
-
 export default function FeaturesV2Renderer({
   section,
 }) {
@@ -18,7 +10,6 @@ export default function FeaturesV2Renderer({
   const items = Array.isArray(content.items)
     ? content.items
     : [];
-  const columns = columnCount(content.columns);
   const introduction =
     content.introduction ||
     content.text ||
@@ -42,13 +33,7 @@ export default function FeaturesV2Renderer({
         ) : null}
 
         {items.length ? (
-          <div
-            className="public-site-card-grid"
-            style={{
-              gridTemplateColumns:
-                `repeat(${columns}, minmax(0, 1fr))`,
-            }}
-          >
+          <div className="public-site-card-grid">
             {items.map((item, index) => (
               <article
                 className="public-site-card public-site-feature-card"
@@ -74,7 +59,3 @@ export default function FeaturesV2Renderer({
     </section>
   );
 }
-
-export {
-  columnCount,
-};
