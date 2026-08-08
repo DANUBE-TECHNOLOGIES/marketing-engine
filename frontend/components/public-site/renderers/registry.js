@@ -1,5 +1,6 @@
 import HeroV2Renderer from "./HeroV2Renderer";
 import CtaV2Renderer from "./CtaV2Renderer";
+import AgencyV2Renderer from "./AgencyV2Renderer";
 import DestinationsRenderer from "./DestinationsRenderer";
 import OffersRenderer from "./OffersRenderer";
 import InspirationsRenderer from "./InspirationsRenderer";
@@ -17,6 +18,7 @@ import SeparatorRenderer from "./SeparatorRenderer";
 export const PUBLIC_RENDERER_REGISTRY = {
   hero: HeroV2Renderer,
   cta: CtaV2Renderer,
+  agency: AgencyV2Renderer,
   destinations: DestinationsRenderer,
   offers: OffersRenderer,
   inspirations: InspirationsRenderer,
