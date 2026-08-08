@@ -16,18 +16,164 @@ function publicPageHref(site, slug = "") {
   return normalized ? `${root}/${encodeURIComponent(normalized)}` : root;
 }
 
+function htmlToSafeParagraphs(value) {
+  const normalized = String(value || "")
+    .replace(/<\s*br\s*\/?\s*>/gi, "\n")
+    .replace(/<\/(p|div|li|h[1-6])\s*>/gi, "\n")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/\r/g, "");
+
+  return normalized
+    .split(/\n+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 function TextSection({ section }) {
   const content = getSectionContent(section);
   const title = sectionTitle(section, content);
+  const htmlParagraphs = content.html ? htmlToSafeParagraphs(content.html) : [];
 
   return (
     <section className="public-site-section">
-      {title ? <h2>{title}</h2> : null}
-      {content.text ? <p>{content.text}</p> : null}
-      {content.description ? <p>{content.description}</p> : null}
-      {Array.isArray(content.paragraphs)
-        ? content.paragraphs.map((paragraph, index) => <p key={index}>{paragraph}</p>)
-        : null}
+      <div className="public-site-container public-site-prose">
+        {title ? <h2>{title}</h2> : null}
+        {content.text ? <p>{content.text}</p> : null}
+        {content.description ? <p>{content.description}</p> : null}
+        {Array.isArray(content.paragraphs)
+          ? content.paragraphs.map((paragraph, index) => <p key={index}>{paragraph}</p>)
+          : null}
+        {htmlParagraphs.map((paragraph, index) => (
+          <p key={`html-${index}`}>{paragraph}</p>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ImageTextSection({ section }) {
+  const content = getSectionContent(section);
+  const title = sectionTitle(section, content);
+  const imagePosition = content.imagePosition === "right" ? "right" : "left";
+
+  return (
+    <section className="public-site-section public-site-image-text">
+      <div
+        className="public-site-container public-site-image-text-grid"
+        data-image-position={imagePosition}
+      >
+        <div className="public-site-image-text-media">
+          {content.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={content.imageUrl} alt={content.imageAlt || ""} loading="lazy" />
+          ) : (
+            <div className="public-site-image-placeholder" aria-hidden="true" />
+          )}
+        </div>
+
+        <div className="public-site-image-text-copy">
+          {content.eyebrow ? <p className="public-site-eyebrow">{content.eyebrow}</p> : null}
+          {title ? <h2>{title}</h2> : null}
+          {content.text ? <p>{content.text}</p> : null}
+          {content.description ? <p>{content.description}</p> : null}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function FeaturesSection({ section }) {
+  const content = getSectionContent(section);
+  const title = sectionTitle(section, content) || "Les points forts";
+  const items = Array.isArray(content.items) ? content.items : [];
+
+  return (
+    <section className="public-site-section public-site-features">
+      <div className="public-site-container">
+        <h2>{title}</h2>
+        {content.text ? <p className="public-site-section-intro">{content.text}</p> : null}
+        <div className="public-site-card-grid">
+          {items.map((item, index) => (
+            <article className="public-site-card public-site-feature-card" key={item.id || index}>
+              {item.icon ? <span className="public-site-feature-icon">{item.icon}</span> : null}
+              <h3>{item.title || item.label}</h3>
+              {item.text ? <p>{item.text}</p> : null}
+              {item.description ? <p>{item.description}</p> : null}
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function GallerySection({ section }) {
+  const content = getSectionContent(section);
+  const title = sectionTitle(section, content) || "Galerie";
+  const images = Array.isArray(content.images) ? content.images : [];
+
+  return (
+    <section className="public-site-section public-site-gallery-section">
+      <div className="public-site-container">
+        <h2>{title}</h2>
+        {content.text ? <p className="public-site-section-intro">{content.text}</p> : null}
+        <div className="public-site-gallery-grid">
+          {images.map((image, index) => (
+            <figure className="public-site-gallery-item" key={image.id || image.url || index}>
+              {image.url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={image.url} alt={image.alt || ""} loading="lazy" />
+              ) : (
+                <div className="public-site-image-placeholder" aria-hidden="true" />
+              )}
+              {image.caption ? <figcaption>{image.caption}</figcaption> : null}
+            </figure>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function AgencySection({ section, site }) {
+  const content = getSectionContent(section);
+  const agency = site.agency || {};
+
+  return (
+    <section className="public-site-section public-site-agency-section">
+      <div className="public-site-container public-site-agency-grid">
+        <div>
+          <p className="public-site-eyebrow">Votre agence</p>
+          <h2>{sectionTitle(section, content) || site.name}</h2>
+          <p>
+            {content.text ||
+              content.description ||
+              agency.description ||
+              "Votre conseiller vous accompagne avant, pendant et après votre voyage."}
+          </p>
+        </div>
+        <div className="public-site-agency-details">
+          {agency.address ? (
+            <p>
+              <strong>Adresse</strong><br />
+              {agency.address}<br />
+              {agency.postalCode} {agency.city}
+            </p>
+          ) : null}
+          {agency.phone ? (
+            <p>
+              <strong>Téléphone</strong><br />
+              <a href={`tel:${agency.phone.replace(/\s+/g, "")}`}>{agency.phone}</a>
+            </p>
+          ) : null}
+        </div>
+      </div>
     </section>
   );
 }
@@ -256,7 +402,7 @@ function CtaSection({ section, site }) {
 }
 
 export default function PublicSiteSections({ page, site }) {
-  const sections = sortSections(page?.sections).filter(isSectionVisible);
+  const sections = sortSections(page?.sections || page?.blocks).filter(isSectionVisible);
 
   return sections.map((section, index) => {
     const type = getSectionType(section);
@@ -276,6 +422,26 @@ export default function PublicSiteSections({ page, site }) {
 
     if (type.includes("hero")) {
       return <HeroSection key={key} section={section} site={site} />;
+    }
+
+    if (["rich_text", "rich-text", "richtext"].includes(type)) {
+      return <TextSection key={key} section={section} />;
+    }
+
+    if (["image_text", "image-text"].includes(type)) {
+      return <ImageTextSection key={key} section={section} />;
+    }
+
+    if (type === "features") {
+      return <FeaturesSection key={key} section={section} />;
+    }
+
+    if (type === "gallery") {
+      return <GallerySection key={key} section={section} />;
+    }
+
+    if (type === "agency") {
+      return <AgencySection key={key} section={section} site={site} />;
     }
 
     if (type.includes("review")) {
@@ -309,10 +475,6 @@ export default function PublicSiteSections({ page, site }) {
       return <CtaSection key={key} section={section} site={site} />;
     }
 
-    return (
-      <div className="public-site-container" key={key}>
-        <TextSection section={section} />
-      </div>
-    );
+    return <TextSection key={key} section={section} />;
   });
 }
