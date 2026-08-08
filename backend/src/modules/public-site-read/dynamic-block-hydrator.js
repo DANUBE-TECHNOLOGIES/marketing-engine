@@ -172,6 +172,9 @@ async function loadGoogleReviews({
       comment: {
         not: null,
       },
+      publishedAt: {
+        not: null,
+      },
     },
     orderBy: [
       {
