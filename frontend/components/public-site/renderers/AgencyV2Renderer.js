@@ -3,6 +3,16 @@ import {
   getSectionTitle,
 } from "./helpers";
 
+const DAY_LABELS = {
+  MONDAY: "Lundi",
+  TUESDAY: "Mardi",
+  WEDNESDAY: "Mercredi",
+  THURSDAY: "Jeudi",
+  FRIDAY: "Vendredi",
+  SATURDAY: "Samedi",
+  SUNDAY: "Dimanche",
+};
+
 function phoneHref(phone) {
   return `tel:${String(phone || "").replace(/\s+/g, "")}`;
 }
@@ -32,6 +42,19 @@ function hasHours(hours) {
   );
 }
 
+function formatPeriods(periods) {
+  if (!Array.isArray(periods) || !periods.length) {
+    return "Fermé";
+  }
+
+  return periods
+    .map(
+      (period) =>
+        `${period.openTime} – ${period.closeTime}`
+    )
+    .join(" / ");
+}
+
 export default function AgencyV2Renderer({
   section,
   site,
@@ -39,6 +62,9 @@ export default function AgencyV2Renderer({
   const content = getSectionContent(section);
   const agency = site?.agency || {};
   const hours = site?.hours || agency?.hours || null;
+  const weekly = Array.isArray(hours?.weekly)
+    ? hours.weekly
+    : [];
 
   const showAddress = content.showAddress !== false;
   const showPhone = content.showPhone !== false;
@@ -124,11 +150,28 @@ export default function AgencyV2Renderer({
               <span className="public-site-agency-icon">◷</span>
               <div>
                 <small>Horaires</small>
-                {hours.status?.label ? (
-                  <strong>{hours.status.label}</strong>
-                ) : null}
-                {hours.today?.label ? (
-                  <p>{hours.today.label}</p>
+
+                <strong>
+                  {hours.status?.label ||
+                    "Horaires de l’agence"}
+                </strong>
+
+                {weekly.length ? (
+                  <div className="public-site-hours-table">
+                    {weekly.map((day) => (
+                      <div
+                        className="public-site-hours-row"
+                        key={day.day}
+                      >
+                        <strong>
+                          {DAY_LABELS[day.day] || day.day}
+                        </strong>
+                        <span>
+                          {formatPeriods(day.periods)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 ) : null}
               </div>
             </article>
