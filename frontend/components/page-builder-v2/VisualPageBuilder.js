@@ -332,6 +332,31 @@ function ToggleInput({
   );
 }
 
+function SelectInput({
+  label,
+  value,
+  onChange,
+  options,
+}) {
+  return (
+    <label className={styles.field}>
+      <span>{label}</span>
+      <select
+        value={value ?? ""}
+        onChange={(event) =>
+          onChange(event.target.value)
+        }
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 function BlockProperties({
   block,
   onContentChange,
@@ -453,6 +478,45 @@ function BlockProperties({
         </>
       ) : null}
 
+      {"alignment" in content ? (
+        <SelectInput
+          label="Alignement"
+          value={content.alignment || "left"}
+          onChange={(value) => set("alignment", value)}
+          options={[
+            { value: "left", label: "Gauche" },
+            { value: "center", label: "Centré" },
+            { value: "right", label: "Droite" },
+          ]}
+        />
+      ) : null}
+
+      {"imagePosition" in content ? (
+        <SelectInput
+          label="Position de l’image"
+          value={content.imagePosition || "left"}
+          onChange={(value) => set("imagePosition", value)}
+          options={[
+            { value: "left", label: "À gauche" },
+            { value: "right", label: "À droite" },
+          ]}
+        />
+      ) : null}
+
+      {"columns" in content ? (
+        <SelectInput
+          label="Nombre de colonnes"
+          value={String(content.columns || 3)}
+          onChange={(value) => set("columns", Number(value))}
+          options={[
+            { value: "1", label: "1 colonne" },
+            { value: "2", label: "2 colonnes" },
+            { value: "3", label: "3 colonnes" },
+            { value: "4", label: "4 colonnes" },
+          ]}
+        />
+      ) : null}
+
       {content.primaryCta ? (
         <>
           <TextInput
@@ -509,6 +573,15 @@ function BlockProperties({
               set("showHours", value)
             }
           />
+          {"showMap" in content ? (
+            <ToggleInput
+              label="Afficher la carte"
+              checked={content.showMap}
+              onChange={(value) =>
+                set("showMap", value)
+              }
+            />
+          ) : null}
         </>
       ) : null}
 
