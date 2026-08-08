@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import PublicSiteFooter from "../public-site/PublicSiteFooter";
+import PublicSiteHeader from "../public-site/PublicSiteHeader";
 import PublicSiteSections from "../public-site/PublicSiteSections";
 
 function toPublicPreviewPage(page) {
@@ -40,17 +42,37 @@ function runtimeCssVariables(payload) {
   );
 }
 
+function runtimeBrandAssets(payload) {
+  const assets = payload?.runtime?.brand?.assets;
+
+  if (!assets || typeof assets !== "object" || Array.isArray(assets)) {
+    return {};
+  }
+
+  return assets;
+}
+
 export default function PublicPagePreview({ page, site }) {
-  const [brandVariables, setBrandVariables] = useState({});
+  const [brandRuntime, setBrandRuntime] = useState(null);
 
   const previewPage = useMemo(
     () => (page ? toPublicPreviewPage(page) : null),
     [page]
   );
 
+  const brandVariables = useMemo(
+    () => runtimeCssVariables(brandRuntime),
+    [brandRuntime]
+  );
+
+  const brandAssets = useMemo(
+    () => runtimeBrandAssets(brandRuntime),
+    [brandRuntime]
+  );
+
   useEffect(() => {
     if (!site?.slug) {
-      setBrandVariables({});
+      setBrandRuntime(null);
       return undefined;
     }
 
@@ -70,14 +92,14 @@ export default function PublicPagePreview({ page, site }) {
         );
 
         if (!response.ok) {
-          if (active) setBrandVariables({});
+          if (active) setBrandRuntime(null);
           return;
         }
 
         const payload = await response.json();
-        if (active) setBrandVariables(runtimeCssVariables(payload));
+        if (active) setBrandRuntime(payload);
       } catch {
-        if (active) setBrandVariables({});
+        if (active) setBrandRuntime(null);
       }
     }
 
@@ -101,7 +123,22 @@ export default function PublicPagePreview({ page, site }) {
           : undefined
       }
     >
-      <PublicSiteSections page={previewPage} site={site} />
+      <PublicSiteHeader
+        brand={brandRuntime?.runtime?.brand || null}
+        brandRuntime={brandRuntime}
+        brandAssets={brandAssets}
+        site={site}
+        hours={null}
+      />
+
+      <main>
+        <PublicSiteSections
+          page={previewPage}
+          site={site}
+        />
+      </main>
+
+      <PublicSiteFooter site={site} />
     </div>
   );
 }
