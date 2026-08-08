@@ -2,6 +2,9 @@ import HeroV2Renderer from "./HeroV2Renderer";
 import CtaV2Renderer from "./CtaV2Renderer";
 import AgencyV2Renderer from "./AgencyV2Renderer";
 import FeaturesV2Renderer from "./FeaturesV2Renderer";
+import RichTextV2Renderer from "./RichTextV2Renderer";
+import ImageTextV2Renderer from "./ImageTextV2Renderer";
+import GalleryV2Renderer from "./GalleryV2Renderer";
 import DestinationsRenderer from "./DestinationsRenderer";
 import OffersRenderer from "./OffersRenderer";
 import InspirationsRenderer from "./InspirationsRenderer";
@@ -21,6 +24,12 @@ export const PUBLIC_RENDERER_REGISTRY = {
   cta: CtaV2Renderer,
   agency: AgencyV2Renderer,
   features: FeaturesV2Renderer,
+  rich_text: RichTextV2Renderer,
+  "rich-text": RichTextV2Renderer,
+  richtext: RichTextV2Renderer,
+  image_text: ImageTextV2Renderer,
+  "image-text": ImageTextV2Renderer,
+  gallery: GalleryV2Renderer,
   destinations: DestinationsRenderer,
   offers: OffersRenderer,
   inspirations: InspirationsRenderer,
