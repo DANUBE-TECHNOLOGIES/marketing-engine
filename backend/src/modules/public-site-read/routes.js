@@ -15,6 +15,10 @@ const {
   hydratePublicDynamicBlocks,
 } = require("./dynamic-block-hydrator");
 
+const {
+  hydratePreviewPage,
+} = require("./preview-hydrator");
+
 function replacePageReference(reference, pages) {
   if (!reference) return null;
 
@@ -94,6 +98,41 @@ function createPublicSiteReadRouter({
         writeOperations:
           false,
       });
+    }
+  );
+
+  router.post(
+    "/sites/:siteSlug/preview-hydrate",
+    async (
+      request,
+      response,
+      next
+    ) => {
+      try {
+        const result =
+          await hydratePreviewPage({
+            prisma:
+              database,
+            siteSlug:
+              request.params.siteSlug,
+            page:
+              request.body?.page ||
+              request.body ||
+              {},
+          });
+
+        response.set(
+          "Cache-Control",
+          "private, no-store"
+        );
+
+        response.json({
+          page:
+            result.page,
+        });
+      } catch (error) {
+        next(error);
+      }
     }
   );
 
