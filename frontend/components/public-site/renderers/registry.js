@@ -9,6 +9,8 @@ import ContactRenderer from "./ContactRenderer";
 import MapRenderer from "./MapRenderer";
 import HoursRenderer from "./HoursRenderer";
 import ReviewsRenderer from "./ReviewsRenderer";
+import TestimonialsRenderer from "./TestimonialsRenderer";
+import SeparatorRenderer from "./SeparatorRenderer";
 
 export const PUBLIC_RENDERER_REGISTRY = {
   destinations: DestinationsRenderer,
@@ -19,9 +21,11 @@ export const PUBLIC_RENDERER_REGISTRY = {
   appointment: AppointmentRenderer,
   faq: FaqRenderer,
   reviews: ReviewsRenderer,
+  testimonials: TestimonialsRenderer,
   contact: ContactRenderer,
   map: MapRenderer,
   hours: HoursRenderer,
+  separator: SeparatorRenderer,
 };
 
 export function getPublicRenderer(type) {
