@@ -26,13 +26,6 @@ function forwardedHeaders(request) {
     if (value) headers.set(name, value);
   }
 
-  if (
-    !headers.has("x-tenant-id") &&
-    !headers.has("x-tenant-slug")
-  ) {
-    headers.set("x-tenant-slug", "mondescale");
-  }
-
   return headers;
 }
 
