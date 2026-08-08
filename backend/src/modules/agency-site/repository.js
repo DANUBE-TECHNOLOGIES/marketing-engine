@@ -9,7 +9,6 @@ class AgencySiteRepository extends TenantScopedRepository {
     });
   }
 
-
   listSites() {
     return this.prisma.agencySite.findMany({
       where: {
@@ -56,13 +55,12 @@ class AgencySiteRepository extends TenantScopedRepository {
   }
 
   async upsertSite(site) {
-    const existing =
-      await this.prisma.agencySite.findFirst({
-        where: this.scope({
-          agencyId: Number(site.agencyId),
-        }),
-        select: { id: true },
-      });
+    const existing = await this.prisma.agencySite.findFirst({
+      where: this.scope({
+        agencyId: Number(site.agencyId),
+      }),
+      select: { id: true },
+    });
 
     const data = {
       name: site.name,
@@ -153,175 +151,81 @@ class AgencySiteRepository extends TenantScopedRepository {
     });
   }
 
-  async createSectionIfMissing(
-    pageId,
-    section
-  ) {
-    const normalizedPageId =
-      String(
-        pageId ||
-        ""
-      ).trim();
+  async createSectionIfMissing(pageId, section) {
+    const normalizedPageId = String(pageId || "").trim();
+    const sectionType = String(section?.sectionType || "").trim();
 
-    const sectionType =
-      String(
-        section?.sectionType ||
-        ""
-      ).trim();
-
-    if (
-      !normalizedPageId ||
-      !sectionType
-    ) {
-      const error =
-        new Error(
-          "pageId et sectionType sont obligatoires."
-        );
-
-      error.statusCode =
-        400;
-
-      error.code =
-        "INVALID_SECTION_CREATE";
-
+    if (!normalizedPageId || !sectionType) {
+      const error = new Error("pageId et sectionType sont obligatoires.");
+      error.statusCode = 400;
+      error.code = "INVALID_SECTION_CREATE";
       throw error;
     }
 
-    /*
-     * Isolation tenant :
-     * on certifie d'abord que la page appartient
-     * bien à un site du tenant courant.
-     */
-    const page =
-      await this.prisma
-        .agencySitePage
-        .findFirst({
-          where: {
-            id:
-              normalizedPageId,
-
-            site: {
-              tenantId:
-                this.tenantId,
-            },
-          },
-
-          select: {
-            id:
-              true,
-          },
-        });
+    const page = await this.prisma.agencySitePage.findFirst({
+      where: {
+        id: normalizedPageId,
+        site: {
+          tenantId: this.tenantId,
+        },
+      },
+      select: { id: true },
+    });
 
     if (!page) {
-      const error =
-        new Error(
-          `Page ${normalizedPageId} introuvable pour ce tenant.`
-        );
-
-      error.statusCode =
-        404;
-
-      error.code =
-        "AGENCY_SITE_PAGE_NOT_FOUND";
-
+      const error = new Error(
+        `Page ${normalizedPageId} introuvable pour ce tenant.`
+      );
+      error.statusCode = 404;
+      error.code = "AGENCY_SITE_PAGE_NOT_FOUND";
       throw error;
     }
 
     const uniqueWhere = {
       pageId_sectionType: {
-        pageId:
-          normalizedPageId,
-
+        pageId: normalizedPageId,
         sectionType,
       },
     };
 
-    const existing =
-      await this.prisma
-        .agencySiteSection
-        .findUnique({
-          where:
-            uniqueWhere,
-        });
+    const existing = await this.prisma.agencySiteSection.findUnique({
+      where: uniqueWhere,
+    });
 
     if (existing) {
       return {
-        created:
-          false,
-
-        reason:
-          "SECTION_ALREADY_EXISTS",
-
-        section:
-          existing,
+        created: false,
+        reason: "SECTION_ALREADY_EXISTS",
+        section: existing,
       };
     }
 
     try {
-      const created =
-        await this.prisma
-          .agencySiteSection
-          .create({
-            data: {
-              pageId:
-                normalizedPageId,
-
-              sectionType,
-
-              jsonContent:
-                section.content ??
-                {},
-
-              displayOrder:
-                Number(
-                  section.displayOrder ||
-                  0
-                ),
-
-              status:
-                "draft",
-            },
-          });
+      const created = await this.prisma.agencySiteSection.create({
+        data: {
+          pageId: normalizedPageId,
+          sectionType,
+          jsonContent: section.content ?? {},
+          displayOrder: Number(section.displayOrder || 0),
+          status: "draft",
+        },
+      });
 
       return {
-        created:
-          true,
-
-        reason:
-          "SECTION_CREATED",
-
-        section:
-          created,
+        created: true,
+        reason: "SECTION_CREATED",
+        section: created,
       };
     } catch (error) {
-      /*
-       * Protection concurrence :
-       * si une autre exécution crée la même section
-       * entre notre lecture et notre create(), on
-       * conserve la section concurrente et on ne fait
-       * jamais d'UPDATE.
-       */
-      if (
-        error?.code ===
-        "P2002"
-      ) {
-        const concurrent =
-          await this.prisma
-            .agencySiteSection
-            .findUnique({
-              where:
-                uniqueWhere,
-            });
+      if (error?.code === "P2002") {
+        const concurrent = await this.prisma.agencySiteSection.findUnique({
+          where: uniqueWhere,
+        });
 
         return {
-          created:
-            false,
-
-          reason:
-            "SECTION_CREATED_CONCURRENTLY",
-
-          section:
-            concurrent,
+          created: false,
+          reason: "SECTION_CREATED_CONCURRENTLY",
+          section: concurrent,
         };
       }
 
@@ -353,9 +257,17 @@ class AgencySiteRepository extends TenantScopedRepository {
     });
   }
 
+  /*
+   * Public reads are deliberately stricter than back-office reads.
+   * A draft/unpublished site must behave as if it does not exist on the
+   * public surface, and only published pages are exposed in navigation/data.
+   */
   findPublicSite(siteSlug) {
     return this.prisma.agencySite.findFirst({
-      where: this.scope({ slug: siteSlug }),
+      where: this.scope({
+        slug: siteSlug,
+        status: "published",
+      }),
       include: {
         agency: {
           select: {
@@ -372,6 +284,12 @@ class AgencySiteRepository extends TenantScopedRepository {
           },
         },
         pages: {
+          where: {
+            OR: [
+              { published: true },
+              { status: "published" },
+            ],
+          },
           orderBy: { displayOrder: "asc" },
           include: {
             sections: {
@@ -386,12 +304,23 @@ class AgencySiteRepository extends TenantScopedRepository {
   findPublicPage(siteSlug, slug) {
     return this.prisma.agencySitePage.findFirst({
       where: {
-        site: {
-          is: this.scope({
-            slug: siteSlug,
-          }),
-        },
-        slug,
+        AND: [
+          {
+            site: {
+              is: this.scope({
+                slug: siteSlug,
+                status: "published",
+              }),
+            },
+          },
+          { slug },
+          {
+            OR: [
+              { published: true },
+              { status: "published" },
+            ],
+          },
+        ],
       },
       include: {
         sections: {
@@ -448,38 +377,27 @@ class AgencySiteRepository extends TenantScopedRepository {
   }
 
   async replacePageSections(pageId, sections) {
-    const page =
-      await this.prisma.agencySitePage.findFirst({
-        where: {
-          id: pageId,
-          site: {
-            tenantId: this.tenantId,
-          },
+    const page = await this.prisma.agencySitePage.findFirst({
+      where: {
+        id: pageId,
+        site: {
+          tenantId: this.tenantId,
         },
-        select: {
-          id: true,
-        },
-      });
+      },
+      select: { id: true },
+    });
 
     if (!page) {
       return null;
     }
 
-    /*
-     * Prisma impose une unicité sur :
-     * pageId + sectionType.
-     *
-     * Le Website Builder autorise plusieurs blocs du même type.
-     * Nous générons donc une clé technique unique tout en conservant
-     * le véritable type dans jsonContent.__builderType.
-     */
     const typeCounts = new Map();
 
     const normalizedSections = sections.map((section, index) => {
       const baseType = String(
         section.jsonContent?.__builderType ||
-        section.sectionType ||
-        "section"
+          section.sectionType ||
+          "section"
       )
         .replace(/--\d+$/, "")
         .trim();
@@ -488,9 +406,7 @@ class AgencySiteRepository extends TenantScopedRepository {
       typeCounts.set(baseType, count);
 
       const uniqueSectionType =
-        count === 1
-          ? baseType
-          : `${baseType}--${count}`;
+        count === 1 ? baseType : `${baseType}--${count}`;
 
       return {
         pageId,
