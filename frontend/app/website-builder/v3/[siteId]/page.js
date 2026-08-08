@@ -1,18 +1,19 @@
-import VisualBuilderV3 from "../../../../components/page-builder-v3/VisualBuilderV3";
-
-import "../../../sites/[siteSlug]/public-site.css";
-import "../../../../components/public-site/brand-runtime.css";
+import {
+  permanentRedirect,
+} from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-export default async function VisualBuilderV3Page({
+export default async function VisualBuilderV3FallbackPage({
   params,
 }) {
-  const resolvedParams = await params;
+  const {
+    siteId,
+  } = await params;
 
-  return (
-    <VisualBuilderV3
-      siteId={resolvedParams.siteId}
-    />
+  permanentRedirect(
+    `/website-builder/editor/${encodeURIComponent(
+      siteId
+    )}`
   );
 }
