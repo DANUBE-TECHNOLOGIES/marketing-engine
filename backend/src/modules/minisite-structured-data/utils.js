@@ -46,7 +46,7 @@ function siteUrl(
   return [
     cleanText(publicOrigin)
       .replace(/\/+$/g, ""),
-    "sites",
+    "agence",
     cleanText(siteSlug)
       .replace(/^\/+|\/+$/g, ""),
   ]
