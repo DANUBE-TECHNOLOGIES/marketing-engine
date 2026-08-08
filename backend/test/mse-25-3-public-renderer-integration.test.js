@@ -141,3 +141,51 @@ test(
     );
   }
 );
+
+test(
+  "MSE-25.3 résout les pages publiques à partir du contrat global backend",
+  () => {
+    const route = source(
+      "../frontend/app/api/public-sites/[[...path]]/route.js"
+    );
+
+    assert.match(
+      route,
+      /\/api\/public-site-read\/sites\//
+    );
+
+    assert.match(
+      route,
+      /findRequestedPage\([\s\S]*?pageSlug/
+    );
+
+    assert.match(
+      route,
+      /PUBLIC_SITE_PAGE_NOT_FOUND/
+    );
+  }
+);
+
+test(
+  "MSE-25.3 produit les canonical SEO sur /agence",
+  () => {
+    const page = source(
+      "../frontend/app/agence/[siteSlug]/[[...pageSlug]]/page.js"
+    );
+
+    assert.match(
+      page,
+      /const\s+root\s*=\s*`\/agence\/\$\{siteSlug\}`/
+    );
+
+    assert.match(
+      page,
+      /alternates:\s*\{[\s\S]*?canonical/
+    );
+
+    assert.match(
+      page,
+      /openGraph:\s*\{[\s\S]*?url:\s*canonical/
+    );
+  }
+);
