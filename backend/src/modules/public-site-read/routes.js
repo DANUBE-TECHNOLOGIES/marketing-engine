@@ -4,6 +4,7 @@ const express = require("express");
 const { PrismaClient } = require("@prisma/client");
 const { PublicSiteReadService } = require("./service");
 const { hydratePublicDynamicBlocks } = require("./dynamic-block-hydrator");
+const { hydratePublicInspirations } = require("./inspiration-hydrator");
 const { hydratePreviewPage } = require("./preview-hydrator");
 
 function replacePageReference(reference, pages) {
@@ -12,11 +13,17 @@ function replacePageReference(reference, pages) {
 }
 
 async function hydrateContract({ database, contract }) {
-  const pages = await hydratePublicDynamicBlocks({
+  const dynamicPages = await hydratePublicDynamicBlocks({
     prisma: database,
     tenantId: contract?.site?.tenantId || null,
     agencyId: contract?.site?.agencyId || contract?.agency?.id || null,
     pages: contract?.pages || [],
+  });
+
+  const pages = await hydratePublicInspirations({
+    prisma: database,
+    tenantId: contract?.site?.tenantId || null,
+    pages: dynamicPages,
   });
 
   return {
