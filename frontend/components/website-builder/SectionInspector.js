@@ -1,8 +1,16 @@
 "use client";
 
 import {
+  useEffect,
+  useState,
+} from "react";
+
+import {
   getInspectorDefinition,
 } from "../../lib/website-builder/inspector-registry";
+import {
+  fetchPublishedDestinations,
+} from "../../lib/page-builder-v2/page-builder-api";
 
 function FieldControl({
   field,
@@ -225,6 +233,129 @@ function CollectionEditor({
   );
 }
 
+function DestinationReferenceSelector({
+  selectedIds,
+  onChange,
+}) {
+  const [destinations, setDestinations] =
+    useState([]);
+  const [loading, setLoading] =
+    useState(true);
+  const [error, setError] =
+    useState(null);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadDestinations() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const items =
+          await fetchPublishedDestinations();
+
+        if (active) {
+          setDestinations(items);
+        }
+      } catch (loadError) {
+        if (active) {
+          setError(loadError.message);
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadDestinations();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const currentIds = Array.isArray(selectedIds)
+    ? selectedIds.map(String)
+    : [];
+
+  function toggleDestination(id) {
+    const normalizedId = String(id);
+
+    if (currentIds.includes(normalizedId)) {
+      onChange(
+        currentIds.filter(
+          (entry) => entry !== normalizedId
+        )
+      );
+      return;
+    }
+
+    onChange([
+      ...currentIds,
+      normalizedId,
+    ]);
+  }
+
+  return (
+    <div className="wb-collection-editor">
+      <div className="wb-collection-heading">
+        <strong>Destinations publiées</strong>
+        <span>{currentIds.length} sélectionnée(s)</span>
+      </div>
+
+      {loading ? (
+        <div className="wb-collection-empty">
+          Chargement du référentiel destinations…
+        </div>
+      ) : null}
+
+      {error ? (
+        <div className="wb-collection-empty">
+          {error}
+        </div>
+      ) : null}
+
+      {!loading && !error && destinations.length ? (
+        <div className="wb-destination-selector">
+          {destinations.map((destination) => (
+            <label
+              key={destination.id}
+              className="wb-destination-option"
+            >
+              <input
+                type="checkbox"
+                checked={currentIds.includes(
+                  String(destination.id)
+                )}
+                onChange={() =>
+                  toggleDestination(destination.id)
+                }
+              />
+
+              <span>
+                <strong>{destination.name}</strong>
+                <small>
+                  {[destination.country, destination.region]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </small>
+              </span>
+            </label>
+          ))}
+        </div>
+      ) : null}
+
+      {!loading && !error && !destinations.length ? (
+        <div className="wb-collection-empty">
+          Aucune destination publiée n’est disponible.
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default function SectionInspector({
   block,
   onRename,
@@ -241,6 +372,11 @@ export default function SectionInspector({
 
   const definition =
     getInspectorDefinition(block.type);
+
+  const destinationSource =
+    block.type === "destinations"
+      ? block.settings?.__dataSource || "travel-core"
+      : null;
 
   return (
     <div className="wb-inspector-form">
@@ -261,7 +397,10 @@ export default function SectionInspector({
           <FieldControl
             field={field}
             value={
-              block.settings?.[field.key]
+              field.key === "__dataSource" &&
+              block.type === "destinations"
+                ? destinationSource
+                : block.settings?.[field.key]
             }
             onChange={(value) =>
               onSettingChange(
@@ -273,6 +412,21 @@ export default function SectionInspector({
         </label>
       ))}
 
+      {block.type === "destinations" &&
+      destinationSource === "travel-core" ? (
+        <DestinationReferenceSelector
+          selectedIds={
+            block.settings?.destinationIds
+          }
+          onChange={(destinationIds) =>
+            onSettingChange(
+              "destinationIds",
+              destinationIds
+            )
+          }
+        />
+      ) : null}
+
       {definition.collection &&
       !(
         (
@@ -282,6 +436,10 @@ export default function SectionInspector({
         (
           block.type === "reviews" &&
           block.settings?.__dataSource === "google-reviews"
+        ) ||
+        (
+          block.type === "destinations" &&
+          destinationSource === "travel-core"
         )
       ) ? (
         <CollectionEditor
@@ -300,12 +458,14 @@ export default function SectionInspector({
         />
       ) : null}
 
-      {block.settings?.__dataSource ? (
+      {block.settings?.__dataSource ||
+      destinationSource === "travel-core" ? (
         <div className="wb-data-source-panel">
           <strong>Source automatique</strong>
 
           <span>
-            {block.settings.__dataSource}
+            {destinationSource ||
+              block.settings.__dataSource}
           </span>
 
           <p>
@@ -315,7 +475,10 @@ export default function SectionInspector({
               : block.type === "reviews" &&
                 block.settings.__dataSource === "google-reviews"
                 ? "Les avis Google publiés de cette agence alimentent automatiquement ce bloc."
-                : "Cette section utilise une source de données automatique."}
+                : block.type === "destinations" &&
+                  destinationSource === "travel-core"
+                  ? "Les destinations publiées du Destination Engine alimentent automatiquement ce bloc."
+                  : "Cette section utilise une source de données automatique."}
           </p>
         </div>
       ) : null}
