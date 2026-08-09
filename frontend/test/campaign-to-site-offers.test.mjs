@@ -48,17 +48,16 @@ test("public offer cards honor approved campaign links safely", () => {
   assert.match(renderer, /Demander un devis/);
 });
 
-test("V2 offer contract keeps manual source until selector is wired", () => {
+test("new V2 offer blocks default to approved campaigns", () => {
   const catalog = read(
     "lib/page-builder-v2/block-catalog.js"
   );
 
   assert.match(
     catalog,
-    /type:\s*["']offers["'][\s\S]*source:\s*["']manual["']/
+    /type:\s*["']offers["'][\s\S]*source:\s*["']campaign["']/
   );
 
-  // The automatic backend source is intentionally opt-in. Existing V2 blocks
-  // therefore preserve their current manual semantics until the UI selector
-  // can be patched safely in VisualPageBuilder.
+  // Existing saved blocks keep their serialized source and remain compatible
+  // with manual offerIds; only newly created blocks inherit this default.
 });
