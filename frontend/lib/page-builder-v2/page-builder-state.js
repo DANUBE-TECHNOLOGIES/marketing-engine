@@ -58,10 +58,17 @@ export function normalizePage(page, index = 0) {
     [];
 
   const status = String(page?.status || "draft");
+  const hasExplicitSlug =
+    page &&
+    Object.prototype.hasOwnProperty.call(page, "slug") &&
+    page.slug !== null &&
+    page.slug !== undefined;
 
   return {
     id: String(page?.id || createLocalId("page")),
-    slug: String(page?.slug || `page-${index + 1}`),
+    slug: hasExplicitSlug
+      ? String(page.slug)
+      : `page-${index + 1}`,
     title: String(
       page?.title ||
       page?.name ||
