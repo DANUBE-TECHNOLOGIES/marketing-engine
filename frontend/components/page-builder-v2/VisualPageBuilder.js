@@ -553,8 +553,7 @@ function BlockProperties({
         />
       ) : null}
 
-      {block.type === "offers" &&
-      "source" in content ? (
+      {block.type === "offers" ? (
         <SelectInput
           label="Source des offres"
           value={content.source || "campaign"}
