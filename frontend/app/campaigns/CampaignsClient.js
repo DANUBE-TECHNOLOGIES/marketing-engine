@@ -13,6 +13,47 @@ const EMPTY_OFFER = {
   badge: "",
 };
 
+function campaignAgencyIds(campaign) {
+  return (campaign?.agencies || [])
+    .map((entry) => Number(entry.agencyId ?? entry.agency?.id))
+    .filter((id) => Number.isInteger(id) && id > 0);
+}
+
+function AgencyChecklist({ agencies, selectedIds, onChange, compact = false }) {
+  const selected = new Set(selectedIds.map(Number));
+
+  const toggle = (agencyId) => {
+    const id = Number(agencyId);
+    const next = selected.has(id)
+      ? selectedIds.filter((item) => Number(item) !== id)
+      : [...selectedIds, id];
+
+    onChange(next);
+  };
+
+  return (
+    <div className={`agency-checklist ${compact ? "agency-checklist-compact" : ""}`}>
+      {agencies.length ? (
+        agencies.map((agency) => (
+          <label key={agency.id} className="agency-choice">
+            <input
+              type="checkbox"
+              checked={selected.has(Number(agency.id))}
+              onChange={() => toggle(agency.id)}
+            />
+            <span>
+              <strong>{agency.name}</strong>
+              <small>{agency.city || "Ville non renseignée"}</small>
+            </span>
+          </label>
+        ))
+      ) : (
+        <small>Aucune agence disponible pour ce tenant.</small>
+      )}
+    </div>
+  );
+}
+
 function OfferStatus({ status }) {
   return (
     <span className={`offer-status offer-status-${status || "review"}`}>
@@ -21,14 +62,20 @@ function OfferStatus({ status }) {
   );
 }
 
-function OfferPanel({ campaign, onChanged }) {
+function OfferPanel({ campaign, agencies, onChanged }) {
   const [open, setOpen] = useState(false);
   const [offers, setOffers] = useState([]);
   const [form, setForm] = useState(EMPTY_OFFER);
+  const [targetIds, setTargetIds] = useState(() => campaignAgencyIds(campaign));
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [savingTargets, setSavingTargets] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+
+  useEffect(() => {
+    setTargetIds(campaignAgencyIds(campaign));
+  }, [campaign]);
 
   const loadOffers = async () => {
     setLoading(true);
@@ -61,6 +108,28 @@ function OfferPanel({ campaign, onChanged }) {
       ...current,
       [key]: value,
     }));
+  };
+
+  const saveTargets = async () => {
+    setSavingTargets(true);
+    setError("");
+    setNotice("");
+
+    try {
+      await campaignApi.update(campaign.id, {
+        agencyIds: targetIds,
+      });
+      setNotice(
+        targetIds.length
+          ? `Ciblage enregistré pour ${targetIds.length} agence(s).`
+          : "Ciblage retiré : aucune offre de cette campagne ne sera diffusée sur les mini-sites."
+      );
+      await onChanged();
+    } catch (targetError) {
+      setError(targetError.message);
+    } finally {
+      setSavingTargets(false);
+    }
   };
 
   const createOffer = async (event) => {
@@ -129,13 +198,42 @@ function OfferPanel({ campaign, onChanged }) {
             <div>
               <strong>Offres mini-site</strong>
               <small>
-                Les offres doivent être approuvées avant d’être visibles sur les sites ciblés.
+                Une offre doit être approuvée et sa campagne doit cibler l’agence pour être visible sur son mini-site.
               </small>
             </div>
           </div>
 
           {error ? <div className="offer-error">{error}</div> : null}
           {notice ? <div className="offer-notice">{notice}</div> : null}
+
+          <section className="targeting-box">
+            <div className="targeting-heading">
+              <div>
+                <strong>Agences ciblées</strong>
+                <small>{targetIds.length} agence(s) sélectionnée(s)</small>
+              </div>
+              <button
+                type="button"
+                disabled={savingTargets}
+                onClick={saveTargets}
+              >
+                {savingTargets ? "Enregistrement…" : "Enregistrer le ciblage"}
+              </button>
+            </div>
+
+            <AgencyChecklist
+              agencies={agencies}
+              selectedIds={targetIds}
+              onChange={setTargetIds}
+              compact
+            />
+          </section>
+
+          {targetIds.length === 0 ? (
+            <div className="offer-warning">
+              Cette campagne ne cible aucune agence : ses offres approuvées ne seront affichées sur aucun mini-site.
+            </div>
+          ) : null}
 
           <form className="offer-form" onSubmit={createOffer}>
             <input
@@ -240,6 +338,8 @@ function OfferPanel({ campaign, onChanged }) {
 
 export default function CampaignsClient() {
   const [items, setItems] = useState([]);
+  const [agencies, setAgencies] = useState([]);
+  const [selectedAgencyIds, setSelectedAgencyIds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [name, setName] = useState("");
@@ -248,7 +348,12 @@ export default function CampaignsClient() {
     setLoading(true);
 
     try {
-      setItems(await campaignApi.list());
+      const [campaigns, agencyOptions] = await Promise.all([
+        campaignApi.list(),
+        campaignApi.agencyOptions(),
+      ]);
+      setItems(campaigns);
+      setAgencies(Array.isArray(agencyOptions) ? agencyOptions : []);
       setError("");
     } catch (loadError) {
       setError(loadError.message);
@@ -269,8 +374,10 @@ export default function CampaignsClient() {
       await campaignApi.create({
         name: name.trim(),
         objective: "sales",
+        agencyIds: selectedAgencyIds,
       });
       setName("");
+      setSelectedAgencyIds([]);
       await load();
     } catch (createError) {
       setError(createError.message);
@@ -295,13 +402,24 @@ export default function CampaignsClient() {
           <p>Créez, orchestrez et validez les contenus de chaque campagne.</p>
         </div>
 
-        <form onSubmit={create} className="create-form">
+        <form onSubmit={create} className="create-form create-campaign-form">
           <input
             value={name}
             onChange={(event) => setName(event.target.value)}
             placeholder="Ex. Hiver 2026"
             minLength={3}
           />
+
+          <div className="create-targets">
+            <strong>Agences ciblées</strong>
+            <AgencyChecklist
+              agencies={agencies}
+              selectedIds={selectedAgencyIds}
+              onChange={setSelectedAgencyIds}
+              compact
+            />
+          </div>
+
           <button>Nouvelle campagne</button>
         </form>
       </header>
@@ -347,7 +465,11 @@ export default function CampaignsClient() {
                   </button>
                 </footer>
 
-                <OfferPanel campaign={campaign} onChanged={load} />
+                <OfferPanel
+                  campaign={campaign}
+                  agencies={agencies}
+                  onChanged={load}
+                />
               </article>
             ))
           )}
