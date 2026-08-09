@@ -44,6 +44,10 @@ class AiContentRepository {
     const ids = Array.isArray(filters.ids)
       ? filters.ids.map(String).filter(Boolean).slice(0, 100)
       : [];
+    const requestedLimit = Math.min(
+      Math.max(Number(filters.limit) || 24, 1),
+      100
+    );
 
     return this.prisma.seoContent.findMany({
       where: {
@@ -56,7 +60,9 @@ class AiContentRepository {
         { publishedAt: "desc" },
         { updatedAt: "desc" },
       ],
-      take: Math.min(Math.max(Number(filters.limit) || 24, 1), 100),
+      take: ids.length
+        ? Math.min(Math.max(requestedLimit, ids.length), 100)
+        : requestedLimit,
     });
   }
 
