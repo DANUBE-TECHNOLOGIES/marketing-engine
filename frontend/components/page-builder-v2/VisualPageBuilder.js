@@ -553,6 +553,25 @@ function BlockProperties({
         />
       ) : null}
 
+      {block.type === "offers" &&
+      "source" in content ? (
+        <SelectInput
+          label="Source des offres"
+          value={content.source || "campaign"}
+          onChange={(value) => set("source", value)}
+          options={[
+            {
+              value: "campaign",
+              label: "Campagnes approuvées",
+            },
+            {
+              value: "manual",
+              label: "Sélection manuelle",
+            },
+          ]}
+        />
+      ) : null}
+
       {"size" in content ? (
         <SelectInput
           label="Espacement"

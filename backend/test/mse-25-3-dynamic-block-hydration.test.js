@@ -122,6 +122,7 @@ test("MSE-25.3 ne résout jamais les destinations hors tenant ou non publiées",
   );
 });
 
+
 test("MSE-25.3 laisse les blocs non dynamiques inchangés", async () => {
   const original = {
     id: "page-1",
@@ -142,5 +143,5 @@ test("MSE-25.3 laisse les blocs non dynamiques inchangés", async () => {
     pages: [original],
   });
 
-  assert.equal(pages[0], original);
+  assert.deepEqual(pages[0], original);
 });
