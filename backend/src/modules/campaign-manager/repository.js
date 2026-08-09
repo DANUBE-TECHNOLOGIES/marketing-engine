@@ -45,6 +45,23 @@ class CampaignRepository {
   });
  }
 
+ listApprovedSiteOffers(agencyId,limit=24){
+  return this.prisma.campaignAsset.findMany({
+   where:{
+    status:"approved",
+    campaign:{
+     tenantId:this.tenantId,
+     agencies:{some:{agencyId}}
+    }
+   },
+   orderBy:[
+    {updatedAt:"desc"},
+    {createdAt:"desc"}
+   ],
+   take:Math.min(Math.max(Number(limit)||24,1),24)
+  });
+ }
+
  createAsset(data){
   return this.prisma.campaignAsset.create({data});
  }
