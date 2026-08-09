@@ -469,6 +469,22 @@ function InspirationReferenceSelector({
   );
 }
 
+function inspectorFieldVisible({
+  blockType,
+  fieldKey,
+  inspirationSource,
+}) {
+  if (
+    blockType === "inspirations" &&
+    inspirationSource === "manual" &&
+    ["selectionMode", "limit"].includes(fieldKey)
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
 export default function SectionInspector({
   block,
   onRename,
@@ -501,6 +517,14 @@ export default function SectionInspector({
       ? block.settings?.selectionMode || "automatic"
       : null;
 
+  const showDataSourcePanel =
+    block.type === "inspirations"
+      ? inspirationSource === "content-generation"
+      : Boolean(
+          block.settings?.__dataSource ||
+          destinationSource === "travel-core"
+        );
+
   return (
     <div className="wb-inspector-form">
       <label>
@@ -513,7 +537,15 @@ export default function SectionInspector({
         />
       </label>
 
-      {definition.fields.map((field) => (
+      {definition.fields
+        .filter((field) =>
+          inspectorFieldVisible({
+            blockType: block.type,
+            fieldKey: field.key,
+            inspirationSource,
+          })
+        )
+        .map((field) => (
         <label key={field.key}>
           {field.label}
 
@@ -602,9 +634,7 @@ export default function SectionInspector({
         />
       ) : null}
 
-      {block.settings?.__dataSource ||
-      destinationSource === "travel-core" ||
-      inspirationSource === "content-generation" ? (
+      {showDataSourcePanel ? (
         <div className="wb-data-source-panel">
           <strong>Source automatique</strong>
 
