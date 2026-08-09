@@ -45,9 +45,18 @@ function assetQuery(filters = {}) {
 export const campaignApi = {
   list: () => request(),
 
+  agencyOptions: () =>
+    request("/options/agencies"),
+
   create: (data) =>
     request("", {
       method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  update: (id, data) =>
+    request(`/${encodeURIComponent(id)}`, {
+      method: "PUT",
       body: JSON.stringify(data),
     }),
 
