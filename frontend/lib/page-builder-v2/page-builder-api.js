@@ -287,8 +287,8 @@ export async function rollbackPageVersion(
 
   if (!response.ok) {
     throw new Error(
-      payload?.message ||
-      payload?.error ||
+      result.payload?.message ||
+      result.payload?.error ||
       `Échec de la restauration (${response.status}).`
     );
   }
@@ -343,5 +343,49 @@ export async function fetchPublishedDestinations() {
       region: String(destination.region || ""),
       heroImageUrl:
         destination.heroImageUrl || null,
+    }));
+}
+
+export async function fetchPublishedInspirations({
+  limit = 24,
+  channel = "article",
+} = {}) {
+  const params = new URLSearchParams();
+  params.set("limit", String(limit));
+  if (channel) {
+    params.set("channel", channel);
+  }
+
+  const response = await fetch(
+    `/api/website-builder/inspirations?${params.toString()}`,
+    {
+      method: "GET",
+      headers: {
+        accept: "application/json",
+      },
+      cache: "no-store",
+    }
+  );
+
+  const payload = await readJson(response);
+
+  if (!response.ok) {
+    throw new Error(
+      payload?.message ||
+      payload?.error ||
+      `Impossible de charger les inspirations publiées (${response.status}).`
+    );
+  }
+
+  return (Array.isArray(payload?.items) ? payload.items : [])
+    .filter(item => item && item.id && item.title)
+    .map(item => ({
+      ...item,
+      id: String(item.id),
+      slug: String(item.slug || ""),
+      title: String(item.title),
+      description: String(item.description || ""),
+      category: String(item.category || item.channel || "Inspiration"),
+      image: item.image || null,
     }));
 }
