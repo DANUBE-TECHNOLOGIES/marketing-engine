@@ -7,6 +7,49 @@ const { createProvider } = require("./providers");
 function httpError(message, statusCode, code) { return Object.assign(new Error(message), { statusCode, code }); }
 function slugify(value) { return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 90); }
 function truncate(value, max) { const s = String(value || "").trim(); return s.length <= max ? s : `${s.slice(0, max - 1).trim()}…`; }
+function asObject(value) { return value && typeof value === "object" && !Array.isArray(value) ? value : {}; }
+
+function inspirationImage(content) {
+  const body = asObject(content?.body);
+  const seo = asObject(content?.seo);
+  const openGraph = asObject(seo.openGraph);
+  const hero = asObject(body.hero);
+  const media = asObject(body.media);
+
+  const candidates = [
+    body.image,
+    body.imageUrl,
+    body.heroImage,
+    hero.image,
+    hero.imageUrl,
+    media.image,
+    media.imageUrl,
+    openGraph.image,
+    openGraph.imageUrl,
+  ];
+
+  return candidates.find(value => typeof value === "string" && value.trim()) || null;
+}
+
+function inspirationCategory(content) {
+  const body = asObject(content?.body);
+  return body.category || body.theme || content?.channel || "Inspiration";
+}
+
+function toInspiration(content) {
+  return {
+    id: content.id,
+    slug: content.slug,
+    title: content.title,
+    description: content.excerpt || asObject(content.body).introduction || "",
+    category: inspirationCategory(content),
+    image: inspirationImage(content),
+    channel: content.channel,
+    locale: content.locale,
+    qualityScore: content.qualityScore,
+    publishedAt: content.publishedAt,
+  };
+}
 
 class AiContentService {
   constructor(prismaOrRepo, tenantId, { provider, env } = {}) {
@@ -21,12 +64,33 @@ class AiContentService {
       capability: "ai-content-service",
       provider: this.provider.name,
       channels: ["landing-page", "article", "faq", "google-business", "facebook", "instagram", "newsletter"],
-      features: ["preview", "generation", "retry", "campaign-assets", "provider-adapters"],
+      features: ["preview", "generation", "retry", "campaign-assets", "provider-adapters", "published-catalog"],
     };
   }
 
   async list(filters) { return this.repo.listJobs(filters); }
   async get(id) { const job = await this.repo.getJob(id); if (!job) throw httpError("Job IA introuvable.", 404, "AI_CONTENT_JOB_NOT_FOUND"); return job; }
+
+  async listPublished(filters = {}) {
+    const ids = String(filters.ids || "")
+      .split(",")
+      .map(value => value.trim())
+      .filter(Boolean)
+      .slice(0, 100);
+
+    const channel = String(filters.channel || "").trim() || undefined;
+    const limit = Math.min(Math.max(Number(filters.limit) || 24, 1), 100);
+    const contents = await this.repo.listPublishedContents({ ids, channel, limit });
+    const items = contents.map(toInspiration);
+
+    if (!ids.length) {
+      return { items, count: items.length };
+    }
+
+    const byId = new Map(items.map(item => [String(item.id), item]));
+    const ordered = ids.map(id => byId.get(String(id))).filter(Boolean).slice(0, limit);
+    return { items: ordered, count: ordered.length };
+  }
 
   async prepare(input) {
     const data = validateGenerate(input);
@@ -143,4 +207,4 @@ class AiContentService {
   }
 }
 
-module.exports = { AiContentService, slugify };
+module.exports = { AiContentService, slugify, toInspiration };
