@@ -64,12 +64,61 @@ class AiContentService {
       capability: "ai-content-service",
       provider: this.provider.name,
       channels: ["landing-page", "article", "faq", "google-business", "facebook", "instagram", "newsletter"],
-      features: ["preview", "generation", "retry", "campaign-assets", "provider-adapters", "published-catalog"],
+      features: ["preview", "generation", "retry", "campaign-assets", "provider-adapters", "published-catalog", "content-publication"],
     };
   }
 
   async list(filters) { return this.repo.listJobs(filters); }
   async get(id) { const job = await this.repo.getJob(id); if (!job) throw httpError("Job IA introuvable.", 404, "AI_CONTENT_JOB_NOT_FOUND"); return job; }
+
+  async getContent(id) {
+    const content = await this.repo.getContent(id);
+    if (!content) throw httpError("Contenu éditorial introuvable.", 404, "AI_CONTENT_NOT_FOUND");
+    return content;
+  }
+
+  async publishContent(id) {
+    const content = await this.getContent(id);
+    const status = String(content.status || "").toLowerCase();
+
+    if (status === "published") {
+      return content;
+    }
+
+    if (!["review", "draft", "approved"].includes(status)) {
+      throw httpError(
+        "Ce contenu ne peut pas être publié dans son état actuel.",
+        409,
+        "AI_CONTENT_NOT_PUBLISHABLE"
+      );
+    }
+
+    return this.repo.updateContent(content.id, {
+      status: "published",
+      publishedAt: new Date(),
+    });
+  }
+
+  async unpublishContent(id) {
+    const content = await this.getContent(id);
+    const status = String(content.status || "").toLowerCase();
+
+    if (status === "review") {
+      return content;
+    }
+
+    if (status !== "published") {
+      throw httpError(
+        "Ce contenu n’est pas actuellement publié.",
+        409,
+        "AI_CONTENT_NOT_PUBLISHED"
+      );
+    }
+
+    return this.repo.updateContent(content.id, {
+      status: "review",
+    });
+  }
 
   async listPublished(filters = {}) {
     const ids = String(filters.ids || "")
