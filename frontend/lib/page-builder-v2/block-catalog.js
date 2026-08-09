@@ -42,7 +42,10 @@ export const BLOCK_CATALOG = Object.freeze([
       imageUrl: "",
       imageAlt: "",
       imagePosition: "left",
-      cta: null,
+      primaryCta: {
+        label: "",
+        href: "#contact",
+      },
     },
   },
   {
