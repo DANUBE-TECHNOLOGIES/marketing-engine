@@ -36,10 +36,19 @@ class CampaignRepository {
  }
 
  async updateAssetReview(asset,data,decision){
+  const isSeoContent=
+   String(asset?.type||"").toLowerCase()==="seo-content";
   const linkedContentId=
-   String(asset?.type||"").toLowerCase()==="seo-content"
+   isSeoContent
     ? String(asset?.payload?.seoContentId||"").trim()
     : "";
+
+  if(isSeoContent&&!linkedContentId){
+   const error=new Error("L’asset SEO ne référence aucun contenu éditorial.");
+   error.statusCode=409;
+   error.code="CAMPAIGN_SEO_CONTENT_LINK_REQUIRED";
+   throw error;
+  }
 
   return this.prisma.$transaction(async tx=>{
    const updated=await tx.campaignAsset.update({
