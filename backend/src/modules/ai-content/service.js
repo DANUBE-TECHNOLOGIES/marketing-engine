@@ -51,6 +51,16 @@ function toInspiration(content) {
   };
 }
 
+function assertStandalonePublication(content) {
+  if (content?.campaignId) {
+    throw httpError(
+      "Ce contenu appartient à une campagne et doit être validé depuis le Campaign Manager.",
+      409,
+      "AI_CONTENT_CAMPAIGN_REVIEW_REQUIRED"
+    );
+  }
+}
+
 class AiContentService {
   constructor(prismaOrRepo, tenantId, { provider, env } = {}) {
     this.repo = prismaOrRepo?.createJob ? prismaOrRepo : new AiContentRepository(prismaOrRepo, tenantId);
@@ -85,6 +95,8 @@ class AiContentService {
       return content;
     }
 
+    assertStandalonePublication(content);
+
     if (!["review", "draft", "approved"].includes(status)) {
       throw httpError(
         "Ce contenu ne peut pas être publié dans son état actuel.",
@@ -106,6 +118,8 @@ class AiContentService {
     if (status === "review") {
       return content;
     }
+
+    assertStandalonePublication(content);
 
     if (status !== "published") {
       throw httpError(
@@ -256,4 +270,4 @@ class AiContentService {
   }
 }
 
-module.exports = { AiContentService, slugify, toInspiration };
+module.exports = { AiContentService, slugify, toInspiration, assertStandalonePublication };
