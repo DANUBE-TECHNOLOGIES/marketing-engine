@@ -172,3 +172,29 @@ test("MSE-25.7 annule l'approbation si le SeoContent lié n'appartient pas au te
       error.statusCode === 409
   );
 });
+
+test("MSE-25.7 refuse un asset seo-content sans référence SeoContent", async () => {
+  const repo = new CampaignRepository(
+    {
+      $transaction: async () => {
+        throw new Error("La transaction ne doit pas démarrer.");
+      },
+    },
+    "tenant_mondescale"
+  );
+
+  await assert.rejects(
+    () => repo.updateAssetReview(
+      {
+        id: "asset-1",
+        type: "seo-content",
+        payload: {},
+      },
+      { status: "approved", metadata: {} },
+      { status: "approved" }
+    ),
+    error =>
+      error.code === "CAMPAIGN_SEO_CONTENT_LINK_REQUIRED" &&
+      error.statusCode === 409
+  );
+});
