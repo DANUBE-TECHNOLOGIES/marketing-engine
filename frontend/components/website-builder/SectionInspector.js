@@ -273,7 +273,11 @@ export default function SectionInspector({
         </label>
       ))}
 
-      {definition.collection ? (
+      {definition.collection &&
+      !(
+        block.type === "offers" &&
+        block.settings?.__dataSource === "campaigns"
+      ) ? (
         <CollectionEditor
           definition={definition.collection}
           items={
@@ -299,8 +303,10 @@ export default function SectionInspector({
           </span>
 
           <p>
-            Les données dynamiques seront raccordées
-            dans un prochain patch.
+            {block.type === "offers" &&
+            block.settings.__dataSource === "campaigns"
+              ? "Les offres approuvées du Campaign Manager alimentent automatiquement ce bloc."
+              : "Cette section utilise une source de données automatique."}
           </p>
         </div>
       ) : null}

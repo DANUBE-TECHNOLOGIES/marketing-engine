@@ -26,7 +26,7 @@ test("MSE-25.3 fait déléguer la preview V2 au renderer public", () => {
   );
   assert.match(
     preview,
-    /<PublicSiteSections page=\{previewPage\} site=\{site\}/
+    /<PublicSiteSections[\s\S]*?page=\{previewPage\}[\s\S]*?site=\{previewSite\}/
   );
   assert.match(
     preview,

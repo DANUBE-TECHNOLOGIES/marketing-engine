@@ -29,6 +29,7 @@ test(
   }
 );
 
+
 test(
   "MSE-25.3 garde les CTA offres sur /agence",
   () => {
@@ -38,7 +39,7 @@ test(
 
     assert.match(
       offers,
-      /href=\{`\/agence\/\$\{site\.slug\}\/contact`\}/
+      /resolvePublicCtaHref\([\s\S]*?site,[\s\S]*?item\.href,[\s\S]*?["']contact["'][\s\S]*?\)/
     );
 
     assert.doesNotMatch(

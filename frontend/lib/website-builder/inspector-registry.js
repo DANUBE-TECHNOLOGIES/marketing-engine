@@ -128,7 +128,18 @@ export const INSPECTOR_REGISTRY = {
   },
 
   offers: {
-    fields: COMMON_FIELDS,
+    fields: [
+      ...COMMON_FIELDS,
+      {
+        key: "__dataSource",
+        label: "Source des offres",
+        control: "select",
+        options: [
+          ["campaigns", "Campagnes approuvées"],
+          ["manual", "Sélection manuelle"],
+        ],
+      },
+    ],
     collection: {
       key: "items",
       label: "Offres",

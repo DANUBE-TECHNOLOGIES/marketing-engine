@@ -1,6 +1,13 @@
 const BACKEND_URL =
   process.env.BACKEND_INTERNAL_URL ||
+  process.env.INTERNAL_API_URL ||
+  process.env.BACKEND_URL ||
   "http://backend:4000";
+
+const TENANT_SLUG =
+  process.env.TENANT_SLUG ||
+  process.env.NEXT_PUBLIC_TENANT_SLUG ||
+  "mondescale";
 
 export async function GET(request, context) {
   const { agencyId } = await context.params;
@@ -8,11 +15,11 @@ export async function GET(request, context) {
   const limit = url.searchParams.get("limit");
 
   const backendUrl = new URL(
-    `/api/public-site-read/agencies/${encodeURIComponent(
-      agencyId
-    )}/offers`,
+    "/campaigns/options/offers",
     BACKEND_URL
   );
+
+  backendUrl.searchParams.set("agencyId", agencyId);
 
   if (limit) {
     backendUrl.searchParams.set("limit", limit);
@@ -22,6 +29,7 @@ export async function GET(request, context) {
     method: "GET",
     headers: {
       accept: "application/json",
+      "x-tenant-slug": TENANT_SLUG,
     },
     cache: "no-store",
   });

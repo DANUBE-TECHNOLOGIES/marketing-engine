@@ -37,6 +37,7 @@ test("MSE-25.3 le registry public utilise les renderers V2 agency et features", 
   assert.match(source, /features:\s*FeaturesV2Renderer/);
 });
 
+
 test("MSE-25.3 le renderer features consomme l'introduction V2 sans casser la grille responsive", () => {
   const source = read(
     "frontend/components/public-site/renderers/FeaturesV2Renderer.js"
@@ -44,7 +45,10 @@ test("MSE-25.3 le renderer features consomme l'introduction V2 sans casser la gr
 
   assert.match(source, /content\.introduction/);
   assert.match(source, /className="public-site-card-grid"/);
-  assert.doesNotMatch(source, /gridTemplateColumns/);
+  assert.match(source, /data-columns=\{columns\}/);
+  assert.match(source, /gridTemplateColumns:/);
+  assert.match(source, /repeat\(auto-fit,/);
+  assert.match(source, /minmax/);
 });
 
 test("MSE-25.3 les horaires sont disponibles en live et en preview", () => {

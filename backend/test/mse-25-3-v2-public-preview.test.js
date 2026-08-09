@@ -12,6 +12,7 @@ function source(relativePath) {
   );
 }
 
+
 test("MSE-25.3 fournit au Designer V2 un aperçu basé sur le renderer public", () => {
   const preview = source(
     "components/page-builder-v2/PublicPagePreview.js"
@@ -24,7 +25,7 @@ test("MSE-25.3 fournit au Designer V2 un aperçu basé sur le renderer public", 
 
   assert.match(
     preview,
-    /<PublicSiteSections[\s\S]*?page=\{previewPage\}[\s\S]*?site=\{site\}[\s\S]*?\/>/
+    /<PublicSiteSections[\s\S]*?page=\{previewPage\}[\s\S]*?site=\{previewSite\}[\s\S]*?\/>/
   );
 
   assert.match(
@@ -37,6 +38,7 @@ test("MSE-25.3 fournit au Designer V2 un aperçu basé sur le renderer public", 
     /public-brand-legal\/sites/
   );
 });
+
 
 test("MSE-25.3 reproduit la coque publique complète dans l'aperçu V2", () => {
   const preview = source(
@@ -55,12 +57,12 @@ test("MSE-25.3 reproduit la coque publique complète dans l'aperçu V2", () => {
 
   assert.match(
     preview,
-    /<PublicSiteHeader[\s\S]*?brandRuntime=\{brandRuntime\}[\s\S]*?site=\{site\}/
+    /<PublicSiteHeader[\s\S]*?brandRuntime=\{brandRuntime\}[\s\S]*?site=\{previewSite\}/
   );
 
   assert.match(
     preview,
-    /<PublicSiteFooter site=\{site\} \/>/
+    /<PublicSiteFooter site=\{previewSite\} \/>/
   );
 
   assert.match(
