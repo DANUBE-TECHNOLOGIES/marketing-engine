@@ -40,6 +40,20 @@ class AiContentRepository {
     });
   }
 
+  getContent(id) {
+    if (!id) return null;
+    return this.prisma.seoContent.findFirst({
+      where: { id: String(id), tenantId: this.tenantId },
+    });
+  }
+
+  updateContent(id, data) {
+    return this.prisma.seoContent.update({
+      where: { id: String(id) },
+      data,
+    });
+  }
+
   listPublishedContents(filters = {}) {
     const ids = Array.isArray(filters.ids)
       ? filters.ids.map(String).filter(Boolean).slice(0, 100)
