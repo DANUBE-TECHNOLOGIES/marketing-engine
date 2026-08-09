@@ -15,7 +15,10 @@ export default function ImageTextV2Renderer({
     content.imagePosition === "right"
       ? "right"
       : "left";
-  const cta = content.cta || null;
+  const cta =
+    content.cta ||
+    content.primaryCta ||
+    null;
 
   const mediaOrder = imagePosition === "right" ? 2 : 1;
   const copyOrder = imagePosition === "right" ? 1 : 2;
