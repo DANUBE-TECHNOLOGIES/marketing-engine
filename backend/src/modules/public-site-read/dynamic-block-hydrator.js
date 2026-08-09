@@ -227,6 +227,10 @@ function collectOfferReferences(pages = []) {
 
       const content = asObject(block.content);
 
+      if (String(content.source || "manual").toLowerCase() !== "manual") {
+        continue;
+      }
+
       for (const reference of cleanReferences(content.offerIds)) {
         if (seen.has(reference)) continue;
         seen.add(reference);
@@ -236,6 +240,27 @@ function collectOfferReferences(pages = []) {
   }
 
   return references;
+}
+
+function automaticCampaignOfferLimit(pages = []) {
+  let limit = 0;
+
+  for (const page of pages) {
+    for (const block of page?.blocks || []) {
+      if (blockType(block) !== "offers") continue;
+
+      const content = asObject(block.content);
+      const source = String(content.source || "manual").toLowerCase();
+
+      if (!["campaign", "automatic", "auto"].includes(source)) {
+        continue;
+      }
+
+      limit = Math.max(limit, normalizeLimit(content.limit));
+    }
+  }
+
+  return limit;
 }
 
 function googleReviewLimit(pages = []) {
@@ -298,24 +323,30 @@ async function loadApprovedCampaignOffers({
   prisma,
   tenantId,
   agencyId,
-  references,
+  references = [],
+  limit = 24,
 }) {
   const numericAgencyId = Number(agencyId);
+  const ids = cleanReferences(references);
 
   if (
     !prisma?.campaignAsset ||
     !tenantId ||
     !Number.isInteger(numericAgencyId) ||
-    !references.length
+    (!ids.length && !limit)
   ) {
     return [];
   }
 
   return prisma.campaignAsset.findMany({
     where: {
-      id: {
-        in: references,
-      },
+      ...(ids.length
+        ? {
+            id: {
+              in: ids,
+            },
+          }
+        : {}),
       status: "approved",
       campaign: {
         tenantId,
@@ -326,6 +357,13 @@ async function loadApprovedCampaignOffers({
         },
       },
     },
+    orderBy: [
+      { updatedAt: "desc" },
+      { createdAt: "desc" },
+    ],
+    take: ids.length
+      ? Math.min(ids.length, 24)
+      : normalizeLimit(limit),
   });
 }
 
@@ -409,6 +447,9 @@ function hydrateOfferBlocks(pages, assets) {
   const byId = new Map(
     assets.map((asset) => [asset.id, asset])
   );
+  const automaticCards = assets
+    .map(offerCard)
+    .filter(Boolean);
 
   return pages.map((page) => ({
     ...page,
@@ -418,18 +459,17 @@ function hydrateOfferBlocks(pages, assets) {
       }
 
       const content = asObject(block.content);
-      const references = cleanReferences(content.offerIds);
+      const source = String(content.source || "manual").toLowerCase();
+      const limit = normalizeLimit(content.limit);
 
-      if (!references.length) {
-        return block;
-      }
-
-      const offers = references
-        .map((reference) => byId.get(reference))
-        .filter(Boolean)
-        .map(offerCard)
-        .filter(Boolean)
-        .slice(0, normalizeLimit(content.limit));
+      const offers = ["campaign", "automatic", "auto"].includes(source)
+        ? automaticCards.slice(0, limit)
+        : cleanReferences(content.offerIds)
+            .map((reference) => byId.get(reference))
+            .filter(Boolean)
+            .map(offerCard)
+            .filter(Boolean)
+            .slice(0, limit);
 
       return {
         ...block,
@@ -490,13 +530,19 @@ async function hydratePublicDynamicBlocks({
 
   const references = collectDestinationReferences(sourcePages);
   const offerReferences = collectOfferReferences(sourcePages);
+  const automaticOfferLimit = automaticCampaignOfferLimit(sourcePages);
   const reviewLimit = googleReviewLimit(sourcePages);
 
-  if (!references.length && !offerReferences.length && !reviewLimit) {
+  if (
+    !references.length &&
+    !offerReferences.length &&
+    !automaticOfferLimit &&
+    !reviewLimit
+  ) {
     return sourcePages;
   }
 
-  const [destinations, offers, reviews] = await Promise.all([
+  const [destinations, manualOffers, automaticOffers, reviews] = await Promise.all([
     loadPublishedDestinations({
       prisma,
       tenantId,
@@ -507,7 +553,16 @@ async function hydratePublicDynamicBlocks({
       tenantId,
       agencyId,
       references: offerReferences,
+      limit: offerReferences.length,
     }),
+    automaticOfferLimit
+      ? loadApprovedCampaignOffers({
+          prisma,
+          tenantId,
+          agencyId,
+          limit: automaticOfferLimit,
+        })
+      : [],
     loadGoogleReviews({
       prisma,
       agencyId,
@@ -523,11 +578,21 @@ async function hydratePublicDynamicBlocks({
         )
       : sourcePages;
 
+  const offerAssets = [
+    ...manualOffers,
+    ...automaticOffers.filter(
+      (candidate) =>
+        !manualOffers.some(
+          (manual) => manual.id === candidate.id
+        )
+    ),
+  ];
+
   const withOffers =
-    offerReferences.length
+    offerReferences.length || automaticOfferLimit
       ? hydrateOfferBlocks(
           withDestinations,
-          offers
+          offerAssets
         )
       : withDestinations;
 
@@ -551,6 +616,7 @@ module.exports = {
   offerCard,
   collectDestinationReferences,
   collectOfferReferences,
+  automaticCampaignOfferLimit,
   googleReviewLimit,
   loadPublishedDestinations,
   loadApprovedCampaignOffers,
