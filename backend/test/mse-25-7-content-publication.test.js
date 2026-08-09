@@ -31,7 +31,7 @@ function repository(initial = {}) {
   };
 }
 
-test("MSE-25.7 publie explicitement un SeoContent en review", async () => {
+test("MSE-25.7 publie explicitement un SeoContent autonome en review", async () => {
   const service = new AiContentService(
     repository({
       "content-1": {
@@ -82,7 +82,26 @@ test("MSE-25.7 refuse de publier un contenu dans un état invalide", async () =>
   );
 });
 
-test("MSE-25.7 retire un contenu publié du catalogue sans supprimer son publishedAt", async () => {
+test("MSE-25.7 interdit de contourner le Campaign Manager pour publier un contenu de campagne", async () => {
+  const service = new AiContentService(
+    repository({
+      "content-1": {
+        campaignId: "campaign-1",
+        status: "review",
+      },
+    }),
+    "tenant_mondescale"
+  );
+
+  await assert.rejects(
+    () => service.publishContent("content-1"),
+    error =>
+      error.code === "AI_CONTENT_CAMPAIGN_REVIEW_REQUIRED" &&
+      error.statusCode === 409
+  );
+});
+
+test("MSE-25.7 retire un contenu autonome publié du catalogue sans supprimer son publishedAt", async () => {
   const publishedAt = new Date("2026-08-09T12:00:00.000Z");
   const service = new AiContentService(
     repository({
@@ -98,6 +117,26 @@ test("MSE-25.7 retire un contenu publié du catalogue sans supprimer son publish
 
   assert.equal(result.status, "review");
   assert.equal(result.publishedAt, publishedAt);
+});
+
+test("MSE-25.7 interdit de dépublier directement un contenu piloté par une campagne", async () => {
+  const service = new AiContentService(
+    repository({
+      "content-1": {
+        campaignId: "campaign-1",
+        status: "published",
+        publishedAt: new Date("2026-08-09T12:00:00.000Z"),
+      },
+    }),
+    "tenant_mondescale"
+  );
+
+  await assert.rejects(
+    () => service.unpublishContent("content-1"),
+    error =>
+      error.code === "AI_CONTENT_CAMPAIGN_REVIEW_REQUIRED" &&
+      error.statusCode === 409
+  );
 });
 
 test("MSE-25.7 renvoie 404 pour un contenu absent du tenant", async () => {
