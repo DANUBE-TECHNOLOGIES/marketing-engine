@@ -1,5 +1,14 @@
 "use strict";
 
+const OFFER_ASSET_TYPES = Object.freeze([
+  "offer",
+  "site-offer",
+  "travel-offer",
+  "deal",
+  "promotion",
+  "promo",
+]);
+
 function asObject(value) {
   return value && typeof value === "object" && !Array.isArray(value)
     ? value
@@ -41,6 +50,12 @@ function normalizeOfferPrice(source) {
 }
 
 function toPublicOfferCard(asset) {
+  const type = String(asset?.type || "").trim().toLowerCase();
+
+  if (!OFFER_ASSET_TYPES.includes(type)) {
+    return null;
+  }
+
   const payload = asObject(asset?.payload);
   const nested = asObject(payload.offer);
   const source = {
@@ -51,56 +66,31 @@ function toPublicOfferCard(asset) {
   const title = cleanText(source.title) || cleanText(asset?.title);
   if (!title) return null;
 
-  const price = normalizeOfferPrice(source);
-  const image =
-    cleanText(source.image) ||
-    cleanText(source.imageUrl) ||
-    cleanText(source.heroImageUrl) ||
-    cleanText(source.visualUrl);
-  const href =
-    cleanText(source.href) ||
-    cleanText(source.url) ||
-    cleanText(source.link);
-  const description =
-    cleanText(source.description) ||
-    cleanText(source.summary);
-  const badge =
-    cleanText(source.badge) ||
-    cleanText(source.label);
-
-  const type = String(asset?.type || "").toLowerCase();
-  const explicitOfferType = [
-    "offer",
-    "travel-offer",
-    "deal",
-    "promotion",
-    "promo",
-  ].includes(type);
-
-  if (
-    !explicitOfferType &&
-    !price &&
-    !image &&
-    !href &&
-    !description &&
-    !badge
-  ) {
-    return null;
-  }
-
   return {
     id: asset.id,
     campaignId: asset.campaignId,
     title,
-    description,
-    image,
-    badge,
-    price,
-    href,
+    description:
+      cleanText(source.description) ||
+      cleanText(source.summary),
+    image:
+      cleanText(source.image) ||
+      cleanText(source.imageUrl) ||
+      cleanText(source.heroImageUrl) ||
+      cleanText(source.visualUrl),
+    badge:
+      cleanText(source.badge) ||
+      cleanText(source.label),
+    price: normalizeOfferPrice(source),
+    href:
+      cleanText(source.href) ||
+      cleanText(source.url) ||
+      cleanText(source.link),
   };
 }
 
 module.exports = {
+  OFFER_ASSET_TYPES,
   asObject,
   cleanText,
   normalizeOfferPrice,
