@@ -287,8 +287,8 @@ export async function rollbackPageVersion(
 
   if (!response.ok) {
     throw new Error(
-      result.payload?.message ||
-      result.payload?.error ||
+      payload?.message ||
+      payload?.error ||
       `Échec de la restauration (${response.status}).`
     );
   }
