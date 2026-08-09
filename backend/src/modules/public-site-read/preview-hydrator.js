@@ -3,6 +3,9 @@
 const {
   hydratePublicDynamicBlocks,
 } = require("./dynamic-block-hydrator");
+const {
+  hydratePublicInspirations,
+} = require("./inspiration-hydrator");
 
 async function resolvePreviewSiteContext({
   prisma,
@@ -69,12 +72,18 @@ async function hydratePreviewPage({
 
   const sourcePage = normalizePreviewPage(page);
 
-  const pages = await hydratePublicDynamicBlocks({
+  const dynamicPages = await hydratePublicDynamicBlocks({
     prisma,
     tenantId: context.tenantId,
     agencyId: context.agencyId,
     pages: [sourcePage],
     includeUnpublishedBlocks: true,
+  });
+
+  const pages = await hydratePublicInspirations({
+    prisma,
+    tenantId: context.tenantId,
+    pages: dynamicPages,
   });
 
   return {
