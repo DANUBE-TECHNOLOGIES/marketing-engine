@@ -54,11 +54,157 @@ function AgencyChecklist({ agencies, selectedIds, onChange, compact = false }) {
   );
 }
 
-function OfferStatus({ status }) {
+function AssetStatus({ status }) {
   return (
     <span className={`offer-status offer-status-${status || "review"}`}>
       {status || "review"}
     </span>
+  );
+}
+
+function GeneratedContentPanel({ campaign, onChanged }) {
+  const [open, setOpen] = useState(false);
+  const [assets, setAssets] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+
+  const loadAssets = async () => {
+    setLoading(true);
+    setError("");
+
+    try {
+      const items = await campaignApi.assets(campaign.id, {
+        type: "seo-content",
+      });
+      setAssets(Array.isArray(items) ? items : []);
+    } catch (loadError) {
+      setError(loadError.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggle = async () => {
+    const next = !open;
+    setOpen(next);
+
+    if (next) {
+      await loadAssets();
+    }
+  };
+
+  const decide = async (asset, decision) => {
+    setError("");
+    setNotice("");
+
+    try {
+      if (decision === "approved") {
+        await campaignApi.approveAsset(campaign.id, asset.id, {
+          note: "Validation éditoriale depuis Campaign Manager",
+        });
+        setNotice(
+          "Contenu approuvé et publié. Il est maintenant disponible pour les blocs Inspirations du Website Designer."
+        );
+      } else {
+        await campaignApi.rejectAsset(campaign.id, asset.id, {
+          note: "Rejet éditorial depuis Campaign Manager",
+        });
+        setNotice("Contenu rejeté et retiré du catalogue Inspirations.");
+      }
+
+      await loadAssets();
+      await onChanged();
+    } catch (decisionError) {
+      setError(decisionError.message);
+    }
+  };
+
+  return (
+    <section className="offer-panel generated-content-panel">
+      <button
+        type="button"
+        className="offer-toggle"
+        onClick={toggle}
+      >
+        {open ? "Masquer les contenus générés" : "Valider les contenus générés"}
+      </button>
+
+      {open ? (
+        <div className="offer-panel-body">
+          <div className="offer-panel-heading">
+            <div>
+              <strong>Contenus éditoriaux générés</strong>
+              <small>
+                L’approbation publie le contenu éditorial et le rend disponible pour les blocs Inspirations du Website Designer.
+              </small>
+            </div>
+          </div>
+
+          {error ? <div className="offer-error">{error}</div> : null}
+          {notice ? <div className="offer-notice">{notice}</div> : null}
+
+          <div className="offer-list">
+            {loading ? (
+              <p>Chargement des contenus…</p>
+            ) : assets.length ? (
+              assets.map((asset) => {
+                const payload = asset.payload || {};
+                const metadata = asset.metadata || {};
+
+                return (
+                  <article className="offer-item" key={asset.id}>
+                    <div className="offer-item-main">
+                      <div className="offer-item-title">
+                        <strong>{asset.title || payload.slug || "Contenu éditorial"}</strong>
+                        <AssetStatus status={asset.status} />
+                      </div>
+                      <p>
+                        {asset.channel === "article"
+                          ? "Article / inspiration voyage"
+                          : `Canal : ${asset.channel || "non renseigné"}`}
+                      </p>
+                      <small>
+                        {payload.seoContentId
+                          ? `Contenu lié : ${payload.seoContentId}`
+                          : "Référence de contenu manquante"}
+                        {metadata.qualityScore
+                          ? ` · Qualité ${metadata.qualityScore}/100`
+                          : ""}
+                      </small>
+                    </div>
+
+                    {asset.status === "review" ? (
+                      <div className="offer-actions">
+                        <button
+                          type="button"
+                          disabled={!payload.seoContentId}
+                          onClick={() => decide(asset, "approved")}
+                        >
+                          Approuver et publier
+                        </button>
+                        <button
+                          type="button"
+                          className="danger-button"
+                          disabled={!payload.seoContentId}
+                          onClick={() => decide(asset, "rejected")}
+                        >
+                          Rejeter
+                        </button>
+                      </div>
+                    ) : null}
+                  </article>
+                );
+              })
+            ) : (
+              <p className="offer-empty">
+                Aucun contenu éditorial généré pour cette campagne.
+              </p>
+            )}
+          </div>
+        </div>
+      ) : null}
+    </section>
   );
 }
 
@@ -298,7 +444,7 @@ function OfferPanel({ campaign, agencies, onChanged }) {
                     <div className="offer-item-main">
                       <div className="offer-item-title">
                         <strong>{asset.title}</strong>
-                        <OfferStatus status={asset.status} />
+                        <AssetStatus status={asset.status} />
                       </div>
                       <p>{payload.description || "Offre sans description."}</p>
                       <small>
@@ -464,6 +610,11 @@ export default function CampaignsClient() {
                     Préparer les tâches
                   </button>
                 </footer>
+
+                <GeneratedContentPanel
+                  campaign={campaign}
+                  onChanged={load}
+                />
 
                 <OfferPanel
                   campaign={campaign}
