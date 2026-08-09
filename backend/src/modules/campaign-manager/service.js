@@ -9,6 +9,9 @@ const {
  validateOfferAssetInput,
  assertOfferAssetPublishable,
 }=require("./offer-asset");
+const {
+ toPublicOfferCard,
+}=require("./public-offer-card");
 const DEFAULT_CHANNELS=["landing-page","faq","facebook","instagram","google-business","newsletter","hero-image"];
 class CampaignService {
  constructor(prismaOrRepo,tenantId){ this.repo=prismaOrRepo?.list?prismaOrRepo:new CampaignRepository(prismaOrRepo,tenantId); }
@@ -16,6 +19,18 @@ class CampaignService {
  summarize(c){ const tasks=c.tasks||[]; const done=tasks.filter(x=>x.status==="completed").length; return {...c,metrics:{agencies:c.agencies?.length||0,destinations:c.destinations?.length||0,tasks:tasks.length,assets:c.assets?.length||0,completedTasks:done,progress:tasks.length?Math.round(done*100/tasks.length):c.progress||0}}; }
  async list(){ return (await this.repo.list()).map(c=>this.summarize(c)); }
  async listAgencyOptions(){ return this.repo.listAgencies(); }
+ async listApprovedOfferOptions(agencyId,limit=24){
+  const numericAgencyId=Number(agencyId);
+  if(!Number.isInteger(numericAgencyId)||numericAgencyId<=0){
+   throw Object.assign(new Error("Identifiant d’agence invalide."),{statusCode:400,code:"CAMPAIGN_OFFER_AGENCY_INVALID"});
+  }
+  if(await this.repo.countAgencies([numericAgencyId])!==1){
+   throw Object.assign(new Error("Agence introuvable dans ce tenant."),{statusCode:404,code:"CAMPAIGN_OFFER_AGENCY_NOT_FOUND"});
+  }
+  return (await this.repo.listApprovedSiteOffers(numericAgencyId,limit))
+   .map(toPublicOfferCard)
+   .filter(Boolean);
+ }
  async get(id){ const c=await this.repo.get(id); if(!c) throw Object.assign(new Error("Campagne introuvable."),{statusCode:404,code:"CAMPAIGN_NOT_FOUND"}); return this.summarize(c); }
  async verify(agencyIds,destinationIds){ if(agencyIds.length && await this.repo.countAgencies(agencyIds)!==agencyIds.length) throw Object.assign(new Error("Une ou plusieurs agences sont absentes du tenant."),{statusCode:400,code:"INVALID_CAMPAIGN_AGENCIES"}); if(destinationIds.length && await this.repo.countDestinations(destinationIds)!==destinationIds.length) throw Object.assign(new Error("Une ou plusieurs destinations sont absentes du tenant."),{statusCode:400,code:"INVALID_CAMPAIGN_DESTINATIONS"}); }
  async create(input){ const d=validateCampaignInput(input); const agencyIds=d.agencyIds||[],destinationIds=d.destinationIds||[]; await this.verify(agencyIds,destinationIds); delete d.agencyIds;delete d.destinationIds;delete d.channels; return this.summarize(await this.repo.create(d,agencyIds,destinationIds)); }
