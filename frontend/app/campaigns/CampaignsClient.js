@@ -219,10 +219,6 @@ function OfferPanel({ campaign, agencies, onChanged }) {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
-  useEffect(() => {
-    setTargetIds(campaignAgencyIds(campaign));
-  }, [campaign]);
-
   const loadOffers = async () => {
     setLoading(true);
     setError("");
@@ -509,7 +505,40 @@ export default function CampaignsClient() {
   };
 
   useEffect(() => {
-    load();
+    let active = true;
+
+    async function loadInitial() {
+      try {
+        const [campaigns, agencyOptions] = await Promise.all([
+          campaignApi.list(),
+          campaignApi.agencyOptions(),
+        ]);
+
+        if (!active) return;
+
+        setItems(campaigns);
+        setAgencies(
+          Array.isArray(agencyOptions)
+            ? agencyOptions
+            : []
+        );
+        setError("");
+      } catch (loadError) {
+        if (active) {
+          setError(loadError.message);
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadInitial();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const create = async (event) => {
@@ -617,6 +646,7 @@ export default function CampaignsClient() {
                 />
 
                 <OfferPanel
+                  key={`${campaign.id}:${campaignAgencyIds(campaign).join(",")}`}
                   campaign={campaign}
                   agencies={agencies}
                   onChanged={load}
