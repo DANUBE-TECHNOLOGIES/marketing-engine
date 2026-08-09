@@ -6,6 +6,10 @@ const assert = require("node:assert/strict");
 const ContentGenerationRepository = require("../src/modules/content-generation/repository");
 const { CampaignService } = require("../src/modules/campaign-manager/service");
 const {
+  OFFER_ASSET_TYPES,
+  normalizeOfferPrice,
+} = require("../src/modules/campaign-manager/public-offer-card");
+const {
   offerCard,
   automaticCampaignOfferLimit,
   loadApprovedCampaignOffers,
@@ -35,13 +39,16 @@ test("generated assets delegate to task-scoped upsert", async () => {
   assert.equal(result.id, "asset-1");
 });
 
-test("offerCard rejects generic campaign content without offer semantics", () => {
+test("shared offer mapper rejects non-offer campaign assets", () => {
   assert.equal(
     offerCard({
       id: "generic-1",
       type: "landing-page",
       title: "Sicile",
-      payload: { generated: true },
+      payload: {
+        price: "1490 €",
+        imageUrl: "https://cdn.example/sicile.jpg",
+      },
     }),
     null
   );
@@ -73,7 +80,18 @@ test("offerCard rejects generic campaign content without offer semantics", () =>
   );
 });
 
-test("approved campaign offers are tenant and agency scoped", async () => {
+test("shared offer price mapper preserves currency for text prices", () => {
+  assert.equal(
+    normalizeOfferPrice({ price: "1 490", currency: "€" }),
+    "1 490 €"
+  );
+  assert.equal(
+    normalizeOfferPrice({ price: "1 490 €", currency: "€" }),
+    "1 490 €"
+  );
+});
+
+test("approved campaign offers are tenant, agency, status and type scoped", async () => {
   let captured = null;
 
   const prisma = {
@@ -94,6 +112,7 @@ test("approved campaign offers are tenant and agency scoped", async () => {
 
   assert.deepEqual(captured.where.id.in, ["offer-a", "offer-b"]);
   assert.equal(captured.where.status, "approved");
+  assert.deepEqual(captured.where.type.in, [...OFFER_ASSET_TYPES]);
   assert.equal(captured.where.campaign.tenantId, "tenant-1");
   assert.equal(captured.where.campaign.agencies.some.agencyId, 42);
   assert.equal(captured.take, 2);
@@ -108,14 +127,15 @@ test("editor offer catalog is tenant-scoped and hides raw payloads", async () =>
       requestedAgencyId = ids[0];
       return 1;
     },
-    listApprovedSiteOffers: async (agencyId) => [
+    listApprovedSiteOffers: async () => [
       {
         id: "offer-1",
         campaignId: "campaign-1",
         type: "offer",
         title: "Sicile",
         payload: {
-          price: "999 €",
+          price: "999",
+          currency: "€",
           internalPrompt: "must-not-leak",
         },
       },
@@ -148,13 +168,16 @@ test("editor offer catalog rejects agencies outside the tenant", async () => {
 });
 
 test("V2 manual offer order and limit survive public hydration", async () => {
+  let captured = null;
   const prisma = {
     campaignAsset: {
-      findMany: async () => [
-        { id: "offer-a", campaignId: "campaign-1", type: "offer", title: "Offre A", payload: { price: "1000 €" } },
-        { id: "offer-b", campaignId: "campaign-1", type: "offer", title: "Offre B", payload: { price: "1200 €" } },
-        { id: "generic", campaignId: "campaign-1", type: "landing-page", title: "Landing", payload: { generated: true } },
-      ],
+      findMany: async (query) => {
+        captured = query;
+        return [
+          { id: "offer-a", campaignId: "campaign-1", type: "offer", title: "Offre A", payload: { price: "1000 €" } },
+          { id: "offer-b", campaignId: "campaign-1", type: "offer", title: "Offre B", payload: { price: "1200 €" } },
+        ];
+      },
     },
   };
 
@@ -173,13 +196,14 @@ test("V2 manual offer order and limit survive public hydration", async () => {
     }],
   });
 
+  assert.deepEqual(captured.where.type.in, [...OFFER_ASSET_TYPES]);
   assert.deepEqual(
     pages[0].blocks[0].content.offers.map((offer) => offer.id),
     ["offer-b", "offer-a"]
   );
 });
 
-test("campaign mode uses latest approved feed and respects limit", async () => {
+test("campaign mode uses latest approved offer feed and respects limit", async () => {
   let captured = null;
 
   const prisma = {
@@ -212,6 +236,7 @@ test("campaign mode uses latest approved feed and respects limit", async () => {
   assert.equal(automaticCampaignOfferLimit([{ blocks: [{ type: "offers", content: { source: "campaign", limit: 1 } }] }]), 1);
   assert.equal(captured.where.id, undefined);
   assert.equal(captured.where.status, "approved");
+  assert.deepEqual(captured.where.type.in, [...OFFER_ASSET_TYPES]);
   assert.deepEqual(captured.orderBy, [{ updatedAt: "desc" }, { createdAt: "desc" }]);
   assert.equal(captured.take, 1);
   assert.deepEqual(pages[0].blocks[0].content.offers.map((offer) => offer.id), ["latest"]);
