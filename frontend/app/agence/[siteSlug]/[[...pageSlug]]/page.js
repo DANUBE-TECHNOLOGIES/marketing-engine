@@ -109,6 +109,114 @@ async function loadPage({
   );
 }
 
+function blockType(block) {
+  return String(
+    block?.blockType ||
+    block?.type ||
+    block?.sectionType ||
+    ""
+  )
+    .replace(/--\d+$/, "")
+    .trim()
+    .toLowerCase();
+}
+
+async function hydrateInspirationsBlock(block) {
+  if (blockType(block) !== "inspirations") {
+    return block;
+  }
+
+  const content =
+    block?.content && typeof block.content === "object"
+      ? block.content
+      : {};
+  const settings =
+    block?.settings && typeof block.settings === "object"
+      ? block.settings
+      : {};
+  const source = String(
+    settings.__dataSource ||
+    content.__dataSource ||
+    "content-generation"
+  ).toLowerCase();
+
+  if (source !== "content-generation") {
+    return block;
+  }
+
+  const selectionMode = String(
+    settings.selectionMode ||
+    content.selectionMode ||
+    "automatic"
+  ).toLowerCase();
+  const ids = selectionMode === "manual"
+    ? (
+        Array.isArray(settings.contentIds)
+          ? settings.contentIds
+          : Array.isArray(content.contentIds)
+            ? content.contentIds
+            : []
+      )
+    : [];
+  const limit = Math.min(
+    Math.max(
+      Number(settings.limit || content.limit) || 6,
+      1
+    ),
+    12
+  );
+
+  if (selectionMode === "manual" && !ids.length) {
+    return {
+      ...block,
+      content: {
+        ...content,
+        items: [],
+      },
+    };
+  }
+
+  try {
+    const items = await publicSiteApi.getInspirations({
+      limit,
+      channel: "article",
+      ids,
+    });
+
+    return {
+      ...block,
+      content: {
+        ...content,
+        items,
+        __resolvedDataSource: "content-generation",
+      },
+    };
+  } catch (error) {
+    console.error(
+      "[PUBLIC_SITE_INSPIRATIONS]",
+      error
+    );
+    return block;
+  }
+}
+
+async function hydratePageInspirations(page) {
+  if (!page || !Array.isArray(page.blocks)) {
+    return page;
+  }
+
+  const blocks = await Promise.all(
+    page.blocks.map(hydrateInspirationsBlock)
+  );
+
+  return {
+    ...page,
+    blocks,
+    sections: blocks,
+    contentBlocks: blocks,
+  };
+}
+
 export async function generateMetadata({
   params,
 }) {
@@ -268,6 +376,8 @@ export default async function AgencySitePage({
           pageSlug,
         }),
       ]);
+
+    page = await hydratePageInspirations(page);
   } catch (error) {
     if (
       error?.statusCode ===
