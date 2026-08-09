@@ -1,4 +1,9 @@
 "use strict";
+
+const {
+ OFFER_ASSET_TYPES,
+}=require("./public-offer-card");
+
 class CampaignRepository {
  constructor(prisma, tenantId){ this.prisma=prisma; this.tenantId=tenantId; }
  include(){ return { agencies:{include:{agency:true}}, destinations:{include:{destination:true}}, tasks:{orderBy:{createdAt:"asc"}}, assets:{orderBy:{createdAt:"desc"}}, publications:true }; }
@@ -49,6 +54,7 @@ class CampaignRepository {
   return this.prisma.campaignAsset.findMany({
    where:{
     status:"approved",
+    type:{in:[...OFFER_ASSET_TYPES]},
     campaign:{
      tenantId:this.tenantId,
      agencies:{some:{agencyId}}
