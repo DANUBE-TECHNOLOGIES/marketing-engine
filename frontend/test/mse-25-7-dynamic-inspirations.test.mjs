@@ -33,6 +33,20 @@ test("MSE-25.7 permet source automatique ou saisie manuelle dans le vrai Designe
   assert.match(inspector, /Articles publiés/);
 });
 
+test("MSE-25.7 masque les réglages catalogue et le panneau automatique en saisie manuelle", () => {
+  const inspector = source("components/website-builder/SectionInspector.js");
+
+  assert.match(inspector, /inspectorFieldVisible/);
+  assert.match(
+    inspector,
+    /inspirationSource === "manual"[\s\S]*?\["selectionMode", "limit"\]\.includes\(fieldKey\)/
+  );
+  assert.match(
+    inspector,
+    /block\.type === "inspirations"[\s\S]*?inspirationSource === "content-generation"[\s\S]*?: Boolean/
+  );
+});
+
 test("MSE-25.7 conserve le renderer public inspirations", () => {
   const renderer = source("components/public-site/renderers/InspirationsRenderer.js");
 
