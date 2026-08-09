@@ -40,6 +40,26 @@ class AiContentRepository {
     });
   }
 
+  listPublishedContents(filters = {}) {
+    const ids = Array.isArray(filters.ids)
+      ? filters.ids.map(String).filter(Boolean).slice(0, 100)
+      : [];
+
+    return this.prisma.seoContent.findMany({
+      where: {
+        tenantId: this.tenantId,
+        status: "published",
+        ...(filters.channel ? { channel: filters.channel } : {}),
+        ...(ids.length ? { id: { in: ids } } : {}),
+      },
+      orderBy: [
+        { publishedAt: "desc" },
+        { updatedAt: "desc" },
+      ],
+      take: Math.min(Math.max(Number(filters.limit) || 24, 1), 100),
+    });
+  }
+
   async nextRevision(channel, slug) {
     const latest = await this.prisma.seoContent.findFirst({
       where: { tenantId: this.tenantId, channel, slug },
