@@ -12,6 +12,30 @@ function pageWhere() {
   return { status: PUBLISHED, published: true };
 }
 
+function tenantSlug(req) {
+  return String(
+    req.headers["x-tenant-slug"] || "mondescale"
+  )
+    .trim()
+    .toLowerCase();
+}
+
+function destinationWhere(req) {
+  const where = {
+    status: PUBLISHED,
+    tenant: {
+      is: {
+        slug: tenantSlug(req),
+      },
+    },
+  };
+
+  if (req.query.country) where.country = req.query.country;
+  if (req.query.type) where.type = req.query.type;
+
+  return where;
+}
+
 function createPublicCatalogRoutes(prisma) {
   if (!prisma) throw new Error("Public Catalog requires Prisma");
 
@@ -87,11 +111,8 @@ function createPublicCatalogRoutes(prisma) {
 
   router.get("/public/destinations", async (req, res, next) => {
     try {
-      const where = { status: PUBLISHED };
-      if (req.query.country) where.country = req.query.country;
-      if (req.query.type) where.type = req.query.type;
       const items = await prisma.destination.findMany({
-        where,
+        where: destinationWhere(req),
         take: parseLimit(req.query.limit),
         orderBy: [{ country: "asc" }, { name: "asc" }],
         select: {
@@ -109,7 +130,10 @@ function createPublicCatalogRoutes(prisma) {
   router.get("/public/destinations/:slug", async (req, res, next) => {
     try {
       const item = await prisma.destination.findFirst({
-        where: { slug: req.params.slug, status: PUBLISHED },
+        where: {
+          ...destinationWhere(req),
+          slug: req.params.slug,
+        },
         include: {
           sections: { orderBy: { position: "asc" } },
           faqs: { orderBy: { position: "asc" } },
