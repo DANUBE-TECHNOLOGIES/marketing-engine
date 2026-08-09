@@ -42,6 +42,32 @@ async function request(path) {
   return payload;
 }
 
+async function requestWebsiteBuilder(path) {
+  const response = await fetch(
+    `${INTERNAL_API_URL}/api/website-builder${path}`,
+    {
+      headers: {
+        accept: "application/json",
+      },
+      cache: "no-store",
+    }
+  );
+
+  const payload = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const error = new Error(
+      payload?.message ||
+        payload?.error ||
+        "Catalogue éditorial indisponible"
+    );
+    error.statusCode = response.status;
+    throw error;
+  }
+
+  return payload;
+}
+
 function siteFromContract(payload) {
   const site =
     payload?.site &&
@@ -111,6 +137,27 @@ export const publicSiteApi = {
         )}`
       )
     );
+  },
+
+  async getInspirations({
+    limit = 6,
+    channel = "article",
+    ids = [],
+  } = {}) {
+    const params = new URLSearchParams();
+    params.set("limit", String(limit));
+    if (channel) params.set("channel", channel);
+    if (Array.isArray(ids) && ids.length) {
+      params.set("ids", ids.map(String).join(","));
+    }
+
+    const payload = await requestWebsiteBuilder(
+      `/inspirations?${params.toString()}`
+    );
+
+    return Array.isArray(payload?.items)
+      ? payload.items
+      : [];
   },
 };
 
