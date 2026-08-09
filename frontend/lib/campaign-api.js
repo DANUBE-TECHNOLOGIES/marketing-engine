@@ -42,6 +42,20 @@ function assetQuery(filters = {}) {
   return query ? `?${query}` : "";
 }
 
+function reviewDecision(data = {}, { rejected = false } = {}) {
+  return {
+    reviewedBy:
+      data.reviewedBy ||
+      "Campaign Manager",
+    comment:
+      data.comment ||
+      data.note ||
+      (rejected
+        ? "Rejet depuis Campaign Manager"
+        : "Validation depuis Campaign Manager"),
+  };
+}
+
 export const campaignApi = {
   list: () => request(),
 
@@ -90,7 +104,7 @@ export const campaignApi = {
       )}/approve`,
       {
         method: "POST",
-        body: JSON.stringify(data),
+        body: JSON.stringify(reviewDecision(data)),
       }
     ),
 
@@ -101,7 +115,9 @@ export const campaignApi = {
       )}/reject`,
       {
         method: "POST",
-        body: JSON.stringify(data),
+        body: JSON.stringify(
+          reviewDecision(data, { rejected: true })
+        ),
       }
     ),
 };
