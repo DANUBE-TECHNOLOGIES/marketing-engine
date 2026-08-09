@@ -10,24 +10,19 @@ const root = path.resolve(
 );
 
 function read(relativePath) {
-  return fs.readFileSync(
-    path.join(root, relativePath),
-    "utf8"
-  );
+  return fs.readFileSync(path.join(root, relativePath), "utf8");
 }
 
-test("website builder exposes approved campaign offer catalog", () => {
+test("website builder reads approved offer catalog through tenant-scoped campaigns", () => {
   const proxy = read(
     "app/api/website-builder/agencies/[agencyId]/offers/route.js"
   );
-  const api = read(
-    "lib/page-builder-v2/page-builder-api.js"
-  );
+  const api = read("lib/page-builder-v2/page-builder-api.js");
 
-  assert.match(
-    proxy,
-    /public-site-read\/agencies\/\$\{encodeURIComponent\([\s\S]*agencyId[\s\S]*\)\}\/offers/
-  );
+  assert.match(proxy, /\/campaigns\/options\/offers/);
+  assert.match(proxy, /searchParams\.set\(["']agencyId["'],\s*agencyId\)/);
+  assert.match(proxy, /["']x-tenant-slug["']:\s*TENANT_SLUG/);
+  assert.doesNotMatch(proxy, /public-site-read\/agencies/);
   assert.match(proxy, /cache-control["']:\s*["']private, no-store/);
 
   assert.match(api, /export async function fetchApprovedOffers/);
@@ -38,9 +33,7 @@ test("website builder exposes approved campaign offer catalog", () => {
 });
 
 test("public offer cards honor approved campaign links safely", () => {
-  const renderer = read(
-    "components/public-site/renderers/OffersRenderer.js"
-  );
+  const renderer = read("components/public-site/renderers/OffersRenderer.js");
 
   assert.match(renderer, /resolvePublicCtaHref/);
   assert.match(renderer, /item\.href/);
@@ -49,9 +42,7 @@ test("public offer cards honor approved campaign links safely", () => {
 });
 
 test("new V2 offer blocks default to approved campaigns", () => {
-  const catalog = read(
-    "lib/page-builder-v2/block-catalog.js"
-  );
+  const catalog = read("lib/page-builder-v2/block-catalog.js");
 
   assert.match(
     catalog,
