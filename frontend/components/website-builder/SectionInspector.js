@@ -10,6 +10,7 @@ import {
 } from "../../lib/website-builder/inspector-registry";
 import {
   fetchPublishedDestinations,
+  fetchPublishedInspirations,
 } from "../../lib/page-builder-v2/page-builder-api";
 
 function FieldControl({
@@ -356,6 +357,118 @@ function DestinationReferenceSelector({
   );
 }
 
+function InspirationReferenceSelector({
+  selectedIds,
+  onChange,
+}) {
+  const [inspirations, setInspirations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadInspirations() {
+      try {
+        setLoading(true);
+        setError(null);
+        const items = await fetchPublishedInspirations({
+          limit: 100,
+          channel: "article",
+        });
+
+        if (active) {
+          setInspirations(items);
+        }
+      } catch (loadError) {
+        if (active) {
+          setError(loadError.message);
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadInspirations();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const currentIds = Array.isArray(selectedIds)
+    ? selectedIds.map(String)
+    : [];
+
+  function toggleInspiration(id) {
+    const normalizedId = String(id);
+
+    if (currentIds.includes(normalizedId)) {
+      onChange(
+        currentIds.filter(entry => entry !== normalizedId)
+      );
+      return;
+    }
+
+    onChange([...currentIds, normalizedId]);
+  }
+
+  return (
+    <div className="wb-collection-editor">
+      <div className="wb-collection-heading">
+        <strong>Articles publiés</strong>
+        <span>{currentIds.length} sélectionné(s)</span>
+      </div>
+
+      {loading ? (
+        <div className="wb-collection-empty">
+          Chargement du catalogue éditorial…
+        </div>
+      ) : null}
+
+      {error ? (
+        <div className="wb-collection-empty">
+          {error}
+        </div>
+      ) : null}
+
+      {!loading && !error && inspirations.length ? (
+        <div className="wb-destination-selector">
+          {inspirations.map((item) => (
+            <label
+              key={item.id}
+              className="wb-destination-option"
+            >
+              <input
+                type="checkbox"
+                checked={currentIds.includes(String(item.id))}
+                onChange={() => toggleInspiration(item.id)}
+              />
+
+              <span>
+                <strong>{item.title}</strong>
+                <small>
+                  {[item.category, item.publishedAt]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </small>
+              </span>
+            </label>
+          ))}
+        </div>
+      ) : null}
+
+      {!loading && !error && !inspirations.length ? (
+        <div className="wb-collection-empty">
+          Aucun article publié n’est disponible.
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default function SectionInspector({
   block,
   onRename,
@@ -376,6 +489,16 @@ export default function SectionInspector({
   const destinationSource =
     block.type === "destinations"
       ? block.settings?.__dataSource || "travel-core"
+      : null;
+
+  const inspirationSource =
+    block.type === "inspirations"
+      ? block.settings?.__dataSource || "content-generation"
+      : null;
+
+  const inspirationSelectionMode =
+    block.type === "inspirations"
+      ? block.settings?.selectionMode || "automatic"
       : null;
 
   return (
@@ -400,7 +523,13 @@ export default function SectionInspector({
               field.key === "__dataSource" &&
               block.type === "destinations"
                 ? destinationSource
-                : block.settings?.[field.key]
+                : field.key === "__dataSource" &&
+                  block.type === "inspirations"
+                  ? inspirationSource
+                  : field.key === "selectionMode" &&
+                    block.type === "inspirations"
+                    ? inspirationSelectionMode
+                    : block.settings?.[field.key]
             }
             onChange={(value) =>
               onSettingChange(
@@ -427,6 +556,17 @@ export default function SectionInspector({
         />
       ) : null}
 
+      {block.type === "inspirations" &&
+      inspirationSource === "content-generation" &&
+      inspirationSelectionMode === "manual" ? (
+        <InspirationReferenceSelector
+          selectedIds={block.settings?.contentIds}
+          onChange={(contentIds) =>
+            onSettingChange("contentIds", contentIds)
+          }
+        />
+      ) : null}
+
       {definition.collection &&
       !(
         (
@@ -440,6 +580,10 @@ export default function SectionInspector({
         (
           block.type === "destinations" &&
           destinationSource === "travel-core"
+        ) ||
+        (
+          block.type === "inspirations" &&
+          inspirationSource === "content-generation"
         )
       ) ? (
         <CollectionEditor
@@ -459,12 +603,14 @@ export default function SectionInspector({
       ) : null}
 
       {block.settings?.__dataSource ||
-      destinationSource === "travel-core" ? (
+      destinationSource === "travel-core" ||
+      inspirationSource === "content-generation" ? (
         <div className="wb-data-source-panel">
           <strong>Source automatique</strong>
 
           <span>
             {destinationSource ||
+              inspirationSource ||
               block.settings.__dataSource}
           </span>
 
@@ -478,7 +624,12 @@ export default function SectionInspector({
                 : block.type === "destinations" &&
                   destinationSource === "travel-core"
                   ? "Les destinations publiées du Destination Engine alimentent automatiquement ce bloc."
-                  : "Cette section utilise une source de données automatique."}
+                  : block.type === "inspirations" &&
+                    inspirationSource === "content-generation"
+                    ? inspirationSelectionMode === "manual"
+                      ? "Le bloc utilise uniquement les articles publiés sélectionnés dans le catalogue éditorial."
+                      : "Les articles publiés les plus récents du moteur de contenu alimentent automatiquement ce bloc."
+                    : "Cette section utilise une source de données automatique."}
           </p>
         </div>
       ) : null}
