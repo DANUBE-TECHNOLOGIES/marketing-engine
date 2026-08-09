@@ -122,15 +122,25 @@ class CampaignService {
    assertOfferAssetPublishable(asset);
   }
 
+  const reviewData={
+   status:decision.status,
+   metadata:buildReviewMetadata(
+    asset.metadata,
+    decision
+   )
+  };
+
+  if(this.repo.updateAssetReview){
+   return this.repo.updateAssetReview(
+    asset,
+    reviewData,
+    decision
+   );
+  }
+
   return this.repo.updateAsset(
    asset.id,
-   {
-    status:decision.status,
-    metadata:buildReviewMetadata(
-     asset.metadata,
-     decision
-    )
-   }
+   reviewData
   );
  }
 
