@@ -299,3 +299,49 @@ export async function rollbackPageVersion(
     payload
   );
 }
+
+export async function fetchPublishedDestinations() {
+  const response = await fetch(
+    "/api/website-builder/destinations",
+    {
+      method: "GET",
+      headers: {
+        accept: "application/json",
+      },
+      cache: "no-store",
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      "Impossible de charger le catalogue destinations."
+    );
+  }
+
+  const payload = await response.json();
+
+  const destinations = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.items)
+      ? payload.items
+      : Array.isArray(payload?.destinations)
+        ? payload.destinations
+        : [];
+
+  return destinations
+    .filter(
+      (destination) =>
+        destination &&
+        destination.id &&
+        destination.name
+    )
+    .map((destination) => ({
+      id: String(destination.id),
+      slug: String(destination.slug || ""),
+      name: String(destination.name),
+      country: String(destination.country || ""),
+      region: String(destination.region || ""),
+      heroImageUrl:
+        destination.heroImageUrl || null,
+    }));
+}
