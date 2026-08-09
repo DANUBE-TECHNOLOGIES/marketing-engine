@@ -443,11 +443,15 @@ function hydrateDestinationBlocks(pages, destinations) {
   }));
 }
 
-function hydrateOfferBlocks(pages, assets) {
-  const byId = new Map(
-    assets.map((asset) => [asset.id, asset])
+function hydrateOfferBlocks(
+  pages,
+  manualAssets = [],
+  automaticAssets = []
+) {
+  const manualById = new Map(
+    manualAssets.map((asset) => [asset.id, asset])
   );
-  const automaticCards = assets
+  const automaticCards = automaticAssets
     .map(offerCard)
     .filter(Boolean);
 
@@ -465,7 +469,7 @@ function hydrateOfferBlocks(pages, assets) {
       const offers = ["campaign", "automatic", "auto"].includes(source)
         ? automaticCards.slice(0, limit)
         : cleanReferences(content.offerIds)
-            .map((reference) => byId.get(reference))
+            .map((reference) => manualById.get(reference))
             .filter(Boolean)
             .map(offerCard)
             .filter(Boolean)
@@ -578,21 +582,12 @@ async function hydratePublicDynamicBlocks({
         )
       : sourcePages;
 
-  const offerAssets = [
-    ...manualOffers,
-    ...automaticOffers.filter(
-      (candidate) =>
-        !manualOffers.some(
-          (manual) => manual.id === candidate.id
-        )
-    ),
-  ];
-
   const withOffers =
     offerReferences.length || automaticOfferLimit
       ? hydrateOfferBlocks(
           withDestinations,
-          offerAssets
+          manualOffers,
+          automaticOffers
         )
       : withDestinations;
 
