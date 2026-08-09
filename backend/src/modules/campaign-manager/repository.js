@@ -35,6 +35,46 @@ class CampaignRepository {
   });
  }
 
+ async updateAssetReview(asset,data,decision){
+  const linkedContentId=
+   String(asset?.type||"").toLowerCase()==="seo-content"
+    ? String(asset?.payload?.seoContentId||"").trim()
+    : "";
+
+  return this.prisma.$transaction(async tx=>{
+   const updated=await tx.campaignAsset.update({
+    where:{id:asset.id},
+    data
+   });
+
+   if(linkedContentId){
+    const contentData=
+     decision.status==="approved"
+      ? {status:"published",publishedAt:new Date()}
+      : decision.status==="rejected"
+       ? {status:"rejected"}
+       : {status:"review"};
+
+    const synced=await tx.seoContent.updateMany({
+     where:{
+      id:linkedContentId,
+      tenantId:this.tenantId
+     },
+     data:contentData
+    });
+
+    if(synced.count!==1){
+     const error=new Error("Le contenu éditorial lié à la campagne est introuvable dans ce tenant.");
+     error.statusCode=409;
+     error.code="CAMPAIGN_SEO_CONTENT_LINK_INVALID";
+     throw error;
+    }
+   }
+
+   return updated;
+  });
+ }
+
  listAssets(campaignId,{status,channel,type}={}){
   return this.prisma.campaignAsset.findMany({
    where:{
