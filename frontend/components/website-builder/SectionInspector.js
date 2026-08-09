@@ -275,8 +275,14 @@ export default function SectionInspector({
 
       {definition.collection &&
       !(
-        block.type === "offers" &&
-        block.settings?.__dataSource === "campaigns"
+        (
+          block.type === "offers" &&
+          block.settings?.__dataSource === "campaigns"
+        ) ||
+        (
+          block.type === "reviews" &&
+          block.settings?.__dataSource === "google-reviews"
+        )
       ) ? (
         <CollectionEditor
           definition={definition.collection}
@@ -306,7 +312,10 @@ export default function SectionInspector({
             {block.type === "offers" &&
             block.settings.__dataSource === "campaigns"
               ? "Les offres approuvées du Campaign Manager alimentent automatiquement ce bloc."
-              : "Cette section utilise une source de données automatique."}
+              : block.type === "reviews" &&
+                block.settings.__dataSource === "google-reviews"
+                ? "Les avis Google publiés de cette agence alimentent automatiquement ce bloc."
+                : "Cette section utilise une source de données automatique."}
           </p>
         </div>
       ) : null}

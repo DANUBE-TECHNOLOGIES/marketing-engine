@@ -151,19 +151,47 @@ function automaticCampaignOfferLimit(pages = []) {
   return limit;
 }
 
+function isGoogleReviewBlock(block) {
+  const type = blockType(block);
+  const content = asObject(block?.content);
+  const settings = asObject(block?.settings);
+
+  if (type === "testimonials") {
+    return (
+      String(content.source || "google").toLowerCase() === "google"
+    );
+  }
+
+  if (type === "reviews") {
+    const source = String(
+      content.source ||
+      settings.__dataSource ||
+      settings.dataSource ||
+      "google-reviews"
+    ).toLowerCase();
+
+    return [
+      "google",
+      "google-reviews",
+    ].includes(source);
+  }
+
+  return false;
+}
+
 function googleReviewLimit(pages = []) {
   let limit = 0;
 
   for (const page of pages) {
     for (const block of page?.blocks || []) {
-      if (blockType(block) !== "testimonials") continue;
+      if (!isGoogleReviewBlock(block)) continue;
+
       const content = asObject(block.content);
 
-      if (String(content.source || "google").toLowerCase() !== "google") {
-        continue;
-      }
-
-      limit = Math.max(limit, normalizeLimit(content.limit));
+      limit = Math.max(
+        limit,
+        normalizeLimit(content.limit)
+      );
     }
   }
 
@@ -326,19 +354,28 @@ function hydrateGoogleReviewBlocks(pages, reviews) {
   return pages.map((page) => ({
     ...page,
     blocks: (page.blocks || []).map((block) => {
-      if (blockType(block) !== "testimonials") return block;
+      if (!isGoogleReviewBlock(block)) return block;
 
       const content = asObject(block.content);
+      const limit = normalizeLimit(content.limit);
+      const type = blockType(block);
 
-      if (String(content.source || "google").toLowerCase() !== "google") {
-        return block;
+      if (type === "reviews") {
+        return {
+          ...block,
+          content: {
+            ...content,
+            reviews: reviews.slice(0, limit),
+            items: items.slice(0, limit),
+          },
+        };
       }
 
       return {
         ...block,
         content: {
           ...content,
-          items: items.slice(0, normalizeLimit(content.limit)),
+          items: items.slice(0, limit),
         },
       };
     }),
@@ -427,6 +464,7 @@ module.exports = {
   collectDestinationReferences,
   collectOfferReferences,
   automaticCampaignOfferLimit,
+  isGoogleReviewBlock,
   googleReviewLimit,
   loadPublishedDestinations,
   loadApprovedCampaignOffers,

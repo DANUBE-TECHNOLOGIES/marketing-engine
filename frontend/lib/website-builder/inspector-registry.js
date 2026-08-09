@@ -357,7 +357,59 @@ export const INSPECTOR_REGISTRY = {
   },
 
   reviews: {
-    fields: COMMON_FIELDS,
+    fields: [
+      ...COMMON_FIELDS,
+      {
+        key: "__dataSource",
+        label: "Source des avis",
+        control: "select",
+        options: [
+          ["google-reviews", "Avis Google"],
+          ["manual", "Sélection manuelle"],
+        ],
+      },
+      {
+        key: "limit",
+        label: "Nombre maximum d’avis",
+        control: "select",
+        options: [
+          ["3", "3 avis"],
+          ["6", "6 avis"],
+          ["9", "9 avis"],
+          ["12", "12 avis"],
+        ],
+      },
+    ],
+    collection: {
+      key: "reviews",
+      label: "Avis",
+      itemLabel: "Avis",
+      fields: [
+        {
+          key: "authorName",
+          label: "Auteur",
+          control: "text",
+        },
+        {
+          key: "rating",
+          label: "Note",
+          control: "select",
+          options: [
+            ["5", "5 étoiles"],
+            ["4", "4 étoiles"],
+            ["3", "3 étoiles"],
+            ["2", "2 étoiles"],
+            ["1", "1 étoile"],
+          ],
+        },
+        {
+          key: "comment",
+          label: "Commentaire",
+          control: "textarea",
+          rows: 4,
+        },
+      ],
+    },
   },
 
   team: {
