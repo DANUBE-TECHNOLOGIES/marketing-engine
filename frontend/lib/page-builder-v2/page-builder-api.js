@@ -102,6 +102,42 @@ export async function fetchPageDetails(site, page) {
   );
 }
 
+export async function fetchApprovedOffers(
+  agencyId,
+  { limit = 24 } = {}
+) {
+  if (!agencyId) {
+    return [];
+  }
+
+  const response = await fetch(
+    `/api/website-builder/agencies/${encodeURIComponent(
+      agencyId
+    )}/offers?limit=${encodeURIComponent(limit)}`,
+    {
+      method: "GET",
+      headers: {
+        accept: "application/json",
+      },
+      cache: "no-store",
+    }
+  );
+
+  const payload = await readJson(response);
+
+  if (!response.ok) {
+    throw new Error(
+      payload?.message ||
+      payload?.error ||
+      `Impossible de charger les offres approuvées (${response.status}).`
+    );
+  }
+
+  return Array.isArray(payload?.items)
+    ? payload.items
+    : [];
+}
+
 async function sendPage(url, method, body) {
   const response = await fetch(url, {
     method,
