@@ -11,6 +11,9 @@ const {
   hydrateOfferBlocks,
   hydratePublicDynamicBlocks,
 } = require("../src/modules/public-site-read/dynamic-block-hydrator");
+const {
+  approvedOfferCatalog,
+} = require("../src/modules/public-site-read/routes");
 
 test("generated assets delegate to task-scoped upsert", async () => {
   const repo = new ContentGenerationRepository({}, "tenant-1");
@@ -96,6 +99,51 @@ test("approved campaign offers are tenant and agency scoped", async () => {
   assert.equal(captured.where.campaign.tenantId, "tenant-1");
   assert.equal(captured.where.campaign.agencies.some.agencyId, 42);
   assert.equal(captured.take, 2);
+});
+
+test("approved offer catalog exposes cards, not raw campaign payloads", async () => {
+  let captured = null;
+
+  const database = {
+    agency: {
+      findUnique: async ({ where }) => ({
+        id: where.id,
+        tenantId: "tenant-1",
+      }),
+    },
+    campaignAsset: {
+      findMany: async (query) => {
+        captured = query;
+        return [
+          {
+            id: "offer-1",
+            campaignId: "campaign-1",
+            type: "offer",
+            title: "Sicile",
+            payload: {
+              price: "999 €",
+              internalPrompt: "must-not-leak",
+            },
+          },
+        ];
+      },
+    },
+  };
+
+  const items = await approvedOfferCatalog({
+    database,
+    agencyId: "42",
+    limit: 6,
+  });
+
+  assert.equal(captured.where.status, "approved");
+  assert.equal(captured.where.campaign.tenantId, "tenant-1");
+  assert.equal(captured.where.campaign.agencies.some.agencyId, 42);
+  assert.equal(items.length, 1);
+  assert.equal(items[0].title, "Sicile");
+  assert.equal(items[0].price, "999 €");
+  assert.equal(items[0].payload, undefined);
+  assert.equal(items[0].internalPrompt, undefined);
 });
 
 test("V2 manual offer order and limit survive public hydration", async () => {
