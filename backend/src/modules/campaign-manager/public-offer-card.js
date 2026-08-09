@@ -29,7 +29,15 @@ function normalizeOfferPrice(source) {
     return currency ? `${direct} ${currency}` : String(direct);
   }
 
-  return cleanText(direct);
+  const price = cleanText(direct);
+
+  if (!price || !currency) {
+    return price;
+  }
+
+  return price.includes(currency)
+    ? price
+    : `${price} ${currency}`;
 }
 
 function toPublicOfferCard(asset) {
