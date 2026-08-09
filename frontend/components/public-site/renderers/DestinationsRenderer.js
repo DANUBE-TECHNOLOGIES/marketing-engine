@@ -89,10 +89,27 @@ export default function DestinationsRenderer({
   site,
 }) {
   const content = getSectionContent(section);
-  const items = getItems(section, [
-    "items",
-    "destinations",
-  ]);
+  const source = String(
+    content.__dataSource ||
+    content.source ||
+    (Array.isArray(content.destinationIds) &&
+    content.destinationIds.length
+      ? "travel-core"
+      : "manual")
+  ).toLowerCase();
+
+  const dynamicSource = [
+    "travel-core",
+    "catalog",
+    "automatic",
+  ].includes(source);
+
+  const items = getItems(
+    section,
+    dynamicSource
+      ? ["destinations", "items"]
+      : ["items"]
+  );
 
   return (
     <section className="public-site-section public-site-destinations">
