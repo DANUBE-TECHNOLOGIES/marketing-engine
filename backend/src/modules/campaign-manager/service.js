@@ -5,6 +5,10 @@ const {
  validateAssetDecision,
  buildReviewMetadata
 }=require("./asset-review");
+const {
+ validateOfferAssetInput,
+ assertOfferAssetPublishable,
+}=require("./offer-asset");
 const DEFAULT_CHANNELS=["landing-page","faq","facebook","instagram","google-business","newsletter","hero-image"];
 class CampaignService {
  constructor(prismaOrRepo,tenantId){ this.repo=prismaOrRepo?.list?prismaOrRepo:new CampaignRepository(prismaOrRepo,tenantId); }
@@ -24,6 +28,26 @@ class CampaignService {
    status:filters.status||undefined,
    channel:filters.channel||undefined,
    type:filters.type||undefined
+  });
+ }
+
+ async createOfferAsset(campaignId,input={}){
+  await this.get(campaignId);
+
+  const validated=validateOfferAssetInput(input);
+
+  return this.repo.createAsset({
+   campaignId,
+   type:"offer",
+   channel:"site",
+   status:"review",
+   title:validated.title,
+   payload:validated.payload,
+   metadata:{
+    source:"campaign-to-site-offers",
+    version:"25.4",
+    createdAt:new Date().toISOString()
+   }
   });
  }
 
@@ -76,6 +100,10 @@ class CampaignService {
      code:"APPROVED_ASSET_REVIEW_LOCKED"
     }
    );
+  }
+
+  if(decision.status==="approved"){
+   assertOfferAssetPublishable(asset);
   }
 
   return this.repo.updateAsset(
