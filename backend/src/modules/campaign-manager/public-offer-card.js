@@ -66,26 +66,36 @@ function toPublicOfferCard(asset) {
   const title = cleanText(source.title) || cleanText(asset?.title);
   if (!title) return null;
 
+  const description =
+    cleanText(source.description) ||
+    cleanText(source.summary);
+  const image =
+    cleanText(source.image) ||
+    cleanText(source.imageUrl) ||
+    cleanText(source.heroImageUrl) ||
+    cleanText(source.visualUrl);
+  const badge =
+    cleanText(source.badge) ||
+    cleanText(source.label);
+  const price = normalizeOfferPrice(source);
+  const href =
+    cleanText(source.href) ||
+    cleanText(source.url) ||
+    cleanText(source.link);
+
+  if (!description && !image && !badge && !price && !href) {
+    return null;
+  }
+
   return {
     id: asset.id,
     campaignId: asset.campaignId,
     title,
-    description:
-      cleanText(source.description) ||
-      cleanText(source.summary),
-    image:
-      cleanText(source.image) ||
-      cleanText(source.imageUrl) ||
-      cleanText(source.heroImageUrl) ||
-      cleanText(source.visualUrl),
-    badge:
-      cleanText(source.badge) ||
-      cleanText(source.label),
-    price: normalizeOfferPrice(source),
-    href:
-      cleanText(source.href) ||
-      cleanText(source.url) ||
-      cleanText(source.link),
+    description,
+    image,
+    badge,
+    price,
+    href,
   };
 }
 
