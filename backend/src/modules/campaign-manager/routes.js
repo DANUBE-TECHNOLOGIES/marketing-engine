@@ -122,6 +122,18 @@ module.exports = ({ prisma }) => {
     })
   );
 
+  router.post(
+    "/campaigns/:id/assets/offers",
+    route(async (req, res) => {
+      res.status(201).json(
+        await service(req).createOfferAsset(
+          req.params.id,
+          req.body || {}
+        )
+      );
+    })
+  );
+
   router.get(
     "/campaigns/:id/assets/:assetId",
     route(async (req, res) => {
