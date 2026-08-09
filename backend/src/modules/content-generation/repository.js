@@ -204,6 +204,16 @@ class ContentGenerationRepository {
       taskId,
     });
   }
+
+  upsertAsset(data) {
+    if (!data?.taskId) {
+      throw new Error("Generated campaign asset requires taskId");
+    }
+
+    const { taskId, ...assetData } = data;
+
+    return this.upsertAssetForTask(taskId, assetData);
+  }
 }
 
 module.exports = ContentGenerationRepository;
