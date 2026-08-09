@@ -220,6 +220,9 @@ export const SECTION_LIBRARY = [
     dataSource: "content-generation",
     defaults: {
       title: "Laissez-vous inspirer",
+      selectionMode: "automatic",
+      limit: "6",
+      contentIds: [],
       items: [],
     },
   },
