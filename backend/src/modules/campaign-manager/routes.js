@@ -32,6 +32,15 @@ module.exports = ({ prisma }) => {
   );
 
   router.get(
+    "/campaigns/options/agencies",
+    route(async (req, res) => {
+      res.json(
+        await service(req).listAgencyOptions()
+      );
+    })
+  );
+
+  router.get(
     "/campaigns",
     route(async (req, res) => {
       res.json(
