@@ -4,6 +4,7 @@ class CampaignRepository {
  include(){ return { agencies:{include:{agency:true}}, destinations:{include:{destination:true}}, tasks:{orderBy:{createdAt:"asc"}}, assets:{orderBy:{createdAt:"desc"}}, publications:true }; }
  list(){ return this.prisma.marketingCampaign.findMany({where:{tenantId:this.tenantId},include:{agencies:{include:{agency:true}},destinations:{include:{destination:true}},tasks:true,assets:true},orderBy:{createdAt:"desc"}}); }
  get(id){ return this.prisma.marketingCampaign.findFirst({where:{id,tenantId:this.tenantId},include:this.include()}); }
+ listAgencies(){ return this.prisma.agency.findMany({where:{tenantId:this.tenantId},select:{id:true,name:true,city:true,status:true},orderBy:[{city:"asc"},{name:"asc"}]}); }
  countAgencies(ids){ return this.prisma.agency.count({where:{tenantId:this.tenantId,id:{in:ids}}}); }
  countDestinations(ids){ return this.prisma.destination.count({where:{tenantId:this.tenantId,id:{in:ids}}}); }
  create(data, agencyIds, destinationIds){ return this.prisma.marketingCampaign.create({data:{...data,tenantId:this.tenantId,source:{type:"campaign-manager",version:"15.1.0"},agencies:{create:agencyIds.map(agencyId=>({agencyId}))},destinations:{create:destinationIds.map(destinationId=>({destinationId}))}},include:this.include()}); }
@@ -42,6 +43,10 @@ class CampaignRepository {
    },
    orderBy:{createdAt:"desc"}
   });
+ }
+
+ createAsset(data){
+  return this.prisma.campaignAsset.create({data});
  }
 
 }
