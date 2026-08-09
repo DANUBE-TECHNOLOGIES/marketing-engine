@@ -198,7 +198,38 @@ export const INSPECTOR_REGISTRY = {
   },
 
   inspirations: {
-    fields: COMMON_FIELDS,
+    fields: [
+      ...COMMON_FIELDS,
+      {
+        key: "__dataSource",
+        label: "Source des inspirations",
+        control: "select",
+        options: [
+          ["content-generation", "Contenus éditoriaux publiés"],
+          ["manual", "Saisie manuelle"],
+        ],
+      },
+      {
+        key: "selectionMode",
+        label: "Mode de sélection",
+        control: "select",
+        options: [
+          ["automatic", "Automatique (plus récents)"],
+          ["manual", "Sélection d’articles"],
+        ],
+      },
+      {
+        key: "limit",
+        label: "Nombre maximum d’articles",
+        control: "select",
+        options: [
+          ["3", "3 articles"],
+          ["6", "6 articles"],
+          ["9", "9 articles"],
+          ["12", "12 articles"],
+        ],
+      },
+    ],
     collection: {
       key: "items",
       label: "Inspirations",
@@ -356,7 +387,6 @@ export const INSPECTOR_REGISTRY = {
   contact: {
     fields: COMMON_FIELDS,
   },
-
 
   hours: {
     fields: [
