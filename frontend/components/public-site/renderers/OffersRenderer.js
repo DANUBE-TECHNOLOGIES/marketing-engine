@@ -3,6 +3,9 @@ import {
   getSectionContent,
   getSectionTitle,
 } from "./helpers";
+import {
+  resolvePublicCtaHref,
+} from "./ctaLinks";
 
 export default function OffersRenderer({
   section,
@@ -28,8 +31,8 @@ export default function OffersRenderer({
           )}
         </h2>
 
-        {content.text ? (
-          <p>{content.text}</p>
+        {content.text || content.introduction ? (
+          <p>{content.text || content.introduction}</p>
         ) : null}
 
         <div className="public-site-offer-grid">
@@ -76,10 +79,16 @@ export default function OffersRenderer({
                   ) : null}
 
                   <a
-                    href={`/agence/${site.slug}/contact`}
+                    href={resolvePublicCtaHref(
+                      site,
+                      item.href,
+                      "contact"
+                    )}
                     className="public-site-inline-link"
                   >
-                    Demander un devis →
+                    {item.href
+                      ? "Voir l’offre →"
+                      : "Demander un devis →"}
                   </a>
                 </div>
               </article>
