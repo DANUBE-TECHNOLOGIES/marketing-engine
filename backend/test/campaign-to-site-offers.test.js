@@ -6,7 +6,9 @@ const assert = require("node:assert/strict");
 const ContentGenerationRepository = require("../src/modules/content-generation/repository");
 const {
   offerCard,
+  automaticCampaignOfferLimit,
   loadApprovedCampaignOffers,
+  hydrateOfferBlocks,
   hydratePublicDynamicBlocks,
 } = require("../src/modules/public-site-read/dynamic-block-hydrator");
 
@@ -71,12 +73,12 @@ test("offerCard rejects generic campaign content without offer semantics", () =>
 });
 
 test("approved campaign offers are tenant and agency scoped", async () => {
-  let capturedWhere = null;
+  let captured = null;
 
   const prisma = {
     campaignAsset: {
-      findMany: async ({ where }) => {
-        capturedWhere = where;
+      findMany: async (query) => {
+        captured = query;
         return [];
       },
     },
@@ -89,13 +91,14 @@ test("approved campaign offers are tenant and agency scoped", async () => {
     references: ["offer-a", "offer-b"],
   });
 
-  assert.deepEqual(capturedWhere.id.in, ["offer-a", "offer-b"]);
-  assert.equal(capturedWhere.status, "approved");
-  assert.equal(capturedWhere.campaign.tenantId, "tenant-1");
-  assert.equal(capturedWhere.campaign.agencies.some.agencyId, 42);
+  assert.deepEqual(captured.where.id.in, ["offer-a", "offer-b"]);
+  assert.equal(captured.where.status, "approved");
+  assert.equal(captured.where.campaign.tenantId, "tenant-1");
+  assert.equal(captured.where.campaign.agencies.some.agencyId, 42);
+  assert.equal(captured.take, 2);
 });
 
-test("V2 offer order and limit survive public hydration", async () => {
+test("V2 manual offer order and limit survive public hydration", async () => {
   const prisma = {
     campaignAsset: {
       findMany: async () => [
@@ -137,6 +140,7 @@ test("V2 offer order and limit survive public hydration", async () => {
             type: "offers",
             status: "published",
             content: {
+              source: "manual",
               offerIds: ["offer-b", "generic", "offer-a"],
               limit: 2,
             },
@@ -151,5 +155,133 @@ test("V2 offer order and limit survive public hydration", async () => {
   assert.deepEqual(
     offers.map((offer) => offer.id),
     ["offer-b", "offer-a"]
+  );
+});
+
+test("campaign mode uses latest approved feed and respects limit", async () => {
+  let captured = null;
+
+  const prisma = {
+    campaignAsset: {
+      findMany: async (query) => {
+        captured = query;
+        return [
+          {
+            id: "latest",
+            campaignId: "campaign-2",
+            type: "promotion",
+            title: "Dernière minute Sicile",
+            payload: { price: "899 €" },
+          },
+          {
+            id: "older",
+            campaignId: "campaign-1",
+            type: "offer",
+            title: "Crète",
+            payload: { price: "1099 €" },
+          },
+        ];
+      },
+    },
+  };
+
+  const pages = await hydratePublicDynamicBlocks({
+    prisma,
+    tenantId: "tenant-1",
+    agencyId: 42,
+    pages: [
+      {
+        id: "page-1",
+        blocks: [
+          {
+            id: "campaign-offers",
+            type: "offers",
+            status: "published",
+            content: {
+              source: "campaign",
+              offerIds: [],
+              limit: 1,
+            },
+          },
+        ],
+      },
+    ],
+  });
+
+  assert.equal(automaticCampaignOfferLimit([
+    {
+      blocks: [
+        { type: "offers", content: { source: "campaign", limit: 1 } },
+      ],
+    },
+  ]), 1);
+
+  assert.equal(captured.where.id, undefined);
+  assert.equal(captured.where.status, "approved");
+  assert.deepEqual(captured.orderBy, [
+    { updatedAt: "desc" },
+    { createdAt: "desc" },
+  ]);
+  assert.equal(captured.take, 1);
+  assert.deepEqual(
+    pages[0].blocks[0].content.offers.map((offer) => offer.id),
+    ["latest"]
+  );
+});
+
+test("manual and automatic offer feeds remain isolated", () => {
+  const pages = hydrateOfferBlocks(
+    [
+      {
+        id: "page-1",
+        blocks: [
+          {
+            id: "manual",
+            type: "offers",
+            content: {
+              source: "manual",
+              offerIds: ["manual-1"],
+              limit: 6,
+            },
+          },
+          {
+            id: "auto",
+            type: "offers",
+            content: {
+              source: "campaign",
+              offerIds: [],
+              limit: 6,
+            },
+          },
+        ],
+      },
+    ],
+    [
+      {
+        id: "manual-1",
+        campaignId: "campaign-manual",
+        type: "offer",
+        title: "Manuelle",
+        payload: { price: "700 €" },
+      },
+    ],
+    [
+      {
+        id: "auto-1",
+        campaignId: "campaign-auto",
+        type: "offer",
+        title: "Automatique",
+        payload: { price: "800 €" },
+      },
+    ]
+  );
+
+  assert.deepEqual(
+    pages[0].blocks[0].content.offers.map((offer) => offer.id),
+    ["manual-1"]
+  );
+  assert.deepEqual(
+    pages[0].blocks[1].content.offers.map((offer) => offer.id),
+    ["auto-1"]
   );
 });
