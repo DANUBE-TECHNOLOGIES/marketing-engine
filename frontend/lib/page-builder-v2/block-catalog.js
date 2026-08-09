@@ -131,7 +131,7 @@ export const BLOCK_CATALOG = Object.freeze([
     defaults: {
       title: "Nos offres",
       introduction: "",
-      source: "manual",
+      source: "campaign",
       offerIds: [],
       limit: 6,
     },
