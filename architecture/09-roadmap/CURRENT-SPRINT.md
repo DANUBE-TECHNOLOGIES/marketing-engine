@@ -15,7 +15,7 @@
 
 - Website Designer V2 reste la source de vérité de la composition des pages ;
 - aucun modèle `Offer` parallèle n’est créé ;
-- seules les offres issues d’un `CampaignAsset` au statut `approved` et d’un type d’offre reconnu sont publiables ;
+- seules les offres issues d’un `CampaignAsset` au statut `approved`, d’un type d’offre reconnu et contenant un contenu commercial exploitable sont publiables ;
 - le ciblage tenant + agence est obligatoire ;
 - aucun prix, visuel ou lien n’est inventé par le renderer ;
 - le catalogue du Designer reste tenant-scopé dans Campaign Manager et n’est pas exposé via `public-site-read`.
@@ -31,6 +31,7 @@
 - [x] nouveaux blocs `offers` configurés par défaut sur `source: "campaign"` ;
 - [x] catalogue approuvé par agence disponible via Campaign Manager + proxy Next + client V2 ;
 - [x] isolation tenant + agence + statut `approved` + types d’offre reconnue ;
+- [x] rejet des cartes offres sans prix, description, image, badge ou lien ;
 - [x] mapper public partagé entre Campaign Manager et renderer ;
 - [x] prix texte + devise normalisés sans duplication de devise ;
 - [x] payload brut de campagne non exposé au Website Designer ;
