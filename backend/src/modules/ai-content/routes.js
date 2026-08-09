@@ -12,5 +12,7 @@ module.exports = ({ prisma }) => {
   router.post("/ai-content/preview", async (req, res, next) => { try { res.json(await service(req).preview(req.body)); } catch (e) { next(e); } });
   router.post("/ai-content/generate", async (req, res, next) => { try { res.status(201).json(await service(req).generate(req.body)); } catch (e) { next(e); } });
   router.post("/ai-content/jobs/:id/retry", async (req, res, next) => { try { res.json(await service(req).retry(req.params.id)); } catch (e) { next(e); } });
+  router.post("/ai-content/contents/:id/publish", async (req, res, next) => { try { res.json(await service(req).publishContent(req.params.id)); } catch (e) { next(e); } });
+  router.post("/ai-content/contents/:id/unpublish", async (req, res, next) => { try { res.json(await service(req).unpublishContent(req.params.id)); } catch (e) { next(e); } });
   return router;
 };
