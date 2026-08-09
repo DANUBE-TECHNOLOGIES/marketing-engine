@@ -31,10 +31,22 @@ function normalizePrice(value) {
   }
 
   const text = clean(value);
+  return text || null;
+}
 
-  if (!text) return null;
+function buildPriceLabel(price, currency) {
+  if (price === null || price === undefined || price === "") {
+    return null;
+  }
 
-  return text;
+  const priceText = String(price).trim();
+  const currencyText = clean(currency);
+
+  if (!currencyText || priceText.includes(currencyText)) {
+    return priceText;
+  }
+
+  return `${priceText} ${currencyText}`;
 }
 
 function normalizeHref(value) {
@@ -64,11 +76,15 @@ function validateOfferAssetInput(input = {}) {
     );
   }
 
+  const price = normalizePrice(input.price);
+  const currency = clean(input.currency);
+
   const payload = {
     title,
     description: clean(input.description),
-    price: normalizePrice(input.price),
-    currency: clean(input.currency),
+    price,
+    currency,
+    priceLabel: buildPriceLabel(price, currency),
     imageUrl: clean(input.imageUrl || input.image),
     href: normalizeHref(input.href || input.url),
     badge: clean(input.badge),
@@ -114,6 +130,7 @@ function assertOfferAssetPublishable(asset) {
 module.exports = {
   clean,
   normalizePrice,
+  buildPriceLabel,
   normalizeHref,
   validateOfferAssetInput,
   assertOfferAssetPublishable,
