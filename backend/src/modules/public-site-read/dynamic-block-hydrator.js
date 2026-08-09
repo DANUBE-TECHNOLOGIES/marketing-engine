@@ -102,6 +102,100 @@ function reviewCard(review) {
   };
 }
 
+function cleanText(value) {
+  if (value === undefined || value === null) return null;
+  const text = String(value).trim();
+  return text || null;
+}
+
+function normalizeOfferPrice(source) {
+  const direct =
+    source.priceLabel ??
+    source.price ??
+    source.fromPrice ??
+    null;
+
+  if (direct === null || direct === undefined || direct === "") {
+    return null;
+  }
+
+  const currency = cleanText(source.currency);
+
+  if (
+    typeof direct === "number" &&
+    Number.isFinite(direct)
+  ) {
+    return currency
+      ? `${direct} ${currency}`
+      : String(direct);
+  }
+
+  return cleanText(direct);
+}
+
+function offerCard(asset) {
+  const payload = asObject(asset?.payload);
+  const nested = asObject(payload.offer);
+  const source = {
+    ...payload,
+    ...nested,
+  };
+
+  const title =
+    cleanText(source.title) ||
+    cleanText(asset?.title);
+
+  if (!title) return null;
+
+  const price = normalizeOfferPrice(source);
+  const image =
+    cleanText(source.image) ||
+    cleanText(source.imageUrl) ||
+    cleanText(source.heroImageUrl) ||
+    cleanText(source.visualUrl);
+  const href =
+    cleanText(source.href) ||
+    cleanText(source.url) ||
+    cleanText(source.link);
+  const description =
+    cleanText(source.description) ||
+    cleanText(source.summary);
+  const badge =
+    cleanText(source.badge) ||
+    cleanText(source.label);
+
+  const type = String(asset?.type || "").toLowerCase();
+  const explicitOfferType = [
+    "offer",
+    "travel-offer",
+    "deal",
+    "promotion",
+    "promo",
+  ].includes(type);
+
+  if (
+    !explicitOfferType &&
+    !price &&
+    !image &&
+    !href &&
+    !description &&
+    !badge
+  ) {
+    return null;
+  }
+
+  return {
+    id: asset.id,
+    campaignId: asset.campaignId,
+    title,
+    description,
+    image,
+    badge,
+    price,
+    href,
+  };
+}
+
 function collectDestinationReferences(pages = []) {
   const references = [];
   const seen = new Set();
@@ -113,6 +207,27 @@ function collectDestinationReferences(pages = []) {
       const content = asObject(block.content);
 
       for (const reference of cleanReferences(content.destinationIds)) {
+        if (seen.has(reference)) continue;
+        seen.add(reference);
+        references.push(reference);
+      }
+    }
+  }
+
+  return references;
+}
+
+function collectOfferReferences(pages = []) {
+  const references = [];
+  const seen = new Set();
+
+  for (const page of pages) {
+    for (const block of page?.blocks || []) {
+      if (blockType(block) !== "offers") continue;
+
+      const content = asObject(block.content);
+
+      for (const reference of cleanReferences(content.offerIds)) {
         if (seen.has(reference)) continue;
         seen.add(reference);
         references.push(reference);
@@ -175,6 +290,41 @@ async function loadPublishedDestinations({
           },
         },
       ],
+    },
+  });
+}
+
+async function loadApprovedCampaignOffers({
+  prisma,
+  tenantId,
+  agencyId,
+  references,
+}) {
+  const numericAgencyId = Number(agencyId);
+
+  if (
+    !prisma?.campaignAsset ||
+    !tenantId ||
+    !Number.isInteger(numericAgencyId) ||
+    !references.length
+  ) {
+    return [];
+  }
+
+  return prisma.campaignAsset.findMany({
+    where: {
+      id: {
+        in: references,
+      },
+      status: "approved",
+      campaign: {
+        tenantId,
+        agencies: {
+          some: {
+            agencyId: numericAgencyId,
+          },
+        },
+      },
     },
   });
 }
@@ -255,6 +405,43 @@ function hydrateDestinationBlocks(pages, destinations) {
   }));
 }
 
+function hydrateOfferBlocks(pages, assets) {
+  const byId = new Map(
+    assets.map((asset) => [asset.id, asset])
+  );
+
+  return pages.map((page) => ({
+    ...page,
+    blocks: (page.blocks || []).map((block) => {
+      if (blockType(block) !== "offers") {
+        return block;
+      }
+
+      const content = asObject(block.content);
+      const references = cleanReferences(content.offerIds);
+
+      if (!references.length) {
+        return block;
+      }
+
+      const offers = references
+        .map((reference) => byId.get(reference))
+        .filter(Boolean)
+        .map(offerCard)
+        .filter(Boolean)
+        .slice(0, normalizeLimit(content.limit));
+
+      return {
+        ...block,
+        content: {
+          ...content,
+          offers,
+        },
+      };
+    }),
+  }));
+}
+
 function hydrateGoogleReviewBlocks(pages, reviews) {
   const items = reviews.map(reviewCard);
 
@@ -302,17 +489,24 @@ async function hydratePublicDynamicBlocks({
     : filterPublicBlocks(pages);
 
   const references = collectDestinationReferences(sourcePages);
+  const offerReferences = collectOfferReferences(sourcePages);
   const reviewLimit = googleReviewLimit(sourcePages);
 
-  if (!references.length && !reviewLimit) {
+  if (!references.length && !offerReferences.length && !reviewLimit) {
     return sourcePages;
   }
 
-  const [destinations, reviews] = await Promise.all([
+  const [destinations, offers, reviews] = await Promise.all([
     loadPublishedDestinations({
       prisma,
       tenantId,
       references,
+    }),
+    loadApprovedCampaignOffers({
+      prisma,
+      tenantId,
+      agencyId,
+      references: offerReferences,
     }),
     loadGoogleReviews({
       prisma,
@@ -329,12 +523,20 @@ async function hydratePublicDynamicBlocks({
         )
       : sourcePages;
 
+  const withOffers =
+    offerReferences.length
+      ? hydrateOfferBlocks(
+          withDestinations,
+          offers
+        )
+      : withDestinations;
+
   return reviewLimit
     ? hydrateGoogleReviewBlocks(
-        withDestinations,
+        withOffers,
         reviews
       )
-    : withDestinations;
+    : withOffers;
 }
 
 module.exports = {
@@ -346,11 +548,15 @@ module.exports = {
   filterPublicBlocks,
   destinationCard,
   reviewCard,
+  offerCard,
   collectDestinationReferences,
+  collectOfferReferences,
   googleReviewLimit,
   loadPublishedDestinations,
+  loadApprovedCampaignOffers,
   loadGoogleReviews,
   hydrateDestinationBlocks,
+  hydrateOfferBlocks,
   hydrateGoogleReviewBlocks,
   hydratePublicDynamicBlocks,
 };
