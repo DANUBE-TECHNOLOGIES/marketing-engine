@@ -96,7 +96,29 @@ export const INSPECTOR_REGISTRY = {
   },
 
   destinations: {
-    fields: COMMON_FIELDS,
+    fields: [
+      ...COMMON_FIELDS,
+      {
+        key: "__dataSource",
+        label: "Source des destinations",
+        control: "select",
+        options: [
+          ["travel-core", "Référentiel destinations"],
+          ["manual", "Saisie manuelle"],
+        ],
+      },
+      {
+        key: "limit",
+        label: "Nombre maximum de destinations",
+        control: "select",
+        options: [
+          ["3", "3 destinations"],
+          ["6", "6 destinations"],
+          ["9", "9 destinations"],
+          ["12", "12 destinations"],
+        ],
+      },
+    ],
     collection: {
       key: "items",
       label: "Destinations",
