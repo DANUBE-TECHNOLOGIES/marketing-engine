@@ -47,6 +47,25 @@ class AiContentRepository {
     });
   }
 
+  listContents(filters = {}) {
+    const status = String(filters.status || "").trim() || undefined;
+    const channel = String(filters.channel || "").trim() || undefined;
+    const requestedLimit = Math.min(Math.max(Number(filters.limit) || 50, 1), 100);
+
+    return this.prisma.seoContent.findMany({
+      where: {
+        tenantId: this.tenantId,
+        ...(status ? { status } : {}),
+        ...(channel ? { channel } : {}),
+      },
+      orderBy: [
+        { updatedAt: "desc" },
+        { createdAt: "desc" },
+      ],
+      take: requestedLimit,
+    });
+  }
+
   updateContent(id, data) {
     return this.prisma.seoContent.update({
       where: { id: String(id) },
@@ -67,6 +86,7 @@ class AiContentRepository {
       where: {
         tenantId: this.tenantId,
         status: "published",
+        publishedAt: { not: null },
         ...(filters.channel ? { channel: filters.channel } : {}),
         ...(ids.length ? { id: { in: ids } } : {}),
       },
