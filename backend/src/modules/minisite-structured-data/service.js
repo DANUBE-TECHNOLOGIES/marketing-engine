@@ -46,6 +46,9 @@ class MiniSiteStructuredDataService {
       deterministic:
         true,
 
+      tenantScoped:
+        true,
+
       schemas: [
         "TravelAgency",
         "LocalBusiness",
@@ -63,14 +66,15 @@ class MiniSiteStructuredDataService {
     };
   }
 
-
   async previewSite({
     siteSlug,
+    tenantId,
   } = {}) {
     const site =
       await this.repository
         .findSiteBySlug(
-          siteSlug
+          siteSlug,
+          tenantId
         );
 
     if (!site) {
@@ -128,11 +132,14 @@ class MiniSiteStructuredDataService {
     };
   }
 
-
-  async previewSitemap() {
+  async previewSitemap({
+    tenantId,
+  } = {}) {
     const sites =
       await this.repository
-        .listSites();
+        .listSites(
+          tenantId
+        );
 
     return buildPublicSitemap({
       sites,
@@ -142,10 +149,14 @@ class MiniSiteStructuredDataService {
     });
   }
 
-  async previewNetwork() {
+  async previewNetwork({
+    tenantId,
+  } = {}) {
     const sites =
       await this.repository
-        .listSites();
+        .listSites(
+          tenantId
+        );
 
     return buildStructuredDataPlan({
       sites,
