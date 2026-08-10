@@ -47,6 +47,24 @@ class AiContentRepository {
     });
   }
 
+  getPublishedContentBySlug(slug) {
+    const normalized = String(slug || "").trim();
+    if (!normalized) return null;
+
+    return this.prisma.seoContent.findFirst({
+      where: {
+        tenantId: this.tenantId,
+        slug: normalized,
+        status: "published",
+        publishedAt: { not: null },
+      },
+      orderBy: [
+        { revision: "desc" },
+        { publishedAt: "desc" },
+      ],
+    });
+  }
+
   listContents(filters = {}) {
     const status = String(filters.status || "").trim() || undefined;
     const channel = String(filters.channel || "").trim() || undefined;
