@@ -6,7 +6,6 @@ const {
   SectionAwarePublicSiteReadService,
 } = require("./section-aware-service");
 const { hydratePublicDynamicBlocks } = require("./dynamic-block-hydrator");
-const { hydratePublicInspirations } = require("./inspiration-hydrator");
 const { hydratePreviewPage } = require("./preview-hydrator");
 
 function replacePageReference(reference, pages) {
@@ -15,17 +14,11 @@ function replacePageReference(reference, pages) {
 }
 
 async function hydrateContract({ database, contract }) {
-  const dynamicPages = await hydratePublicDynamicBlocks({
+  const pages = await hydratePublicDynamicBlocks({
     prisma: database,
     tenantId: contract?.site?.tenantId || null,
     agencyId: contract?.site?.agencyId || contract?.agency?.id || null,
     pages: contract?.pages || [],
-  });
-
-  const pages = await hydratePublicInspirations({
-    prisma: database,
-    tenantId: contract?.site?.tenantId || null,
-    pages: dynamicPages,
   });
 
   return {
@@ -45,8 +38,9 @@ function createPublicSiteReadRouter({ prisma } = {}) {
     response.json({
       ok: true,
       capability: "public-site-read",
-      version: "1.1",
+      version: "1.2",
       contentSource: "website-designer-sections",
+      dynamicHydration: "single-pipeline",
       writeOperations: false,
     });
   });
