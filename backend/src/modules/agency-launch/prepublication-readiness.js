@@ -1,8 +1,6 @@
 "use strict";
 
-const {
-  isPublished,
-} = require("./service");
+const { isPublished } = require("./service");
 
 const REQUIRED_CONTENT_PAGES = [
   { key: "home", label: "Accueil" },
@@ -24,52 +22,66 @@ const RECOMMENDED_PAGES = [
 ];
 
 function normalizeSlug(value) {
-  return String(value || "")
-    .trim()
-    .toLowerCase();
+  return String(value || "").trim().toLowerCase();
 }
 
 function canonicalPageKey(value) {
   const slug = normalizeSlug(value);
-
-  if (
-    slug === "" ||
-    slug === "home" ||
-    slug === "accueil"
-  ) {
-    return "home";
-  }
-
+  if (slug === "" || slug === "home" || slug === "accueil") return "home";
   return slug;
 }
 
 function pageByKey(pages, key) {
-  return (
-    (pages || []).find(
-      (page) =>
-        canonicalPageKey(page?.slug) === key
-    ) || null
+  return (pages || []).find(
+    (page) => canonicalPageKey(page?.slug) === key
+  ) || null;
+}
+
+function publicEntries(entries = []) {
+  const visible = entries.filter(
+    (entry) => String(entry?.status || "").toLowerCase() !== "hidden"
   );
+  return {
+    total: entries.length,
+    visible: visible.length,
+    published: visible.filter(isPublished).length,
+  };
 }
 
 function designerContentState(page) {
+  const blocks = Array.isArray(page?.blocks) ? page.blocks : [];
   const sections = Array.isArray(page?.sections) ? page.sections : [];
-  const visibleSections = sections.filter(
-    (section) => String(section?.status || "").toLowerCase() !== "hidden"
-  );
-  const publishedSections = visibleSections.filter(isPublished);
+  const blockState = publicEntries(blocks);
+  const sectionState = publicEntries(sections);
   const pagePublished = isPublished(page);
+
+  const source = blockState.total > 0
+    ? "website-designer-v2-blocks"
+    : sectionState.total > 0
+      ? "agency-site-sections"
+      : "empty";
+
+  const selectedState = source === "website-designer-v2-blocks"
+    ? blockState
+    : source === "agency-site-sections"
+      ? sectionState
+      : { total: 0, visible: 0, published: 0 };
 
   const coherent =
     !pagePublished ||
-    sections.length === 0 ||
-    publishedSections.length > 0;
+    selectedState.total === 0 ||
+    selectedState.published > 0;
 
   return {
-    hasDesignerSections: sections.length > 0,
-    totalSections: sections.length,
-    visibleSections: visibleSections.length,
-    publishedSections: publishedSections.length,
+    source,
+    hasV2Blocks: blockState.total > 0,
+    totalBlocks: blockState.total,
+    visibleBlocks: blockState.visible,
+    publishedBlocks: blockState.published,
+    hasDesignerSections: sectionState.total > 0,
+    totalSections: sectionState.total,
+    visibleSections: sectionState.visible,
+    publishedSections: sectionState.published,
     coherent,
   };
 }
@@ -120,20 +132,10 @@ function identityCheck(agency) {
 function contentCheck(site) {
   const pages = site?.pages || [];
   const requiredPages = REQUIRED_CONTENT_PAGES.map(
-    (definition) =>
-      pagePresenceCheck(
-        pages,
-        definition,
-        true
-      )
+    (definition) => pagePresenceCheck(pages, definition, true)
   );
   const recommendedPages = RECOMMENDED_PAGES.map(
-    (definition) =>
-      pagePresenceCheck(
-        pages,
-        definition,
-        false
-      )
+    (definition) => pagePresenceCheck(pages, definition, false)
   );
 
   return {
@@ -153,12 +155,7 @@ function contentCheck(site) {
 function legalCheck(site) {
   const pages = site?.pages || [];
   const items = REQUIRED_LEGAL_PAGES.map(
-    (definition) =>
-      pagePresenceCheck(
-        pages,
-        definition,
-        true
-      )
+    (definition) => pagePresenceCheck(pages, definition, true)
   );
 
   return {
@@ -177,24 +174,12 @@ function seoCheck(site) {
     .filter(Boolean);
 
   const missingSeoTitle = launchPages
-    .filter(
-      (page) =>
-        !String(page?.seoTitle || "").trim()
-    )
-    .map((page) => ({
-      id: page.id,
-      slug: canonicalPageKey(page.slug),
-    }));
+    .filter((page) => !String(page?.seoTitle || "").trim())
+    .map((page) => ({ id: page.id, slug: canonicalPageKey(page.slug) }));
 
   const missingDescription = launchPages
-    .filter(
-      (page) =>
-        !String(page?.metaDescription || "").trim()
-    )
-    .map((page) => ({
-      id: page.id,
-      slug: canonicalPageKey(page.slug),
-    }));
+    .filter((page) => !String(page?.metaDescription || "").trim())
+    .map((page) => ({ id: page.id, slug: canonicalPageKey(page.slug) }));
 
   return {
     code: "SEO",
@@ -234,38 +219,21 @@ function score(checks) {
   };
 
   return checks.reduce(
-    (total, check) =>
-      total +
-      (check.passed
-        ? weights[check.code] || 0
-        : 0),
+    (total, check) => total + (check.passed ? weights[check.code] || 0 : 0),
     0
   );
 }
 
 function blockers(checks) {
   return checks
-    .filter(
-      (check) =>
-        check.required &&
-        !check.passed
-    )
-    .map((check) => ({
-      code: check.code,
-      label: check.label,
-    }));
+    .filter((check) => check.required && !check.passed)
+    .map((check) => ({ code: check.code, label: check.label }));
 }
 
 class PrepublicationReadinessService {
   constructor({ prisma, tenantId } = {}) {
-    if (!prisma) {
-      throw new Error("Le client Prisma est obligatoire.");
-    }
-
-    if (!String(tenantId || "").trim()) {
-      throw new Error("Le tenant est obligatoire.");
-    }
-
+    if (!prisma) throw new Error("Le client Prisma est obligatoire.");
+    if (!String(tenantId || "").trim()) throw new Error("Le tenant est obligatoire.");
     this.prisma = prisma;
     this.tenantId = String(tenantId);
   }
@@ -281,10 +249,7 @@ class PrepublicationReadinessService {
     }
 
     const agency = await this.prisma.agency.findFirst({
-      where: {
-        id,
-        tenantId: this.tenantId,
-      },
+      where: { id, tenantId: this.tenantId },
       select: {
         id: true,
         name: true,
@@ -295,12 +260,8 @@ class PrepublicationReadinessService {
         email: true,
         tenantId: true,
         agencySites: {
-          where: {
-            tenantId: this.tenantId,
-          },
-          orderBy: {
-            createdAt: "desc",
-          },
+          where: { tenantId: this.tenantId },
+          orderBy: { createdAt: "desc" },
           take: 1,
           select: {
             id: true,
@@ -313,9 +274,7 @@ class PrepublicationReadinessService {
             publishedAt: true,
             updatedAt: true,
             pages: {
-              orderBy: {
-                displayOrder: "asc",
-              },
+              orderBy: { displayOrder: "asc" },
               select: {
                 id: true,
                 slug: true,
@@ -325,10 +284,17 @@ class PrepublicationReadinessService {
                 seoTitle: true,
                 metaDescription: true,
                 displayOrder: true,
-                sections: {
-                  orderBy: {
-                    displayOrder: "asc",
+                blocks: {
+                  orderBy: { displayOrder: "asc" },
+                  select: {
+                    id: true,
+                    blockType: true,
+                    status: true,
+                    displayOrder: true,
                   },
+                },
+                sections: {
+                  orderBy: { displayOrder: "asc" },
                   select: {
                     id: true,
                     sectionType: true,
@@ -369,7 +335,7 @@ class PrepublicationReadinessService {
     const launchScore = score(checks);
 
     return {
-      version: "1.3",
+      version: "1.4",
       mode: "prepublication",
       agency: {
         id: agency.id,
@@ -389,15 +355,10 @@ class PrepublicationReadinessService {
       readiness: {
         score: launchScore,
         grade:
-          launchScore >= 90
-            ? "A"
-            : launchScore >= 75
-              ? "B"
-              : launchScore >= 60
-                ? "C"
-                : launchScore >= 40
-                  ? "D"
-                  : "E",
+          launchScore >= 90 ? "A" :
+          launchScore >= 75 ? "B" :
+          launchScore >= 60 ? "C" :
+          launchScore >= 40 ? "D" : "E",
         ready: launchBlockers.length === 0,
         blockers: launchBlockers,
       },
@@ -410,6 +371,7 @@ module.exports = {
   PrepublicationReadinessService,
   canonicalPageKey,
   pageByKey,
+  publicEntries,
   designerContentState,
   pagePresenceCheck,
   identityCheck,
