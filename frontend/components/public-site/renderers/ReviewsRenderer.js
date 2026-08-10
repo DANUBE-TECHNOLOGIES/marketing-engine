@@ -38,6 +38,35 @@ function formatDate(value) {
   }
 }
 
+function reviewInitial(authorName) {
+  return String(authorName || "V")
+    .trim()
+    .charAt(0)
+    .toUpperCase();
+}
+
+function compactText(value, limit = 260) {
+  const text = String(value || "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (text.length <= limit) {
+    return text;
+  }
+
+  const shortened = text.slice(0, limit);
+  const lastSpace = shortened.lastIndexOf(" ");
+
+  return `${shortened.slice(0, lastSpace > 170 ? lastSpace : limit).trim()}…`;
+}
+
+function isLongText(value, limit = 260) {
+  return String(value || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .length > limit;
+}
+
 export default async function ReviewsRenderer({
   section,
   site,
@@ -73,7 +102,7 @@ export default async function ReviewsRenderer({
     <section className="public-site-section public-site-reviews">
       <div className="public-site-container">
         <div className="public-site-reviews-heading">
-          <div>
+          <div className="public-site-reviews-heading-copy">
             <p className="public-site-section-kicker">
               Avis Google
             </p>
@@ -91,22 +120,29 @@ export default async function ReviewsRenderer({
           </div>
 
           {total > 0 ? (
-            <div className="public-site-google-summary">
-              <span className="public-site-google-logo">
+            <div className="public-site-google-summary" aria-label={`Note Google ${averageRating.toFixed(1)} sur 5, ${total} avis`}>
+              <span className="public-site-google-logo" aria-hidden="true">
                 G
               </span>
 
-              <div>
-                <strong>
-                  {averageRating.toFixed(1)}
-                </strong>
+              <div className="public-site-google-summary-copy">
+                <span className="public-site-google-summary-label">
+                  Note Google
+                </span>
 
-                <span className="public-site-google-stars">
+                <div className="public-site-google-summary-rating">
+                  <strong>
+                    {averageRating.toFixed(1)}
+                  </strong>
+                  <span>/ 5</span>
+                </div>
+
+                <span className="public-site-google-stars" aria-hidden="true">
                   {stars(averageRating)}
                 </span>
 
                 <small>
-                  {total} avis
+                  {total} avis clients
                 </small>
               </div>
             </div>
@@ -115,57 +151,73 @@ export default async function ReviewsRenderer({
 
         {reviews.length ? (
           <div className="public-site-review-grid">
-            {reviews.map((review) => (
-              <article
-                className="public-site-review-card"
-                key={review.id}
-              >
-                <div className="public-site-review-card-top">
-                  <span className="public-site-review-avatar">
-                    {String(
-                      review.authorName ||
-                      "V"
-                    )
-                      .trim()
-                      .charAt(0)
-                      .toUpperCase()}
-                  </span>
+            {reviews.map((review) => {
+              const longComment = isLongText(review.comment);
+              const hasReply = Boolean(review.reply);
 
-                  <div>
-                    <strong>
-                      {review.authorName ||
-                        "Voyageur"}
-                    </strong>
+              return (
+                <article
+                  className="public-site-review-card"
+                  key={review.id}
+                >
+                  <div className="public-site-review-card-top">
+                    <span className="public-site-review-avatar">
+                      {reviewInitial(review.authorName)}
+                    </span>
 
-                    <small>
-                      {formatDate(
-                        review.publishedAt
-                      )}
-                    </small>
+                    <div className="public-site-review-author">
+                      <strong>
+                        {review.authorName || "Voyageur"}
+                      </strong>
+
+                      <small>
+                        {formatDate(review.publishedAt)}
+                      </small>
+                    </div>
+
+                    <span className="public-site-review-google-mark" aria-label="Avis Google">
+                      G
+                    </span>
                   </div>
-                </div>
 
-                <p className="public-site-review-stars">
-                  {stars(review.rating)}
-                </p>
+                  <p className="public-site-review-stars" aria-label={`${Number(review.rating) || 0} étoiles sur 5`}>
+                    {stars(review.rating)}
+                  </p>
 
-                {review.comment ? (
-                  <blockquote>
-                    {review.comment}
-                  </blockquote>
-                ) : null}
+                  {review.comment ? (
+                    <blockquote className="public-site-review-excerpt">
+                      {compactText(review.comment)}
+                    </blockquote>
+                  ) : null}
 
-                {review.reply ? (
-                  <div className="public-site-review-reply">
-                    <strong>
-                      Réponse de l’agence
-                    </strong>
+                  {longComment || hasReply ? (
+                    <details className="public-site-review-details">
+                      <summary>
+                        {longComment
+                          ? "Lire l’avis complet"
+                          : "Voir la réponse de l’agence"}
+                      </summary>
 
-                    <p>{review.reply}</p>
-                  </div>
-                ) : null}
-              </article>
-            ))}
+                      {longComment ? (
+                        <blockquote className="public-site-review-fulltext">
+                          {review.comment}
+                        </blockquote>
+                      ) : null}
+
+                      {hasReply ? (
+                        <div className="public-site-review-reply">
+                          <strong>
+                            Réponse de l’agence
+                          </strong>
+
+                          <p>{review.reply}</p>
+                        </div>
+                      ) : null}
+                    </details>
+                  ) : null}
+                </article>
+              );
+            })}
           </div>
         ) : (
           <div className="public-site-empty-premium">
