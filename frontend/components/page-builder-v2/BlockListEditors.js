@@ -388,6 +388,81 @@ export function TestimonialsEditor({
   );
 }
 
+export function TeamEditor({
+  members,
+  onChange,
+}) {
+  return (
+    <ListEditor
+      items={members}
+      onChange={onChange}
+      addLabel="Ajouter un membre"
+      createItem={() => ({
+        id: `team-${Date.now()}`,
+        name: "",
+        role: "Conseiller voyage",
+        imageUrl: "",
+        imageAlt: "",
+        bio: "",
+      })}
+    >
+      {({ item, update }) => (
+        <>
+          {item.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              className={styles.editorThumbnail}
+              src={item.imageUrl}
+              alt={item.imageAlt || item.name || "Membre de l'équipe"}
+            />
+          ) : null}
+
+          <Field
+            label="Nom"
+            value={item.name}
+            onChange={(name) =>
+              update({ ...item, name })
+            }
+          />
+
+          <Field
+            label="Fonction"
+            value={item.role}
+            onChange={(role) =>
+              update({ ...item, role })
+            }
+          />
+
+          <Field
+            label="URL de la photo"
+            value={item.imageUrl}
+            onChange={(imageUrl) =>
+              update({ ...item, imageUrl })
+            }
+          />
+
+          <Field
+            label="Texte alternatif de la photo"
+            value={item.imageAlt}
+            onChange={(imageAlt) =>
+              update({ ...item, imageAlt })
+            }
+          />
+
+          <Field
+            label="Présentation"
+            value={item.bio}
+            multiline
+            onChange={(bio) =>
+              update({ ...item, bio })
+            }
+          />
+        </>
+      )}
+    </ListEditor>
+  );
+}
+
 export function StringListEditor({
   items,
   onChange,
