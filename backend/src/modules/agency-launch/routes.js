@@ -3,10 +3,12 @@
 const express = require("express");
 const { PrismaClient } = require("@prisma/client");
 const {
-  AgencyLaunchService,
   resolveLaunchState,
   summarizeLaunchStates,
 } = require("./service");
+const {
+  PrepublicationReadinessService,
+} = require("./prepublication-readiness");
 
 function createHttpError(statusCode, code, message) {
   const error = new Error(message);
@@ -91,7 +93,10 @@ async function assertAgencyInTenant(database, tenantId, agencyId) {
 }
 
 async function networkForTenant(database, tenantId) {
-  const service = new AgencyLaunchService({ prisma: database });
+  const service = new PrepublicationReadinessService({
+    prisma: database,
+    tenantId,
+  });
   const agencies = await database.agency.findMany({
     where: { tenantId },
     orderBy: [{ city: "asc" }, { name: "asc" }],
@@ -132,7 +137,8 @@ async function networkForTenant(database, tenantId) {
   }
 
   return {
-    version: "1.1",
+    version: "1.2",
+    mode: "prepublication",
     tenantId,
     generatedAt: new Date().toISOString(),
     summary: summarizeLaunchStates(items),
@@ -148,7 +154,8 @@ function createAgencyLaunchRouter({ prisma } = {}) {
     response.json({
       ok: true,
       capability: "agency-launch",
-      version: "1.1",
+      version: "1.2",
+      mode: "prepublication",
     });
   });
 
@@ -171,7 +178,10 @@ function createAgencyLaunchRouter({ prisma } = {}) {
           tenantId,
           request.params.agencyId
         );
-        const service = new AgencyLaunchService({ prisma: database });
+        const service = new PrepublicationReadinessService({
+          prisma: database,
+          tenantId,
+        });
         const report = await service.readiness(agencyId);
 
         response.json({
