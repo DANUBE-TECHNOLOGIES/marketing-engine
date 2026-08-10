@@ -17,6 +17,12 @@ function createPrisma() {
         return { count: 1 };
       },
     },
+    pageBlock: {
+      updateMany: async (query) => {
+        calls.push({ model: "block", query });
+        return { count: 14 };
+      },
+    },
     agencySiteSection: {
       updateMany: async (query) => {
         calls.push({ model: "section", query });
@@ -33,7 +39,7 @@ function createPrisma() {
   };
 }
 
-test("MSE-25.9 publishes Designer sections together with their page", async () => {
+test("MSE-25.9 publishes V2 blocks and legacy sections together with their page", async () => {
   const { prisma, calls } = createPrisma();
   const repository = new SitePublicationRepository({ prisma });
 
@@ -43,9 +49,11 @@ test("MSE-25.9 publishes Designer sections together with their page", async () =
   });
 
   assert.equal(result.published, true);
+  assert.equal(result.blocksPublished, 14);
   assert.equal(result.sectionsPublished, 9);
 
   const pageCall = calls.find((entry) => entry.model === "page");
+  const blockCall = calls.find((entry) => entry.model === "block");
   const sectionCall = calls.find((entry) => entry.model === "section");
 
   assert.deepEqual(pageCall.query.where, {
@@ -55,12 +63,16 @@ test("MSE-25.9 publishes Designer sections together with their page", async () =
   assert.equal(pageCall.query.data.status, "published");
   assert.equal(pageCall.query.data.published, true);
 
+  assert.equal(blockCall.query.where.pageId, "page-home");
+  assert.deepEqual(blockCall.query.where.status, { not: "hidden" });
+  assert.equal(blockCall.query.data.status, "published");
+
   assert.equal(sectionCall.query.where.pageId, "page-home");
   assert.deepEqual(sectionCall.query.where.status, { not: "hidden" });
   assert.equal(sectionCall.query.data.status, "published");
 });
 
-test("MSE-25.9 preserves hidden Designer sections during publication", async () => {
+test("MSE-25.9 preserves hidden V2 blocks and legacy sections during publication", async () => {
   const { prisma, calls } = createPrisma();
   const repository = new SitePublicationRepository({ prisma });
 
@@ -69,11 +81,14 @@ test("MSE-25.9 preserves hidden Designer sections during publication", async () 
     pageId: "page-home",
   });
 
+  const blockCall = calls.find((entry) => entry.model === "block");
   const sectionCall = calls.find((entry) => entry.model === "section");
+
+  assert.deepEqual(blockCall.query.where.status, { not: "hidden" });
   assert.deepEqual(sectionCall.query.where.status, { not: "hidden" });
 });
 
-test("MSE-25.9 unpublishes only previously published Designer sections", async () => {
+test("MSE-25.9 unpublishes only previously published V2 blocks and legacy sections", async () => {
   const { prisma, calls } = createPrisma();
   const repository = new SitePublicationRepository({ prisma });
 
@@ -83,15 +98,20 @@ test("MSE-25.9 unpublishes only previously published Designer sections", async (
   });
 
   assert.equal(result.published, false);
+  assert.equal(result.blocksUnpublished, 14);
   assert.equal(result.sectionsUnpublished, 9);
 
+  const blockCall = calls.find((entry) => entry.model === "block");
   const sectionCall = calls.find((entry) => entry.model === "section");
-  assert.equal(sectionCall.query.where.pageId, "page-home");
+
+  assert.equal(blockCall.query.where.status, "published");
+  assert.equal(blockCall.query.data.status, "draft");
   assert.equal(sectionCall.query.where.status, "published");
   assert.equal(sectionCall.query.data.status, "draft");
 });
 
-test("MSE-25.9 does not publish sections when the page does not belong to the site", async () => {
+test("MSE-25.9 touches no child content when the page does not belong to the site", async () => {
+  let blockTouched = false;
   let sectionTouched = false;
 
   const prisma = {
@@ -99,6 +119,12 @@ test("MSE-25.9 does not publish sections when the page does not belong to the si
       callback({
         agencySitePage: {
           updateMany: async () => ({ count: 0 }),
+        },
+        pageBlock: {
+          updateMany: async () => {
+            blockTouched = true;
+            return { count: 1 };
+          },
         },
         agencySiteSection: {
           updateMany: async () => {
@@ -116,5 +142,6 @@ test("MSE-25.9 does not publish sections when the page does not belong to the si
     (error) => error.code === "PAGE_NOT_FOUND"
   );
 
+  assert.equal(blockTouched, false);
   assert.equal(sectionTouched, false);
 });
