@@ -55,49 +55,33 @@ function profileSource(payload) {
 function normalizeLegalProfile(payload) {
   const source = profileSource(payload);
   const pages = source.pages || source.content || {};
+  const ui = source.settings?.brandStudio || {};
 
   return {
     id: source.id || null,
     agencyId: source.agencyId || null,
-    companyName:
-      source.companyName || source.legalName || source.publisherName || "",
-    legalForm:
-      source.legalForm || source.companyForm || source.publisherLegalForm || "",
-    shareCapital:
-      source.shareCapital || source.capital || source.publisherShareCapital || "",
-    registrationNumber:
-      source.registrationNumber || source.siret || source.publisherRegistration || "",
-    vatNumber:
-      source.vatNumber || source.vatId || source.publisherVatNumber || "",
-    registeredOffice:
-      source.registeredOffice || source.address || source.publisherAddress || "",
+    companyName: source.companyName || source.legalName || "",
+    legalForm: source.legalForm || "",
+    shareCapital: source.shareCapital || "",
+    registrationNumber: source.registrationNumber || source.siret || "",
+    vatNumber: source.vatNumber || "",
+    registeredOffice: source.registeredOffice || source.address || "",
     publicationDirector: source.publicationDirector || "",
-    hostingProvider:
-      source.hostingProvider || source.hostName || source.hostingName || "",
-    legalEmail:
-      source.legalEmail || source.contactEmail || source.publisherEmail || "",
-    dpoEmail:
-      source.dpoEmail || source.dataProtectionEmail || source.privacyContactEmail || "",
-    phone: source.phone || source.publisherPhone || "",
+    hostingProvider: source.hostingProvider || "",
+    legalEmail: ui.legalEmail || source.privacyContactEmail || "",
+    dpoEmail: ui.dpoEmail || source.privacyContactEmail || "",
+    phone: ui.phone || "",
     legalNotice:
-      pages.legalNotice ||
-      source.legalNotice ||
-      source.legalNoticeText ||
-      source.legalNoticeContent ||
-      "",
+      pages.legalNotice || source.legalNotice || source.legalNoticeContent || "",
     privacyPolicy:
       pages.privacyPolicy ||
       source.privacyPolicy ||
-      source.privacyText ||
       source.privacyPolicyContent ||
       "",
     cookiePolicy:
-      pages.cookiePolicy ||
-      source.cookiePolicy ||
-      source.cookiesPolicyContent ||
-      "",
-    terms:
-      pages.terms || source.terms || source.termsContent || "",
+      pages.cookiePolicy || source.cookiePolicy || source.cookiePolicyContent || "",
+    terms: pages.terms || source.terms || source.termsContent || "",
+    settings: source.settings || {},
   };
 }
 
@@ -125,22 +109,28 @@ async function fetchLegalProfile(agencyId) {
 function buildLegalProfilePayload(agencyId, profile) {
   return {
     agencyId,
-    publisherName: profile.companyName || null,
-    publisherLegalForm: profile.legalForm || null,
-    publisherShareCapital: profile.shareCapital || null,
-    publisherRegistration: profile.registrationNumber || null,
-    publisherVatNumber: profile.vatNumber || null,
-    publisherAddress: profile.registeredOffice || null,
-    publisherPhone: profile.phone || null,
-    publisherEmail: profile.legalEmail || null,
+    legalName: profile.companyName || null,
+    legalForm: profile.legalForm || null,
+    shareCapital: profile.shareCapital || null,
+    registeredOffice: profile.registeredOffice || null,
+    registrationNumber: profile.registrationNumber || null,
+    vatNumber: profile.vatNumber || null,
     publicationDirector: profile.publicationDirector || null,
     hostingProvider: profile.hostingProvider || null,
-    dataProtectionOfficer: profile.dpoEmail ? "DPO" : null,
     privacyContactEmail: profile.dpoEmail || profile.legalEmail || null,
     legalNoticeContent: profile.legalNotice || null,
     privacyPolicyContent: profile.privacyPolicy || null,
-    cookiesPolicyContent: profile.cookiePolicy || null,
+    cookiePolicyContent: profile.cookiePolicy || null,
     termsContent: profile.terms || null,
+    settings: {
+      ...(profile.settings || {}),
+      brandStudio: {
+        ...(profile.settings?.brandStudio || {}),
+        legalEmail: profile.legalEmail || null,
+        dpoEmail: profile.dpoEmail || null,
+        phone: profile.phone || null,
+      },
+    },
   };
 }
 
@@ -155,10 +145,6 @@ async function saveLegalProfile({ agencyId, profile }) {
     {
       url: `/api/legal-profile?agencyId=${normalizedAgencyId}`,
       method: "PUT",
-    },
-    {
-      url: `/api/legal-profile?agencyId=${normalizedAgencyId}`,
-      method: "POST",
     },
   ];
 
