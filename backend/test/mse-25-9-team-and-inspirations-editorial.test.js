@@ -23,8 +23,9 @@ test("MSE-25.9 exposes team and inspirations in the V2 block catalog", () => {
   assert.match(catalog, /source:\s*["']content-generation["']/);
 });
 
-test("MSE-25.9 provides a structured team member editor", () => {
+test("MSE-25.9 provides and wires a structured team member editor", () => {
   const editors = read("frontend/components/page-builder-v2/BlockListEditors.js");
+  const designer = read("frontend/components/page-builder-v2/VisualPageBuilder.js");
 
   assert.match(editors, /export function TeamEditor/);
   assert.match(editors, /Ajouter un membre/);
@@ -32,6 +33,23 @@ test("MSE-25.9 provides a structured team member editor", () => {
   assert.match(editors, /label=["']Fonction["']/);
   assert.match(editors, /label=["']URL de la photo["']/);
   assert.match(editors, /label=["']Présentation["']/);
+
+  assert.match(designer, /TeamEditor/);
+  assert.match(designer, /block\.type === ["']team["']/);
+  assert.match(designer, /members=\{content\.members\}/);
+  assert.match(designer, /set\(["']members["'],\s*members\)/);
+});
+
+test("MSE-25.9 exposes automatic/manual source controls for destinations and inspirations", () => {
+  const designer = read("frontend/components/page-builder-v2/VisualPageBuilder.js");
+
+  assert.match(designer, /Source des destinations/);
+  assert.match(designer, /Catalogue publié automatiquement/);
+  assert.match(designer, /content\.selectionMode === ["']manual["']/);
+  assert.match(designer, /Source des inspirations/);
+  assert.match(designer, /Contenus publiés automatiquement/);
+  assert.match(designer, /content\.source === ["']manual["']/);
+  assert.match(designer, /contentIds/);
 });
 
 test("MSE-25.9 plans automatic editorial inspirations", () => {
