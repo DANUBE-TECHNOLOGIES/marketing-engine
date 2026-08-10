@@ -159,6 +159,13 @@ export const publicSiteApi = {
       ? payload.items
       : [];
   },
+
+  async getInspiration(siteSlug, contentSlug) {
+    await request(`/${encodeURIComponent(siteSlug)}`);
+    return requestWebsiteBuilder(
+      `/inspirations/${encodeURIComponent(contentSlug)}`
+    );
+  },
 };
 
 export {
