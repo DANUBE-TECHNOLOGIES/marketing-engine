@@ -18,6 +18,7 @@ import HoursRenderer from "./HoursRenderer";
 import ReviewsRenderer from "./ReviewsRenderer";
 import TestimonialsRenderer from "./TestimonialsRenderer";
 import SeparatorRenderer from "./SeparatorRenderer";
+import TeamRenderer from "./TeamRenderer";
 
 export const PUBLIC_RENDERER_REGISTRY = {
   hero: HeroV2Renderer,
@@ -43,11 +44,9 @@ export const PUBLIC_RENDERER_REGISTRY = {
   map: MapRenderer,
   hours: HoursRenderer,
   separator: SeparatorRenderer,
+  team: TeamRenderer,
 };
 
 export function getPublicRenderer(type) {
-  return (
-    PUBLIC_RENDERER_REGISTRY[type] ||
-    null
-  );
+  return PUBLIC_RENDERER_REGISTRY[type] || null;
 }
