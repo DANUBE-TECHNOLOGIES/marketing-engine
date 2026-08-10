@@ -1,7 +1,6 @@
 "use strict";
 
-const express =
-  require("express");
+const express = require("express");
 
 const {
   MiniSiteStructuredDataService,
@@ -15,6 +14,7 @@ function sendError(
     .status(
       Number(
         error?.status ||
+        error?.statusCode ||
         500
       )
     )
@@ -33,12 +33,57 @@ function sendError(
     });
 }
 
+async function tenantIdForRequest(
+  prisma,
+  request
+) {
+  const direct = String(
+    request.tenantId ||
+    request.get("x-tenant-id") ||
+    ""
+  ).trim();
+
+  if (direct) {
+    return direct;
+  }
+
+  const slug = String(
+    request.tenantSlug ||
+    request.get("x-tenant-slug") ||
+    ""
+  ).trim();
+
+  if (!slug) {
+    const error = new Error(
+      "Le tenant est obligatoire pour les données structurées."
+    );
+    error.code = "MINISITE_STRUCTURED_DATA_TENANT_REQUIRED";
+    error.status = 400;
+    throw error;
+  }
+
+  const tenant = await prisma.tenant.findUnique({
+    where: { slug },
+    select: { id: true },
+  });
+
+  if (!tenant) {
+    const error = new Error(
+      "Tenant introuvable."
+    );
+    error.code = "MINISITE_STRUCTURED_DATA_TENANT_NOT_FOUND";
+    error.status = 404;
+    throw error;
+  }
+
+  return tenant.id;
+}
+
 function routes({
   prisma,
   service,
 } = {}) {
-  const router =
-    express.Router();
+  const router = express.Router();
 
   const structuredDataService =
     service ||
@@ -62,13 +107,20 @@ function routes({
   router.get(
     "/minisite-structured-data/sitemap",
     async (
-      _request,
+      request,
       response
     ) => {
       try {
+        const tenantId = await tenantIdForRequest(
+          prisma,
+          request
+        );
+
         const result =
           await structuredDataService
-            .previewSitemap();
+            .previewSitemap({
+              tenantId,
+            });
 
         response
           .set(
@@ -94,12 +146,18 @@ function routes({
       response
     ) => {
       try {
+        const tenantId = await tenantIdForRequest(
+          prisma,
+          request
+        );
+
         const result =
           await structuredDataService
             .previewSite({
               siteSlug:
                 request.params
                   .siteSlug,
+              tenantId,
             });
 
         response
@@ -122,13 +180,20 @@ function routes({
   router.post(
     "/minisite-structured-data/network/preview",
     async (
-      _request,
+      request,
       response
     ) => {
       try {
+        const tenantId = await tenantIdForRequest(
+          prisma,
+          request
+        );
+
         response.json(
           await structuredDataService
-            .previewNetwork()
+            .previewNetwork({
+              tenantId,
+            })
         );
       } catch (error) {
         sendError(
@@ -145,4 +210,5 @@ function routes({
 module.exports = {
   routes,
   sendError,
+  tenantIdForRequest,
 };
