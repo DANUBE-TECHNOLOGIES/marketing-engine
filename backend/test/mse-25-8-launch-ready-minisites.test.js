@@ -8,6 +8,7 @@ const {
   assertAgencyInTenant,
 } = require("../src/modules/agency-launch/routes");
 const {
+  MiniSiteStructuredDataRepository,
   requireTenantId,
 } = require("../src/modules/minisite-structured-data/repository");
 const {
@@ -122,6 +123,34 @@ test("MSE-25.8 structured-data repository refuses an unscoped network query", ()
       return true;
     }
   );
+});
+
+test("MSE-25.8 structured-data repository loads hours and social profiles inside the tenant", async () => {
+  let query = null;
+  const database = {
+    agencySite: {
+      async findMany(value) {
+        query = value;
+        return [];
+      },
+    },
+  };
+
+  const repository = new MiniSiteStructuredDataRepository(database);
+  await repository.listSites("tenant_mondescale");
+
+  assert.equal(query.where.tenantId, "tenant_mondescale");
+  assert.equal(query.select.agency.select.profile.select.regularHours, true);
+  assert.equal(query.select.agency.select.profile.select.specialHours, true);
+  assert.deepEqual(
+    query.select.agency.select.brandProfiles.where,
+    { tenantId: "tenant_mondescale" }
+  );
+  assert.equal(query.select.agency.select.brandProfiles.take, 1);
+  assert.equal(query.select.agency.select.brandProfiles.select.facebookUrl, true);
+  assert.equal(query.select.agency.select.brandProfiles.select.instagramUrl, true);
+  assert.equal(query.select.agency.select.brandProfiles.select.linkedinUrl, true);
+  assert.equal(query.select.agency.select.brandProfiles.select.youtubeUrl, true);
 });
 
 test("MSE-25.8 sitemap excludes draft sites, draft pages and legal noindex pages", () => {
