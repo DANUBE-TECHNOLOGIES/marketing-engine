@@ -94,20 +94,21 @@ export default function PublicSiteHeader({
       </div>
 
       <header className="public-site-header">
-        <PublicBrandLogo
-          brand={resolvedPublicBrand}
-          brandAssets={resolvedPublicBrandAssets}
-          site={site}
-          agency={agency}
-          className="public-site-header__brand-logo"
-        />
-
-        <div className="public-site-container public-site-header-inner">
+        <div className="public-site-container public-site-header-main">
           <Link
             href={`/agence/${site.slug}`}
-            className="public-site-brand"
+            className="public-site-header-identity"
+            aria-label={`Accueil ${site.name}`}
           >
-            <span className="public-site-brand-mark">M</span>
+            <span className="public-site-header-logo-wrap">
+              <PublicBrandLogo
+                brand={resolvedPublicBrand}
+                brandAssets={resolvedPublicBrandAssets}
+                site={site}
+                agency={agency}
+                className="public-site-header__brand-logo"
+              />
+            </span>
 
             <span className="public-site-brand-copy">
               <strong>{site.name}</strong>
@@ -117,24 +118,6 @@ export default function PublicSiteHeader({
               ) : null}
             </span>
           </Link>
-
-          <nav
-            className="public-site-navigation"
-            aria-label="Navigation principale"
-          >
-            {pages.map((page, index) => (
-              <Link
-                key={
-                  page.id ||
-                  page.path ||
-                  `${page.title}-${index}`
-                }
-                href={pageHref(site.slug, page)}
-              >
-                {page.title}
-              </Link>
-            ))}
-          </nav>
 
           <div className="public-site-header-actions">
             {agency.phone ? (
@@ -155,6 +138,28 @@ export default function PublicSiteHeader({
             >
               Demander un devis
             </Link>
+          </div>
+        </div>
+
+        <div className="public-site-header-navrow">
+          <div className="public-site-container">
+            <nav
+              className="public-site-navigation"
+              aria-label="Navigation principale"
+            >
+              {pages.map((page, index) => (
+                <Link
+                  key={
+                    page.id ||
+                    page.path ||
+                    `${page.title}-${index}`
+                  }
+                  href={pageHref(site.slug, page)}
+                >
+                  {page.title}
+                </Link>
+              ))}
+            </nav>
           </div>
         </div>
       </header>
