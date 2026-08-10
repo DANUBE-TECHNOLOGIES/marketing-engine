@@ -8,7 +8,8 @@ const sections = [
       ["SEO Direction", "/seo-direction"],
       ["SEO Today", "/seo-today"],
       ["Production", "/production"],
-      ["Mise en ligne mini-sites", "/agency-launch"]
+      ["Mise en ligne mini-sites", "/agency-launch"],
+      ["Studio éditorial Inspirations", "/editorial-content"]
     ]
   },
   {
