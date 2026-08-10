@@ -118,6 +118,20 @@ async function assertSiteInTenant(prisma, request, siteId) {
   return site;
 }
 
+function requiredSiteId(request) {
+  const siteId = String(request.body?.siteId || "").trim();
+
+  if (!siteId) {
+    throw sitePublicationError(
+      "PAGE_PUBLICATION_SITE_REQUIRED",
+      "Le mini-site est obligatoire pour publier une page.",
+      400
+    );
+  }
+
+  return siteId;
+}
+
 function createSitePublicationRoutes(prisma, options = {}) {
   const router = express.Router();
 
@@ -160,6 +174,48 @@ function createSitePublicationRoutes(prisma, options = {}) {
       historyStore,
       lockManager,
     });
+
+  /*
+   * Internal page publication endpoints used by SitePublicationService.
+   * They only flip page publication state; they never rewrite page blocks.
+   * The siteId is mandatory so we can tenant-check the site first and then
+   * ensure the page belongs to that exact site in the repository update.
+   */
+  router.post(
+    "/publication/pages/:pageId/publish",
+    async (request, response) => {
+      try {
+        const siteId = requiredSiteId(request);
+        await assertSiteInTenant(prisma, request, siteId);
+        response.json(
+          await repository.markPagePublished({
+            siteId,
+            pageId: request.params.pageId,
+          })
+        );
+      } catch (error) {
+        sendError(response, error);
+      }
+    }
+  );
+
+  router.post(
+    "/publication/pages/:pageId/unpublish",
+    async (request, response) => {
+      try {
+        const siteId = requiredSiteId(request);
+        await assertSiteInTenant(prisma, request, siteId);
+        response.json(
+          await repository.markPageUnpublished({
+            siteId,
+            pageId: request.params.pageId,
+          })
+        );
+      } catch (error) {
+        sendError(response, error);
+      }
+    }
+  );
 
   router.get("/sites/:siteId/status", async (request, response) => {
     try {
@@ -241,6 +297,7 @@ module.exports = {
   assertSiteInTenant,
   createSitePublicationRoutes,
   requestHeaders,
+  requiredSiteId,
   sendError,
   tenantIdForRequest,
 };
