@@ -9,30 +9,37 @@ const {
   contentCheck,
 } = require("../src/modules/agency-launch/prepublication-readiness");
 
-test("MSE-25.9 draft pages may legitimately contain draft Designer sections before publication", () => {
+test("MSE-25.9 draft pages may legitimately contain draft V2 blocks before publication", () => {
   const state = designerContentState({
     status: "draft",
     published: false,
+    blocks: [
+      { status: "draft", blockType: "hero" },
+      { status: "draft", blockType: "destinations" },
+    ],
     sections: [
-      { status: "draft", sectionType: "hero" },
-      { status: "draft", sectionType: "destinations" },
+      { status: "published", sectionType: "hero" },
     ],
   });
 
-  assert.equal(state.hasDesignerSections, true);
-  assert.equal(state.publishedSections, 0);
+  assert.equal(state.source, "website-designer-v2-blocks");
+  assert.equal(state.hasV2Blocks, true);
+  assert.equal(state.publishedBlocks, 0);
   assert.equal(state.coherent, true);
 });
 
-test("MSE-25.9 published pages fail readiness when every Designer section is still draft", () => {
+test("MSE-25.9 published pages fail readiness when every V2 block is still draft", () => {
   const page = {
     id: "home-1",
     slug: "",
     status: "published",
     published: true,
+    blocks: [
+      { status: "draft", blockType: "hero" },
+      { status: "draft", blockType: "destinations" },
+    ],
     sections: [
-      { status: "draft", sectionType: "hero" },
-      { status: "draft", sectionType: "destinations" },
+      { status: "published", sectionType: "hero" },
     ],
   };
 
@@ -40,34 +47,57 @@ test("MSE-25.9 published pages fail readiness when every Designer section is sti
 
   assert.equal(check.exists, true);
   assert.equal(check.published, true);
-  assert.equal(check.contentState.publishedSections, 0);
+  assert.equal(check.contentState.source, "website-designer-v2-blocks");
+  assert.equal(check.contentState.publishedBlocks, 0);
   assert.equal(check.passed, false);
 });
 
-test("MSE-25.9 published pages pass once at least one visible Designer section is public", () => {
+test("MSE-25.9 published pages pass once at least one visible V2 block is public", () => {
   const page = {
     id: "home-1",
     slug: "",
     status: "published",
     published: true,
+    blocks: [
+      { status: "published", blockType: "hero" },
+      { status: "draft", blockType: "destinations" },
+      { status: "hidden", blockType: "team" },
+    ],
     sections: [
-      { status: "published", sectionType: "hero" },
-      { status: "draft", sectionType: "destinations" },
-      { status: "hidden", sectionType: "team" },
+      { status: "draft", sectionType: "hero" },
     ],
   };
 
   const check = pagePresenceCheck([page], { key: "home", label: "Accueil" }, true);
 
-  assert.equal(check.contentState.totalSections, 3);
-  assert.equal(check.contentState.visibleSections, 2);
+  assert.equal(check.contentState.totalBlocks, 3);
+  assert.equal(check.contentState.visibleBlocks, 2);
+  assert.equal(check.contentState.publishedBlocks, 1);
+  assert.equal(check.passed, true);
+});
+
+test("MSE-25.9 legacy sections remain the readiness source before a V2 save", () => {
+  const page = {
+    id: "legacy-home",
+    slug: "home",
+    status: "published",
+    published: true,
+    blocks: [],
+    sections: [
+      { status: "published", sectionType: "hero" },
+    ],
+  };
+
+  const check = pagePresenceCheck([page], { key: "home", label: "Accueil" }, true);
+
+  assert.equal(check.contentState.source, "agency-site-sections");
   assert.equal(check.contentState.publishedSections, 1);
   assert.equal(check.passed, true);
 });
 
-test("MSE-25.9 legacy published pages remain compatible when they have no Designer sections", () => {
+test("MSE-25.9 empty legacy published pages remain compatible during transition", () => {
   const page = {
-    id: "legacy-home",
+    id: "empty-legacy-home",
     slug: "home",
     status: "published",
     published: true,
@@ -75,7 +105,7 @@ test("MSE-25.9 legacy published pages remain compatible when they have no Design
 
   const check = pagePresenceCheck([page], { key: "home", label: "Accueil" }, true);
 
-  assert.equal(check.contentState.hasDesignerSections, false);
+  assert.equal(check.contentState.source, "empty");
   assert.equal(check.passed, true);
 });
 
@@ -87,11 +117,12 @@ test("MSE-25.9 GENERAL_CONTENT blocks an inconsistent published required page", 
         slug: "",
         status: "published",
         published: true,
-        sections: [{ status: "draft", sectionType: "hero" }],
+        blocks: [{ status: "draft", blockType: "hero" }],
+        sections: [{ status: "published", sectionType: "hero" }],
       },
-      { id: "agency", slug: "agence", status: "draft", sections: [] },
-      { id: "services", slug: "services", status: "draft", sections: [] },
-      { id: "contact", slug: "contact", status: "draft", sections: [] },
+      { id: "agency", slug: "agence", status: "draft", blocks: [], sections: [] },
+      { id: "services", slug: "services", status: "draft", blocks: [], sections: [] },
+      { id: "contact", slug: "contact", status: "draft", blocks: [], sections: [] },
     ],
   };
 
