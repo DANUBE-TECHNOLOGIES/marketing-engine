@@ -5,23 +5,16 @@ const {
 } = require("./errors");
 
 class SitePublicationRepository {
-  constructor({
-    prisma,
-  }) {
+  constructor({ prisma }) {
     this.prisma = prisma;
   }
 
   async site(siteId) {
     const site = await this.prisma.agencySite.findUnique({
-      where: {
-        id: String(siteId),
-      },
+      where: { id: String(siteId) },
       include: {
         agency: {
-          select: {
-            id: true,
-            name: true,
-          },
+          select: { id: true, name: true },
         },
         pages: {
           orderBy: [
@@ -53,10 +46,7 @@ class SitePublicationRepository {
     return site;
   }
 
-  async markPagePublished({
-    siteId,
-    pageId,
-  }) {
+  async markPagePublished({ siteId, pageId }) {
     const result = await this.prisma.$transaction(async (tx) => {
       const page = await tx.agencySitePage.updateMany({
         where: {
@@ -78,22 +68,29 @@ class SitePublicationRepository {
         );
       }
 
+      const blocks = tx.pageBlock
+        ? await tx.pageBlock.updateMany({
+            where: {
+              pageId: String(pageId),
+              status: { not: "hidden" },
+            },
+            data: { status: "published" },
+          })
+        : { count: 0 };
+
       const sections = tx.agencySiteSection
         ? await tx.agencySiteSection.updateMany({
             where: {
               pageId: String(pageId),
-              status: {
-                not: "hidden",
-              },
+              status: { not: "hidden" },
             },
-            data: {
-              status: "published",
-            },
+            data: { status: "published" },
           })
         : { count: 0 };
 
       return {
         pageCount: page.count,
+        blockCount: blocks.count,
         sectionCount: sections.count,
       };
     });
@@ -103,14 +100,12 @@ class SitePublicationRepository {
       siteId: String(siteId),
       status: "published",
       published: true,
+      blocksPublished: result.blockCount,
       sectionsPublished: result.sectionCount,
     };
   }
 
-  async markPageUnpublished({
-    siteId,
-    pageId,
-  }) {
+  async markPageUnpublished({ siteId, pageId }) {
     const result = await this.prisma.$transaction(async (tx) => {
       const page = await tx.agencySitePage.updateMany({
         where: {
@@ -132,20 +127,29 @@ class SitePublicationRepository {
         );
       }
 
+      const blocks = tx.pageBlock
+        ? await tx.pageBlock.updateMany({
+            where: {
+              pageId: String(pageId),
+              status: "published",
+            },
+            data: { status: "draft" },
+          })
+        : { count: 0 };
+
       const sections = tx.agencySiteSection
         ? await tx.agencySiteSection.updateMany({
             where: {
               pageId: String(pageId),
               status: "published",
             },
-            data: {
-              status: "draft",
-            },
+            data: { status: "draft" },
           })
         : { count: 0 };
 
       return {
         pageCount: page.count,
+        blockCount: blocks.count,
         sectionCount: sections.count,
       };
     });
@@ -155,6 +159,7 @@ class SitePublicationRepository {
       siteId: String(siteId),
       status: "draft",
       published: false,
+      blocksUnpublished: result.blockCount,
       sectionsUnpublished: result.sectionCount,
     };
   }
@@ -191,9 +196,7 @@ class SitePublicationRepository {
 
   async markSitePublished(siteId) {
     return this.prisma.agencySite.update({
-      where: {
-        id: String(siteId),
-      },
+      where: { id: String(siteId) },
       data: {
         status: "published",
         publishedAt: new Date(),
@@ -203,9 +206,7 @@ class SitePublicationRepository {
 
   async markSiteUnpublished(siteId) {
     return this.prisma.agencySite.update({
-      where: {
-        id: String(siteId),
-      },
+      where: { id: String(siteId) },
       data: {
         status: "draft",
         publishedAt: null,
