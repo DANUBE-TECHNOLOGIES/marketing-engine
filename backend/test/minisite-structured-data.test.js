@@ -107,6 +107,130 @@ test(
 );
 
 test(
+  "ajoute les horaires réels AgencyProfile au TravelAgency",
+  () => {
+    const result =
+      buildTravelAgency({
+        agency: {
+          ...agency,
+          profile: {
+            regularHours: [
+              {
+                openDay:
+                  "MONDAY",
+                openTime:
+                  "09:00",
+                closeDay:
+                  "MONDAY",
+                closeTime:
+                  "12:30",
+              },
+              {
+                openDay:
+                  "MONDAY",
+                openTime:
+                  "14:00",
+                closeDay:
+                  "MONDAY",
+                closeTime:
+                  "18:30",
+              },
+              {
+                openDay:
+                  "TUESDAY",
+                openTime:
+                  "10:00",
+                closeDay:
+                  "TUESDAY",
+                closeTime:
+                  "18:00",
+              },
+            ],
+          },
+        },
+        site,
+        publicOrigin,
+      });
+
+    assert.deepEqual(
+      result.openingHoursSpecification,
+      [
+        {
+          "@type":
+            "OpeningHoursSpecification",
+          dayOfWeek:
+            "https://schema.org/Monday",
+          opens:
+            "09:00",
+          closes:
+            "12:30",
+        },
+        {
+          "@type":
+            "OpeningHoursSpecification",
+          dayOfWeek:
+            "https://schema.org/Monday",
+          opens:
+            "14:00",
+          closes:
+            "18:30",
+        },
+        {
+          "@type":
+            "OpeningHoursSpecification",
+          dayOfWeek:
+            "https://schema.org/Tuesday",
+          opens:
+            "10:00",
+          closes:
+            "18:00",
+        },
+      ]
+    );
+  }
+);
+
+test(
+  "ajoute les réseaux sociaux BrandProfile au sameAs sans doublon",
+  () => {
+    const result =
+      buildTravelAgency({
+        agency: {
+          ...agency,
+          brandProfiles: [
+            {
+              facebookUrl:
+                "https://www.facebook.com/mondescale.boisis",
+              instagramUrl:
+                "https://www.instagram.com/mondescale.boisis",
+              linkedinUrl:
+                "https://www.linkedin.com/company/mondescale",
+              youtubeUrl:
+                null,
+            },
+          ],
+        },
+        site: {
+          ...site,
+          sameAs: [
+            "https://www.facebook.com/mondescale.boisis",
+          ],
+        },
+        publicOrigin,
+      });
+
+    assert.deepEqual(
+      result.sameAs,
+      [
+        "https://www.facebook.com/mondescale.boisis",
+        "https://www.instagram.com/mondescale.boisis",
+        "https://www.linkedin.com/company/mondescale",
+      ]
+    );
+  }
+);
+
+test(
   "génère WebSite et WebPage sur /agence",
   () => {
     const website =
