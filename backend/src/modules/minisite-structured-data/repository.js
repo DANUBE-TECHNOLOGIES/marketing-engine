@@ -48,6 +48,21 @@ function selectExisting(
   );
 }
 
+function requireTenantId(value) {
+  const tenantId = String(value || "").trim();
+
+  if (!tenantId) {
+    const error = new Error(
+      "Le tenant est obligatoire pour les données structurées des mini-sites."
+    );
+    error.code = "MINISITE_STRUCTURED_DATA_TENANT_REQUIRED";
+    error.status = 400;
+    throw error;
+  }
+
+  return tenantId;
+}
+
 class MiniSiteStructuredDataRepository {
   constructor(
     prisma
@@ -56,9 +71,9 @@ class MiniSiteStructuredDataRepository {
       prisma;
   }
 
-
   async findSiteBySlug(
-    siteSlug
+    siteSlug,
+    tenantId
   ) {
     const normalizedSlug =
       String(
@@ -81,7 +96,9 @@ class MiniSiteStructuredDataRepository {
     }
 
     const sites =
-      await this.listSites();
+      await this.listSites(
+        tenantId
+      );
 
     return (
       sites.find(
@@ -95,7 +112,14 @@ class MiniSiteStructuredDataRepository {
     );
   }
 
-  async listSites() {
+  async listSites(
+    tenantId
+  ) {
+    const resolvedTenantId =
+      requireTenantId(
+        tenantId
+      );
+
     const agencyFields =
       modelFields(
         "Agency"
@@ -121,12 +145,15 @@ class MiniSiteStructuredDataRepository {
         agencyFields,
         [
           "id",
+          "tenantId",
           "name",
           "city",
           "address",
           "postalCode",
           "phone",
           "email",
+          "website",
+          "googleReviewUrl",
           "description",
         ]
       );
@@ -136,6 +163,7 @@ class MiniSiteStructuredDataRepository {
         siteFields,
         [
           "id",
+          "tenantId",
           "agencyId",
           "slug",
           "status",
@@ -143,6 +171,7 @@ class MiniSiteStructuredDataRepository {
           "logoUrl",
           "coverImageUrl",
           "description",
+          "updatedAt",
         ]
       );
 
@@ -155,9 +184,12 @@ class MiniSiteStructuredDataRepository {
           "slug",
           "title",
           "status",
+          "published",
+          "publishedAt",
           "seoTitle",
           "metaDescription",
           "displayOrder",
+          "updatedAt",
         ]
       );
 
@@ -177,6 +209,11 @@ class MiniSiteStructuredDataRepository {
     return this.prisma
       .agencySite
       .findMany({
+        where: {
+          tenantId:
+            resolvedTenantId,
+        },
+
         select: {
           ...siteSelect,
 
@@ -242,5 +279,6 @@ class MiniSiteStructuredDataRepository {
 module.exports = {
   MiniSiteStructuredDataRepository,
   modelFields,
+  requireTenantId,
   selectExisting,
 };
