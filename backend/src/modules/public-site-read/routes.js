@@ -2,7 +2,9 @@
 
 const express = require("express");
 const { PrismaClient } = require("@prisma/client");
-const { PublicSiteReadService } = require("./service");
+const {
+  SectionAwarePublicSiteReadService,
+} = require("./section-aware-service");
 const { hydratePublicDynamicBlocks } = require("./dynamic-block-hydrator");
 const { hydratePublicInspirations } = require("./inspiration-hydrator");
 const { hydratePreviewPage } = require("./preview-hydrator");
@@ -36,14 +38,15 @@ async function hydrateContract({ database, contract }) {
 
 function createPublicSiteReadRouter({ prisma } = {}) {
   const database = prisma || new PrismaClient();
-  const service = new PublicSiteReadService({ prisma: database });
+  const service = new SectionAwarePublicSiteReadService({ prisma: database });
   const router = express.Router();
 
   router.get("/health", (request, response) => {
     response.json({
       ok: true,
       capability: "public-site-read",
-      version: "1.0",
+      version: "1.1",
+      contentSource: "website-designer-sections",
       writeOperations: false,
     });
   });
