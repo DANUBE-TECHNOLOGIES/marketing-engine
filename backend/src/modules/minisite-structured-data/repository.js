@@ -125,6 +125,16 @@ class MiniSiteStructuredDataRepository {
         "Agency"
       );
 
+    const agencyProfileFields =
+      modelFields(
+        "AgencyProfile"
+      );
+
+    const brandProfileFields =
+      modelFields(
+        "BrandProfile"
+      );
+
     const siteFields =
       modelFields(
         "AgencySite"
@@ -155,6 +165,34 @@ class MiniSiteStructuredDataRepository {
           "website",
           "googleReviewUrl",
           "description",
+        ]
+      );
+
+    const agencyProfileSelect =
+      selectExisting(
+        agencyProfileFields,
+        [
+          "timezone",
+          "regularHours",
+          "specialHours",
+          "hoursSource",
+          "googleSyncedAt",
+          "updatedAt",
+        ]
+      );
+
+    const brandProfileSelect =
+      selectExisting(
+        brandProfileFields,
+        [
+          "id",
+          "tenantId",
+          "agencyId",
+          "facebookUrl",
+          "instagramUrl",
+          "linkedinUrl",
+          "youtubeUrl",
+          "updatedAt",
         ]
       );
 
@@ -218,8 +256,42 @@ class MiniSiteStructuredDataRepository {
           ...siteSelect,
 
           agency: {
-            select:
-              agencySelect,
+            select: {
+              ...agencySelect,
+
+              ...(agencyFields.has(
+                "profile"
+              ) &&
+              Object.keys(
+                agencyProfileSelect
+              ).length
+                ? {
+                    profile: {
+                      select:
+                        agencyProfileSelect,
+                    },
+                  }
+                : {}),
+
+              ...(agencyFields.has(
+                "brandProfiles"
+              ) &&
+              Object.keys(
+                brandProfileSelect
+              ).length
+                ? {
+                    brandProfiles: {
+                      where: {
+                        tenantId:
+                          resolvedTenantId,
+                      },
+                      select:
+                        brandProfileSelect,
+                      take: 1,
+                    },
+                  }
+                : {}),
+            },
           },
 
           pages: {
