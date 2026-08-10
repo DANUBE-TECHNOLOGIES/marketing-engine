@@ -1,5 +1,6 @@
 import Link from "next/link";
 import MainLayout from "../components/MainLayout";
+import PublishSiteButton from "./PublishSiteButton";
 
 export const dynamic = "force-dynamic";
 
@@ -164,6 +165,10 @@ export default async function AgencyLaunchPage() {
                     </div>
 
                     <div className="flex flex-wrap gap-2 lg:justify-end">
+                      {state.code === "ready_to_publish" && site?.id ? (
+                        <PublishSiteButton siteId={site.id} />
+                      ) : null}
+
                       <Link
                         href={`/website-builder?agencyId=${agency.id}`}
                         className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
