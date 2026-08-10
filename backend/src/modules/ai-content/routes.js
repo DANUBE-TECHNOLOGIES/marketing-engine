@@ -14,6 +14,19 @@ module.exports = ({ prisma }) => {
   router.get("/ai-content/published", async (req, res, next) => {
     try { res.json(await service(req).listPublished(req.query)); } catch (e) { next(e); }
   });
+  router.get("/ai-content/published/:slug", async (req, res, next) => {
+    try {
+      const current = service(req);
+      const content = await current.repo.getPublishedContentBySlug(req.params.slug);
+      if (!content) {
+        return res.status(404).json({
+          error: "AI_CONTENT_PUBLISHED_NOT_FOUND",
+          message: "Inspiration publiée introuvable.",
+        });
+      }
+      return res.json(content);
+    } catch (e) { return next(e); }
+  });
   router.get("/ai-content/contents", async (req, res, next) => {
     try {
       const current = service(req);
