@@ -5,6 +5,15 @@ const {
   toPublicOfferCard,
 } = require("../campaign-manager/public-offer-card");
 
+const DEFAULT_INSPIRATION_CHANNELS = Object.freeze([
+  "inspiration",
+  "article",
+  "blog",
+  "travel-guide",
+  "destination-guide",
+  "landing-page",
+]);
+
 function asObject(value) {
   return value && typeof value === "object" && !Array.isArray(value)
     ? value
@@ -70,6 +79,38 @@ function reviewCard(review) {
   };
 }
 
+function inspirationCard(content) {
+  const body = asObject(content?.body);
+  const seo = asObject(content?.seo);
+  const image =
+    body.heroImageUrl ||
+    body.imageUrl ||
+    body.image ||
+    seo.imageUrl ||
+    seo.image ||
+    null;
+
+  return {
+    id: content.id,
+    slug: content.slug || null,
+    title: content.title,
+    description:
+      content.excerpt ||
+      body.excerpt ||
+      body.summary ||
+      body.description ||
+      null,
+    image,
+    category:
+      body.category ||
+      seo.category ||
+      content.channel ||
+      null,
+    channel: content.channel,
+    publishedAt: content.publishedAt || null,
+  };
+}
+
 const offerCard = toPublicOfferCard;
 
 function destinationConfig(block) {
@@ -124,6 +165,55 @@ function collectDestinationPlan(pages = []) {
 
 function collectDestinationReferences(pages = []) {
   return collectDestinationPlan(pages).references;
+}
+
+function inspirationConfig(block) {
+  const content = asObject(block?.content);
+  const references = cleanReferences(content.contentIds);
+  const source = String(
+    content.source || content.__dataSource || "content-generation"
+  ).trim().toLowerCase();
+  const channels = cleanReferences(content.channels);
+
+  return {
+    content,
+    references,
+    source,
+    channels: channels.length ? channels : [...DEFAULT_INSPIRATION_CHANNELS],
+    limit: normalizeLimit(content.limit),
+  };
+}
+
+function collectInspirationPlan(pages = []) {
+  const references = [];
+  const channels = new Set();
+  const seen = new Set();
+  let automaticLimit = 0;
+
+  for (const page of pages) {
+    for (const block of page?.blocks || []) {
+      if (blockType(block) !== "inspirations") continue;
+      const config = inspirationConfig(block);
+
+      for (const channel of config.channels) channels.add(channel);
+
+      if (config.references.length && config.source === "manual") {
+        for (const reference of config.references) {
+          if (seen.has(reference)) continue;
+          seen.add(reference);
+          references.push(reference);
+        }
+      } else if (["content-generation", "automatic", "auto", "seo-content"].includes(config.source)) {
+        automaticLimit = Math.max(automaticLimit, config.limit);
+      }
+    }
+  }
+
+  return {
+    references,
+    channels: [...channels],
+    automaticLimit,
+  };
 }
 
 function collectOfferReferences(pages = []) {
@@ -208,6 +298,43 @@ async function loadPublishedDestinations({ prisma, tenantId, references = [], li
   });
 }
 
+async function loadPublishedInspirations({
+  prisma,
+  tenantId,
+  references = [],
+  channels = DEFAULT_INSPIRATION_CHANNELS,
+  limit = 0,
+}) {
+  const ids = cleanReferences(references);
+  const allowedChannels = cleanReferences(channels);
+
+  if (!prisma?.seoContent || !tenantId || (!ids.length && !limit)) return [];
+
+  return prisma.seoContent.findMany({
+    where: {
+      tenantId,
+      status: "published",
+      publishedAt: { not: null },
+      ...(allowedChannels.length
+        ? { channel: { in: allowedChannels } }
+        : {}),
+      ...(ids.length
+        ? {
+            OR: [
+              { id: { in: ids } },
+              { slug: { in: ids } },
+            ],
+          }
+        : {}),
+    },
+    orderBy: [
+      { publishedAt: "desc" },
+      { updatedAt: "desc" },
+    ],
+    take: ids.length ? Math.min(ids.length, 100) : normalizeLimit(limit),
+  });
+}
+
 async function loadApprovedCampaignOffers({ prisma, tenantId, agencyId, references = [], limit = 24 }) {
   const numericAgencyId = Number(agencyId);
   const ids = cleanReferences(references);
@@ -275,6 +402,40 @@ function hydrateDestinationBlocks(pages, manualDestinations = [], automaticDesti
   }));
 }
 
+function hydrateInspirationBlocks(pages, manualContents = [], automaticContents = []) {
+  const byReference = new Map();
+  for (const content of manualContents) {
+    byReference.set(String(content.id), content);
+    if (content.slug) byReference.set(String(content.slug), content);
+  }
+  const automaticCards = automaticContents.map(inspirationCard);
+
+  return pages.map((page) => ({
+    ...page,
+    blocks: (page.blocks || []).map((block) => {
+      if (blockType(block) !== "inspirations") return block;
+      const config = inspirationConfig(block);
+      const resolved = config.references.length && config.source === "manual"
+        ? config.references
+            .map((reference) => byReference.get(String(reference)))
+            .filter(Boolean)
+            .slice(0, config.limit)
+            .map(inspirationCard)
+        : automaticCards.slice(0, config.limit);
+
+      return {
+        ...block,
+        content: {
+          ...config.content,
+          inspirations: resolved,
+          articles: resolved,
+          items: resolved,
+        },
+      };
+    }),
+  }));
+}
+
 function hydrateOfferBlocks(pages, manualAssets = [], automaticAssets = []) {
   const manualById = new Map(manualAssets.map((asset) => [asset.id, asset]));
   const automaticCards = automaticAssets.map(offerCard).filter(Boolean);
@@ -327,15 +488,32 @@ async function hydratePublicDynamicBlocks({ prisma, tenantId, agencyId, pages = 
 
   const sourcePages = includeUnpublishedBlocks ? pages : filterPublicBlocks(pages);
   const destinationPlan = collectDestinationPlan(sourcePages);
+  const inspirationPlan = collectInspirationPlan(sourcePages);
   const offerReferences = collectOfferReferences(sourcePages);
   const automaticOfferLimit = automaticCampaignOfferLimit(sourcePages);
   const reviewLimit = googleReviewLimit(sourcePages);
 
-  if (!destinationPlan.references.length && !destinationPlan.automaticLimit && !offerReferences.length && !automaticOfferLimit && !reviewLimit) {
+  if (
+    !destinationPlan.references.length &&
+    !destinationPlan.automaticLimit &&
+    !inspirationPlan.references.length &&
+    !inspirationPlan.automaticLimit &&
+    !offerReferences.length &&
+    !automaticOfferLimit &&
+    !reviewLimit
+  ) {
     return sourcePages;
   }
 
-  const [manualDestinations, automaticDestinations, manualOffers, automaticOffers, reviews] = await Promise.all([
+  const [
+    manualDestinations,
+    automaticDestinations,
+    manualInspirations,
+    automaticInspirations,
+    manualOffers,
+    automaticOffers,
+    reviews,
+  ] = await Promise.all([
     loadPublishedDestinations({
       prisma,
       tenantId,
@@ -347,6 +525,23 @@ async function hydratePublicDynamicBlocks({ prisma, tenantId, agencyId, pages = 
           prisma,
           tenantId,
           limit: destinationPlan.automaticLimit,
+        })
+      : [],
+    inspirationPlan.references.length
+      ? loadPublishedInspirations({
+          prisma,
+          tenantId,
+          references: inspirationPlan.references,
+          channels: inspirationPlan.channels,
+          limit: inspirationPlan.references.length,
+        })
+      : [],
+    inspirationPlan.automaticLimit
+      ? loadPublishedInspirations({
+          prisma,
+          tenantId,
+          channels: inspirationPlan.channels,
+          limit: inspirationPlan.automaticLimit,
         })
       : [],
     loadApprovedCampaignOffers({
@@ -366,14 +561,19 @@ async function hydratePublicDynamicBlocks({ prisma, tenantId, agencyId, pages = 
     ? hydrateDestinationBlocks(sourcePages, manualDestinations, automaticDestinations)
     : sourcePages;
 
-  const withOffers = offerReferences.length || automaticOfferLimit
-    ? hydrateOfferBlocks(withDestinations, manualOffers, automaticOffers)
+  const withInspirations = inspirationPlan.references.length || inspirationPlan.automaticLimit
+    ? hydrateInspirationBlocks(withDestinations, manualInspirations, automaticInspirations)
     : withDestinations;
+
+  const withOffers = offerReferences.length || automaticOfferLimit
+    ? hydrateOfferBlocks(withInspirations, manualOffers, automaticOffers)
+    : withInspirations;
 
   return reviewLimit ? hydrateGoogleReviewBlocks(withOffers, reviews) : withOffers;
 }
 
 module.exports = {
+  DEFAULT_INSPIRATION_CHANNELS,
   asObject,
   cleanReferences,
   normalizeLimit,
@@ -382,18 +582,23 @@ module.exports = {
   filterPublicBlocks,
   destinationCard,
   reviewCard,
+  inspirationCard,
   offerCard,
   destinationConfig,
   collectDestinationPlan,
   collectDestinationReferences,
+  inspirationConfig,
+  collectInspirationPlan,
   collectOfferReferences,
   automaticCampaignOfferLimit,
   isGoogleReviewBlock,
   googleReviewLimit,
   loadPublishedDestinations,
+  loadPublishedInspirations,
   loadApprovedCampaignOffers,
   loadGoogleReviews,
   hydrateDestinationBlocks,
+  hydrateInspirationBlocks,
   hydrateOfferBlocks,
   hydrateGoogleReviewBlocks,
   hydratePublicDynamicBlocks,
