@@ -152,17 +152,14 @@ function createAgencyLaunchRouter({ prisma } = {}) {
     });
   });
 
-  const networkHandler = async (request, response) => {
+  router.get("/network", async (request, response) => {
     try {
       const tenantId = await tenantIdForRequest(database, request);
       response.json(await networkForTenant(database, tenantId));
     } catch (error) {
       sendError(response, error);
     }
-  };
-
-  router.get("/network", networkHandler);
-  router.get("/api/agency-launch/network", networkHandler);
+  });
 
   router.get(
     "/agencies/:agencyId/readiness",
