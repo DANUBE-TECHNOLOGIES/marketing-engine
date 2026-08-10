@@ -1,11 +1,34 @@
 "use strict";
 
 const {
+  weeklySchedule,
+} = require(
+  "../agency-profile/hours"
+);
+
+const {
   cleanText,
   normalizePhone,
   removeEmpty,
   siteUrl,
 } = require("./utils");
+
+const SCHEMA_DAYS = {
+  SUNDAY:
+    "https://schema.org/Sunday",
+  MONDAY:
+    "https://schema.org/Monday",
+  TUESDAY:
+    "https://schema.org/Tuesday",
+  WEDNESDAY:
+    "https://schema.org/Wednesday",
+  THURSDAY:
+    "https://schema.org/Thursday",
+  FRIDAY:
+    "https://schema.org/Friday",
+  SATURDAY:
+    "https://schema.org/Saturday",
+};
 
 function buildPostalAddress(
   agency
@@ -32,6 +55,85 @@ function buildPostalAddress(
     addressCountry:
       "FR",
   });
+}
+
+function buildOpeningHoursSpecification(
+  agency
+) {
+  const regularHours =
+    Array.isArray(
+      agency?.profile
+        ?.regularHours
+    )
+      ? agency.profile
+          .regularHours
+      : [];
+
+  return weeklySchedule(
+    regularHours
+  ).flatMap(
+    ({ day, periods }) =>
+      periods
+        .filter(
+          (period) =>
+            period.openTime &&
+            period.closeTime &&
+            SCHEMA_DAYS[day]
+        )
+        .map(
+          (period) => ({
+            "@type":
+              "OpeningHoursSpecification",
+
+            dayOfWeek:
+              SCHEMA_DAYS[day],
+
+            opens:
+              period.openTime,
+
+            closes:
+              period.closeTime,
+          })
+        )
+  );
+}
+
+function buildSameAs(
+  agency,
+  site
+) {
+  const agencyBrandProfile =
+    Array.isArray(
+      agency?.brandProfiles
+    )
+      ? agency.brandProfiles[0]
+      : null;
+
+  const candidates = [
+    ...(Array.isArray(
+      site?.sameAs
+    )
+      ? site.sameAs
+      : []),
+    agencyBrandProfile
+      ?.facebookUrl,
+    agencyBrandProfile
+      ?.instagramUrl,
+    agencyBrandProfile
+      ?.linkedinUrl,
+    agencyBrandProfile
+      ?.youtubeUrl,
+  ];
+
+  return [
+    ...new Set(
+      candidates
+        .map(
+          cleanText
+        )
+        .filter(Boolean)
+    ),
+  ];
 }
 
 function buildTravelAgency({
@@ -129,20 +231,22 @@ function buildTravelAgency({
           "https://www.mondescale.com",
       },
 
+    openingHoursSpecification:
+      buildOpeningHoursSpecification(
+        agency
+      ),
+
     sameAs:
-      Array.isArray(
-        site.sameAs
-      )
-        ? site.sameAs
-            .map(
-              cleanText
-            )
-            .filter(Boolean)
-        : [],
+      buildSameAs(
+        agency,
+        site
+      ),
   });
 }
 
 module.exports = {
+  buildOpeningHoursSpecification,
   buildPostalAddress,
+  buildSameAs,
   buildTravelAgency,
 };
