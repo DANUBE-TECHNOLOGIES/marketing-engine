@@ -57,31 +57,53 @@ class SitePublicationRepository {
     siteId,
     pageId,
   }) {
-    const result = await this.prisma.agencySitePage.updateMany({
-      where: {
-        id: String(pageId),
-        siteId: String(siteId),
-      },
-      data: {
-        status: "published",
-        published: true,
-      },
-    });
+    const result = await this.prisma.$transaction(async (tx) => {
+      const page = await tx.agencySitePage.updateMany({
+        where: {
+          id: String(pageId),
+          siteId: String(siteId),
+        },
+        data: {
+          status: "published",
+          published: true,
+        },
+      });
 
-    if (result.count !== 1) {
-      throw sitePublicationError(
-        "PAGE_NOT_FOUND",
-        "La page demandée est introuvable dans ce mini-site.",
-        404,
-        { siteId, pageId }
-      );
-    }
+      if (page.count !== 1) {
+        throw sitePublicationError(
+          "PAGE_NOT_FOUND",
+          "La page demandée est introuvable dans ce mini-site.",
+          404,
+          { siteId, pageId }
+        );
+      }
+
+      const sections = tx.agencySiteSection
+        ? await tx.agencySiteSection.updateMany({
+            where: {
+              pageId: String(pageId),
+              status: {
+                not: "hidden",
+              },
+            },
+            data: {
+              status: "published",
+            },
+          })
+        : { count: 0 };
+
+      return {
+        pageCount: page.count,
+        sectionCount: sections.count,
+      };
+    });
 
     return {
       pageId: String(pageId),
       siteId: String(siteId),
       status: "published",
       published: true,
+      sectionsPublished: result.sectionCount,
     };
   }
 
@@ -89,31 +111,51 @@ class SitePublicationRepository {
     siteId,
     pageId,
   }) {
-    const result = await this.prisma.agencySitePage.updateMany({
-      where: {
-        id: String(pageId),
-        siteId: String(siteId),
-      },
-      data: {
-        status: "draft",
-        published: false,
-      },
-    });
+    const result = await this.prisma.$transaction(async (tx) => {
+      const page = await tx.agencySitePage.updateMany({
+        where: {
+          id: String(pageId),
+          siteId: String(siteId),
+        },
+        data: {
+          status: "draft",
+          published: false,
+        },
+      });
 
-    if (result.count !== 1) {
-      throw sitePublicationError(
-        "PAGE_NOT_FOUND",
-        "La page demandée est introuvable dans ce mini-site.",
-        404,
-        { siteId, pageId }
-      );
-    }
+      if (page.count !== 1) {
+        throw sitePublicationError(
+          "PAGE_NOT_FOUND",
+          "La page demandée est introuvable dans ce mini-site.",
+          404,
+          { siteId, pageId }
+        );
+      }
+
+      const sections = tx.agencySiteSection
+        ? await tx.agencySiteSection.updateMany({
+            where: {
+              pageId: String(pageId),
+              status: "published",
+            },
+            data: {
+              status: "draft",
+            },
+          })
+        : { count: 0 };
+
+      return {
+        pageCount: page.count,
+        sectionCount: sections.count,
+      };
+    });
 
     return {
       pageId: String(pageId),
       siteId: String(siteId),
       status: "draft",
       published: false,
+      sectionsUnpublished: result.sectionCount,
     };
   }
 
