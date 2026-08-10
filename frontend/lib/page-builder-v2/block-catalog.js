@@ -67,6 +67,19 @@ export const BLOCK_CATALOG = Object.freeze([
     },
   },
   {
+    type: "team",
+    label: "Équipe",
+    category: "Confiance",
+    icon: "♙",
+    defaults: {
+      title: "Une équipe passionnée",
+      text: "Rencontrez les conseillers qui imaginent et accompagnent vos voyages.",
+      source: "agency-team",
+      members: [],
+      columns: 3,
+    },
+  },
+  {
     type: "gallery",
     label: "Galerie",
     category: "Médias",
@@ -143,7 +156,22 @@ export const BLOCK_CATALOG = Object.freeze([
     icon: "◎",
     defaults: {
       title: "À découvrir également",
+      source: "automatic",
+      selectionMode: "automatic",
       destinationIds: [],
+      limit: 6,
+    },
+  },
+  {
+    type: "inspirations",
+    label: "Inspirations",
+    category: "Voyage",
+    icon: "✺",
+    defaults: {
+      title: "Laissez-vous inspirer",
+      text: "Conseils, idées et récits pour préparer votre prochain voyage.",
+      source: "content-generation",
+      contentIds: [],
       limit: 6,
     },
   },
