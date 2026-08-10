@@ -1,137 +1,201 @@
 "use strict";
 
-const express =
-  require(
-    "express"
-  );
-
-const {
-  PrismaClient,
-} =
-  require(
-    "@prisma/client"
-  );
-
+const express = require("express");
+const { PrismaClient } = require("@prisma/client");
 const {
   AgencyLaunchService,
-} =
-  require(
-    "./service"
-  );
+  resolveLaunchState,
+  summarizeLaunchStates,
+} = require("./service");
 
-function createAgencyLaunchRouter({
-  prisma,
-} = {}) {
-  const database =
-    prisma ||
-    new PrismaClient();
+function createHttpError(statusCode, code, message) {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  error.code = code;
+  return error;
+}
 
-  const service =
-    new AgencyLaunchService({
-      prisma:
-        database,
-    });
+function statusCode(error) {
+  return Number(error?.statusCode || error?.status || 500);
+}
 
-  const router =
-    express.Router();
+function sendError(response, error) {
+  response.status(statusCode(error)).json({
+    error: error?.code || "AGENCY_LAUNCH_ERROR",
+    message: error?.message || "Impossible de calculer l'état de lancement.",
+  });
+}
 
-  router.get(
-    "/health",
-    (
-      request,
-      response
-    ) => {
-      response.json({
-        ok:
-          true,
+async function tenantIdForRequest(database, request) {
+  const direct = String(
+    request.tenantId || request.get("x-tenant-id") || ""
+  ).trim();
 
-        capability:
-          "agency-launch",
+  if (direct) {
+    return direct;
+  }
 
-        version:
-          "1.0",
+  const slug = String(
+    request.tenantSlug || request.get("x-tenant-slug") || ""
+  ).trim();
+
+  if (!slug) {
+    throw createHttpError(
+      400,
+      "AGENCY_LAUNCH_TENANT_REQUIRED",
+      "Le tenant est obligatoire."
+    );
+  }
+
+  const tenant = await database.tenant.findUnique({
+    where: { slug },
+    select: { id: true },
+  });
+
+  if (!tenant) {
+    throw createHttpError(
+      404,
+      "AGENCY_LAUNCH_TENANT_NOT_FOUND",
+      "Tenant introuvable."
+    );
+  }
+
+  return tenant.id;
+}
+
+async function assertAgencyInTenant(database, tenantId, agencyId) {
+  const id = Number(agencyId);
+
+  if (!Number.isInteger(id) || id <= 0) {
+    throw createHttpError(
+      400,
+      "AGENCY_LAUNCH_INVALID_AGENCY_ID",
+      "Identifiant agence invalide."
+    );
+  }
+
+  const agency = await database.agency.findFirst({
+    where: { id, tenantId },
+    select: { id: true },
+  });
+
+  if (!agency) {
+    throw createHttpError(
+      404,
+      "AGENCY_LAUNCH_AGENCY_NOT_FOUND",
+      "Agence introuvable dans ce tenant."
+    );
+  }
+
+  return agency.id;
+}
+
+async function networkForTenant(database, tenantId) {
+  const service = new AgencyLaunchService({ prisma: database });
+  const agencies = await database.agency.findMany({
+    where: { tenantId },
+    orderBy: [{ city: "asc" }, { name: "asc" }],
+    select: { id: true },
+  });
+
+  const items = [];
+
+  for (const agency of agencies) {
+    try {
+      const report = await service.readiness(agency.id);
+      const launchState = resolveLaunchState({
+        site: report.site,
+        readiness: report.readiness,
+      });
+
+      items.push({
+        ...report,
+        launchState,
+      });
+    } catch (error) {
+      items.push({
+        agency: { id: agency.id },
+        readiness: { ready: false },
+        launchState: {
+          code: "to_complete",
+          label: "À compléter",
+          priority: 2,
+          actionable: true,
+          action: "complete",
+        },
+        error: {
+          code: error?.code || "AGENCY_LAUNCH_READINESS_ERROR",
+          message: error?.message || "État de lancement indisponible.",
+        },
       });
     }
-  );
+  }
 
-  router.get(
-    "/network",
-    async (
-      request,
-      response,
-      next
-    ) => {
-      try {
-        response.json(
-          await service.network()
-        );
-      } catch (error) {
-        next(error);
-      }
+  return {
+    version: "1.1",
+    tenantId,
+    generatedAt: new Date().toISOString(),
+    summary: summarizeLaunchStates(items),
+    items,
+  };
+}
+
+function createAgencyLaunchRouter({ prisma } = {}) {
+  const database = prisma || new PrismaClient();
+  const router = express.Router();
+
+  router.get("/health", (request, response) => {
+    response.json({
+      ok: true,
+      capability: "agency-launch",
+      version: "1.1",
+    });
+  });
+
+  const networkHandler = async (request, response) => {
+    try {
+      const tenantId = await tenantIdForRequest(database, request);
+      response.json(await networkForTenant(database, tenantId));
+    } catch (error) {
+      sendError(response, error);
     }
-  );
+  };
+
+  router.get("/network", networkHandler);
+  router.get("/api/agency-launch/network", networkHandler);
 
   router.get(
     "/agencies/:agencyId/readiness",
-    async (
-      request,
-      response,
-      next
-    ) => {
+    async (request, response) => {
       try {
-        response.json(
-          await service.readiness(
-            request.params
-              .agencyId
-          )
+        const tenantId = await tenantIdForRequest(database, request);
+        const agencyId = await assertAgencyInTenant(
+          database,
+          tenantId,
+          request.params.agencyId
         );
+        const service = new AgencyLaunchService({ prisma: database });
+        const report = await service.readiness(agencyId);
+
+        response.json({
+          ...report,
+          launchState: resolveLaunchState({
+            site: report.site,
+            readiness: report.readiness,
+          }),
+        });
       } catch (error) {
-        next(error);
+        sendError(response, error);
       }
     }
   );
 
-
-  router.get(
-    "/api/agency-launch/network",
-    async (
-      request,
-      response
-    ) => {
-      try {
-        const service =
-          serviceFor(
-            request
-          );
-
-        response.json(
-          await service.networkStates()
-        );
-      } catch (error) {
-        response
-          .status(
-            Number(
-              error?.statusCode ||
-              error?.status ||
-              500
-            )
-          )
-          .json({
-            error:
-              error?.code ||
-              "AGENCY_LAUNCH_NETWORK_ERROR",
-
-            message:
-              error?.message ||
-              "Impossible de calculer l'état réseau.",
-          });
-      }
-    }
-  );
-
-return router;
+  return router;
 }
 
 module.exports = {
   createAgencyLaunchRouter,
+  tenantIdForRequest,
+  assertAgencyInTenant,
+  networkForTenant,
 };
