@@ -41,6 +41,7 @@ import {
   FeaturesEditor,
   GalleryEditor,
   StringListEditor,
+  TeamEditor,
   TestimonialsEditor,
 } from "./BlockListEditors";
 
@@ -144,6 +145,33 @@ function BlockPreview({ block }) {
         </section>
       );
 
+    case "team":
+      return (
+        <section className={styles.contentPreview}>
+          <h2>{content.title || "Une équipe passionnée"}</h2>
+          {content.text ? <p>{content.text}</p> : null}
+          <div className={styles.cardGrid}>
+            {(content.members || []).length ? (
+              content.members.slice(0, 4).map((member, index) => (
+                <article key={member.id || `${member.name}-${index}`}>
+                  <div className={styles.cardImage}>
+                    {member.imageUrl ? "Photo" : "Équipe"}
+                  </div>
+                  <h3>{member.name || "Membre de l’équipe"}</h3>
+                  <p>{member.role || "Conseiller voyage"}</p>
+                </article>
+              ))
+            ) : (
+              <article>
+                <div className={styles.cardImage}>Équipe</div>
+                <h3>Ajoutez les membres de l’agence</h3>
+                <p>Nom, fonction, photo et présentation.</p>
+              </article>
+            )}
+          </div>
+        </section>
+      );
+
     case "gallery":
       return (
         <section className={styles.contentPreview}>
@@ -243,6 +271,22 @@ function BlockPreview({ block }) {
                   Destination
                 </div>
                 <h3>Destination associée</h3>
+              </article>
+            ))}
+          </div>
+        </section>
+      );
+
+    case "inspirations":
+      return (
+        <section className={styles.contentPreview}>
+          <h2>{content.title || "Laissez-vous inspirer"}</h2>
+          {content.text ? <p>{content.text}</p> : null}
+          <div className={styles.cardGrid}>
+            {[1, 2, 3].map((item) => (
+              <article key={item}>
+                <div className={styles.cardImage}>Inspiration</div>
+                <h3>Contenu éditorial publié</h3>
               </article>
             ))}
           </div>
@@ -571,6 +615,32 @@ function BlockProperties({
         />
       ) : null}
 
+      {block.type === "destinations" ? (
+        <SelectInput
+          label="Source des destinations"
+          value={content.selectionMode || content.source || "automatic"}
+          onChange={(value) => {
+            set("selectionMode", value);
+          }}
+          options={[
+            { value: "automatic", label: "Catalogue publié automatiquement" },
+            { value: "manual", label: "Sélection manuelle" },
+          ]}
+        />
+      ) : null}
+
+      {block.type === "inspirations" ? (
+        <SelectInput
+          label="Source des inspirations"
+          value={content.source || "content-generation"}
+          onChange={(value) => set("source", value)}
+          options={[
+            { value: "content-generation", label: "Contenus publiés automatiquement" },
+            { value: "manual", label: "Sélection manuelle" },
+          ]}
+        />
+      ) : null}
+
       {"size" in content ? (
         <SelectInput
           label="Espacement"
@@ -681,6 +751,13 @@ function BlockProperties({
         />
       ) : null}
 
+      {block.type === "team" ? (
+        <TeamEditor
+          members={content.members}
+          onChange={(members) => set("members", members)}
+        />
+      ) : null}
+
       {block.type === "testimonials" &&
       content.source === "manual" ? (
         <TestimonialsEditor
@@ -701,13 +778,26 @@ function BlockProperties({
         />
       ) : null}
 
-      {block.type === "destinations" ? (
+      {block.type === "destinations" &&
+      content.selectionMode === "manual" ? (
         <StringListEditor
           items={content.destinationIds}
           label="Identifiant de la destination"
           addLabel="Ajouter une destination"
           onChange={(destinationIds) =>
             set("destinationIds", destinationIds)
+          }
+        />
+      ) : null}
+
+      {block.type === "inspirations" &&
+      content.source === "manual" ? (
+        <StringListEditor
+          items={content.contentIds}
+          label="Identifiant du contenu"
+          addLabel="Ajouter une inspiration"
+          onChange={(contentIds) =>
+            set("contentIds", contentIds)
           }
         />
       ) : null}
