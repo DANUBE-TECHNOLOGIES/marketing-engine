@@ -38,8 +38,9 @@ function createPublicSiteReadRouter({ prisma } = {}) {
     response.json({
       ok: true,
       capability: "public-site-read",
-      version: "1.2",
-      contentSource: "website-designer-sections",
+      version: "1.3",
+      contentSource: "website-designer-v2-blocks",
+      fallbackContentSource: "agency-site-sections",
       dynamicHydration: "single-pipeline",
       writeOperations: false,
     });
