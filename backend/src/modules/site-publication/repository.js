@@ -2,196 +2,173 @@
 
 const {
   sitePublicationError,
-} =
-  require(
-    "./errors"
-  );
+} = require("./errors");
 
 class SitePublicationRepository {
   constructor({
     prisma,
   }) {
-    this.prisma =
-      prisma;
+    this.prisma = prisma;
   }
 
-  async site(
-    siteId
-  ) {
-    const site =
-      await this.prisma
-        .agencySite
-        .findUnique({
-          where: {
-            id:
-              String(siteId),
+  async site(siteId) {
+    const site = await this.prisma.agencySite.findUnique({
+      where: {
+        id: String(siteId),
+      },
+      include: {
+        agency: {
+          select: {
+            id: true,
+            name: true,
           },
-
-          include: {
-            agency: {
-              select: {
-                id:
-                  true,
-
-                name:
-                  true,
-              },
-            },
-
-            pages: {
-              orderBy: [
-                {
-                  displayOrder:
-                    "asc",
-                },
-
-                {
-                  createdAt:
-                    "asc",
-                },
-              ],
-
-              select: {
-                id:
-                  true,
-
-                slug:
-                  true,
-
-                title:
-                  true,
-
-                status:
-                  true,
-
-                published:
-                  true,
-
-                displayOrder:
-                  true,
-
-                updatedAt:
-                  true,
-              },
-            },
+        },
+        pages: {
+          orderBy: [
+            { displayOrder: "asc" },
+            { createdAt: "asc" },
+          ],
+          select: {
+            id: true,
+            slug: true,
+            title: true,
+            status: true,
+            published: true,
+            displayOrder: true,
+            updatedAt: true,
           },
-        });
+        },
+      },
+    });
 
     if (!site) {
       throw sitePublicationError(
         "SITE_NOT_FOUND",
         "Le mini-site demandé est introuvable.",
         404,
-        {
-          siteId,
-        }
+        { siteId }
       );
     }
 
     return site;
   }
 
-  async status(
-    siteId
-  ) {
-    const site =
-      await this.site(
-        siteId
-      );
+  async markPagePublished({
+    siteId,
+    pageId,
+  }) {
+    const result = await this.prisma.agencySitePage.updateMany({
+      where: {
+        id: String(pageId),
+        siteId: String(siteId),
+      },
+      data: {
+        status: "published",
+        published: true,
+      },
+    });
 
-    const publishedPages =
-      site.pages.filter(
-        (page) =>
-          page.published ||
-          String(
-            page.status || ""
-          ).toLowerCase() ===
-            "published"
+    if (result.count !== 1) {
+      throw sitePublicationError(
+        "PAGE_NOT_FOUND",
+        "La page demandée est introuvable dans ce mini-site.",
+        404,
+        { siteId, pageId }
       );
+    }
 
     return {
-      site: {
-        id:
-          site.id,
-
-        slug:
-          site.slug,
-
-        name:
-          site.name,
-
-        status:
-          site.status,
-
-        publishedAt:
-          site.publishedAt,
-
-        agency:
-          site.agency,
-      },
-
-      pages: {
-        total:
-          site.pages.length,
-
-        published:
-          publishedPages.length,
-
-        unpublished:
-          site.pages.length -
-          publishedPages.length,
-
-        items:
-          site.pages,
-      },
-
-      fullyPublished:
-        site.pages.length > 0 &&
-        publishedPages.length ===
-          site.pages.length,
+      pageId: String(pageId),
+      siteId: String(siteId),
+      status: "published",
+      published: true,
     };
   }
 
-  async markSitePublished(
-    siteId
-  ) {
-    return this.prisma
-      .agencySite
-      .update({
-        where: {
-          id:
-            String(siteId),
-        },
+  async markPageUnpublished({
+    siteId,
+    pageId,
+  }) {
+    const result = await this.prisma.agencySitePage.updateMany({
+      where: {
+        id: String(pageId),
+        siteId: String(siteId),
+      },
+      data: {
+        status: "draft",
+        published: false,
+      },
+    });
 
-        data: {
-          status:
-            "published",
+    if (result.count !== 1) {
+      throw sitePublicationError(
+        "PAGE_NOT_FOUND",
+        "La page demandée est introuvable dans ce mini-site.",
+        404,
+        { siteId, pageId }
+      );
+    }
 
-          publishedAt:
-            new Date(),
-        },
-      });
+    return {
+      pageId: String(pageId),
+      siteId: String(siteId),
+      status: "draft",
+      published: false,
+    };
   }
 
-  async markSiteUnpublished(
-    siteId
-  ) {
-    return this.prisma
-      .agencySite
-      .update({
-        where: {
-          id:
-            String(siteId),
-        },
+  async status(siteId) {
+    const site = await this.site(siteId);
 
-        data: {
-          status:
-            "draft",
+    const publishedPages = site.pages.filter(
+      (page) =>
+        page.published ||
+        String(page.status || "").toLowerCase() === "published"
+    );
 
-          publishedAt:
-            null,
-        },
-      });
+    return {
+      site: {
+        id: site.id,
+        slug: site.slug,
+        name: site.name,
+        status: site.status,
+        publishedAt: site.publishedAt,
+        agency: site.agency,
+      },
+      pages: {
+        total: site.pages.length,
+        published: publishedPages.length,
+        unpublished: site.pages.length - publishedPages.length,
+        items: site.pages,
+      },
+      fullyPublished:
+        site.pages.length > 0 &&
+        publishedPages.length === site.pages.length,
+    };
+  }
+
+  async markSitePublished(siteId) {
+    return this.prisma.agencySite.update({
+      where: {
+        id: String(siteId),
+      },
+      data: {
+        status: "published",
+        publishedAt: new Date(),
+      },
+    });
+  }
+
+  async markSiteUnpublished(siteId) {
+    return this.prisma.agencySite.update({
+      where: {
+        id: String(siteId),
+      },
+      data: {
+        status: "draft",
+        publishedAt: null,
+      },
+    });
   }
 }
 
