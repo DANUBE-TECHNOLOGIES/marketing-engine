@@ -12,6 +12,7 @@ const seoPlatform = require("./seo-platform");
 const knowledgeGraph = require("./knowledge-graph");
 const agencySite = require("./agency-site");
 const agencyProfile = require("./agency-profile");
+const agencyLaunch = require("./agency-launch");
 const googleBusinessPhotos = require("./google-business-photos");
 const contentQuality = require("./content-quality");
 const marketingAutomation = require("./marketing-automation");
@@ -156,6 +157,10 @@ module.exports = function registerModules(app, { prisma }) {
 
   if (agencyProfile.routes) {
     app.use(agencyProfile.routes({ prisma }));
+  }
+
+  if (agencyLaunch.createAgencyLaunchRouter) {
+    app.use(agencyLaunch.createAgencyLaunchRouter({ prisma }));
   }
 
   if (googleBusinessPhotos.routes) {
