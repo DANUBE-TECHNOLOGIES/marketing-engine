@@ -14,6 +14,10 @@ export default function InspirationsRenderer({
     "inspirations",
   ]);
 
+  if (!items.length && content.showWhenEmpty !== true) {
+    return null;
+  }
+
   return (
     <section className="public-site-section public-site-inspirations">
       <div className="public-site-container">
@@ -32,52 +36,29 @@ export default function InspirationsRenderer({
           <p>{content.text}</p>
         ) : null}
 
-        <div className="public-site-editorial-grid">
-          {items.length ? (
-            items.map((item, index) => (
+        {items.length ? (
+          <div className="public-site-editorial-grid">
+            {items.map((item, index) => (
               <article
                 className="public-site-editorial-card"
-                key={
-                  item.id ||
-                  item.slug ||
-                  index
-                }
+                key={item.id || item.slug || index}
               >
                 {item.image ? (
                   <div
                     className="public-site-editorial-image"
-                    style={{
-                      backgroundImage: `url("${item.image}")`,
-                    }}
+                    style={{ backgroundImage: `url("${item.image}")` }}
                   />
                 ) : null}
 
                 <div>
-                  {item.category ? (
-                    <span>
-                      {item.category}
-                    </span>
-                  ) : null}
-
-                  <h3>
-                    {item.title ||
-                      "Inspiration voyage"}
-                  </h3>
-
-                  {item.description ? (
-                    <p>{item.description}</p>
-                  ) : null}
+                  {item.category ? <span>{item.category}</span> : null}
+                  <h3>{item.title || "Inspiration voyage"}</h3>
+                  {item.description ? <p>{item.description}</p> : null}
                 </div>
               </article>
-            ))
-          ) : (
-            <div className="public-site-empty-premium">
-              <strong>
-                De nouvelles inspirations seront bientôt publiées.
-              </strong>
-            </div>
-          )}
-        </div>
+            ))}
+          </div>
+        ) : null}
       </div>
     </section>
   );
