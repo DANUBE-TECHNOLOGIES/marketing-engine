@@ -56,9 +56,7 @@ async function generateInspiration(formData) {
     .filter(Boolean)
     .slice(0, 20);
 
-  if (!topic) {
-    throw new Error("Le sujet ou la destination est obligatoire.");
-  }
+  if (!topic) throw new Error("Le sujet ou la destination est obligatoire.");
 
   await api("/ai-content/generate", {
     method: "POST",
@@ -71,6 +69,22 @@ async function generateInspiration(formData) {
       agencyName: "Mondescale Voyages",
       tone: "expert, chaleureux, inspirant et rassurant",
       requestedBy: "editorial-content-cockpit",
+    }),
+  });
+
+  revalidatePath(COCKPIT_PATH);
+}
+
+async function updateContent(contentId, formData) {
+  "use server";
+
+  await requireRole(["admin", "manager"]);
+
+  await api(`/ai-content/contents/${encodeURIComponent(contentId)}`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      title: String(formData.get("title") || "").trim(),
+      excerpt: String(formData.get("excerpt") || "").trim(),
     }),
   });
 
@@ -99,33 +113,24 @@ async function unpublishContent(contentId) {
 
 function statusClasses(status) {
   switch (String(status || "").toLowerCase()) {
-    case "published":
-      return "bg-emerald-100 text-emerald-800";
-    case "review":
-      return "bg-amber-100 text-amber-800";
-    case "draft":
-      return "bg-slate-100 text-slate-700";
-    default:
-      return "bg-gray-100 text-gray-700";
+    case "published": return "bg-emerald-100 text-emerald-800";
+    case "review": return "bg-amber-100 text-amber-800";
+    case "draft": return "bg-slate-100 text-slate-700";
+    default: return "bg-gray-100 text-gray-700";
   }
 }
 
 function statusLabel(status) {
   switch (String(status || "").toLowerCase()) {
-    case "published":
-      return "Publié";
-    case "review":
-      return "À valider";
-    case "draft":
-      return "Brouillon";
-    default:
-      return status || "Inconnu";
+    case "published": return "Publié";
+    case "review": return "À valider";
+    case "draft": return "Brouillon";
+    default: return status || "Inconnu";
   }
 }
 
 function formatDate(value) {
   if (!value) return "—";
-
   try {
     return new Intl.DateTimeFormat("fr-FR", {
       dateStyle: "medium",
@@ -140,13 +145,10 @@ function bodyPreview(content) {
   const body = content?.body;
   if (!body || typeof body !== "object" || Array.isArray(body)) return null;
 
-  const sections = Array.isArray(body.sections) ? body.sections : [];
-  const faq = Array.isArray(body.faq) ? body.faq : [];
-
   return {
     introduction: body.introduction || body.summary || "",
-    sections,
-    faq,
+    sections: Array.isArray(body.sections) ? body.sections : [],
+    faq: Array.isArray(body.faq) ? body.faq : [],
   };
 }
 
@@ -163,7 +165,7 @@ export default async function EditorialContentPage() {
       <div className="mx-auto max-w-7xl">
         <PageHeader
           title="Studio éditorial Inspirations"
-          subtitle="Générez, contrôlez et publiez les contenus qui alimentent automatiquement les mini-sites Mondescale."
+          subtitle="Générez, contrôlez, corrigez et publiez les contenus qui alimentent automatiquement les mini-sites Mondescale."
           action={
             <div className="flex flex-wrap gap-2">
               <ButtonLink href="/website-builder">Website Designer</ButtonLink>
@@ -190,9 +192,7 @@ export default async function EditorialContentPage() {
 
         <section className="mb-8 rounded-3xl border bg-white p-6 shadow-sm">
           <div className="mb-5">
-            <p className="text-xs font-bold uppercase tracking-[.18em] text-blue-700">
-              Nouvelle inspiration
-            </p>
+            <p className="text-xs font-bold uppercase tracking-[.18em] text-blue-700">Nouvelle inspiration</p>
             <h2 className="mt-2 text-2xl font-bold">Créer un contenu voyage</h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
               Le contenu généré arrive d’abord en validation. Il ne peut apparaître sur aucun mini-site tant que vous n’avez pas cliqué sur Publier.
@@ -202,47 +202,24 @@ export default async function EditorialContentPage() {
           <form action={generateInspiration} className="grid gap-4 lg:grid-cols-[2fr_1fr_2fr_auto] lg:items-end">
             <label className="grid gap-2 text-sm font-semibold">
               Sujet ou destination
-              <input
-                name="topic"
-                required
-                placeholder="Ex. Sicile hors saison"
-                className="min-h-11 rounded-xl border border-slate-300 px-3 font-normal outline-none focus:border-blue-500"
-              />
+              <input name="topic" required placeholder="Ex. Sicile hors saison" className="min-h-11 rounded-xl border border-slate-300 px-3 font-normal outline-none focus:border-blue-500" />
             </label>
-
             <label className="grid gap-2 text-sm font-semibold">
               Ville cible
-              <input
-                name="city"
-                placeholder="Ex. Bois-Colombes"
-                className="min-h-11 rounded-xl border border-slate-300 px-3 font-normal outline-none focus:border-blue-500"
-              />
+              <input name="city" placeholder="Ex. Bois-Colombes" className="min-h-11 rounded-xl border border-slate-300 px-3 font-normal outline-none focus:border-blue-500" />
             </label>
-
             <label className="grid gap-2 text-sm font-semibold">
               Mots-clés complémentaires
-              <input
-                name="keywords"
-                placeholder="voyage, conseil, séjour, départ Paris"
-                className="min-h-11 rounded-xl border border-slate-300 px-3 font-normal outline-none focus:border-blue-500"
-              />
+              <input name="keywords" placeholder="voyage, conseil, séjour, départ Paris" className="min-h-11 rounded-xl border border-slate-300 px-3 font-normal outline-none focus:border-blue-500" />
             </label>
-
-            <button
-              type="submit"
-              className="min-h-11 rounded-xl bg-slate-950 px-5 text-sm font-bold text-white transition hover:bg-blue-800"
-            >
-              Générer
-            </button>
+            <button type="submit" className="min-h-11 rounded-xl bg-slate-950 px-5 text-sm font-bold text-white transition hover:bg-blue-800">Générer</button>
           </form>
         </section>
 
         <section className="rounded-3xl border bg-white p-6 shadow-sm">
           <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[.18em] text-blue-700">
-                Workflow éditorial
-              </p>
+              <p className="text-xs font-bold uppercase tracking-[.18em] text-blue-700">Workflow éditorial</p>
               <h2 className="mt-2 text-2xl font-bold">Contenus générés</h2>
             </div>
             <p className="text-sm text-slate-500">{contents.length} contenu(s)</p>
@@ -251,9 +228,7 @@ export default async function EditorialContentPage() {
           {!contents.length ? (
             <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center">
               <strong className="block text-lg">Aucune inspiration pour le moment</strong>
-              <p className="mt-2 text-sm text-slate-600">
-                Générez le premier article ci-dessus. Après validation et publication, les blocs Inspirations configurés en mode automatique pourront l’afficher.
-              </p>
+              <p className="mt-2 text-sm text-slate-600">Générez le premier article ci-dessus. Après validation et publication, les blocs Inspirations configurés en mode automatique pourront l’afficher.</p>
             </div>
           ) : (
             <div className="grid gap-5">
@@ -261,29 +236,20 @@ export default async function EditorialContentPage() {
                 const preview = bodyPreview(content);
                 const isPublished = content.status === "published";
                 const canPublish = ["review", "draft", "approved"].includes(content.status);
+                const canEdit = canPublish && !content.campaignId;
 
                 return (
                   <article key={content.id} className="rounded-2xl border border-slate-200 p-5">
                     <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
-                      <div className="min-w-0 max-w-4xl">
+                      <div className="min-w-0 max-w-4xl flex-1">
                         <div className="mb-3 flex flex-wrap items-center gap-2">
-                          <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusClasses(content.status)}`}>
-                            {statusLabel(content.status)}
-                          </span>
-                          <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
-                            {content.channel}
-                          </span>
-                          {Number.isFinite(content.qualityScore) ? (
-                            <span className="text-xs font-semibold text-slate-500">
-                              Qualité {content.qualityScore}/100
-                            </span>
-                          ) : null}
+                          <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${statusClasses(content.status)}`}>{statusLabel(content.status)}</span>
+                          <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">{content.channel}</span>
+                          {Number.isFinite(content.qualityScore) ? <span className="text-xs font-semibold text-slate-500">Qualité {content.qualityScore}/100</span> : null}
                         </div>
 
                         <h3 className="text-xl font-bold leading-tight">{content.title}</h3>
-                        {content.excerpt ? (
-                          <p className="mt-2 text-sm leading-6 text-slate-600">{content.excerpt}</p>
-                        ) : null}
+                        {content.excerpt ? <p className="mt-2 text-sm leading-6 text-slate-600">{content.excerpt}</p> : null}
 
                         <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-500">
                           <span>Slug : {content.slug || "—"}</span>
@@ -292,11 +258,26 @@ export default async function EditorialContentPage() {
                           {content.publishedAt ? <span>Publié : {formatDate(content.publishedAt)}</span> : null}
                         </div>
 
+                        {canEdit ? (
+                          <details className="mt-4 rounded-xl border border-blue-100 bg-blue-50/50 p-4">
+                            <summary className="cursor-pointer text-sm font-bold text-blue-900">Corriger avant publication</summary>
+                            <form action={updateContent.bind(null, content.id)} className="mt-4 grid gap-4">
+                              <label className="grid gap-2 text-sm font-semibold text-slate-800">
+                                Titre éditorial
+                                <input name="title" required defaultValue={content.title || ""} maxLength={90} className="min-h-11 rounded-xl border border-slate-300 bg-white px-3 font-normal" />
+                              </label>
+                              <label className="grid gap-2 text-sm font-semibold text-slate-800">
+                                Extrait de la carte Inspiration
+                                <textarea name="excerpt" defaultValue={content.excerpt || ""} maxLength={240} rows={4} className="rounded-xl border border-slate-300 bg-white p-3 font-normal" />
+                              </label>
+                              <button type="submit" className="w-fit rounded-xl bg-blue-800 px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-900">Enregistrer les corrections</button>
+                            </form>
+                          </details>
+                        ) : null}
+
                         {preview ? (
                           <details className="mt-4 rounded-xl bg-slate-50 p-4">
-                            <summary className="cursor-pointer text-sm font-bold text-slate-800">
-                              Relire le contenu généré
-                            </summary>
+                            <summary className="cursor-pointer text-sm font-bold text-slate-800">Relire le contenu généré</summary>
                             <div className="mt-4 grid gap-4 text-sm leading-6 text-slate-700">
                               {preview.introduction ? <p>{preview.introduction}</p> : null}
                               {preview.sections.map((section, index) => (
@@ -305,11 +286,7 @@ export default async function EditorialContentPage() {
                                   <p>{section.text || section.content || section.body || ""}</p>
                                 </section>
                               ))}
-                              {preview.faq.length ? (
-                                <div>
-                                  <strong>FAQ générée : {preview.faq.length} question(s)</strong>
-                                </div>
-                              ) : null}
+                              {preview.faq.length ? <div><strong>FAQ générée : {preview.faq.length} question(s)</strong></div> : null}
                             </div>
                           </details>
                         ) : null}
@@ -318,23 +295,12 @@ export default async function EditorialContentPage() {
                       <div className="flex shrink-0 flex-wrap gap-2">
                         {canPublish ? (
                           <form action={publishContent.bind(null, content.id)}>
-                            <button
-                              type="submit"
-                              className="rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-800"
-                            >
-                              Publier
-                            </button>
+                            <button type="submit" className="rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-800">Publier</button>
                           </form>
                         ) : null}
-
                         {isPublished ? (
                           <form action={unpublishContent.bind(null, content.id)}>
-                            <button
-                              type="submit"
-                              className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50"
-                            >
-                              Dépublier
-                            </button>
+                            <button type="submit" className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50">Dépublier</button>
                           </form>
                         ) : null}
                       </div>
