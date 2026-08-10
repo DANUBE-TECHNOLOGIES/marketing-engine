@@ -98,6 +98,31 @@ function buildOpeningHoursSpecification(
   );
 }
 
+function isHttpUrl(
+  value
+) {
+  const normalized =
+    cleanText(value);
+
+  if (!normalized) {
+    return false;
+  }
+
+  try {
+    const parsed =
+      new URL(normalized);
+
+    return (
+      parsed.protocol ===
+        "http:" ||
+      parsed.protocol ===
+        "https:"
+    );
+  } catch {
+    return false;
+  }
+}
+
 function buildSameAs(
   agency,
   site
@@ -131,7 +156,9 @@ function buildSameAs(
         .map(
           cleanText
         )
-        .filter(Boolean)
+        .filter(
+          isHttpUrl
+        )
     ),
   ];
 }
@@ -249,4 +276,5 @@ module.exports = {
   buildPostalAddress,
   buildSameAs,
   buildTravelAgency,
+  isHttpUrl,
 };
