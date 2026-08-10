@@ -124,21 +124,20 @@ function createSitePublicationRoutes(prisma, options = {}) {
   const repository =
     options.repository || new SitePublicationRepository({ prisma });
 
+  const backendOrigin =
+    process.env.SITE_PUBLICATION_BACKEND_ORIGIN ||
+    `http://127.0.0.1:${process.env.PORT || 4000}`;
+
   const readinessClient =
     options.readinessClient ||
     new SiteReadinessClient({
-      frontendOrigin:
-        process.env.SITE_PUBLICATION_FRONTEND_ORIGIN ||
-        process.env.FRONTEND_INTERNAL_URL ||
-        "http://frontend:3000",
+      backendOrigin,
     });
 
   const pagePublicationClient =
     options.pagePublicationClient ||
     new PagePublicationClient({
-      backendOrigin:
-        process.env.SITE_PUBLICATION_BACKEND_ORIGIN ||
-        `http://127.0.0.1:${process.env.PORT || 4000}`,
+      backendOrigin,
     });
 
   const historyStore =
