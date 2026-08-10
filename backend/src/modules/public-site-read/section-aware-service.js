@@ -36,25 +36,39 @@ function normalizeDesignerSection(section) {
   };
 }
 
-function normalizePublicPage(page) {
-  const designerSections = Array.isArray(page.sections)
-    ? page.sections
-        .filter((section) => publishedLike(section))
-        .map(normalizeDesignerSection)
-    : [];
+function normalizeV2Block(block) {
+  return {
+    ...normalizeBlock(block),
+    source: "page-block-v2",
+  };
+}
 
-  const legacyBlocks = Array.isArray(page.blocks)
+function normalizePublicPage(page) {
+  const v2Blocks = Array.isArray(page.blocks)
     ? page.blocks
         .filter((block) => {
           if (!block?.status) return true;
           return publishedLike(block);
         })
-        .map(normalizeBlock)
+        .map(normalizeV2Block)
     : [];
 
-  const blocks = designerSections.length
-    ? designerSections
-    : legacyBlocks;
+  const legacySections = Array.isArray(page.sections)
+    ? page.sections
+        .filter((section) => publishedLike(section))
+        .map(normalizeDesignerSection)
+    : [];
+
+  /*
+   * Website Designer V2 persiste dans PageBlock, qui porte le contrat
+   * riche (settings, SEO, visibilité, version). AgencySiteSection reste
+   * le fallback historique pour les pages n'ayant pas encore été sauvées
+   * avec V2. Dès qu'au moins un bloc V2 publié existe, il devient la source
+   * publique de vérité de la page.
+   */
+  const blocks = v2Blocks.length
+    ? v2Blocks
+    : legacySections;
 
   return {
     id: page.id,
@@ -68,9 +82,11 @@ function normalizePublicPage(page) {
     metaDescription: page.metaDescription ?? null,
     path: page.path ?? null,
     blocks,
-    contentSource: designerSections.length
-      ? "website-designer-sections"
-      : "legacy-page-blocks",
+    contentSource: v2Blocks.length
+      ? "website-designer-v2-blocks"
+      : legacySections.length
+        ? "agency-site-sections"
+        : "empty",
   };
 }
 
@@ -154,7 +170,7 @@ class SectionAwarePublicSiteReadService extends PublicSiteReadService {
     const canonicalBasePath = `/agence/${site.slug}`;
 
     return {
-      version: "1.1",
+      version: "1.2",
       site: {
         id: site.id,
         agencyId: site.agencyId,
@@ -189,5 +205,6 @@ class SectionAwarePublicSiteReadService extends PublicSiteReadService {
 module.exports = {
   SectionAwarePublicSiteReadService,
   normalizeDesignerSection,
+  normalizeV2Block,
   normalizePublicPage,
 };
