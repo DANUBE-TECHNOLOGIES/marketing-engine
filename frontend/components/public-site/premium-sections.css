@@ -1,0 +1,116 @@
+.public-site-team {
+  background: #fff;
+}
+
+.public-site-team .public-site-section-intro {
+  max-width: 720px;
+  margin-bottom: 34px;
+}
+
+.public-site-team-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.public-site-team-card {
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--public-text) 10%, transparent);
+  border-radius: 26px;
+  background: #fff;
+  box-shadow: 0 18px 46px rgba(7, 29, 48, 0.07);
+}
+
+.public-site-team-portrait {
+  aspect-ratio: 4 / 3;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 80% 15%, color-mix(in srgb, var(--public-accent) 18%, transparent), transparent 34%),
+    linear-gradient(135deg, color-mix(in srgb, var(--public-primary) 12%, #fff), #f7fafc);
+}
+
+.public-site-team-portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.public-site-team-portrait span {
+  display: grid;
+  place-items: center;
+  width: 92px;
+  height: 92px;
+  border-radius: 50%;
+  background: var(--public-primary);
+  color: #fff;
+  font-size: 2rem;
+  font-weight: 900;
+}
+
+.public-site-team-copy {
+  padding: 24px;
+}
+
+.public-site-team-copy h3 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.public-site-team-role {
+  margin: 7px 0 12px;
+  color: var(--public-primary);
+  font-size: .78rem;
+  font-weight: 850;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.public-site-team-copy > p:not(.public-site-team-role) {
+  margin: 0;
+  color: var(--public-muted);
+  line-height: 1.65;
+}
+
+.public-site-destination-grid,
+.public-site-editorial-grid {
+  margin-top: 34px;
+}
+
+.public-site-destination-card {
+  min-height: 390px;
+  border-radius: 28px;
+  background-color: color-mix(in srgb, var(--public-primary) 92%, #071d30);
+  background-size: cover;
+  background-position: center;
+  box-shadow: 0 20px 50px rgba(7, 29, 48, .12);
+  transition: transform .22s ease, box-shadow .22s ease;
+}
+
+.public-site-destination-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 28px 62px rgba(7, 29, 48, .16);
+}
+
+.public-site-editorial-card {
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 16px 44px rgba(7, 29, 48, .075);
+}
+
+@media (max-width: 1050px) {
+  .public-site-team-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .public-site-team-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .public-site-destination-card {
+    min-height: 320px;
+  }
+}
