@@ -13,9 +13,7 @@ function asObject(value) {
 
 function cleanReferences(value) {
   if (!Array.isArray(value)) return [];
-
   const seen = new Set();
-
   return value
     .map((entry) => String(entry || "").trim())
     .filter(Boolean)
@@ -28,11 +26,7 @@ function cleanReferences(value) {
 
 function normalizeLimit(value, fallback = 6) {
   const parsed = Number(value);
-
-  if (!Number.isFinite(parsed)) {
-    return fallback;
-  }
-
+  if (!Number.isFinite(parsed)) return fallback;
   return Math.max(1, Math.min(24, Math.trunc(parsed)));
 }
 
@@ -42,25 +36,14 @@ function blockType(block) {
 
 function isPublicBlock(block) {
   const status = String(block?.status || "").trim().toLowerCase();
-
   if (!status) return true;
-
-  return [
-    "published",
-    "publish",
-    "visible",
-    "live",
-    "online",
-    "active",
-  ].includes(status);
+  return ["published", "publish", "visible", "live", "online", "active"].includes(status);
 }
 
 function filterPublicBlocks(pages = []) {
   return pages.map((page) => ({
     ...page,
-    blocks: Array.isArray(page?.blocks)
-      ? page.blocks.filter(isPublicBlock)
-      : [],
+    blocks: Array.isArray(page?.blocks) ? page.blocks.filter(isPublicBlock) : [],
   }));
 }
 
@@ -89,39 +72,68 @@ function reviewCard(review) {
 
 const offerCard = toPublicOfferCard;
 
-function collectDestinationReferences(pages = []) {
+function destinationConfig(block) {
+  const content = asObject(block?.content);
+  const references = cleanReferences(content.destinationIds);
+  const source = String(
+    content.source ||
+      content.__dataSource ||
+      (references.length ? "manual" : "automatic")
+  ).trim().toLowerCase();
+  const selectionMode = String(
+    content.selectionMode ||
+      (references.length ? "manual" : "automatic")
+  ).trim().toLowerCase();
+
+  return {
+    content,
+    references,
+    source,
+    selectionMode,
+    limit: normalizeLimit(content.limit),
+  };
+}
+
+function collectDestinationPlan(pages = []) {
   const references = [];
   const seen = new Set();
+  let automaticLimit = 0;
 
   for (const page of pages) {
     for (const block of page?.blocks || []) {
       if (blockType(block) !== "destinations") continue;
-      const content = asObject(block.content);
+      const config = destinationConfig(block);
 
-      for (const reference of cleanReferences(content.destinationIds)) {
-        if (seen.has(reference)) continue;
-        seen.add(reference);
-        references.push(reference);
+      if (config.references.length && config.selectionMode !== "automatic") {
+        for (const reference of config.references) {
+          if (seen.has(reference)) continue;
+          seen.add(reference);
+          references.push(reference);
+        }
+        continue;
+      }
+
+      if (["travel-core", "catalog", "automatic", "auto"].includes(config.source) || config.selectionMode === "automatic") {
+        automaticLimit = Math.max(automaticLimit, config.limit);
       }
     }
   }
 
-  return references;
+  return { references, automaticLimit };
+}
+
+function collectDestinationReferences(pages = []) {
+  return collectDestinationPlan(pages).references;
 }
 
 function collectOfferReferences(pages = []) {
   const references = [];
   const seen = new Set();
-
   for (const page of pages) {
     for (const block of page?.blocks || []) {
       if (blockType(block) !== "offers") continue;
       const content = asObject(block.content);
-
-      if (String(content.source || "manual").toLowerCase() !== "manual") {
-        continue;
-      }
-
+      if (String(content.source || "manual").toLowerCase() !== "manual") continue;
       for (const reference of cleanReferences(content.offerIds)) {
         if (seen.has(reference)) continue;
         seen.add(reference);
@@ -129,25 +141,20 @@ function collectOfferReferences(pages = []) {
       }
     }
   }
-
   return references;
 }
 
 function automaticCampaignOfferLimit(pages = []) {
   let limit = 0;
-
   for (const page of pages) {
     for (const block of page?.blocks || []) {
       if (blockType(block) !== "offers") continue;
       const content = asObject(block.content);
       const source = String(content.source || "manual").toLowerCase();
-
       if (!["campaign", "automatic", "auto"].includes(source)) continue;
-
       limit = Math.max(limit, normalizeLimit(content.limit));
     }
   }
-
   return limit;
 }
 
@@ -155,82 +162,56 @@ function isGoogleReviewBlock(block) {
   const type = blockType(block);
   const content = asObject(block?.content);
   const settings = asObject(block?.settings);
-
   if (type === "testimonials") {
-    return (
-      String(content.source || "google").toLowerCase() === "google"
-    );
+    return String(content.source || "google").toLowerCase() === "google";
   }
-
   if (type === "reviews") {
     const source = String(
-      content.source ||
-      settings.__dataSource ||
-      settings.dataSource ||
-      "google-reviews"
+      content.source || settings.__dataSource || settings.dataSource || "google-reviews"
     ).toLowerCase();
-
-    return [
-      "google",
-      "google-reviews",
-    ].includes(source);
+    return ["google", "google-reviews"].includes(source);
   }
-
   return false;
 }
 
 function googleReviewLimit(pages = []) {
   let limit = 0;
-
   for (const page of pages) {
     for (const block of page?.blocks || []) {
       if (!isGoogleReviewBlock(block)) continue;
-
       const content = asObject(block.content);
-
-      limit = Math.max(
-        limit,
-        normalizeLimit(content.limit)
-      );
+      limit = Math.max(limit, normalizeLimit(content.limit));
     }
   }
-
   return limit;
 }
 
-async function loadPublishedDestinations({ prisma, tenantId, references }) {
-  if (!prisma?.destination || !tenantId || !references.length) return [];
+async function loadPublishedDestinations({ prisma, tenantId, references = [], limit = 0 }) {
+  const ids = cleanReferences(references);
+  if (!prisma?.destination || !tenantId || (!ids.length && !limit)) return [];
 
   return prisma.destination.findMany({
     where: {
       tenantId,
       status: "published",
-      OR: [
-        { id: { in: references } },
-        { slug: { in: references } },
-      ],
+      ...(ids.length
+        ? {
+            OR: [
+              { id: { in: ids } },
+              { slug: { in: ids } },
+            ],
+          }
+        : {}),
     },
+    orderBy: { name: "asc" },
+    take: ids.length ? Math.min(ids.length, 100) : normalizeLimit(limit),
   });
 }
 
-async function loadApprovedCampaignOffers({
-  prisma,
-  tenantId,
-  agencyId,
-  references = [],
-  limit = 24,
-}) {
+async function loadApprovedCampaignOffers({ prisma, tenantId, agencyId, references = [], limit = 24 }) {
   const numericAgencyId = Number(agencyId);
   const ids = cleanReferences(references);
-
-  if (
-    !prisma?.campaignAsset ||
-    !tenantId ||
-    !Number.isInteger(numericAgencyId) ||
-    (!ids.length && !limit)
-  ) {
-    return [];
-  }
+  if (!prisma?.campaignAsset || !tenantId || !Number.isInteger(numericAgencyId) || (!ids.length && !limit)) return [];
 
   return prisma.campaignAsset.findMany({
     where: {
@@ -239,95 +220,71 @@ async function loadApprovedCampaignOffers({
       type: { in: [...OFFER_ASSET_TYPES] },
       campaign: {
         tenantId,
-        agencies: {
-          some: {
-            agencyId: numericAgencyId,
-          },
-        },
+        agencies: { some: { agencyId: numericAgencyId } },
       },
     },
-    orderBy: [
-      { updatedAt: "desc" },
-      { createdAt: "desc" },
-    ],
-    take: ids.length
-      ? Math.min(ids.length, 24)
-      : normalizeLimit(limit),
+    orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+    take: ids.length ? Math.min(ids.length, 24) : normalizeLimit(limit),
   });
 }
 
 async function loadGoogleReviews({ prisma, agencyId, limit }) {
   if (!prisma?.googleReview || !agencyId || !limit) return [];
-
   return prisma.googleReview.findMany({
     where: {
       agencyId,
       comment: { not: null },
       publishedAt: { not: null },
     },
-    orderBy: [
-      { publishedAt: "desc" },
-      { createdAt: "desc" },
-    ],
+    orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
     take: limit,
   });
 }
 
-function hydrateDestinationBlocks(pages, destinations) {
+function hydrateDestinationBlocks(pages, manualDestinations = [], automaticDestinations = []) {
   const byReference = new Map();
-
-  for (const destination of destinations) {
-    byReference.set(destination.id, destination);
-    byReference.set(destination.slug, destination);
+  for (const destination of manualDestinations) {
+    byReference.set(String(destination.id), destination);
+    byReference.set(String(destination.slug), destination);
   }
+  const automaticCards = automaticDestinations.map(destinationCard);
 
   return pages.map((page) => ({
     ...page,
     blocks: (page.blocks || []).map((block) => {
       if (blockType(block) !== "destinations") return block;
+      const config = destinationConfig(block);
 
-      const content = asObject(block.content);
-      const references = cleanReferences(content.destinationIds);
-      if (!references.length) return block;
-
-      const resolved = references
-        .map((reference) => byReference.get(reference))
-        .filter(Boolean)
-        .slice(0, normalizeLimit(content.limit))
-        .map(destinationCard);
+      const resolved = config.references.length && config.selectionMode !== "automatic"
+        ? config.references
+            .map((reference) => byReference.get(String(reference)))
+            .filter(Boolean)
+            .slice(0, config.limit)
+            .map(destinationCard)
+        : automaticCards.slice(0, config.limit);
 
       return {
         ...block,
         content: {
-          ...content,
+          ...config.content,
           destinations: resolved,
+          items: resolved,
         },
       };
     }),
   }));
 }
 
-function hydrateOfferBlocks(
-  pages,
-  manualAssets = [],
-  automaticAssets = []
-) {
-  const manualById = new Map(
-    manualAssets.map((asset) => [asset.id, asset])
-  );
-  const automaticCards = automaticAssets
-    .map(offerCard)
-    .filter(Boolean);
-
+function hydrateOfferBlocks(pages, manualAssets = [], automaticAssets = []) {
+  const manualById = new Map(manualAssets.map((asset) => [asset.id, asset]));
+  const automaticCards = automaticAssets.map(offerCard).filter(Boolean);
   return pages.map((page) => ({
     ...page,
     blocks: (page.blocks || []).map((block) => {
       if (blockType(block) !== "offers") return block;
-
       const content = asObject(block.content);
       const source = String(content.source || "manual").toLowerCase();
       const limit = normalizeLimit(content.limit);
-
       const offers = ["campaign", "automatic", "auto"].includes(source)
         ? automaticCards.slice(0, limit)
         : cleanReferences(content.offerIds)
@@ -336,30 +293,20 @@ function hydrateOfferBlocks(
             .map(offerCard)
             .filter(Boolean)
             .slice(0, limit);
-
-      return {
-        ...block,
-        content: {
-          ...content,
-          offers,
-        },
-      };
+      return { ...block, content: { ...content, offers } };
     }),
   }));
 }
 
 function hydrateGoogleReviewBlocks(pages, reviews) {
   const items = reviews.map(reviewCard);
-
   return pages.map((page) => ({
     ...page,
     blocks: (page.blocks || []).map((block) => {
       if (!isGoogleReviewBlock(block)) return block;
-
       const content = asObject(block.content);
       const limit = normalizeLimit(content.limit);
       const type = blockType(block);
-
       if (type === "reviews") {
         return {
           ...block,
@@ -370,85 +317,60 @@ function hydrateGoogleReviewBlocks(pages, reviews) {
           },
         };
       }
-
-      return {
-        ...block,
-        content: {
-          ...content,
-          items: items.slice(0, limit),
-        },
-      };
+      return { ...block, content: { ...content, items: items.slice(0, limit) } };
     }),
   }));
 }
 
-async function hydratePublicDynamicBlocks({
-  prisma,
-  tenantId,
-  agencyId,
-  pages = [],
-  includeUnpublishedBlocks = false,
-} = {}) {
+async function hydratePublicDynamicBlocks({ prisma, tenantId, agencyId, pages = [], includeUnpublishedBlocks = false } = {}) {
   if (!Array.isArray(pages) || !pages.length) return [];
 
-  const sourcePages = includeUnpublishedBlocks
-    ? pages
-    : filterPublicBlocks(pages);
-
-  const destinationReferences = collectDestinationReferences(sourcePages);
+  const sourcePages = includeUnpublishedBlocks ? pages : filterPublicBlocks(pages);
+  const destinationPlan = collectDestinationPlan(sourcePages);
   const offerReferences = collectOfferReferences(sourcePages);
   const automaticOfferLimit = automaticCampaignOfferLimit(sourcePages);
   const reviewLimit = googleReviewLimit(sourcePages);
 
-  if (
-    !destinationReferences.length &&
-    !offerReferences.length &&
-    !automaticOfferLimit &&
-    !reviewLimit
-  ) {
+  if (!destinationPlan.references.length && !destinationPlan.automaticLimit && !offerReferences.length && !automaticOfferLimit && !reviewLimit) {
     return sourcePages;
   }
 
-  const [destinations, manualOffers, automaticOffers, reviews] =
-    await Promise.all([
-      loadPublishedDestinations({
-        prisma,
-        tenantId,
-        references: destinationReferences,
-      }),
-      loadApprovedCampaignOffers({
-        prisma,
-        tenantId,
-        agencyId,
-        references: offerReferences,
-        limit: offerReferences.length,
-      }),
-      automaticOfferLimit
-        ? loadApprovedCampaignOffers({
-            prisma,
-            tenantId,
-            agencyId,
-            limit: automaticOfferLimit,
-          })
-        : [],
-      loadGoogleReviews({
-        prisma,
-        agencyId,
-        limit: reviewLimit,
-      }),
-    ]);
+  const [manualDestinations, automaticDestinations, manualOffers, automaticOffers, reviews] = await Promise.all([
+    loadPublishedDestinations({
+      prisma,
+      tenantId,
+      references: destinationPlan.references,
+      limit: destinationPlan.references.length,
+    }),
+    destinationPlan.automaticLimit
+      ? loadPublishedDestinations({
+          prisma,
+          tenantId,
+          limit: destinationPlan.automaticLimit,
+        })
+      : [],
+    loadApprovedCampaignOffers({
+      prisma,
+      tenantId,
+      agencyId,
+      references: offerReferences,
+      limit: offerReferences.length,
+    }),
+    automaticOfferLimit
+      ? loadApprovedCampaignOffers({ prisma, tenantId, agencyId, limit: automaticOfferLimit })
+      : [],
+    loadGoogleReviews({ prisma, agencyId, limit: reviewLimit }),
+  ]);
 
-  const withDestinations = destinationReferences.length
-    ? hydrateDestinationBlocks(sourcePages, destinations)
+  const withDestinations = destinationPlan.references.length || destinationPlan.automaticLimit
+    ? hydrateDestinationBlocks(sourcePages, manualDestinations, automaticDestinations)
     : sourcePages;
 
   const withOffers = offerReferences.length || automaticOfferLimit
     ? hydrateOfferBlocks(withDestinations, manualOffers, automaticOffers)
     : withDestinations;
 
-  return reviewLimit
-    ? hydrateGoogleReviewBlocks(withOffers, reviews)
-    : withOffers;
+  return reviewLimit ? hydrateGoogleReviewBlocks(withOffers, reviews) : withOffers;
 }
 
 module.exports = {
@@ -461,6 +383,8 @@ module.exports = {
   destinationCard,
   reviewCard,
   offerCard,
+  destinationConfig,
+  collectDestinationPlan,
   collectDestinationReferences,
   collectOfferReferences,
   automaticCampaignOfferLimit,
