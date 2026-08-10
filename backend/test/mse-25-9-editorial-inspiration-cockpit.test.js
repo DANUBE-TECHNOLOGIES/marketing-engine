@@ -6,6 +6,10 @@ const path = require("node:path");
 const test = require("node:test");
 
 const AiContentRepository = require("../src/modules/ai-content/repository");
+const {
+  validateEditorialUpdate,
+  assertEditableEditorialContent,
+} = require("../src/modules/ai-content/editorial-update");
 
 const ROOT = path.resolve(__dirname, "../..");
 
@@ -55,12 +59,45 @@ test("MSE-25.9 published editorial catalog requires an actual publication timest
   assert.equal(captured.where.channel, "article");
 });
 
+test("MSE-25.9 validates editorial copy corrections", () => {
+  const patch = validateEditorialUpdate({
+    title: `  ${"T".repeat(100)}  `,
+    excerpt: `  ${"E".repeat(260)}  `,
+  });
+
+  assert.equal(patch.title.length, 90);
+  assert.equal(patch.excerpt.length, 240);
+  assert.throws(
+    () => validateEditorialUpdate({ title: "   " }),
+    (error) => error.code === "AI_CONTENT_TITLE_REQUIRED"
+  );
+});
+
+test("MSE-25.9 only edits standalone unpublished editorial content", () => {
+  assert.doesNotThrow(() =>
+    assertEditableEditorialContent({ status: "review", campaignId: null })
+  );
+
+  assert.throws(
+    () => assertEditableEditorialContent({ status: "published", campaignId: null }),
+    (error) => error.code === "AI_CONTENT_UNPUBLISH_BEFORE_EDIT"
+  );
+
+  assert.throws(
+    () => assertEditableEditorialContent({ status: "review", campaignId: "campaign-1" }),
+    (error) => error.code === "AI_CONTENT_CAMPAIGN_REVIEW_REQUIRED"
+  );
+});
+
 test("MSE-25.9 exposes editorial review endpoints without auto-publishing generation", () => {
   const routes = read("backend/src/modules/ai-content/routes.js");
   const service = read("backend/src/modules/ai-content/service.js");
 
   assert.match(routes, /router\.get\(["']\/ai-content\/contents["']/);
   assert.match(routes, /router\.get\(["']\/ai-content\/contents\/:id["']/);
+  assert.match(routes, /router\.patch\(["']\/ai-content\/contents\/:id["']/);
+  assert.match(routes, /assertEditableEditorialContent/);
+  assert.match(routes, /validateEditorialUpdate/);
   assert.match(routes, /contents\/:id\/publish/);
   assert.match(routes, /contents\/:id\/unpublish/);
 
@@ -75,6 +112,10 @@ test("MSE-25.9 frontend provides a human-gated inspiration cockpit", () => {
 
   assert.match(cockpit, /Studio éditorial Inspirations/);
   assert.match(cockpit, /generateInspiration/);
+  assert.match(cockpit, /updateContent/);
+  assert.match(cockpit, /method:\s*["']PATCH["']/);
+  assert.match(cockpit, /Corriger avant publication/);
+  assert.match(cockpit, /Enregistrer les corrections/);
   assert.match(cockpit, /publishContent/);
   assert.match(cockpit, /unpublishContent/);
   assert.match(cockpit, /Le contenu généré arrive d’abord en validation/);
