@@ -1,6 +1,10 @@
 "use strict";
 const express = require("express");
 const { AiContentService } = require("./service");
+const {
+  validateEditorialUpdate,
+  assertEditableEditorialContent,
+} = require("./editorial-update");
 
 module.exports = ({ prisma }) => {
   const router = express.Router();
@@ -18,6 +22,15 @@ module.exports = ({ prisma }) => {
   });
   router.get("/ai-content/contents/:id", async (req, res, next) => {
     try { res.json(await service(req).getContent(req.params.id)); } catch (e) { next(e); }
+  });
+  router.patch("/ai-content/contents/:id", async (req, res, next) => {
+    try {
+      const current = service(req);
+      const content = await current.getContent(req.params.id);
+      assertEditableEditorialContent(content);
+      const patch = validateEditorialUpdate(req.body);
+      res.json(await current.repo.updateContent(content.id, patch));
+    } catch (e) { next(e); }
   });
   router.get("/ai-content/jobs", async (req, res, next) => {
     try { res.json(await service(req).list(req.query)); } catch (e) { next(e); }
