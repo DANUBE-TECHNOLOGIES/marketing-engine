@@ -19,11 +19,14 @@ const ALLOWED_METHODS =
     "POST",
   ]);
 
-function requestPath(
+async function requestPath(
   context
 ) {
+  const parameters =
+    await context?.params;
+
   const parts =
-    context?.params?.path ||
+    parameters?.path ||
     [];
 
   if (
@@ -129,7 +132,7 @@ async function proxy(
   }
 
   const path =
-    requestPath(
+    await requestPath(
       context
     );
 
