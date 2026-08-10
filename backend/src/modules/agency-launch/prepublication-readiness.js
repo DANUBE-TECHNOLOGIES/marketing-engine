@@ -52,19 +52,44 @@ function pageByKey(pages, key) {
   );
 }
 
+function designerContentState(page) {
+  const sections = Array.isArray(page?.sections) ? page.sections : [];
+  const visibleSections = sections.filter(
+    (section) => String(section?.status || "").toLowerCase() !== "hidden"
+  );
+  const publishedSections = visibleSections.filter(isPublished);
+  const pagePublished = isPublished(page);
+
+  const coherent =
+    !pagePublished ||
+    sections.length === 0 ||
+    publishedSections.length > 0;
+
+  return {
+    hasDesignerSections: sections.length > 0,
+    totalSections: sections.length,
+    visibleSections: visibleSections.length,
+    publishedSections: publishedSections.length,
+    coherent,
+  };
+}
+
 function pagePresenceCheck(pages, definition, required) {
   const page = pageByKey(pages, definition.key);
+  const contentState = designerContentState(page);
+  const exists = Boolean(page);
 
   return {
     code: `PAGE_${definition.key.toUpperCase().replace(/-/g, "_")}`,
     label: definition.label,
     required,
-    exists: Boolean(page),
+    exists,
     published: isPublished(page),
-    passed: Boolean(page),
+    passed: exists && contentState.coherent,
     pageId: page?.id || null,
     slug: definition.key,
     actualSlug: page?.slug ?? null,
+    contentState,
   };
 }
 
@@ -300,6 +325,17 @@ class PrepublicationReadinessService {
                 seoTitle: true,
                 metaDescription: true,
                 displayOrder: true,
+                sections: {
+                  orderBy: {
+                    displayOrder: "asc",
+                  },
+                  select: {
+                    id: true,
+                    sectionType: true,
+                    status: true,
+                    displayOrder: true,
+                  },
+                },
               },
             },
           },
@@ -333,7 +369,7 @@ class PrepublicationReadinessService {
     const launchScore = score(checks);
 
     return {
-      version: "1.2",
+      version: "1.3",
       mode: "prepublication",
       agency: {
         id: agency.id,
@@ -374,6 +410,7 @@ module.exports = {
   PrepublicationReadinessService,
   canonicalPageKey,
   pageByKey,
+  designerContentState,
   pagePresenceCheck,
   identityCheck,
   contentCheck,
