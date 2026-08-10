@@ -27,11 +27,12 @@ test("MSE-25.8 proxies imported brand assets for browser previews", () => {
 test("MSE-25.8 persists legal profile through the canonical backend contract", () => {
   const file = source("frontend/lib/brand-studio/legal-api.js");
   assert.match(file, /payload\?\.resolved/);
-  assert.match(file, /publisherName:/);
-  assert.match(file, /publisherLegalForm:/);
-  assert.match(file, /publisherRegistration:/);
+  assert.match(file, /legalName:/);
+  assert.match(file, /legalForm:/);
+  assert.match(file, /registrationNumber:/);
   assert.match(file, /legalNoticeContent:/);
   assert.match(file, /privacyPolicyContent:/);
+  assert.match(file, /brandStudio:/);
 });
 
 test("MSE-25.8 resolves asynchronous Next route params for publication", () => {
