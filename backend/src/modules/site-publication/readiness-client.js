@@ -4,11 +4,19 @@ const {
   sitePublicationError,
 } = require("./errors");
 
+function deploymentTenantSlug() {
+  return String(
+    process.env.TENANT_SLUG ||
+    process.env.NEXT_PUBLIC_TENANT_SLUG ||
+    "mondescale"
+  ).trim();
+}
+
 function forwardedHeaders(source = {}) {
   const headers = {
     Accept: "application/json",
     "Content-Type": "application/json",
-    "x-tenant-slug": source["x-tenant-slug"] || "mondescale",
+    "x-tenant-slug": source["x-tenant-slug"] || deploymentTenantSlug(),
   };
 
   for (const name of [
@@ -70,12 +78,15 @@ class SiteReadinessClient {
   constructor({
     backendOrigin,
     frontendOrigin,
+    readinessPathPrefix = "/api/agency-launch",
   } = {}) {
     this.backendOrigin = String(
       backendOrigin ||
       frontendOrigin ||
       `http://127.0.0.1:${process.env.PORT || 4000}`
     ).replace(/\/+$/, "");
+    this.readinessPathPrefix = `/${String(readinessPathPrefix || "api/agency-launch")
+      .replace(/^\/+|\/+$/g, "")}`;
   }
 
   async check({
@@ -86,7 +97,7 @@ class SiteReadinessClient {
 
     try {
       response = await fetch(
-        `${this.backendOrigin}/agencies/${encodeURIComponent(String(agencyId))}/readiness`,
+        `${this.backendOrigin}${this.readinessPathPrefix}/agencies/${encodeURIComponent(String(agencyId))}/readiness`,
         {
           method: "GET",
           headers: forwardedHeaders(headers),
@@ -163,4 +174,5 @@ module.exports = {
   SiteReadinessClient,
   forwardedHeaders,
   normalizeLaunchReadiness,
+  deploymentTenantSlug,
 };
