@@ -4,8 +4,9 @@ import { publicSiteApi } from "../../../lib/public-site-api";
 import { getPublicBrandTheme } from "../../../lib/public-brand-api";
 import PublicSiteHeader from "../../../components/public-site/PublicSiteHeader";
 import PublicSiteFooter from "../../../components/public-site/PublicSiteFooter";
-import MiniSiteStructuredData from "../../../components/public-site/MiniSiteStructuredData";
 import PublicBrandLegalRuntime from "../../../components/public-site/PublicBrandLegalRuntime";
+import JsonLd from "../../../components/JsonLd";
+import { buildWebSiteSchema } from "../../../lib/seo/json-ld";
 import {
   fetchPublicBrandLegalRuntime,
   runtimeBrandAssets,
@@ -50,6 +51,8 @@ export default async function PublicAgencySiteLayout({ children, params }) {
 
   return (
     <PublicBrandLegalRuntime runtime={publicBrandLegalRuntime}>
+      <JsonLd data={buildWebSiteSchema()} />
+
       <div
         className="public-site-shell"
         style={Object.keys(cssVariables).length ? cssVariables : undefined}
@@ -62,10 +65,7 @@ export default async function PublicAgencySiteLayout({ children, params }) {
           hours={hours}
         />
 
-        <main>
-          <MiniSiteStructuredData params={params} />
-          {children}
-        </main>
+        <main>{children}</main>
 
         <PublicSiteFooter site={site} />
       </div>
