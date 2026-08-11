@@ -51,6 +51,29 @@ class AiContentRepository {
     });
   }
 
+  getPublishedAgencySiteByAgencyId(agencyId) {
+    const id = Number(agencyId);
+    if (!Number.isSafeInteger(id) || id <= 0) return null;
+
+    return this.prisma.agencySite.findFirst({
+      where: {
+        tenantId: this.tenantId,
+        agencyId: id,
+        OR: [
+          { status: "published" },
+          { publishedAt: { not: null } },
+        ],
+      },
+      select: {
+        id: true,
+        agencyId: true,
+        slug: true,
+        status: true,
+        publishedAt: true,
+      },
+    });
+  }
+
   async getPublishedContentBySlug(slug, filters = {}) {
     const normalized = String(slug || "").trim();
     if (!normalized) return null;
