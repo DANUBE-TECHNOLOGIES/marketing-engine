@@ -44,25 +44,25 @@ export default function PublicSiteFooter({ site }) {
         <div>
           <h3>Votre agence</h3>
 
-          {agency.address ? (
-            <p>
-              {agency.address}
-              <br />
-              {agency.postalCode} {agency.city}
-            </p>
-          ) : null}
+          <address className="public-site-footer-address">
+            <strong>{site.name}</strong>
 
-          {agency.phone ? (
-            <p>
+            {agency.address ? (
+              <span>
+                {agency.address}
+                <br />
+                {agency.postalCode} {agency.city}
+              </span>
+            ) : null}
+
+            {agency.phone ? (
               <a href={telephoneHref(agency.phone)}>{agency.phone}</a>
-            </p>
-          ) : null}
+            ) : null}
 
-          {agency.email ? (
-            <p>
+            {agency.email ? (
               <a href={`mailto:${agency.email}`}>{agency.email}</a>
-            </p>
-          ) : null}
+            ) : null}
+          </address>
         </div>
 
         <div>
