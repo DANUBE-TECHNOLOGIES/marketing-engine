@@ -3,8 +3,16 @@ import {
   getSectionTitle,
 } from "./helpers";
 
+function defaultFaqTitle(site) {
+  const city = String(site?.agency?.city || site?.city || "").trim();
+  return city
+    ? `Questions fréquentes sur votre agence à ${city}`
+    : "Questions fréquentes sur votre agence";
+}
+
 export default function FaqRenderer({
   section,
+  site,
 }) {
   const items = getItems(section, [
     "items",
@@ -18,7 +26,7 @@ export default function FaqRenderer({
         <h2>
           {getSectionTitle(
             section,
-            "Questions fréquentes"
+            defaultFaqTitle(site)
           )}
         </h2>
 
@@ -47,3 +55,7 @@ export default function FaqRenderer({
     </section>
   );
 }
+
+export {
+  defaultFaqTitle,
+};
