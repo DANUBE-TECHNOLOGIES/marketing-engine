@@ -130,13 +130,16 @@ export default function DestinationPage({ data }) {
   const { destination: d, site } = data;
   const sections = Array.isArray(d.sections) ? d.sections : [];
   const faqs = Array.isArray(d.faqs) ? d.faqs : [];
+  const siteRoot = site.basePath || `/agence/${encodeURIComponent(site.slug)}`;
+  const inspirationsPath = `${siteRoot.replace(/\/$/, "")}/inspiration`;
+  const contactPath = `${siteRoot.replace(/\/$/, "")}/contact`;
 
   const destinationSchema = buildDestinationSchema(data);
   const agencySchema = buildTravelAgencySchema(site);
   const breadcrumbSchema = buildBreadcrumbSchema([
     {
       name: "Accueil",
-      path: site.basePath,
+      path: siteRoot,
     },
     {
       name: d.name,
@@ -166,6 +169,12 @@ export default function DestinationPage({ data }) {
         }}
       >
         <div className={styles["de-shell"]}>
+          <nav aria-label="Fil d’Ariane">
+            <Link href={siteRoot}>Accueil de {site.name}</Link>
+            <span aria-hidden="true"> › </span>
+            <span>{d.name}</span>
+          </nav>
+
           <p className={styles["de-kicker"]}>
             {[d.country, d.region, d.type].filter(Boolean).join(" · ")}
           </p>
@@ -246,9 +255,17 @@ export default function DestinationPage({ data }) {
             vos envies, à votre rythme et à votre budget.
           </p>
 
-          <Link href={data.quotePath}>
-            Demander mon devis personnalisé
-          </Link>
+          <div className={styles["de-actions"]}>
+            <Link href={data.quotePath}>
+              Demander mon devis personnalisé
+            </Link>
+            <Link href={inspirationsPath}>
+              Voir les conseils et inspirations voyage
+            </Link>
+            <Link href={contactPath}>
+              Contacter {site.name}
+            </Link>
+          </div>
         </div>
       </section>
     </div>
