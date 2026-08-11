@@ -14,5 +14,11 @@ function signedHeaderActor(req={},env=process.env,now=Date.now()){
   return actor;
 }
 function trustedHeaderActor(req={},env=process.env){if(String(env.TRUST_IDENTITY_HEADERS||"").toLowerCase()!=="true")return null;const get=getter(req);return clean(get("x-auth-user")||get("x-forwarded-user")||get("x-user-email")||get("x-user"));}
-function requestActor(req={},env=process.env,now=Date.now()){return nativeActor(req)||signedHeaderActor(req,env,now)||trustedHeaderActor(req,env)||null;}
-module.exports={clean,getter,nativeActor,signedHeaderActor,trustedHeaderActor,requestActor};
+function requestActorContext(req={},env=process.env,now=Date.now()){
+  const native=nativeActor(req);if(native)return{actor:native,source:"native",verified:true};
+  const signed=signedHeaderActor(req,env,now);if(signed)return{actor:signed,source:"signed_proxy",verified:true};
+  const trusted=trustedHeaderActor(req,env);if(trusted)return{actor:trusted,source:"trusted_header",verified:false};
+  return{actor:null,source:"anonymous",verified:false};
+}
+function requestActor(req={},env=process.env,now=Date.now()){return requestActorContext(req,env,now).actor;}
+module.exports={clean,getter,nativeActor,signedHeaderActor,trustedHeaderActor,requestActorContext,requestActor};
