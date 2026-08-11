@@ -1,386 +1,182 @@
 "use strict";
 
 const {
+  contentIndexesForAgency,
+} = require("../ai-content/editorial-targeting");
+const {
   cleanText,
   normalizeSlug,
   pageUrl,
   siteUrl,
 } = require("./utils");
 
-const NOINDEX_SLUGS =
-  new Set([
-    "mentions-legales",
-    "confidentialite",
-  ]);
+const NOINDEX_SLUGS = new Set([
+  "mentions-legales",
+  "confidentialite",
+]);
 
-function isPublishedSite(
-  site
-) {
-  return Boolean(
-    site &&
-    (
-      site.status ===
-        "published" ||
-      site.publishedAt
-    )
-  );
+function isPublishedSite(site) {
+  return Boolean(site && (site.status === "published" || site.publishedAt));
 }
 
-function isPublishedPage(
-  page
-) {
-  if (!page) {
-    return false;
-  }
-
-  if (
-    page.published ===
-    true
-  ) {
-    return true;
-  }
-
-  if (
-    page.status ===
-    "published"
-  ) {
-    return true;
-  }
-
-  return Boolean(
-    page.publishedAt
-  );
+function isPublishedPage(page) {
+  if (!page) return false;
+  if (page.published === true) return true;
+  if (page.status === "published") return true;
+  return Boolean(page.publishedAt);
 }
 
-function shouldIndexPage(
-  page
-) {
-  const slug =
-    normalizeSlug(
-      page?.slug
-    );
-
-  if (
-    NOINDEX_SLUGS.has(
-      slug
-    )
-  ) {
-    return false;
-  }
-
-  return isPublishedPage(
-    page
-  );
+function shouldIndexPage(page) {
+  const slug = normalizeSlug(page?.slug);
+  if (NOINDEX_SLUGS.has(slug)) return false;
+  return isPublishedPage(page);
 }
 
-function normalizeDate(
-  value
-) {
-  if (!value) {
-    return null;
-  }
-
-  const date =
-    value instanceof Date
-      ? value
-      : new Date(value);
-
-  if (
-    Number.isNaN(
-      date.getTime()
-    )
-  ) {
-    return null;
-  }
-
-  return date
-    .toISOString();
+function normalizeDate(value) {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString();
 }
 
-function pagePriority(
-  slug
-) {
-  const normalized =
-    normalizeSlug(slug);
-
-  if (!normalized) {
-    return 1;
-  }
-
-  if (
-    [
-      "agence",
-      "services",
-      "destinations",
-      "contact",
-    ].includes(
-      normalized
-    )
-  ) {
-    return 0.8;
-  }
-
-  if (
-    [
-      "equipe",
-      "inspirations",
-      "engagements",
-      "partenaires",
-      "avis",
-    ].includes(
-      normalized
-    )
-  ) {
-    return 0.6;
-  }
-
+function pagePriority(slug) {
+  const normalized = normalizeSlug(slug);
+  if (!normalized) return 1;
+  if (["agence", "services", "destinations", "contact"].includes(normalized)) return 0.8;
+  if (["equipe", "inspirations", "engagements", "partenaires", "avis"].includes(normalized)) return 0.6;
   return 0.5;
 }
 
-function pageChangeFrequency(
-  slug
-) {
-  const normalized =
-    normalizeSlug(slug);
-
-  if (!normalized) {
-    return "weekly";
-  }
-
-  if (
-    [
-      "destinations",
-      "inspirations",
-      "avis",
-    ].includes(
-      normalized
-    )
-  ) {
-    return "weekly";
-  }
-
+function pageChangeFrequency(slug) {
+  const normalized = normalizeSlug(slug);
+  if (!normalized) return "weekly";
+  if (["destinations", "inspirations", "avis"].includes(normalized)) return "weekly";
   return "monthly";
 }
 
-function buildPublicSitemap({
-  sites,
-  publicOrigin,
-} = {}) {
+function inspirationUrl(publicOrigin, siteSlug, contentSlug) {
+  const origin = String(publicOrigin || "").replace(/\/+$/g, "");
+  return `${origin}/agence/${encodeURIComponent(siteSlug)}/inspiration/${encodeURIComponent(contentSlug)}`;
+}
+
+function buildPublicSitemap({ sites, inspirations, publicOrigin } = {}) {
   const entries = [];
   const excluded = [];
+  const publishedSitesByAgency = new Map();
 
-  for (
-    const site
-    of sites || []
-  ) {
-    if (
-      !isPublishedSite(
-        site
-      )
-    ) {
+  for (const site of sites || []) {
+    if (!isPublishedSite(site)) {
       excluded.push({
-        type:
-          "site",
-
-        siteId:
-          site.id,
-
-        siteSlug:
-          site.slug,
-
-        reason:
-          "site-not-published",
+        type: "site",
+        siteId: site.id,
+        siteSlug: site.slug,
+        reason: "site-not-published",
       });
-
       continue;
     }
 
-    const publishedPages =
-      (
-        site.pages ||
-        []
-      ).filter(
-        shouldIndexPage
-      );
+    const agencyId = site.agency?.id || site.agencyId;
+    if (agencyId !== undefined && agencyId !== null) {
+      publishedSitesByAgency.set(String(agencyId), site);
+    }
 
-    const homePage =
-      publishedPages.find(
-        (page) =>
-          normalizeSlug(
-            page.slug
-          ) === ""
-      );
+    const publishedPages = (site.pages || []).filter(shouldIndexPage);
+    const homePage = publishedPages.find((page) => normalizeSlug(page.slug) === "");
 
     entries.push({
-      url:
-        siteUrl(
-          publicOrigin,
-          site.slug
-        ),
-
-      lastModified:
-        normalizeDate(
-          homePage?.updatedAt ||
-          site.updatedAt ||
-          site.publishedAt
-        ),
-
-      changeFrequency:
-        "weekly",
-
-      priority:
-        1,
-
-      agencyId:
-        site.agency?.id ||
-        site.agencyId,
-
-      siteSlug:
-        site.slug,
-
-      pageSlug:
-        "",
+      url: siteUrl(publicOrigin, site.slug),
+      lastModified: normalizeDate(homePage?.updatedAt || site.updatedAt || site.publishedAt),
+      changeFrequency: "weekly",
+      priority: 1,
+      agencyId,
+      siteSlug: site.slug,
+      pageSlug: "",
     });
 
-    for (
-      const page
-      of site.pages || []
-    ) {
-      const slug =
-        normalizeSlug(
-          page.slug
-        );
+    for (const page of site.pages || []) {
+      const slug = normalizeSlug(page.slug);
+      if (!slug) continue;
 
-      if (!slug) {
-        continue;
-      }
-
-      if (
-        !shouldIndexPage(
-          page
-        )
-      ) {
+      if (!shouldIndexPage(page)) {
         excluded.push({
-          type:
-            "page",
-
-          siteId:
-            site.id,
-
-          siteSlug:
-            site.slug,
-
-          pageId:
-            page.id,
-
-          pageSlug:
-            slug,
-
-          reason:
-            NOINDEX_SLUGS.has(
-              slug
-            )
-              ? "noindex-page"
-              : "page-not-published",
+          type: "page",
+          siteId: site.id,
+          siteSlug: site.slug,
+          pageId: page.id,
+          pageSlug: slug,
+          reason: NOINDEX_SLUGS.has(slug) ? "noindex-page" : "page-not-published",
         });
-
         continue;
       }
 
       entries.push({
-        url:
-          pageUrl(
-            publicOrigin,
-            site.slug,
-            slug
-          ),
-
-        lastModified:
-          normalizeDate(
-            page.updatedAt ||
-            page.publishedAt ||
-            site.updatedAt ||
-            site.publishedAt
-          ),
-
-        changeFrequency:
-          pageChangeFrequency(
-            slug
-          ),
-
-        priority:
-          pagePriority(
-            slug
-          ),
-
-        agencyId:
-          site.agency?.id ||
-          site.agencyId,
-
-        siteSlug:
-          site.slug,
-
-        pageSlug:
-          slug,
+        url: pageUrl(publicOrigin, site.slug, slug),
+        lastModified: normalizeDate(page.updatedAt || page.publishedAt || site.updatedAt || site.publishedAt),
+        changeFrequency: pageChangeFrequency(slug),
+        priority: pagePriority(slug),
+        agencyId,
+        siteSlug: site.slug,
+        pageSlug: slug,
       });
     }
   }
 
-  const deduplicated =
-    [
-      ...new Map(
-        entries.map(
-          (entry) => [
-            cleanText(
-              entry.url
-            ),
-            entry,
-          ]
-        )
-      ).values(),
-    ].sort(
-      (
-        left,
-        right
-      ) =>
-        left.url.localeCompare(
-          right.url
-        )
-    );
+  for (const inspiration of inspirations || []) {
+    const slug = String(inspiration?.slug || "").trim();
+    if (!slug) {
+      excluded.push({ type: "inspiration", contentId: inspiration?.id, reason: "missing-slug" });
+      continue;
+    }
+
+    let indexed = false;
+    for (const [agencyId, site] of publishedSitesByAgency.entries()) {
+      if (!contentIndexesForAgency(inspiration, agencyId)) continue;
+
+      entries.push({
+        url: inspirationUrl(publicOrigin, site.slug, slug),
+        lastModified: normalizeDate(inspiration.updatedAt || inspiration.publishedAt || site.updatedAt),
+        changeFrequency: "monthly",
+        priority: 0.65,
+        agencyId: site.agency?.id || site.agencyId,
+        siteSlug: site.slug,
+        pageSlug: `inspiration/${slug}`,
+        contentId: inspiration.id,
+        contentSlug: slug,
+        type: "inspiration",
+      });
+      indexed = true;
+      break;
+    }
+
+    if (!indexed) {
+      excluded.push({
+        type: "inspiration",
+        contentId: inspiration.id,
+        contentSlug: slug,
+        reason: "no-canonical-agency",
+      });
+    }
+  }
+
+  const deduplicated = [
+    ...new Map(
+      entries.map((entry) => [cleanText(entry.url), entry])
+    ).values(),
+  ].sort((left, right) => left.url.localeCompare(right.url));
 
   return {
     publicOrigin,
-
-    generatedAt:
-      new Date()
-        .toISOString(),
-
+    generatedAt: new Date().toISOString(),
     summary: {
-      totalSites:
-        (sites || []).length,
-
-      publishedSites:
-        (
-          sites ||
-          []
-        ).filter(
-          isPublishedSite
-        ).length,
-
-      entryCount:
-        deduplicated.length,
-
-      excludedCount:
-        excluded.length,
-
-      duplicateCount:
-        entries.length -
-        deduplicated.length,
+      totalSites: (sites || []).length,
+      publishedSites: (sites || []).filter(isPublishedSite).length,
+      editorialContents: (inspirations || []).length,
+      indexedEditorialContents: deduplicated.filter((entry) => entry.type === "inspiration").length,
+      entryCount: deduplicated.length,
+      excludedCount: excluded.length,
+      duplicateCount: entries.length - deduplicated.length,
     },
-
-    entries:
-      deduplicated,
-
+    entries: deduplicated,
     excluded,
   };
 }
@@ -388,6 +184,7 @@ function buildPublicSitemap({
 module.exports = {
   NOINDEX_SLUGS,
   buildPublicSitemap,
+  inspirationUrl,
   isPublishedPage,
   isPublishedSite,
   pageChangeFrequency,
