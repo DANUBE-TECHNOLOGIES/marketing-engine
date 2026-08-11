@@ -1,6 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  fetchPageDetails,
+  fetchSite,
+} from "../../lib/page-builder-v2/page-builder-api";
+import { saveLocalDraft } from "../../lib/page-builder-v2/draft-storage";
+import { buildSeoDraftProposal } from "../../lib/page-builder-v2/seo-draft-proposal";
 
 const MODE_LABELS = {
   reinforce_existing: "Renforcer la page existante",
@@ -9,9 +15,12 @@ const MODE_LABELS = {
   monitor: "Surveillance SEO",
 };
 
-export default function SeoDesignerContext({ pageSlug, keyword, mode, brief }) {
+export default function SeoDesignerContext({ siteId, pageSlug, keyword, mode, brief }) {
   const [pageOpened, setPageOpened] = useState(false);
   const [expanded, setExpanded] = useState(Boolean(brief));
+  const [preparing, setPreparing] = useState(false);
+  const [proposalNotice, setProposalNotice] = useState("");
+  const [proposalError, setProposalError] = useState("");
 
   useEffect(() => {
     if (!pageSlug || pageOpened) return undefined;
@@ -47,7 +56,65 @@ export default function SeoDesignerContext({ pageSlug, keyword, mode, brief }) {
     };
   }, [pageSlug, pageOpened]);
 
+  async function prepareDraftProposal() {
+    if (!siteId || !pageSlug || !brief) return;
+
+    if (
+      !window.confirm(
+        "Préparer les sections recommandées dans un brouillon local de cette page ? Rien ne sera publié automatiquement."
+      )
+    ) {
+      return;
+    }
+
+    setPreparing(true);
+    setProposalError("");
+    setProposalNotice("");
+
+    try {
+      const site = await fetchSite(siteId);
+      const target = site.pages.find(
+        (page) => String(page.slug || "") === String(pageSlug || "")
+      );
+
+      if (!target) {
+        throw new Error(`La page cible /${pageSlug} n'existe pas dans ce mini-site.`);
+      }
+
+      const detailedPage = await fetchPageDetails(site, target);
+      const proposal = buildSeoDraftProposal(detailedPage, brief, mode);
+
+      if (proposal.duplicate) {
+        setProposalNotice(proposal.note);
+        return;
+      }
+
+      const savedAt = saveLocalDraft(site.id, proposal.page);
+
+      if (!savedAt) {
+        throw new Error("Impossible d'enregistrer le brouillon local SEO.");
+      }
+
+      setProposalNotice(
+        `${proposal.note} Le Designer va restaurer ce brouillon local.`
+      );
+
+      window.setTimeout(() => window.location.reload(), 450);
+    } catch (error) {
+      setProposalError(
+        error?.message || "Impossible de préparer la proposition SEO."
+      );
+    } finally {
+      setPreparing(false);
+    }
+  }
+
   if (!keyword && !pageSlug && !brief) return null;
+
+  const canPrepareExistingDraft =
+    Boolean(siteId && pageSlug && brief) &&
+    mode !== "consider_new_page" &&
+    mode !== "monitor";
 
   return (
     <aside style={{position:"fixed",right:20,bottom:20,zIndex:120,width:"min(430px, calc(100vw - 40px))",maxHeight:"calc(100vh - 110px)",overflow:"auto",border:"1px solid #c7d2fe",borderRadius:14,background:"#eef2ff",color:"#1e1b4b",padding:16,boxShadow:"0 16px 40px rgba(30, 41, 59, .18)"}}>
@@ -66,7 +133,27 @@ export default function SeoDesignerContext({ pageSlug, keyword, mode, brief }) {
         </div> : null}
       </> : null}
 
-      <div style={{marginTop:12,fontSize:12,lineHeight:1.5,opacity:.75}}>Le brief sert d’aide à l’édition. Aucune création ni publication automatique n’est déclenchée : la validation humaine reste obligatoire.</div>
+      {canPrepareExistingDraft ? (
+        <button
+          type="button"
+          disabled={preparing}
+          onClick={prepareDraftProposal}
+          style={{marginTop:14,width:"100%",border:0,borderRadius:9,background:"#312e81",color:"white",padding:"10px 12px",fontWeight:800,cursor:preparing?"wait":"pointer",opacity:preparing?.7:1}}
+        >
+          {preparing ? "Préparation du brouillon…" : "Préparer les blocs SEO en brouillon"}
+        </button>
+      ) : null}
+
+      {mode === "consider_new_page" ? (
+        <div style={{marginTop:12,padding:10,borderRadius:8,background:"#fff7ed",color:"#9a3412",fontSize:12,lineHeight:1.5}}>
+          La création d'une nouvelle page reste volontairement bloquée ici : elle devra d'abord être validée explicitement, puis créée en brouillon non publié.
+        </div>
+      ) : null}
+
+      {proposalNotice ? <div style={{marginTop:10,padding:9,borderRadius:8,background:"#ecfdf5",color:"#166534",fontSize:12}}>{proposalNotice}</div> : null}
+      {proposalError ? <div style={{marginTop:10,padding:9,borderRadius:8,background:"#fef2f2",color:"#991b1b",fontSize:12}}>{proposalError}</div> : null}
+
+      <div style={{marginTop:12,fontSize:12,lineHeight:1.5,opacity:.75}}>Le brief sert d’aide à l’édition. Les blocs préparés restent en statut brouillon et aucune publication automatique n’est déclenchée : la validation humaine reste obligatoire.</div>
     </aside>
   );
 }
