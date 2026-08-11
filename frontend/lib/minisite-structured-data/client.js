@@ -13,6 +13,22 @@ function normalizeOrigin(
   );
 }
 
+function tenantSlug(options = {}) {
+  return String(
+    options.tenantSlug ||
+    process.env.TENANT_SLUG ||
+    process.env.NEXT_PUBLIC_TENANT_SLUG ||
+    "mondescale"
+  ).trim();
+}
+
+function publicHeaders(options = {}) {
+  return {
+    Accept: "application/json",
+    "x-tenant-slug": tenantSlug(options),
+  };
+}
+
 export function getBackendOrigin() {
   return normalizeOrigin(
     process.env
@@ -58,26 +74,12 @@ export async function fetchMiniSiteStructuredData(
       await fetch(
         url,
         {
-          method:
-            "GET",
-
-          headers: {
-            Accept:
-              "application/json",
-
-            "x-tenant-slug":
-              "mondescale",
-          },
-
+          method: "GET",
+          headers: publicHeaders(options),
           next: {
-            revalidate:
-              300,
+            revalidate: 300,
           },
-
-          signal:
-            AbortSignal.timeout(
-              8000
-            ),
+          signal: AbortSignal.timeout(8000),
         }
       );
   } catch {
@@ -91,25 +93,20 @@ export async function fetchMiniSiteStructuredData(
   let payload;
 
   try {
-    payload =
-      await response.json();
+    payload = await response.json();
   } catch {
     return null;
   }
 
   if (
-    !payload.validation
-      ?.valid ||
-    !isValidJsonLdGraph(
-      payload.graph
-    )
+    !payload.validation?.valid ||
+    !isValidJsonLdGraph(payload.graph)
   ) {
     return null;
   }
 
   return payload;
 }
-
 
 export async function fetchMiniSiteSitemap(
   options = {}
@@ -130,34 +127,19 @@ export async function fetchMiniSiteSitemap(
       await fetch(
         url,
         {
-          method:
-            "GET",
-
-          headers: {
-            Accept:
-              "application/json",
-
-            "x-tenant-slug":
-              "mondescale",
-          },
-
+          method: "GET",
+          headers: publicHeaders(options),
           next: {
-            revalidate:
-              300,
+            revalidate: 300,
           },
-
-          signal:
-            AbortSignal.timeout(
-              8000
-            ),
+          signal: AbortSignal.timeout(8000),
         }
       );
   } catch {
     return {
       entries: [],
       summary: {
-        entryCount:
-          0,
+        entryCount: 0,
       },
     };
   }
@@ -166,33 +148,31 @@ export async function fetchMiniSiteSitemap(
     return {
       entries: [],
       summary: {
-        entryCount:
-          0,
+        entryCount: 0,
       },
     };
   }
 
   try {
-    const payload =
-      await response.json();
+    const payload = await response.json();
 
     return {
       ...payload,
-
-      entries:
-        Array.isArray(
-          payload.entries
-        )
-          ? payload.entries
-          : [],
+      entries: Array.isArray(payload.entries)
+        ? payload.entries
+        : [],
     };
   } catch {
     return {
       entries: [],
       summary: {
-        entryCount:
-          0,
+        entryCount: 0,
       },
     };
   }
 }
+
+export {
+  publicHeaders,
+  tenantSlug,
+};
