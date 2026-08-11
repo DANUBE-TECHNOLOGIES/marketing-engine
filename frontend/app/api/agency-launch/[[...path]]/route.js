@@ -47,6 +47,7 @@ function forwardedHeaders(
     of [
       "accept",
       "authorization",
+      "content-type",
       "cookie",
       "x-tenant-id",
       "x-tenant-slug",
@@ -118,6 +119,12 @@ async function handler(
   const target =
     `${BACKEND_URL}/api/agency-launch${suffix}`;
 
+  let body;
+  if (request.method !== "GET") {
+    const text = await request.text();
+    body = text || undefined;
+  }
+
   let response;
 
   try {
@@ -125,17 +132,14 @@ async function handler(
       await fetch(
         target,
         {
-          method:
-            "GET",
-
+          method: request.method,
           headers:
             forwardedHeaders(
               request
             ),
-
+          body,
           cache:
             "no-store",
-
           signal:
             AbortSignal.timeout(
               30000
@@ -167,15 +171,15 @@ async function handler(
   const text =
     await response.text();
 
-  let body;
+  let responseBody;
 
   try {
-    body =
+    responseBody =
       JSON.parse(
         text
       );
   } catch {
-    body = {
+    responseBody = {
       error:
         "INVALID_AGENCY_LAUNCH_RESPONSE",
 
@@ -193,7 +197,7 @@ async function handler(
   }
 
   return NextResponse.json(
-    body,
+    responseBody,
     {
       status:
         response.status,
@@ -208,4 +212,5 @@ async function handler(
 
 export {
   handler as GET,
+  handler as POST,
 };
