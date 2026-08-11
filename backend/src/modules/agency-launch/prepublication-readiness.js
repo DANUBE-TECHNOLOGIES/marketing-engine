@@ -196,13 +196,22 @@ function seoCheck(site) {
   };
 }
 
+function publicSiteSlugValid(value) {
+  const slug = String(value || "").trim().toLowerCase();
+  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug);
+}
+
 function siteCheck(site) {
+  const exists = Boolean(site);
+  const slugValid = exists && publicSiteSlugValid(site?.slug);
+
   return {
     code: "SITE",
     label: "Mini-site",
     required: true,
-    passed: Boolean(site),
-    exists: Boolean(site),
+    passed: exists && slugValid,
+    exists,
+    slugValid,
     siteId: site?.id || null,
     slug: site?.slug || null,
     status: site?.status || null,
@@ -336,7 +345,7 @@ class PrepublicationReadinessService {
     const launchScore = score(checks);
 
     return {
-      version: "1.5",
+      version: "1.6",
       mode: "prepublication",
       agency: {
         id: agency.id,
@@ -379,6 +388,7 @@ module.exports = {
   contentCheck,
   legalCheck,
   seoCheck,
+  publicSiteSlugValid,
   siteCheck,
   score,
   blockers,
