@@ -7,8 +7,10 @@ const {
 async function resolvePreviewSiteContext({
   prisma,
   siteSlug,
+  tenantId,
 }) {
   const slug = String(siteSlug || "").trim().toLowerCase();
+  const normalizedTenantId = String(tenantId || "").trim();
 
   if (!slug) {
     const error = new Error("Slug de mini-site invalide.");
@@ -17,8 +19,18 @@ async function resolvePreviewSiteContext({
     throw error;
   }
 
+  if (!normalizedTenantId) {
+    const error = new Error("Tenant public obligatoire.");
+    error.statusCode = 400;
+    error.code = "PUBLIC_SITE_PREVIEW_TENANT_REQUIRED";
+    throw error;
+  }
+
   const site = await prisma.agencySite.findFirst({
-    where: { slug },
+    where: {
+      slug,
+      tenantId: normalizedTenantId,
+    },
     select: {
       id: true,
       agencyId: true,
@@ -60,11 +72,13 @@ function normalizePreviewPage(page) {
 async function hydratePreviewPage({
   prisma,
   siteSlug,
+  tenantId,
   page,
 }) {
   const context = await resolvePreviewSiteContext({
     prisma,
     siteSlug,
+    tenantId,
   });
 
   const sourcePage = normalizePreviewPage(page);
