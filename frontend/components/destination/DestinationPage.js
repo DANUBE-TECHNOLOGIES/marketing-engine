@@ -159,118 +159,98 @@ export default function DestinationPage({ data }) {
       <JsonLd data={breadcrumbSchema} />
       {destinationFaqSchema?.mainEntity?.length ? <JsonLd data={destinationFaqSchema} /> : null}
 
-      <header className={styles["de-nav"]}>
+      <section
+        className={styles["de-hero"]}
+        style={{
+          backgroundImage: `linear-gradient(90deg,rgba(9,25,37,.88),rgba(9,25,37,.28)),url("${d.heroImageUrl || ""}")`,
+        }}
+      >
         <div className={styles["de-shell"]}>
-          <Link href={site.basePath} className={styles["de-brand"]}>
-            {site.name}
-          </Link>
+          <p className={styles["de-kicker"]}>
+            {[d.country, d.region, d.type].filter(Boolean).join(" · ")}
+          </p>
 
-          <nav aria-label="Navigation principale">
-            <Link href={site.basePath}>Accueil</Link>
-            <Link
-              href={`${site.basePath}/contact`}
-              className={styles["de-nav-cta"]}
-            >
-              Demander un devis
-            </Link>
-          </nav>
-        </div>
-      </header>
+          <h1>Voyage à {d.name}</h1>
 
-      <main>
-        <section
-          className={styles["de-hero"]}
-          style={{
-            backgroundImage: `linear-gradient(90deg,rgba(9,25,37,.88),rgba(9,25,37,.28)),url("${d.heroImageUrl || ""}")`,
-          }}
-        >
-          <div className={styles["de-shell"]}>
-            <p className={styles["de-kicker"]}>
-              {[d.country, d.region, d.type].filter(Boolean).join(" · ")}
-            </p>
+          {d.tagline && <p>{d.tagline}</p>}
 
-            <h1>Voyage à {d.name}</h1>
-
-            {d.tagline && <p>{d.tagline}</p>}
-
-            <div className={styles["de-actions"]}>
-              <Link href={data.quotePath}>
-                Construire mon voyage
-              </Link>
-
-              <a href="#decouvrir">
-                Découvrir {d.name}
-              </a>
-            </div>
-          </div>
-        </section>
-
-        {facts.length ? (
-          <section className={styles["de-facts"]} aria-label={`Informations pratiques sur ${d.name}`}>
-            <div className={styles["de-shell"]}>
-              {facts.map(([label, value]) => (
-                <div key={label}>
-                  <div>
-                    <span>{label}</span>
-                    <strong>{value}</strong>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        <section id="decouvrir" className={styles["de-intro"]}>
-          <div className={styles["de-shell"]}>
-            <p className={styles["de-kicker"]}>L’inspiration Mondescale</p>
-            <h2>{d.tagline || `Découvrez ${d.name} autrement`}</h2>
-            {d.summary ? <div className={styles["de-prose"]}><p>{d.summary}</p></div> : null}
-            {Array.isArray(d.highlights) && d.highlights.length ? (
-              <div className={styles["de-pills"]}>
-                {d.highlights.map((highlight) => <span key={highlight}>{highlight}</span>)}
-              </div>
-            ) : null}
-          </div>
-        </section>
-
-        {sections.map((section) => (
-          <SectionContent key={section.id || section.key} section={section} />
-        ))}
-
-        {faqs.length ? (
-          <section className={styles["de-faq"]}>
-            <div className={styles["de-shell"]}>
-              <p className={styles["de-kicker"]}>Préparer votre voyage</p>
-              <h2>Questions fréquentes sur {d.name}</h2>
-              {faqs.map((faq, index) => (
-                <details key={faq.id || `${faq.question}-${index}`}>
-                  <summary>{faq.question}</summary>
-                  <p>{faq.answer}</p>
-                </details>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        <section className={styles["de-final"]}>
-          <div className={styles["de-shell"]}>
-            <p className={styles["de-kicker"]}>
-              Un voyage conçu pour vous
-            </p>
-
-            <h2>Prêt à découvrir {d.name} ?</h2>
-
-            <p>
-              Votre agence {site.name} construit un séjour adapté à
-              vos envies, à votre rythme et à votre budget.
-            </p>
-
+          <div className={styles["de-actions"]}>
             <Link href={data.quotePath}>
-              Demander mon devis personnalisé
+              Construire mon voyage
             </Link>
+
+            <a href="#decouvrir">
+              Découvrir {d.name}
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {facts.length ? (
+        <section className={styles["de-facts"]} aria-label={`Informations pratiques sur ${d.name}`}>
+          <div className={styles["de-shell"]}>
+            {facts.map(([label, value]) => (
+              <div key={label}>
+                <div>
+                  <span>{label}</span>
+                  <strong>{value}</strong>
+                </div>
+              </div>
+            ))}
           </div>
         </section>
-      </main>
+      ) : null}
+
+      <section id="decouvrir" className={styles["de-intro"]}>
+        <div className={styles["de-shell"]}>
+          <p className={styles["de-kicker"]}>L’inspiration Mondescale</p>
+          <h2>{d.tagline || `Découvrez ${d.name} autrement`}</h2>
+          {d.summary ? <div className={styles["de-prose"]}><p>{d.summary}</p></div> : null}
+          {Array.isArray(d.highlights) && d.highlights.length ? (
+            <div className={styles["de-pills"]}>
+              {d.highlights.map((highlight) => <span key={highlight}>{highlight}</span>)}
+            </div>
+          ) : null}
+        </div>
+      </section>
+
+      {sections.map((section) => (
+        <SectionContent key={section.id || section.key} section={section} />
+      ))}
+
+      {faqs.length ? (
+        <section className={styles["de-faq"]}>
+          <div className={styles["de-shell"]}>
+            <p className={styles["de-kicker"]}>Préparer votre voyage</p>
+            <h2>Questions fréquentes sur {d.name}</h2>
+            {faqs.map((faq, index) => (
+              <details key={faq.id || `${faq.question}-${index}`}>
+                <summary>{faq.question}</summary>
+                <p>{faq.answer}</p>
+              </details>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      <section className={styles["de-final"]}>
+        <div className={styles["de-shell"]}>
+          <p className={styles["de-kicker"]}>
+            Un voyage conçu pour vous
+          </p>
+
+          <h2>Prêt à découvrir {d.name} ?</h2>
+
+          <p>
+            Votre agence {site.name} construit un séjour adapté à
+            vos envies, à votre rythme et à votre budget.
+          </p>
+
+          <Link href={data.quotePath}>
+            Demander mon devis personnalisé
+          </Link>
+        </div>
+      </section>
     </div>
   );
 }
