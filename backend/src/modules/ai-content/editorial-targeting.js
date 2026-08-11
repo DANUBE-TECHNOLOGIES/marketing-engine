@@ -27,15 +27,27 @@ function normalizeEditorialTargeting(value = {}) {
       throw error;
     }
 
+    const requestedIndexAgencyId = String(input.indexAgencyId || "").trim();
+    const indexAgencyId = requestedIndexAgencyId || agencyIds[0];
+
+    if (!agencyIds.includes(indexAgencyId)) {
+      const error = new Error("L’agence d’indexation doit faire partie des agences ciblées.");
+      error.statusCode = 400;
+      error.code = "AI_CONTENT_INDEX_AGENCY_INVALID";
+      throw error;
+    }
+
     return {
       scope: "agencies",
       agencyIds,
+      indexAgencyId,
     };
   }
 
   return {
     scope: "network",
     agencyIds: [],
+    indexAgencyId: null,
   };
 }
 
@@ -49,6 +61,7 @@ function targetingFromContent(content) {
     return {
       scope: "network",
       agencyIds: [],
+      indexAgencyId: null,
       legacy: true,
     };
   }
@@ -62,6 +75,7 @@ function targetingFromContent(content) {
     return {
       scope: "network",
       agencyIds: [],
+      indexAgencyId: null,
       legacy: true,
     };
   }
@@ -75,9 +89,18 @@ function contentTargetsAgency(content, agencyId) {
   return Boolean(id) && targeting.agencyIds.includes(id);
 }
 
+function contentIndexesForAgency(content, agencyId) {
+  const targeting = targetingFromContent(content);
+  if (targeting.scope !== "agencies") return false;
+
+  const id = String(agencyId || "").trim();
+  return Boolean(id) && targeting.indexAgencyId === id;
+}
+
 module.exports = {
   cleanAgencyIds,
   normalizeEditorialTargeting,
   targetingFromContent,
   contentTargetsAgency,
+  contentIndexesForAgency,
 };
