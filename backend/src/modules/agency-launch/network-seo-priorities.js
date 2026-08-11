@@ -36,12 +36,37 @@ function learningBonus(action, learning) {
   return Math.round(Math.min(raw, LEARNING_BONUS_CAP) * 10) / 10;
 }
 
+function scoreBreakdown(action, learning) {
+  const priorityScore = PRIORITY_WEIGHT[action?.priority] || 0;
+  const sourceScore = SOURCE_BONUS[action?.source] || 0;
+  const group = learningGroupForAction(action, learning);
+  const bonus = learningBonus(action, learning);
+  return {
+    priorityScore,
+    sourceScore,
+    baseScore: priorityScore + sourceScore,
+    learningBonus: bonus,
+    finalScore: priorityScore + sourceScore + bonus,
+    learning: group
+      ? {
+          confidence: group.confidence || "insufficient",
+          samples: Number(group.samples || 0),
+          improvementRate: Number(group.improvementRate || 0),
+          averageDelta: Number(group.averageDelta || 0),
+          applied: bonus > 0,
+        }
+      : {
+          confidence: "insufficient",
+          samples: 0,
+          improvementRate: 0,
+          averageDelta: 0,
+          applied: false,
+        },
+  };
+}
+
 function opportunityScore(action, learning) {
-  return (
-    (PRIORITY_WEIGHT[action?.priority] || 0) +
-    (SOURCE_BONUS[action?.source] || 0) +
-    learningBonus(action, learning)
-  );
+  return scoreBreakdown(action, learning).finalScore;
 }
 
 function networkSeoPriorities(items = [], limit = 25, learning = null) {
@@ -52,7 +77,7 @@ function networkSeoPriorities(items = [], limit = 25, learning = null) {
     const queue = Array.isArray(item?.seoActions?.actions) ? item.seoActions.actions : [];
 
     for (const seoAction of queue) {
-      const bonus = learningBonus(seoAction, learning);
+      const scoring = scoreBreakdown(seoAction, learning);
       actions.push({
         ...seoAction,
         agency: {
@@ -60,8 +85,9 @@ function networkSeoPriorities(items = [], limit = 25, learning = null) {
           name: agency.name || null,
           city: agency.city || null,
         },
-        learningBonus: bonus,
-        opportunityScore: opportunityScore(seoAction, learning),
+        scoring,
+        learningBonus: scoring.learningBonus,
+        opportunityScore: scoring.finalScore,
       });
     }
   }
@@ -76,11 +102,11 @@ function networkSeoPriorities(items = [], limit = 25, learning = null) {
 
   const safeLimit = Math.max(1, Math.min(Number(limit) || 25, 100));
   return {
-    version: "1.1",
+    version: "1.2",
     total: actions.length,
     highPriority: actions.filter((item) => ["critical", "high"].includes(item.priority)).length,
     agenciesWithActions: new Set(actions.map((item) => item.agency?.id).filter(Boolean)).size,
-    learningApplied: actions.some((item) => item.learningBonus > 0),
+    learningApplied: actions.some((item) => item.scoring?.learning?.applied),
     actions: actions.slice(0, safeLimit),
   };
 }
@@ -91,6 +117,7 @@ module.exports = {
   LEARNING_BONUS_CAP,
   learningGroupForAction,
   learningBonus,
+  scoreBreakdown,
   opportunityScore,
   networkSeoPriorities,
 };
