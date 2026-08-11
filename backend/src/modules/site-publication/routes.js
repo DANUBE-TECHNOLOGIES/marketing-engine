@@ -8,6 +8,9 @@ const {
   sitePublicationError,
 } = require("./errors");
 const {
+  assertSiteHasNoPublishedCanonicalEditorialDependencies,
+} = require("./editorial-dependency-guard");
+const {
   SitePublicationHistoryStore,
 } = require("./history-store");
 const {
@@ -277,7 +280,16 @@ function createSitePublicationRoutes(prisma, options = {}) {
 
   router.post("/sites/:siteId/unpublish", async (request, response) => {
     try {
-      await assertSiteInTenant(prisma, request, request.params.siteId);
+      const site = await assertSiteInTenant(
+        prisma,
+        request,
+        request.params.siteId
+      );
+
+      await assertSiteHasNoPublishedCanonicalEditorialDependencies(
+        prisma,
+        site
+      );
 
       response.json(
         await service.unpublish({
