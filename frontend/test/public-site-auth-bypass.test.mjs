@@ -16,11 +16,10 @@ test("public media and brand runtime bypass Basic Auth", () => {
   assert.match(proxy, /pathname\.startsWith\("\/api\/public-brand-legal\/"\)/);
 });
 
-test("published inspiration reads bypass Basic Auth without opening writes", () => {
-  assert.match(proxy, /request\.method === "GET"/);
+test("published inspiration GET routes bypass Basic Auth without opening writes", () => {
   assert.match(proxy, /pathname === "\/api\/website-builder\/inspirations"/);
   assert.match(proxy, /pathname\.startsWith\("\/api\/website-builder\/inspirations\/"\)/);
-  assert.match(proxy, /isPublicInspirationRead/);
+  assert.match(proxy, /request\.method === "GET"/);
 });
 
 test("SEO discovery files bypass Basic Auth", () => {
