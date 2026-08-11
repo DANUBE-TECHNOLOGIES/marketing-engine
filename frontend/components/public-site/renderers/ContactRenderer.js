@@ -3,24 +3,13 @@ import {
   getSectionTitle,
 } from "./helpers";
 
+import {
+  buildGoogleMapsSearchUrl,
+} from "../../../lib/public-agency-location";
+
 function phoneHref(phone) {
   return `tel:${String(phone || "")
     .replace(/\s+/g, "")}`;
-}
-
-function mapUrl(agency) {
-  const query = encodeURIComponent(
-    [
-      agency.name,
-      agency.address,
-      agency.postalCode,
-      agency.city,
-    ]
-      .filter(Boolean)
-      .join(" ")
-  );
-
-  return `https://www.google.com/maps/search/?api=1&query=${query}`;
 }
 
 export default function ContactRenderer({
@@ -32,6 +21,18 @@ export default function ContactRenderer({
 
   const agency =
     site?.agency || {};
+
+  const mapUrl =
+    buildGoogleMapsSearchUrl(
+      agency
+    );
+
+  const city =
+    String(
+      agency.city ||
+      site?.city ||
+      ""
+    ).trim();
 
   return (
     <section
@@ -46,7 +47,9 @@ export default function ContactRenderer({
         <h2>
           {getSectionTitle(
             section,
-            "Contactez votre agence"
+            city
+              ? `Contactez votre agence de voyages à ${city}`
+              : "Contactez votre agence"
           )}
         </h2>
 
@@ -68,21 +71,21 @@ export default function ContactRenderer({
               </strong>
 
               {agency.address ? (
-                <p>
+                <address>
                   {agency.address}
                   <br />
                   {agency.postalCode}{" "}
                   {agency.city}
-                </p>
+                </address>
               ) : (
                 <p>
                   Adresse en cours de mise à jour.
                 </p>
               )}
 
-              {agency.address ? (
+              {mapUrl ? (
                 <a
-                  href={mapUrl(agency)}
+                  href={mapUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
