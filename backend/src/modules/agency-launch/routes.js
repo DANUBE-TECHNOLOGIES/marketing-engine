@@ -185,13 +185,21 @@ async function networkForTenant(database, tenantId) {
     }
   }
 
+  const learning = await networkSeoLearning(database, tenantId, 100);
+
   return {
-    version: "3.0",
+    version: "3.1",
     mode: "prepublication",
     tenantId,
     generatedAt: new Date().toISOString(),
     summary: summarizeLaunchStates(items),
-    seoPriorities: networkSeoPriorities(items),
+    seoPriorities: networkSeoPriorities(items, 25, learning),
+    seoLearning: {
+      measuredActions: learning.measuredActions,
+      improvedActions: learning.improvedActions,
+      declinedActions: learning.declinedActions,
+      groups: learning.groups,
+    },
     items,
   };
 }
@@ -229,7 +237,7 @@ function createAgencyLaunchRouter({ prisma } = {}) {
     response.json({
       ok: true,
       capability: "agency-launch",
-      version: "3.0",
+      version: "3.1",
       mode: "prepublication",
       legalRuntimeRequired: true,
       localCitationsObserved: true,
@@ -241,6 +249,7 @@ function createAgencyLaunchRouter({ prisma } = {}) {
       seoActionHistoryObserved: true,
       seoActionImpactObserved: true,
       seoLearningObserved: true,
+      guardedLearningPrioritizationObserved: true,
     });
   });
 
