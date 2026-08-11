@@ -16,8 +16,21 @@ function minimumCardWidth(columns) {
   return 520;
 }
 
+function defaultFeaturesTitle(site) {
+  const city = String(site?.agency?.city || site?.city || "").trim();
+  return city ? `Nos services voyage à ${city}` : "Nos services voyage";
+}
+
+function defaultFeaturesIntroduction(site) {
+  const city = String(site?.agency?.city || site?.city || "").trim();
+  return city
+    ? `Notre équipe à ${city} vous conseille selon votre projet, votre budget et votre façon de voyager.`
+    : "Notre équipe vous conseille selon votre projet, votre budget et votre façon de voyager.";
+}
+
 export default function FeaturesV2Renderer({
   section,
+  site,
 }) {
   const content = getSectionContent(section);
   const items = Array.isArray(content.items)
@@ -27,7 +40,7 @@ export default function FeaturesV2Renderer({
     content.introduction ||
     content.text ||
     content.description ||
-    "";
+    defaultFeaturesIntroduction(site);
   const columns = normalizeColumns(content.columns);
   const minimum = minimumCardWidth(columns);
 
@@ -37,7 +50,7 @@ export default function FeaturesV2Renderer({
         <h2>
           {getSectionTitle(
             section,
-            "Les points forts"
+            defaultFeaturesTitle(site)
           )}
         </h2>
 
@@ -62,7 +75,7 @@ export default function FeaturesV2Renderer({
                 key={item.id || item.title || index}
               >
                 {item.icon ? (
-                  <span className="public-site-feature-icon">
+                  <span className="public-site-feature-icon" aria-hidden="true">
                     {item.icon}
                   </span>
                 ) : null}
@@ -81,3 +94,8 @@ export default function FeaturesV2Renderer({
     </section>
   );
 }
+
+export {
+  defaultFeaturesIntroduction,
+  defaultFeaturesTitle,
+};
