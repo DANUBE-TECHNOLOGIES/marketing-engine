@@ -68,6 +68,7 @@ test("MSE-25.9 finds only published editorials canonically owned by the agency",
   assert.equal(captured.where.tenantId, "tenant-mondescale");
   assert.equal(captured.where.status, "published");
   assert.deepEqual(captured.where.publishedAt, { not: null });
+  assert.equal(captured.take, undefined);
   assert.equal(dependencies.length, 1);
   assert.equal(dependencies[0].id, "owned");
 });
@@ -113,12 +114,15 @@ test("MSE-25.9 allows site unpublication when no published canonical editorial d
 
 test("MSE-25.9 site unpublish route checks editorial dependencies before invoking the orchestrator", () => {
   const routes = source("backend/src/modules/site-publication/routes.js");
-  const guardPosition = routes.indexOf("assertSiteHasNoPublishedCanonicalEditorialDependencies(");
-  const unpublishPosition = routes.indexOf("await service.unpublish({");
+  const routeStart = routes.indexOf('router.post("/sites/:siteId/unpublish"');
+  const routeEnd = routes.indexOf("return router;", routeStart);
+  const routeSource = routes.slice(routeStart, routeEnd);
+  const guardPosition = routeSource.indexOf("assertSiteHasNoPublishedCanonicalEditorialDependencies(");
+  const unpublishPosition = routeSource.indexOf("await service.unpublish({");
 
-  assert.match(routes, /SITE_CANONICAL_EDITORIAL_DEPENDENCIES|assertSiteHasNoPublishedCanonicalEditorialDependencies/);
+  assert.ok(routeStart >= 0);
+  assert.match(routeSource, /const site = await assertSiteInTenant/);
   assert.ok(guardPosition >= 0);
   assert.ok(unpublishPosition >= 0);
   assert.ok(guardPosition < unpublishPosition);
-  assert.match(routes, /const site = await assertSiteInTenant/);
 });
