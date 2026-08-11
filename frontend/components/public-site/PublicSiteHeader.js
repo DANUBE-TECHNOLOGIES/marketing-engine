@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { getShowcaseUrl } from "../../lib/showcase-url";
 import PublicBrandLogo from "./PublicBrandLogo";
 
 function normalizeNavigation(site) {
@@ -67,6 +68,7 @@ export default function PublicSiteHeader({
   );
 
   const agency = site.agency || {};
+  const showcaseUrl = getShowcaseUrl(site);
 
   return (
     <>
@@ -138,6 +140,16 @@ export default function PublicSiteHeader({
             >
               Demander un devis
             </Link>
+
+            <a
+              className="public-site-header-cta public-site-header-showcase"
+              href={showcaseUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Découvrir nos voyages
+              <span aria-hidden="true">↗</span>
+            </a>
           </div>
         </div>
 
