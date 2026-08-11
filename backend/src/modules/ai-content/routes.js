@@ -6,6 +6,10 @@ const {
   assertEditableEditorialContent,
 } = require("./editorial-update");
 
+function asObject(value) {
+  return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+}
+
 module.exports = ({ prisma }) => {
   const router = express.Router();
   const service = req => new AiContentService(prisma, req.tenant.id);
@@ -42,6 +46,16 @@ module.exports = ({ prisma }) => {
       const content = await current.getContent(req.params.id);
       assertEditableEditorialContent(content);
       const patch = validateEditorialUpdate(req.body);
+      const editorialTargeting = patch.editorialTargeting;
+      delete patch.editorialTargeting;
+
+      if (editorialTargeting) {
+        patch.seo = {
+          ...asObject(content.seo),
+          editorialTargeting,
+        };
+      }
+
       res.json(await current.repo.updateContent(content.id, patch));
     } catch (e) { next(e); }
   });
