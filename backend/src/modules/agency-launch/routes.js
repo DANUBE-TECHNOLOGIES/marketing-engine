@@ -15,6 +15,10 @@ const {
   legalRuntimeReadiness,
   applyLegalRuntimeToReadiness,
 } = require("./legal-runtime-readiness");
+const {
+  localCitationsReadiness,
+  applyLocalCitationsToReadiness,
+} = require("./local-citations-readiness");
 
 function createHttpError(statusCode, code, message) {
   const error = new Error(message);
@@ -100,12 +104,16 @@ async function assertAgencyInTenant(database, tenantId, agencyId) {
 
 async function readinessWithPublicRuntime(database, tenantId, agencyId, service) {
   const report = await service.readiness(agencyId);
-  const legalRuntime = await legalRuntimeReadiness(database, tenantId, agencyId);
-
-  return applyLegalRuntimeToReadiness(report, legalRuntime, {
+  const [legalRuntime, localCitations] = await Promise.all([
+    legalRuntimeReadiness(database, tenantId, agencyId),
+    localCitationsReadiness(database, tenantId, agencyId),
+  ]);
+  const withLegal = applyLegalRuntimeToReadiness(report, legalRuntime, {
     score,
     blockers,
   });
+
+  return applyLocalCitationsToReadiness(withLegal, localCitations);
 }
 
 async function networkForTenant(database, tenantId) {
@@ -158,7 +166,7 @@ async function networkForTenant(database, tenantId) {
   }
 
   return {
-    version: "1.3",
+    version: "2.1",
     mode: "prepublication",
     tenantId,
     generatedAt: new Date().toISOString(),
@@ -175,9 +183,10 @@ function createAgencyLaunchRouter({ prisma } = {}) {
     response.json({
       ok: true,
       capability: "agency-launch",
-      version: "1.3",
+      version: "2.1",
       mode: "prepublication",
       legalRuntimeRequired: true,
+      localCitationsObserved: true,
     });
   });
 
