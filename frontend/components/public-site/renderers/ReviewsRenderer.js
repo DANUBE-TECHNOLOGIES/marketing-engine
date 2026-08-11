@@ -38,6 +38,24 @@ function formatDate(value) {
   }
 }
 
+function latestPublishedAt(reviews = []) {
+  const dates = reviews
+    .map((review) => review?.publishedAt)
+    .filter(Boolean)
+    .map((value) => new Date(value))
+    .filter((date) => !Number.isNaN(date.getTime()));
+
+  if (!dates.length) {
+    return null;
+  }
+
+  return new Date(
+    Math.max(
+      ...dates.map((date) => date.getTime())
+    )
+  ).toISOString();
+}
+
 function reviewInitial(authorName) {
   return String(authorName || "V")
     .trim()
@@ -118,6 +136,13 @@ export default async function ReviewsRenderer({
     content.text ||
     defaultReviewsIntro(site, total);
 
+  const latestReview =
+    data?.summary?.latestPublishedAt ||
+    latestPublishedAt(reviews);
+
+  const latestReviewLabel =
+    formatDate(latestReview);
+
   return (
     <section className="public-site-section public-site-reviews">
       <div className="public-site-container">
@@ -164,6 +189,15 @@ export default async function ReviewsRenderer({
                 <small>
                   {total} avis clients
                 </small>
+
+                {latestReviewLabel ? (
+                  <small>
+                    Dernier avis affiché :{" "}
+                    <time dateTime={latestReview}>
+                      {latestReviewLabel}
+                    </time>
+                  </small>
+                ) : null}
               </div>
             </div>
           ) : null}
@@ -275,4 +309,5 @@ export default async function ReviewsRenderer({
 export {
   defaultReviewsIntro,
   defaultReviewsTitle,
+  latestPublishedAt,
 };
