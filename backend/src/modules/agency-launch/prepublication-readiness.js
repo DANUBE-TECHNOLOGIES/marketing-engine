@@ -67,10 +67,10 @@ function designerContentState(page) {
       ? sectionState
       : { total: 0, visible: 0, published: 0 };
 
+  const hasVisibleContent = selectedState.visible > 0;
   const coherent =
-    !pagePublished ||
-    selectedState.total === 0 ||
-    selectedState.published > 0;
+    hasVisibleContent &&
+    (!pagePublished || selectedState.published > 0);
 
   return {
     source,
@@ -82,6 +82,7 @@ function designerContentState(page) {
     totalSections: sectionState.total,
     visibleSections: sectionState.visible,
     publishedSections: sectionState.published,
+    hasVisibleContent,
     coherent,
   };
 }
@@ -335,7 +336,7 @@ class PrepublicationReadinessService {
     const launchScore = score(checks);
 
     return {
-      version: "1.4",
+      version: "1.5",
       mode: "prepublication",
       agency: {
         id: agency.id,
