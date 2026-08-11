@@ -53,6 +53,13 @@ function formatSyncedAt(value) {
   }
 }
 
+function defaultHoursTitle(site) {
+  const city = String(site?.agency?.city || site?.city || "").trim();
+  return city
+    ? `Horaires de notre agence à ${city}`
+    : "Horaires de l’agence";
+}
+
 export default async function HoursRenderer({
   section,
   site,
@@ -68,6 +75,7 @@ export default async function HoursRenderer({
     Array.isArray(data.weekly)
       ? data.weekly
       : [];
+  const syncedLabel = formatSyncedAt(data.syncedAt);
 
   return (
     <section className="public-site-section public-site-hours">
@@ -79,7 +87,7 @@ export default async function HoursRenderer({
         <h2>
           {getSectionTitle(
             section,
-            "Horaires de l’agence"
+            defaultHoursTitle(site)
           )}
         </h2>
 
@@ -133,13 +141,12 @@ export default async function HoursRenderer({
           </div>
         </div>
 
-        {data.syncedAt ? (
+        {data.syncedAt && syncedLabel ? (
           <p className="public-site-hours-sync">
-            Horaires synchronisés avec Google
-            Business Profile le{" "}
-            {formatSyncedAt(
-              data.syncedAt
-            )}
+            Horaires synchronisés avec Google Business Profile le{" "}
+            <time dateTime={data.syncedAt}>
+              {syncedLabel}
+            </time>
           </p>
         ) : (
           <p className="public-site-hours-sync">
@@ -151,3 +158,7 @@ export default async function HoursRenderer({
     </section>
   );
 }
+
+export {
+  defaultHoursTitle,
+};
