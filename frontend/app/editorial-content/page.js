@@ -42,7 +42,13 @@ async function loadAgencies() {
   try {
     const payload = await api("/agency-launch/network");
     return (payload?.items || [])
-      .map((item) => item?.agency)
+      .map((item) => item?.agency
+        ? {
+            ...item.agency,
+            site: item.site || null,
+            launchState: item.launchState || null,
+          }
+        : null)
       .filter((agency) => agency?.id !== undefined && agency?.id !== null)
       .sort((a, b) => String(a.name || a.city || "").localeCompare(String(b.name || b.city || ""), "fr"));
   } catch (error) {
@@ -230,8 +236,14 @@ export default async function EditorialContentPage() {
                 const preview = bodyPreview(content);
                 const currentTargeting = targeting(content);
                 const isPublished = content.status === "published";
-                const canPublish = ["review", "draft", "approved"].includes(content.status);
-                const canEdit = canPublish && !content.campaignId;
+                const publishableStatus = ["review", "draft", "approved"].includes(content.status);
+                const canonicalAgency = currentTargeting.scope === "agencies"
+                  ? agencies.find((agency) => String(agency.id) === currentTargeting.indexAgencyId)
+                  : null;
+                const canonicalSiteReady = currentTargeting.scope !== "agencies"
+                  || Boolean(canonicalAgency?.site?.published && canonicalAgency?.site?.slug);
+                const canPublish = publishableStatus && canonicalSiteReady;
+                const canEdit = publishableStatus && !content.campaignId;
 
                 return (
                   <article key={content.id} className="rounded-2xl border border-slate-200 p-5">
@@ -247,6 +259,14 @@ export default async function EditorialContentPage() {
                         <h3 className="text-xl font-bold leading-tight">{content.title}</h3>
                         {content.excerpt ? <p className="mt-2 text-sm leading-6 text-slate-600">{content.excerpt}</p> : null}
                         <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-500"><span>Slug : {content.slug || "—"}</span><span>Révision : {content.revision || 1}</span><span>Mis à jour : {formatDate(content.updatedAt)}</span>{content.publishedAt ? <span>Publié : {formatDate(content.publishedAt)}</span> : null}</div>
+
+                        {publishableStatus && currentTargeting.scope === "agencies" && !canonicalSiteReady ? (
+                          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                            <strong className="block">Publication locale bloquée</strong>
+                            <p className="mt-1">L’agence propriétaire de l’indexation SEO doit disposer d’un mini-site publié avant que cette inspiration puisse être mise en ligne.</p>
+                            <a href="/agency-launch" className="mt-2 inline-flex font-bold underline underline-offset-2">Ouvrir la mise en ligne des agences</a>
+                          </div>
+                        ) : null}
 
                         {canEdit ? (
                           <details className="mt-4 rounded-xl border border-blue-100 bg-blue-50/50 p-4">
@@ -293,6 +313,7 @@ export default async function EditorialContentPage() {
 
                       <div className="flex shrink-0 flex-wrap gap-2">
                         {canPublish ? <form action={publishContent.bind(null, content.id)}><button type="submit" className="rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-emerald-800">Publier</button></form> : null}
+                        {publishableStatus && !canonicalSiteReady ? <button type="button" disabled className="cursor-not-allowed rounded-xl bg-slate-200 px-4 py-2.5 text-sm font-bold text-slate-500">Publication bloquée</button> : null}
                         {isPublished ? <form action={unpublishContent.bind(null, content.id)}><button type="submit" className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50">Dépublier</button></form> : null}
                       </div>
                     </div>
