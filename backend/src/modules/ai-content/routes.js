@@ -1,6 +1,6 @@
 "use strict";
 const express = require("express");
-const { AiContentService } = require("./service");
+const { AiContentService, toInspiration } = require("./service");
 const {
   validateEditorialUpdate,
   assertEditableEditorialContent,
@@ -10,18 +10,53 @@ function asObject(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : {};
 }
 
+function publicCatalogFilters(query = {}) {
+  const ids = String(query.ids || "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .slice(0, 100);
+
+  return {
+    ids,
+    channel: String(query.channel || "").trim() || undefined,
+    agencyId: String(query.agencyId || "").trim() || undefined,
+    limit: Math.min(Math.max(Number(query.limit) || 24, 1), 100),
+  };
+}
+
 module.exports = ({ prisma }) => {
   const router = express.Router();
   const service = req => new AiContentService(prisma, req.tenant.id);
 
   router.get("/ai-content/health", (req, res) => res.json(service(req).health()));
   router.get("/ai-content/published", async (req, res, next) => {
-    try { res.json(await service(req).listPublished(req.query)); } catch (e) { next(e); }
+    try {
+      const current = service(req);
+      const filters = publicCatalogFilters(req.query);
+      const contents = await current.repo.listPublishedContents(filters);
+      const items = contents.map(toInspiration);
+
+      if (!filters.ids.length) {
+        return res.json({ items, count: items.length });
+      }
+
+      const byId = new Map(items.map((item) => [String(item.id), item]));
+      const bySlug = new Map(items.filter((item) => item.slug).map((item) => [String(item.slug), item]));
+      const ordered = filters.ids
+        .map((id) => byId.get(String(id)) || bySlug.get(String(id)))
+        .filter(Boolean)
+        .slice(0, filters.limit);
+
+      return res.json({ items: ordered, count: ordered.length });
+    } catch (e) { return next(e); }
   });
   router.get("/ai-content/published/:slug", async (req, res, next) => {
     try {
       const current = service(req);
-      const content = await current.repo.getPublishedContentBySlug(req.params.slug);
+      const content = await current.repo.getPublishedContentBySlug(req.params.slug, {
+        agencyId: String(req.query.agencyId || "").trim() || undefined,
+      });
       if (!content) {
         return res.status(404).json({
           error: "AI_CONTENT_PUBLISHED_NOT_FOUND",
