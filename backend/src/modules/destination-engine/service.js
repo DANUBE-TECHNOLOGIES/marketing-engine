@@ -15,39 +15,48 @@ function sitePublished(site) {
   return Boolean(site.publishedAt);
 }
 
+function requireTenantId(value) {
+  const tenantId = String(value || '').trim();
+  if (!tenantId) {
+    const error = new Error('Le tenant est obligatoire pour le moteur Destination.');
+    error.statusCode = 400;
+    error.code = 'DESTINATION_TENANT_REQUIRED';
+    throw error;
+  }
+  return tenantId;
+}
+
 class DestinationService {
   constructor(prisma) {
     this.repo = new DestinationRepository(prisma);
     this.publicRepo = new PublicDestinationRepository(prisma);
   }
 
-  list(publishedOnly = false) {
-    return this.repo.list(publishedOnly);
+  list(tenantId, publishedOnly = false) {
+    return this.repo.list(requireTenantId(tenantId), publishedOnly);
   }
 
-  async get(slug, publishedOnly = false) {
-    const destination = await this.repo.findBySlug(slug, publishedOnly);
+  async get(tenantId, slug, publishedOnly = false) {
+    const destination = await this.repo.findBySlug(
+      requireTenantId(tenantId),
+      slug,
+      publishedOnly
+    );
     if (!destination) {
       const e = new Error(`Destination ${slug} introuvable`);
       e.statusCode = 404;
+      e.code = 'DESTINATION_NOT_FOUND';
       throw e;
     }
     return destination;
   }
 
-  seedBudapest() {
-    return this.repo.upsertBudapest();
+  seedBudapest(tenantId) {
+    return this.repo.upsertBudapest(requireTenantId(tenantId));
   }
 
   async publicForSite(siteSlug, destinationSlug, tenantId) {
-    const normalizedTenantId = String(tenantId || '').trim();
-    if (!normalizedTenantId) {
-      const e = new Error('Le tenant est obligatoire pour une destination publique.');
-      e.statusCode = 400;
-      e.code = 'PUBLIC_DESTINATION_TENANT_REQUIRED';
-      throw e;
-    }
-
+    const normalizedTenantId = requireTenantId(tenantId);
     const site = await this.repo.findPublicSite(siteSlug, normalizedTenantId);
 
     if (!site || !sitePublished(site)) {
@@ -88,3 +97,4 @@ class DestinationService {
 
 module.exports = DestinationService;
 module.exports.sitePublished = sitePublished;
+module.exports.requireTenantId = requireTenantId;
