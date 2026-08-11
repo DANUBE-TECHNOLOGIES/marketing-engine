@@ -40,6 +40,9 @@ const {
 const {
   seoActionImpact,
 } = require("./seo-action-impact");
+const {
+  seoLearningSummary,
+} = require("./seo-learning-summary");
 
 function createHttpError(statusCode, code, message) {
   const error = new Error(message);
@@ -183,13 +186,38 @@ async function networkForTenant(database, tenantId) {
   }
 
   return {
-    version: "2.9",
+    version: "3.0",
     mode: "prepublication",
     tenantId,
     generatedAt: new Date().toISOString(),
     summary: summarizeLaunchStates(items),
     seoPriorities: networkSeoPriorities(items),
     items,
+  };
+}
+
+async function networkSeoLearning(database, tenantId, limitPerAgency = 100) {
+  const agencies = await database.agency.findMany({
+    where: { tenantId },
+    orderBy: [{ city: "asc" }, { name: "asc" }],
+    select: { id: true, name: true, city: true },
+  });
+
+  const actions = [];
+  const impacts = [];
+  for (const agency of agencies) {
+    const agencyActions = await seoActionHistory(database, tenantId, agency.id, limitPerAgency);
+    const agencyImpacts = await seoActionImpact(database, tenantId, agency.id, agencyActions);
+    actions.push(...agencyActions.map((action) => ({ ...action, agency })));
+    impacts.push(...agencyImpacts);
+  }
+
+  return {
+    version: "1.0",
+    tenantId,
+    generatedAt: new Date().toISOString(),
+    agenciesObserved: agencies.length,
+    ...seoLearningSummary(actions, impacts),
   };
 }
 
@@ -201,7 +229,7 @@ function createAgencyLaunchRouter({ prisma } = {}) {
     response.json({
       ok: true,
       capability: "agency-launch",
-      version: "2.9",
+      version: "3.0",
       mode: "prepublication",
       legalRuntimeRequired: true,
       localCitationsObserved: true,
@@ -212,6 +240,7 @@ function createAgencyLaunchRouter({ prisma } = {}) {
       networkSeoPrioritiesObserved: true,
       seoActionHistoryObserved: true,
       seoActionImpactObserved: true,
+      seoLearningObserved: true,
     });
   });
 
@@ -219,6 +248,15 @@ function createAgencyLaunchRouter({ prisma } = {}) {
     try {
       const tenantId = await tenantIdForRequest(database, request);
       response.json(await networkForTenant(database, tenantId));
+    } catch (error) {
+      sendError(response, error);
+    }
+  });
+
+  router.get("/network/seo-learning", async (request, response) => {
+    try {
+      const tenantId = await tenantIdForRequest(database, request);
+      response.json(await networkSeoLearning(database, tenantId, request.query.limit));
     } catch (error) {
       sendError(response, error);
     }
@@ -287,4 +325,5 @@ module.exports = {
   assertAgencyInTenant,
   readinessWithPublicRuntime,
   networkForTenant,
+  networkSeoLearning,
 };
