@@ -3,6 +3,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const {
+  rankingOpportunity,
   localRankingCheck,
   applyLocalRankingsToReadiness,
 } = require("./local-rankings-readiness");
@@ -39,6 +40,7 @@ test("stale measurements are surfaced instead of being treated as current visibi
   assert.equal(check.freshKeywords, 0);
   assert.equal(check.missingOrStale.length, 1);
   assert.equal(check.top10Keywords, 0);
+  assert.equal(check.opportunities.length, 0);
 });
 
 test("fresh local rankings expose top 10 and top 20 coverage", () => {
@@ -66,6 +68,34 @@ test("fresh local rankings expose top 10 and top 20 coverage", () => {
   assert.equal(check.top20Keywords, 2);
   assert.equal(check.top10Rate, 0.333);
   assert.equal(check.top20Rate, 0.667);
+  assert.equal(check.opportunities[0].type, "near_top10");
+  assert.equal(check.opportunities[0].position, 17);
+  assert.equal(check.opportunities[0].priority, "high");
+  assert.equal(check.opportunities[1].type, "not_found");
+});
+
+test("positions 11 to 20 are prioritized over weaker visibility", () => {
+  const nearTop10 = rankingOpportunity({
+    fresh: true,
+    found: true,
+    keywordId: 1,
+    keyword: "voyage sur mesure gien",
+    city: "Gien",
+    position: 12,
+  });
+  const weak = rankingOpportunity({
+    fresh: true,
+    found: true,
+    keywordId: 2,
+    keyword: "croisiere gien",
+    city: "Gien",
+    position: 34,
+  });
+
+  assert.equal(nearTop10.priority, "high");
+  assert.equal(nearTop10.type, "near_top10");
+  assert.equal(weak.priority, "medium");
+  assert.equal(weak.type, "visible_but_weak");
 });
 
 test("ranking readiness remains advisory and does not alter launch score", () => {
@@ -76,7 +106,7 @@ test("ranking readiness remains advisory and does not alter launch score", () =>
   };
   const next = applyLocalRankingsToReadiness(report, localRankingCheck([], NOW));
 
-  assert.equal(next.version, "2.2");
+  assert.equal(next.version, "2.3");
   assert.equal(next.readiness.score, 100);
   assert.equal(next.readiness.ready, true);
   assert.equal(next.checks.at(-1).code, "LOCAL_RANKINGS");
