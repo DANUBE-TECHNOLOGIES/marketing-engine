@@ -2,8 +2,8 @@
 
 const PRIORITY_RANK = { critical: 0, high: 1, medium: 2, low: 3 };
 
-function action(priority, code, title, detail, source, target = null) {
-  return { priority, code, title, detail, source, target };
+function action(priority, code, title, detail, source, target = null, metadata = {}) {
+  return { priority, code, title, detail, source, target, ...metadata };
 }
 
 function actionsFromRankings(check) {
@@ -19,7 +19,15 @@ function actionsFromRankings(check) {
       "LOCAL_RANKINGS",
       item.targetPage
         ? { type: "page", slug: item.targetPage.slug, pageId: item.targetPage.pageId }
-        : { type: "keyword", keyword: item.keyword, city: item.city }
+        : { type: "keyword", keyword: item.keyword, city: item.city },
+      {
+        keywordId: item.keywordId ?? null,
+        keyword: item.keyword || null,
+        city: item.city || null,
+        position: item.position ?? null,
+        momentum: item.momentum || null,
+        targetPage: item.targetPage || null,
+      }
     )
   );
 }
@@ -87,7 +95,8 @@ function actionsFromSimilarity(check) {
       "Différencier le contenu de l’agence",
       check.recommendation,
       "CONTENT_SIMILARITY",
-      match ? { type: "page", slug: match.slug, peerAgencyName: match.peerAgencyName } : null
+      match ? { type: "page", slug: match.slug, peerAgencyName: match.peerAgencyName } : null,
+      { targetPage: match ? { slug: match.slug, title: match.pageTitle || match.slug } : null }
     ),
   ];
 }
@@ -112,7 +121,7 @@ function buildSeoActionQueue(report) {
   });
 
   return {
-    version: "1.0",
+    version: "1.1",
     generatedAt: new Date().toISOString(),
     total: actions.length,
     highPriority: actions.filter((item) => item.priority === "high" || item.priority === "critical").length,
