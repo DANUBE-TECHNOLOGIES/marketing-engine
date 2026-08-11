@@ -25,10 +25,161 @@ function normalizeAlignment(value) {
     : "left";
 }
 
-export default function RichTextV2Renderer({ section }) {
+function normalizeLabel(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s*:\s*$/, "")
+    .trim()
+    .toLowerCase();
+}
+
+const LEGAL_HEADINGS = [
+  ["editeur du site", "Éditeur du site", "▤"],
+  ["informations legales", "Informations légales", "▧"],
+  ["hebergement", "Hébergement", "◇"],
+  ["nos garanties", "Nos garanties", "✓"],
+  ["garanties", "Garanties", "✓"],
+  ["photos", "Crédits photos", "◉"],
+  ["donnees personnelles", "Données personnelles", "▣"],
+  ["politique de confidentialite", "Politique de confidentialité", "▣"],
+  ["responsable du traitement", "Responsable du traitement", "▤"],
+  ["donnees collectees", "Données collectées", "≡"],
+  ["collecte des donnees", "Collecte des données", "≡"],
+  ["finalites", "Finalités du traitement", "◎"],
+  ["base legale", "Base légale", "§"],
+  ["destinataires", "Destinataires", "↗"],
+  ["duree de conservation", "Durée de conservation", "◷"],
+  ["vos droits", "Vos droits", "✓"],
+  ["droits des personnes", "Vos droits", "✓"],
+  ["cookies", "Cookies", "◌"],
+  ["securite", "Sécurité", "◇"],
+  ["transferts de donnees", "Transferts de données", "↗"],
+  ["contact", "Contact", "@"],
+];
+
+function legalHeading(value) {
+  const normalized = normalizeLabel(value);
+  const found = LEGAL_HEADINGS.find(([key]) => normalized === key);
+
+  if (found) {
+    return {
+      title: found[1],
+      icon: found[2],
+    };
+  }
+
+  if (String(value || "").trim().endsWith(":" ) && String(value || "").trim().length <= 64) {
+    return {
+      title: String(value).trim().replace(/\s*:\s*$/, ""),
+      icon: "•",
+    };
+  }
+
+  return null;
+}
+
+function isLegalPage(page) {
+  const slug = normalizeLabel(page?.slug).replace(/_/g, "-");
+  const title = normalizeLabel(page?.title);
+
+  return [
+    "mentions-legales",
+    "confidentialite",
+    "politique-de-confidentialite",
+    "privacy",
+  ].includes(slug) || title.includes("mentions legales") || title.includes("confidentialite");
+}
+
+function buildLegalGroups(values) {
+  const groups = [];
+  let current = null;
+
+  for (const value of values) {
+    const heading = legalHeading(value);
+
+    if (heading) {
+      current = {
+        ...heading,
+        paragraphs: [],
+      };
+      groups.push(current);
+      continue;
+    }
+
+    if (!current) {
+      current = {
+        title: "Informations",
+        icon: "i",
+        paragraphs: [],
+      };
+      groups.push(current);
+    }
+
+    current.paragraphs.push(value);
+  }
+
+  return groups.filter((group) => group.paragraphs.length > 0);
+}
+
+function LegalDocument({ section, page, content, paragraphs }) {
+  const title = getSectionTitle(section, null) || page?.title || "Informations légales";
+  const values = [
+    content.text,
+    content.description,
+    ...paragraphs,
+  ].filter(Boolean);
+  const groups = buildLegalGroups(values);
+
+  return (
+    <section className="public-site-section public-site-legal-document">
+      <div className="public-site-container">
+        <header className="public-site-legal-heading">
+          <h1>{title}</h1>
+          <span aria-hidden="true" />
+        </header>
+
+        <div className="public-site-legal-grid">
+          {groups.map((group, index) => (
+            <article
+              className="public-site-legal-card"
+              key={`${group.title}-${index}`}
+            >
+              <div className="public-site-legal-card-heading">
+                <span className="public-site-legal-card-icon" aria-hidden="true">
+                  {group.icon}
+                </span>
+                <h2>{group.title}</h2>
+              </div>
+
+              <div className="public-site-legal-card-copy">
+                {group.paragraphs.map((paragraph, paragraphIndex) => (
+                  <p key={`${index}-${paragraphIndex}`}>{paragraph}</p>
+                ))}
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export default function RichTextV2Renderer({ section, page }) {
   const content = getSectionContent(section);
   const alignment = normalizeAlignment(content.alignment);
   const paragraphs = textParagraphs(content.html);
+
+  if (isLegalPage(page)) {
+    return (
+      <LegalDocument
+        section={section}
+        page={page}
+        content={content}
+        paragraphs={paragraphs}
+      />
+    );
+  }
 
   return (
     <section className="public-site-section public-site-rich-text">
