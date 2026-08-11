@@ -27,12 +27,48 @@ export function buildWebSiteSchema() {
   });
 }
 
+function openingHoursSpecification(hours) {
+  const weekly = Array.isArray(hours?.weekly) ? hours.weekly : [];
+
+  return weekly.flatMap((day) => {
+    const periods = Array.isArray(day?.periods) ? day.periods : [];
+    return periods
+      .filter((period) => period?.openTime && period?.closeTime)
+      .map((period) => ({
+        "@type": "OpeningHoursSpecification",
+        dayOfWeek: `https://schema.org/${String(day.day || "")
+          .toLowerCase()
+          .replace(/^./, (value) => value.toUpperCase())}`,
+        opens: period.openTime,
+        closes: period.closeTime,
+      }));
+  });
+}
+
+function servedAreas(site, agency) {
+  const values =
+    site?.targetCities ||
+    site?.metadata?.targetCities ||
+    agency?.targetCities ||
+    [];
+
+  if (!Array.isArray(values)) return values;
+
+  return values.map((value) =>
+    typeof value === "string"
+      ? { "@type": "City", name: value }
+      : value
+  );
+}
+
 export function buildTravelAgencySchema(site) {
   const agency = site?.agency || site;
+  const latitude = agency?.latitude ?? site?.latitude;
+  const longitude = agency?.longitude ?? site?.longitude;
 
   return compactJsonLd({
     "@context": "https://schema.org",
-    "@type": "TravelAgency",
+    "@type": ["TravelAgency", "LocalBusiness"],
     "@id": `${absoluteUrl(site.basePath)}#travel-agency`,
     name: site.name || agency.name,
     url: absoluteUrl(site.basePath),
@@ -43,22 +79,33 @@ export function buildTravelAgencySchema(site) {
       agency.logoUrl ||
       site.logoUrl ||
       site.heroImageUrl,
+    description: agency.description || site.description,
     address: {
       "@type": "PostalAddress",
       streetAddress: agency.address || site.address,
       postalCode: agency.postalCode || site.postalCode,
       addressLocality: agency.city || site.city,
+      addressRegion: agency.region || site.region,
       addressCountry: "FR",
     },
-    areaServed:
-      site.targetCities ||
-      site.metadata?.targetCities ||
-      agency.targetCities,
+    geo:
+      latitude != null && longitude != null
+        ? {
+            "@type": "GeoCoordinates",
+            latitude,
+            longitude,
+          }
+        : undefined,
+    areaServed: servedAreas(site, agency),
+    openingHoursSpecification: openingHoursSpecification(site?.hours),
     sameAs: [
       agency.website,
+      agency.googleBusinessUrl,
+      agency.googleMapsUrl,
       agency.googleReviewUrl,
       agency.facebookUrl,
       agency.instagramUrl,
+      agency.linkedinUrl,
     ].filter(Boolean),
   });
 }
@@ -110,6 +157,7 @@ export function buildDestinationSchema(data) {
     provider: site
       ? {
           "@type": "TravelAgency",
+          "@id": `${absoluteUrl(site.basePath)}#travel-agency`,
           name: site.name,
           url: absoluteUrl(site.basePath),
         }
