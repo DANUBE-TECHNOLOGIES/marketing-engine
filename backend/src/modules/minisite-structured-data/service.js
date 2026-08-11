@@ -27,6 +27,7 @@ class MiniSiteStructuredDataService {
       destructive: false,
       deterministic: true,
       tenantScoped: true,
+      destinationSitemap: "localized-per-published-agency-site",
       editorialSitemap: "canonical-agency-only",
       publicOrigin: this.publicOrigin,
       schemas: ["TravelAgency", "LocalBusiness", "WebSite", "WebPage", "BreadcrumbList", "FAQPage"],
@@ -58,14 +59,16 @@ class MiniSiteStructuredDataService {
   }
 
   async previewSitemap({ tenantId } = {}) {
-    const [sites, inspirations] = await Promise.all([
+    const [sites, inspirations, destinations] = await Promise.all([
       this.repository.listSites(tenantId),
       this.repository.listPublishedEditorialContents(tenantId),
+      this.repository.listPublishedDestinations(tenantId),
     ]);
 
     return buildPublicSitemap({
       sites,
       inspirations,
+      destinations,
       publicOrigin: this.publicOrigin,
     });
   }
