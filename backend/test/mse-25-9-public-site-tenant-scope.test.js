@@ -1,6 +1,8 @@
 "use strict";
 
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 const test = require("node:test");
 
 const {
@@ -12,6 +14,18 @@ const {
 const {
   resolvePreviewSiteContext,
 } = require("../src/modules/public-site-read/preview-hydrator");
+const {
+  MiniSiteStructuredDataRepository,
+} = require("../src/modules/minisite-structured-data/repository");
+const {
+  normalizePublicOrigin,
+} = require("../src/modules/minisite-structured-data/service");
+
+const ROOT = path.resolve(__dirname, "../..");
+
+function source(relativePath) {
+  return fs.readFileSync(path.join(ROOT, relativePath), "utf8");
+}
 
 function request(headers = {}, extras = {}) {
   return {
@@ -141,4 +155,42 @@ test("MSE-25.9 preview hydration scopes site lookup by tenant", async () => {
     tenantId: "tenant-mondescale",
   });
   assert.equal(context.siteId, "site-1");
+});
+
+test("MSE-25.9 structured-data client derives tenant from deployment configuration", () => {
+  const client = source("frontend/lib/minisite-structured-data/client.js");
+  const brandRuntime = source("frontend/lib/public-brand-legal-runtime.js");
+
+  assert.match(client, /process\.env\.TENANT_SLUG/);
+  assert.match(client, /process\.env\.NEXT_PUBLIC_TENANT_SLUG/);
+  assert.match(client, /"x-tenant-slug": tenantSlug\(options\)/);
+  assert.match(brandRuntime, /process\.env\.TENANT_SLUG/);
+  assert.match(brandRuntime, /"x-tenant-slug": getTenantSlug\(\)/);
+});
+
+test("MSE-25.9 structured-data public origin is configurable", () => {
+  assert.equal(
+    normalizePublicOrigin("https://travel.example.test/"),
+    "https://travel.example.test"
+  );
+});
+
+test("MSE-25.9 sitemap editorial query is tenant scoped and not truncated", async () => {
+  let captured = null;
+  const prisma = {
+    seoContent: {
+      findMany: async (args) => {
+        captured = args;
+        return [];
+      },
+    },
+  };
+
+  const repository = new MiniSiteStructuredDataRepository(prisma);
+  await repository.listPublishedEditorialContents("tenant-mondescale");
+
+  assert.equal(captured.where.tenantId, "tenant-mondescale");
+  assert.equal(captured.where.status, "published");
+  assert.deepEqual(captured.where.publishedAt, { not: null });
+  assert.equal(Object.hasOwn(captured, "take"), false);
 });
