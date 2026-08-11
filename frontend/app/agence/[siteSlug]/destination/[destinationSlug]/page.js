@@ -1,6 +1,9 @@
 import { notFound } from "next/navigation";
 import DestinationPage from "../../../../../components/destination/DestinationPage";
-import { getPublicDestination } from "../../../../../lib/destination-api";
+import {
+  getPublicDestination,
+  PublicDestinationNotFoundError,
+} from "../../../../../lib/destination-api";
 
 const PUBLIC_ORIGIN = String(
   process.env.NEXT_PUBLIC_SITE_ORIGIN ||
@@ -36,10 +39,26 @@ function localDestinationDescription(data) {
   return `${local} ${base}`.slice(0, 300).trim();
 }
 
-export async function generateMetadata({ params }) {
+async function loadDestination(params) {
   const p = await params;
-  const data = await getPublicDestination(p.siteSlug, p.destinationSlug);
-  if (!data) {
+
+  try {
+    return await getPublicDestination(p.siteSlug, p.destinationSlug);
+  } catch (error) {
+    if (error instanceof PublicDestinationNotFoundError) {
+      notFound();
+    }
+    throw error;
+  }
+}
+
+export async function generateMetadata({ params }) {
+  let data;
+
+  try {
+    data = await loadDestination(params);
+  } catch (error) {
+    console.error("Destination metadata unavailable:", error?.message || error);
     return {
       robots: { index: false, follow: false },
     };
@@ -69,9 +88,7 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function Page({ params }) {
-  const p = await params;
-  const data = await getPublicDestination(p.siteSlug, p.destinationSlug);
-  if (!data) notFound();
+  const data = await loadDestination(params);
   return <DestinationPage data={data} />;
 }
 
