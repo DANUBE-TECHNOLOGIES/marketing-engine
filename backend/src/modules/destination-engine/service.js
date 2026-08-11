@@ -39,31 +39,41 @@ class DestinationService {
     return this.repo.upsertBudapest();
   }
 
-  async publicForSite(siteSlug, destinationSlug) {
-    const site = await this.repo.findPublicSite(siteSlug);
+  async publicForSite(siteSlug, destinationSlug, tenantId) {
+    const normalizedTenantId = String(tenantId || '').trim();
+    if (!normalizedTenantId) {
+      const e = new Error('Le tenant est obligatoire pour une destination publique.');
+      e.statusCode = 400;
+      e.code = 'PUBLIC_DESTINATION_TENANT_REQUIRED';
+      throw e;
+    }
+
+    const site = await this.repo.findPublicSite(siteSlug, normalizedTenantId);
 
     if (!site || !sitePublished(site)) {
       const e = new Error(`Mini-site ${siteSlug} introuvable`);
       e.statusCode = 404;
+      e.code = 'PUBLIC_DESTINATION_SITE_NOT_FOUND';
       throw e;
     }
 
-    const tenantId = site.tenantId || site.agency?.tenantId || null;
-
     const destination = await this.publicRepo.findPublishedForTenant(
-      tenantId,
+      normalizedTenantId,
       destinationSlug
     );
 
     if (!destination) {
       const e = new Error(`Destination ${destinationSlug} introuvable`);
       e.statusCode = 404;
+      e.code = 'PUBLIC_DESTINATION_NOT_FOUND';
       throw e;
     }
 
     return {
       site: {
         id: site.id,
+        tenantId: site.tenantId || site.agency?.tenantId || normalizedTenantId,
+        agencyId: site.agencyId,
         slug: site.slug,
         name: site.name,
         basePath: `/agence/${site.slug}`,
