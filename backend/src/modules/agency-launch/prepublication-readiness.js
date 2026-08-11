@@ -24,6 +24,8 @@ const RECOMMENDED_PAGES = [
 const SIMILARITY_PAGE_KEYS = ["home", "agence", "services"];
 const SIMILARITY_THRESHOLD = 0.82;
 const SIMILARITY_MIN_WORDS = 60;
+const REVIEW_FRESHNESS_TARGET_DAYS = 120;
+const REVIEW_RESPONSE_TARGET = 0.5;
 
 function normalizeSlug(value) {
   return String(value || "").trim().toLowerCase();
@@ -72,9 +74,7 @@ function designerContentState(page) {
       : { total: 0, visible: 0, published: 0 };
 
   const hasVisibleContent = selectedState.visible > 0;
-  const coherent =
-    hasVisibleContent &&
-    (!pagePublished || selectedState.published > 0);
+  const coherent = hasVisibleContent && (!pagePublished || selectedState.published > 0);
 
   return {
     source,
@@ -159,6 +159,66 @@ function localSeoCheck(agency) {
   };
 }
 
+function daysSince(value, now = new Date()) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return Math.max(0, Math.floor((now.getTime() - date.getTime()) / 86400000));
+}
+
+function localReviewTrustCheck(agency, now = new Date()) {
+  const reviews = Array.isArray(agency?.reviews) ? agency.reviews : [];
+  const datedReviews = reviews
+    .filter((review) => review?.publishedAt)
+    .sort((left, right) => new Date(right.publishedAt) - new Date(left.publishedAt));
+  const latestPublishedAt = datedReviews[0]?.publishedAt || null;
+  const latestAgeDays = daysSince(latestPublishedAt, now);
+  const withReplies = reviews.filter((review) => String(review?.reply || "").trim()).length;
+  const googleSourced = reviews.filter((review) => {
+    const source = String(review?.source || "").trim().toLowerCase();
+    return source.includes("google") || Boolean(review?.googleReviewId);
+  }).length;
+  const responseRate = reviews.length ? withReplies / reviews.length : 0;
+  const freshnessOk = latestAgeDays != null && latestAgeDays <= REVIEW_FRESHNESS_TARGET_DAYS;
+  const responseOk = reviews.length > 0 && responseRate >= REVIEW_RESPONSE_TARGET;
+  const sourceOk = reviews.length > 0 && googleSourced > 0;
+  const passed = reviews.length > 0 && freshnessOk && responseOk && sourceOk;
+
+  return {
+    code: "LOCAL_TRUST",
+    label: "Confiance locale et avis",
+    required: false,
+    passed,
+    reviewCount: reviews.length,
+    latestPublishedAt,
+    latestAgeDays,
+    freshnessTargetDays: REVIEW_FRESHNESS_TARGET_DAYS,
+    withReplies,
+    responseRate: Math.round(responseRate * 1000) / 1000,
+    responseTarget: REVIEW_RESPONSE_TARGET,
+    googleSourced,
+    signals: {
+      hasReviews: reviews.length > 0,
+      freshnessOk,
+      responseOk,
+      sourceOk,
+      hasReviewLink: Boolean(String(agency?.googleReviewUrl || "").trim()),
+      hasGoogleLocation: Boolean(String(agency?.googleLocationId || "").trim()),
+    },
+    recommendation: passed
+      ? null
+      : reviews.length === 0
+        ? "Synchroniser les avis Google et poursuivre la collecte d'avis clients réels afin d'apporter une preuve de confiance locale au mini-site."
+        : !freshnessOk
+          ? "Relancer régulièrement la collecte d'avis afin de maintenir un flux récent de retours clients vérifiables."
+          : !responseOk
+            ? "Répondre davantage aux avis clients publiés : viser au moins une réponse sur deux comme seuil opérationnel interne."
+            : !sourceOk
+              ? "Vérifier la synchronisation Google Business Profile afin que les avis affichés soient correctement rattachés à leur source."
+              : "Compléter les signaux Google locaux de l'agence.",
+  };
+}
+
 function contentCheck(site) {
   const pages = site?.pages || [];
   const requiredPages = REQUIRED_CONTENT_PAGES.map(
@@ -231,34 +291,27 @@ function textValues(value, output = []) {
     if (normalized) output.push(normalized);
     return output;
   }
-
   if (Array.isArray(value)) {
     value.forEach((item) => textValues(item, output));
     return output;
   }
-
   if (value && typeof value === "object") {
     Object.entries(value).forEach(([key, item]) => {
       if (["id", "url", "href", "imageUrl", "image", "icon"].includes(key)) return;
       textValues(item, output);
     });
   }
-
   return output;
 }
 
 function publishedPageText(page) {
   if (!page) return "";
-
   const blocks = Array.isArray(page.blocks) ? page.blocks : [];
   const sections = Array.isArray(page.sections) ? page.sections : [];
   const source = blocks.length > 0 ? blocks : sections;
   const entries = source.filter(
-    (entry) =>
-      String(entry?.status || "").toLowerCase() !== "hidden" &&
-      isPublished(entry)
+    (entry) => String(entry?.status || "").toLowerCase() !== "hidden" && isPublished(entry)
   );
-
   return textValues([
     page.title,
     page.h1,
@@ -279,21 +332,17 @@ function localDifferentiationCheck(site, agency) {
     const wordCount = text ? text.split(/\s+/).filter(Boolean).length : 0;
     const hasCity = Boolean(city) && normalized.includes(city);
     const hasAgencyName = Boolean(agencyName) && normalized.includes(agencyName);
-    const locallyAnchored = hasCity || hasAgencyName;
-
     return {
       slug: definition.key,
       wordCount,
       hasCity,
       hasAgencyName,
-      locallyAnchored,
+      locallyAnchored: hasCity || hasAgencyName,
     };
   });
-
   const substantivePages = details.filter((item) => item.wordCount >= 45).length;
   const locallyAnchoredPages = details.filter((item) => item.locallyAnchored).length;
   const passed = substantivePages >= 2 && locallyAnchoredPages >= 3;
-
   return {
     code: "LOCAL_CONTENT",
     label: "Différenciation du contenu local",
@@ -309,9 +358,7 @@ function localDifferentiationCheck(site, agency) {
 }
 
 function stripDiacritics(value) {
-  return String(value || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+  return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
 function comparisonTokens(text, agency) {
@@ -320,7 +367,6 @@ function comparisonTokens(text, agency) {
       .flatMap((value) => stripDiacritics(value).toLowerCase().split(/[^a-z0-9]+/))
       .filter((value) => value.length >= 2)
   );
-
   return stripDiacritics(text)
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
@@ -332,62 +378,43 @@ function comparisonTokens(text, agency) {
 function tokenShingles(tokens, size = 3) {
   const shingles = new Set();
   if (!Array.isArray(tokens) || tokens.length < size) return shingles;
-
   for (let index = 0; index <= tokens.length - size; index += 1) {
     shingles.add(tokens.slice(index, index + size).join(" "));
   }
-
   return shingles;
 }
 
 function jaccardSimilarity(left, right) {
   if (!left?.size || !right?.size) return 0;
-
   let intersection = 0;
   const smaller = left.size <= right.size ? left : right;
   const larger = left.size <= right.size ? right : left;
-
   smaller.forEach((value) => {
     if (larger.has(value)) intersection += 1;
   });
-
   return intersection / (left.size + right.size - intersection);
 }
 
 function pageSimilarity(currentPage, currentAgency, peerPage, peerAgency) {
-  const currentText = publishedPageText(currentPage);
-  const peerText = publishedPageText(peerPage);
-  const currentTokens = comparisonTokens(currentText, currentAgency);
-  const peerTokens = comparisonTokens(peerText, peerAgency);
-
-  if (
-    currentTokens.length < SIMILARITY_MIN_WORDS ||
-    peerTokens.length < SIMILARITY_MIN_WORDS
-  ) {
+  const currentTokens = comparisonTokens(publishedPageText(currentPage), currentAgency);
+  const peerTokens = comparisonTokens(publishedPageText(peerPage), peerAgency);
+  if (currentTokens.length < SIMILARITY_MIN_WORDS || peerTokens.length < SIMILARITY_MIN_WORDS) {
     return null;
   }
-
-  return jaccardSimilarity(
-    tokenShingles(currentTokens),
-    tokenShingles(peerTokens)
-  );
+  return jaccardSimilarity(tokenShingles(currentTokens), tokenShingles(peerTokens));
 }
 
 function interAgencySimilarityCheck(site, agency, peers = []) {
   const matches = [];
-
   for (const peerAgency of peers || []) {
     const peerSite = peerAgency?.agencySites?.[0] || null;
     if (!peerSite || !isPublished(peerSite)) continue;
-
     for (const slug of SIMILARITY_PAGE_KEYS) {
       const currentPage = pageByKey(site?.pages || [], slug);
       const peerPage = pageByKey(peerSite.pages || [], slug);
       if (!currentPage || !peerPage || !isPublished(currentPage) || !isPublished(peerPage)) continue;
-
       const similarity = pageSimilarity(currentPage, agency, peerPage, peerAgency);
       if (similarity == null || similarity < SIMILARITY_THRESHOLD) continue;
-
       matches.push({
         slug,
         peerAgencyId: peerAgency.id,
@@ -397,9 +424,7 @@ function interAgencySimilarityCheck(site, agency, peers = []) {
       });
     }
   }
-
   matches.sort((left, right) => right.similarity - left.similarity);
-
   return {
     code: "CONTENT_SIMILARITY",
     label: "Similarité inter-agences",
@@ -409,10 +434,9 @@ function interAgencySimilarityCheck(site, agency, peers = []) {
     minimumWords: SIMILARITY_MIN_WORDS,
     comparedPages: SIMILARITY_PAGE_KEYS,
     matches: matches.slice(0, 12),
-    recommendation:
-      matches.length > 0
-        ? "Certaines pages ressemblent fortement à celles d'une autre agence après neutralisation du nom et de la ville. Ajouter des éléments réellement propres à l'équipe, aux expertises, à la clientèle locale ou aux pratiques de l'agence avant de renforcer leur indexation."
-        : null,
+    recommendation: matches.length > 0
+      ? "Certaines pages ressemblent fortement à celles d'une autre agence après neutralisation du nom et de la ville. Ajouter des éléments réellement propres à l'équipe, aux expertises, à la clientèle locale ou aux pratiques de l'agence avant de renforcer leur indexation."
+      : null,
   };
 }
 
@@ -424,7 +448,6 @@ function publicSiteSlugValid(value) {
 function siteCheck(site) {
   const exists = Boolean(site);
   const slugValid = exists && publicSiteSlugValid(site?.slug);
-
   return {
     code: "SITE",
     label: "Mini-site",
@@ -449,7 +472,6 @@ function score(checks) {
     LOCAL_SEO: 5,
     LOCAL_CONTENT: 5,
   };
-
   return checks.reduce(
     (total, check) => total + (check.passed ? weights[check.code] || 0 : 0),
     0
@@ -474,23 +496,11 @@ const PUBLIC_CONTENT_SELECT = {
   displayOrder: true,
   blocks: {
     orderBy: { displayOrder: "asc" },
-    select: {
-      id: true,
-      blockType: true,
-      content: true,
-      status: true,
-      displayOrder: true,
-    },
+    select: { id: true, blockType: true, content: true, status: true, displayOrder: true },
   },
   sections: {
     orderBy: { displayOrder: "asc" },
-    select: {
-      id: true,
-      sectionType: true,
-      jsonContent: true,
-      status: true,
-      displayOrder: true,
-    },
+    select: { id: true, sectionType: true, jsonContent: true, status: true, displayOrder: true },
   },
 };
 
@@ -504,7 +514,6 @@ class PrepublicationReadinessService {
 
   async loadAgency(agencyId) {
     const id = Number(agencyId);
-
     if (!Number.isInteger(id) || id <= 0) {
       const error = new Error("Identifiant agence invalide.");
       error.code = "AGENCY_LAUNCH_INVALID_AGENCY_ID";
@@ -526,6 +535,19 @@ class PrepublicationReadinessService {
         googleReviewUrl: true,
         googleLocationId: true,
         tenantId: true,
+        reviews: {
+          orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
+          take: 100,
+          select: {
+            id: true,
+            rating: true,
+            reply: true,
+            source: true,
+            googleReviewId: true,
+            publishedAt: true,
+            createdAt: true,
+          },
+        },
         agencySites: {
           where: { tenantId: this.tenantId },
           orderBy: { createdAt: "desc" },
@@ -555,7 +577,6 @@ class PrepublicationReadinessService {
       error.statusCode = 404;
       throw error;
     }
-
     return agency;
   }
 
@@ -594,7 +615,6 @@ class PrepublicationReadinessService {
       this.loadPeerAgencies(agencyId),
     ]);
     const site = agency.agencySites?.[0] || null;
-
     const checks = [
       siteCheck(site),
       identityCheck(agency),
@@ -604,19 +624,14 @@ class PrepublicationReadinessService {
       localSeoCheck(agency),
       localDifferentiationCheck(site, agency),
       interAgencySimilarityCheck(site, agency, peers),
+      localReviewTrustCheck(agency),
     ];
-
     const launchBlockers = blockers(checks);
     const launchScore = score(checks);
-
     return {
-      version: "1.9",
+      version: "2.0",
       mode: "prepublication",
-      agency: {
-        id: agency.id,
-        name: agency.name,
-        city: agency.city,
-      },
+      agency: { id: agency.id, name: agency.name, city: agency.city },
       site: site
         ? {
             id: site.id,
@@ -651,6 +666,8 @@ module.exports = {
   pagePresenceCheck,
   identityCheck,
   localSeoCheck,
+  daysSince,
+  localReviewTrustCheck,
   contentCheck,
   legalCheck,
   seoCheck,
