@@ -25,6 +25,7 @@ async function resolveEditorialCanonical(prisma, tenantId, content) {
     select: {
       agencyId: true,
       slug: true,
+      name: true,
     },
   });
 
@@ -33,6 +34,7 @@ async function resolveEditorialCanonical(prisma, tenantId, content) {
   return {
     agencyId: String(site.agencyId),
     siteSlug: String(site.slug),
+    siteName: String(site.name || "").trim() || null,
   };
 }
 
