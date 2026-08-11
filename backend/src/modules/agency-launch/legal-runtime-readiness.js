@@ -63,15 +63,24 @@ function readinessGrade(value) {
   return "E";
 }
 
+function legalRoutesPresent(check) {
+  const items = Array.isArray(check?.items) ? check.items : [];
+  return items.length > 0 && items.every((item) => item?.exists === true);
+}
+
 function applyLegalRuntimeToReadiness(report, runtime, { score, blockers } = {}) {
   if (!report || !runtime || !Array.isArray(report.checks)) return report;
 
   const checks = report.checks.map((check) => {
     if (String(check?.code || "").toUpperCase() !== "LEGAL") return check;
 
+    const routesPresent = legalRoutesPresent(check);
+
     return {
       ...check,
-      passed: check.passed === true && runtime.passed === true,
+      passed: routesPresent && runtime.passed === true,
+      routesPresent,
+      contentSource: "legal-runtime",
       runtime,
     };
   });
@@ -100,6 +109,7 @@ module.exports = {
   defined,
   resolvedLegalValue,
   legalRuntimeReadiness,
+  legalRoutesPresent,
   applyLegalRuntimeToReadiness,
   readinessGrade,
 };
