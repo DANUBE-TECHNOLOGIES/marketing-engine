@@ -1,5 +1,6 @@
 import Link from "next/link";
 import MainLayout from "../../components/MainLayout";
+import MarkSeoActionDoneButton from "./MarkSeoActionDoneButton";
 
 export const dynamic = "force-dynamic";
 
@@ -159,6 +160,7 @@ export default async function AgencySeoPage({ params }) {
             <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div className="border-b border-slate-200 px-6 py-5">
                 <h2 className="text-xl font-bold text-slate-950">Actions recommandées</h2>
+                <p className="mt-1 text-sm text-slate-500">Une fois l'optimisation réellement effectuée, enregistrez-la pour démarrer automatiquement le suivi d'impact.</p>
               </div>
               <div className="divide-y divide-slate-100">
                 {actions.map((action, index) => (
@@ -167,6 +169,7 @@ export default async function AgencySeoPage({ params }) {
                     <div className="mt-1 font-semibold text-slate-950">{action.title}</div>
                     <p className="mt-1 text-sm leading-6 text-slate-600">{action.detail}</p>
                     {action.targetPage?.slug ? <div className="mt-2 text-xs text-slate-500">Cible : /{action.targetPage.slug}</div> : null}
+                    <MarkSeoActionDoneButton agencyId={agencyId} action={action} />
                   </div>
                 ))}
                 {!actions.length ? <div className="px-6 py-10 text-center text-emerald-700">Aucune action prioritaire actuellement.</div> : null}
