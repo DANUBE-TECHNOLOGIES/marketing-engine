@@ -161,7 +161,6 @@ export function buildTravelAgencySchema(site) {
       agency.website,
       agency.googleBusinessUrl,
       agency.googleMapsUrl,
-      agency.googleReviewUrl,
       agency.facebookUrl,
       agency.instagramUrl,
       agency.linkedinUrl,
