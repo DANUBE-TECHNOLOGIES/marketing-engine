@@ -11,6 +11,7 @@ const { applyRankingContentCoverage } = require("./ranking-content-coverage");
 const { applySeoActionQueue } = require("./seo-action-queue");
 const { applySeoActionCooldown } = require("./seo-action-cooldown");
 const { applyLocalSeoGoals } = require("./local-seo-goals");
+const { applySeoHealthScore } = require("./seo-health-score");
 const { networkSeoGoals } = require("./network-seo-goals");
 const { networkRankingVisibilityTrend } = require("./network-ranking-visibility-trend");
 const { networkSeoPriorities } = require("./network-seo-priorities");
@@ -36,7 +37,28 @@ async function readinessWithPublicRuntime(database, tenantId, agencyId, service)
   ]);
   const queued = applySeoActionQueue(applyRankingContentCoverage(withRankings, pages));
   const cooled = { ...queued, version: "3.3", seoActions: applySeoActionCooldown(queued.seoActions, recentHistory) };
-  return applyLocalSeoGoals(cooled);
+  return applySeoHealthScore(applyLocalSeoGoals(cooled));
+}
+
+function summarizeSeoHealth(items = []) {
+  const rows = items.filter((item) => item?.agency?.id && item?.seoHealth);
+  const scores = rows.map((item) => Number(item.seoHealth.score || 0));
+  const average = scores.length ? Math.round((scores.reduce((sum, value) => sum + value, 0) / scores.length) * 10) / 10 : 0;
+  const priority = rows.filter((item) => item.seoHealth.status === "priority");
+  const watch = rows.filter((item) => item.seoHealth.status === "watch");
+  const healthy = rows.filter((item) => item.seoHealth.status === "healthy");
+  return {
+    version: "1.0",
+    agenciesObserved: rows.length,
+    averageScore: average,
+    healthy: healthy.length,
+    watch: watch.length,
+    priority: priority.length,
+    priorityAgencies: [...priority, ...watch]
+      .sort((left, right) => Number(left.seoHealth.score || 0) - Number(right.seoHealth.score || 0))
+      .slice(0, 10)
+      .map((item) => ({ agency: item.agency, seoHealth: item.seoHealth })),
+  };
 }
 
 async function networkForTenant(database, tenantId) {
@@ -48,7 +70,7 @@ async function networkForTenant(database, tenantId) {
     catch (error) { items.push({ agency: { id: agency.id }, readiness: { ready: false }, launchState: { code: "to_complete", label: "À compléter", priority: 2, actionable: true, action: "complete" }, error: { code: error?.code || "AGENCY_LAUNCH_READINESS_ERROR", message: error?.message || "État de lancement indisponible." } }); }
   }
   const learning = await networkSeoLearning(database, tenantId, 100);
-  return { version: "3.6", mode: "prepublication", tenantId, generatedAt: new Date().toISOString(), summary: summarizeLaunchStates(items), seoGoals: networkSeoGoals(items), seoVisibilityTrend: networkRankingVisibilityTrend(items), seoPriorities: networkSeoPriorities(items, 25, learning), seoLearning: { measuredActions: learning.measuredActions, improvedActions: learning.improvedActions, declinedActions: learning.declinedActions, groups: learning.groups }, items };
+  return { version: "3.7", mode: "prepublication", tenantId, generatedAt: new Date().toISOString(), summary: summarizeLaunchStates(items), seoHealth: summarizeSeoHealth(items), seoGoals: networkSeoGoals(items), seoVisibilityTrend: networkRankingVisibilityTrend(items), seoPriorities: networkSeoPriorities(items, 25, learning), seoLearning: { measuredActions: learning.measuredActions, improvedActions: learning.improvedActions, declinedActions: learning.declinedActions, groups: learning.groups }, items };
 }
 
 async function networkSeoLearning(database, tenantId, limitPerAgency = 100) {
@@ -61,7 +83,7 @@ async function networkSeoLearning(database, tenantId, limitPerAgency = 100) {
 function createAgencyLaunchRouter({ prisma } = {}) {
   const database = prisma || new PrismaClient();
   const router = express.Router();
-  router.get("/health", (request, response) => response.json({ ok: true, capability: "agency-launch", version: "3.6", mode: "prepublication", legalRuntimeRequired: true, localCitationsObserved: true, localRankingsObserved: true, rankingMomentumObserved: true, rankingVisibilityTrendObserved: true, networkRankingVisibilityTrendObserved: true, rankingContentCoverageObserved: true, seoActionQueueObserved: true, seoActionCooldownObserved: true, localSeoGoalsObserved: true, networkSeoGoalsObserved: true, networkSeoPrioritiesObserved: true, seoActionHistoryObserved: true, seoActionImpactObserved: true, seoLearningObserved: true, guardedLearningPrioritizationObserved: true, explainablePriorityScoringObserved: true }));
+  router.get("/health", (request, response) => response.json({ ok: true, capability: "agency-launch", version: "3.7", mode: "prepublication", legalRuntimeRequired: true, localCitationsObserved: true, localRankingsObserved: true, rankingMomentumObserved: true, rankingVisibilityTrendObserved: true, networkRankingVisibilityTrendObserved: true, rankingContentCoverageObserved: true, seoActionQueueObserved: true, seoActionCooldownObserved: true, localSeoGoalsObserved: true, networkSeoGoalsObserved: true, seoHealthObserved: true, networkSeoHealthObserved: true, networkSeoPrioritiesObserved: true, seoActionHistoryObserved: true, seoActionImpactObserved: true, seoLearningObserved: true, guardedLearningPrioritizationObserved: true, explainablePriorityScoringObserved: true }));
   router.get("/network", async (request, response) => { try { const tenantId = await tenantIdForRequest(database, request); response.json(await networkForTenant(database, tenantId)); } catch (error) { sendError(response, error); } });
   router.get("/network/seo-learning", async (request, response) => { try { const tenantId = await tenantIdForRequest(database, request); response.json(await networkSeoLearning(database, tenantId, request.query.limit)); } catch (error) { sendError(response, error); } });
   router.get("/agencies/:agencyId/readiness", async (request, response) => { try { const tenantId = await tenantIdForRequest(database, request); const agencyId = await assertAgencyInTenant(database, tenantId, request.params.agencyId); const service = new PrepublicationReadinessService({ prisma: database, tenantId }); const report = await readinessWithPublicRuntime(database, tenantId, agencyId, service); response.json({ ...report, launchState: resolveLaunchState({ site: report.site, readiness: report.readiness }) }); } catch (error) { sendError(response, error); } });
@@ -70,4 +92,4 @@ function createAgencyLaunchRouter({ prisma } = {}) {
   return router;
 }
 
-module.exports = { createAgencyLaunchRouter, tenantIdForRequest, assertAgencyInTenant, readinessWithPublicRuntime, networkForTenant, networkSeoLearning };
+module.exports = { createAgencyLaunchRouter, tenantIdForRequest, assertAgencyInTenant, readinessWithPublicRuntime, networkForTenant, networkSeoLearning, summarizeSeoHealth };
