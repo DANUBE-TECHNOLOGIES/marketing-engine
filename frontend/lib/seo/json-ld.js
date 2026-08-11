@@ -1,4 +1,7 @@
 import { absoluteUrl } from "./site-url";
+import {
+  buildGoogleMapsSearchUrl,
+} from "../public-agency-location";
 
 export function compactJsonLd(value) {
   return JSON.parse(
@@ -124,6 +127,14 @@ export function buildTravelAgencySchema(site) {
   const agency = site?.agency || site;
   const latitude = agency?.latitude ?? site?.latitude;
   const longitude = agency?.longitude ?? site?.longitude;
+  const hasMap =
+    agency.googleMapsUrl ||
+    buildGoogleMapsSearchUrl({
+      name: site.name || agency.name,
+      address: agency.address || site.address,
+      postalCode: agency.postalCode || site.postalCode,
+      city: agency.city || site.city,
+    });
 
   return compactJsonLd({
     "@context": "https://schema.org",
@@ -155,6 +166,7 @@ export function buildTravelAgencySchema(site) {
             longitude,
           }
         : undefined,
+    hasMap,
     areaServed: servedAreas(site, agency),
     openingHoursSpecification: openingHoursSpecification(site?.hours),
     sameAs: [
