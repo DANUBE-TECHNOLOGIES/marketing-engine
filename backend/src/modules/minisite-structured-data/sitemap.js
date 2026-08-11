@@ -43,15 +43,20 @@ function pagePriority(slug) {
   const normalized = normalizeSlug(slug);
   if (!normalized) return 1;
   if (["agence", "services", "destinations", "contact"].includes(normalized)) return 0.8;
-  if (["equipe", "inspirations", "engagements", "partenaires", "avis"].includes(normalized)) return 0.6;
+  if (["equipe", "inspiration", "engagements", "partenaires", "avis"].includes(normalized)) return 0.6;
   return 0.5;
 }
 
 function pageChangeFrequency(slug) {
   const normalized = normalizeSlug(slug);
   if (!normalized) return "weekly";
-  if (["destinations", "inspirations", "avis"].includes(normalized)) return "weekly";
+  if (["destinations", "inspiration", "avis"].includes(normalized)) return "weekly";
   return "monthly";
+}
+
+function inspirationIndexUrl(publicOrigin, siteSlug) {
+  const origin = String(publicOrigin || "").replace(/\/+$/g, "");
+  return `${origin}/agence/${encodeURIComponent(siteSlug)}/inspiration`;
 }
 
 function inspirationUrl(publicOrigin, siteSlug, contentSlug) {
@@ -98,6 +103,17 @@ function buildPublicSitemap({ sites, inspirations, destinations, publicOrigin } 
       agencyId,
       siteSlug: site.slug,
       pageSlug: "",
+    });
+
+    entries.push({
+      url: inspirationIndexUrl(publicOrigin, site.slug),
+      lastModified: normalizeDate(site.updatedAt || site.publishedAt),
+      changeFrequency: "weekly",
+      priority: 0.6,
+      agencyId,
+      siteSlug: site.slug,
+      pageSlug: "inspiration",
+      type: "inspiration-index",
     });
 
     for (const page of site.pages || []) {
@@ -209,6 +225,7 @@ function buildPublicSitemap({ sites, inspirations, destinations, publicOrigin } 
       indexedDestinationPages: deduplicated.filter((entry) => entry.type === "destination").length,
       editorialContents: (inspirations || []).length,
       indexedEditorialContents: deduplicated.filter((entry) => entry.type === "inspiration").length,
+      inspirationIndexPages: deduplicated.filter((entry) => entry.type === "inspiration-index").length,
       entryCount: deduplicated.length,
       excludedCount: excluded.length,
       duplicateCount: entries.length - deduplicated.length,
@@ -221,8 +238,9 @@ function buildPublicSitemap({ sites, inspirations, destinations, publicOrigin } 
 module.exports = {
   NOINDEX_SLUGS,
   buildPublicSitemap,
-  inspirationUrl,
   destinationUrl,
+  inspirationIndexUrl,
+  inspirationUrl,
   isPublishedPage,
   isPublishedSite,
   pageChangeFrequency,
