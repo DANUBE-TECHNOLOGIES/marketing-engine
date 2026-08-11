@@ -12,6 +12,7 @@ const { applySeoActionQueue } = require("./seo-action-queue");
 const { applySeoActionCooldown } = require("./seo-action-cooldown");
 const { applyLocalSeoGoals } = require("./local-seo-goals");
 const { applySeoHealthScore } = require("./seo-health-score");
+const { applySeoHealthActionPlan } = require("./seo-health-action-plan");
 const { networkSeoGoals } = require("./network-seo-goals");
 const { networkRankingVisibilityTrend } = require("./network-ranking-visibility-trend");
 const { networkSeoPriorities } = require("./network-seo-priorities");
@@ -37,7 +38,9 @@ async function readinessWithPublicRuntime(database, tenantId, agencyId, service)
   ]);
   const queued = applySeoActionQueue(applyRankingContentCoverage(withRankings, pages));
   const cooled = { ...queued, version: "3.3", seoActions: applySeoActionCooldown(queued.seoActions, recentHistory) };
-  return applySeoHealthScore(applyLocalSeoGoals(cooled));
+  const withGoals = applyLocalSeoGoals(cooled);
+  const withHealth = applySeoHealthScore(withGoals);
+  return applySeoHealthActionPlan(withHealth);
 }
 
 function summarizeSeoHealth(items = []) {
@@ -47,18 +50,7 @@ function summarizeSeoHealth(items = []) {
   const priority = rows.filter((item) => item.seoHealth.status === "priority");
   const watch = rows.filter((item) => item.seoHealth.status === "watch");
   const healthy = rows.filter((item) => item.seoHealth.status === "healthy");
-  return {
-    version: "1.0",
-    agenciesObserved: rows.length,
-    averageScore: average,
-    healthy: healthy.length,
-    watch: watch.length,
-    priority: priority.length,
-    priorityAgencies: [...priority, ...watch]
-      .sort((left, right) => Number(left.seoHealth.score || 0) - Number(right.seoHealth.score || 0))
-      .slice(0, 10)
-      .map((item) => ({ agency: item.agency, seoHealth: item.seoHealth })),
-  };
+  return { version: "1.0", agenciesObserved: rows.length, averageScore: average, healthy: healthy.length, watch: watch.length, priority: priority.length, priorityAgencies: [...priority, ...watch].sort((left, right) => Number(left.seoHealth.score || 0) - Number(right.seoHealth.score || 0)).slice(0, 10).map((item) => ({ agency: item.agency, seoHealth: item.seoHealth, seoActionPlan: item.seoActionPlan })) };
 }
 
 async function networkForTenant(database, tenantId) {
@@ -70,20 +62,14 @@ async function networkForTenant(database, tenantId) {
     catch (error) { items.push({ agency: { id: agency.id }, readiness: { ready: false }, launchState: { code: "to_complete", label: "À compléter", priority: 2, actionable: true, action: "complete" }, error: { code: error?.code || "AGENCY_LAUNCH_READINESS_ERROR", message: error?.message || "État de lancement indisponible." } }); }
   }
   const learning = await networkSeoLearning(database, tenantId, 100);
-  return { version: "3.7", mode: "prepublication", tenantId, generatedAt: new Date().toISOString(), summary: summarizeLaunchStates(items), seoHealth: summarizeSeoHealth(items), seoGoals: networkSeoGoals(items), seoVisibilityTrend: networkRankingVisibilityTrend(items), seoPriorities: networkSeoPriorities(items, 25, learning), seoLearning: { measuredActions: learning.measuredActions, improvedActions: learning.improvedActions, declinedActions: learning.declinedActions, groups: learning.groups }, items };
+  return { version: "3.8", mode: "prepublication", tenantId, generatedAt: new Date().toISOString(), summary: summarizeLaunchStates(items), seoHealth: summarizeSeoHealth(items), seoGoals: networkSeoGoals(items), seoVisibilityTrend: networkRankingVisibilityTrend(items), seoPriorities: networkSeoPriorities(items, 25, learning), seoLearning: { measuredActions: learning.measuredActions, improvedActions: learning.improvedActions, declinedActions: learning.declinedActions, groups: learning.groups }, items };
 }
 
-async function networkSeoLearning(database, tenantId, limitPerAgency = 100) {
-  const agencies = await database.agency.findMany({ where: { tenantId }, orderBy: [{ city: "asc" }, { name: "asc" }], select: { id: true, name: true, city: true } });
-  const actions = [], impacts = [];
-  for (const agency of agencies) { const agencyActions = await seoActionHistory(database, tenantId, agency.id, limitPerAgency); const agencyImpacts = await seoActionImpact(database, tenantId, agency.id, agencyActions); actions.push(...agencyActions.map((action) => ({ ...action, agency }))); impacts.push(...agencyImpacts); }
-  return { version: "1.0", tenantId, generatedAt: new Date().toISOString(), agenciesObserved: agencies.length, ...seoLearningSummary(actions, impacts) };
-}
+async function networkSeoLearning(database, tenantId, limitPerAgency = 100) { const agencies = await database.agency.findMany({ where: { tenantId }, orderBy: [{ city: "asc" }, { name: "asc" }], select: { id: true, name: true, city: true } }); const actions = [], impacts = []; for (const agency of agencies) { const agencyActions = await seoActionHistory(database, tenantId, agency.id, limitPerAgency); const agencyImpacts = await seoActionImpact(database, tenantId, agency.id, agencyActions); actions.push(...agencyActions.map((action) => ({ ...action, agency }))); impacts.push(...agencyImpacts); } return { version: "1.0", tenantId, generatedAt: new Date().toISOString(), agenciesObserved: agencies.length, ...seoLearningSummary(actions, impacts) }; }
 
 function createAgencyLaunchRouter({ prisma } = {}) {
-  const database = prisma || new PrismaClient();
-  const router = express.Router();
-  router.get("/health", (request, response) => response.json({ ok: true, capability: "agency-launch", version: "3.7", mode: "prepublication", legalRuntimeRequired: true, localCitationsObserved: true, localRankingsObserved: true, rankingMomentumObserved: true, rankingVisibilityTrendObserved: true, networkRankingVisibilityTrendObserved: true, rankingContentCoverageObserved: true, seoActionQueueObserved: true, seoActionCooldownObserved: true, localSeoGoalsObserved: true, networkSeoGoalsObserved: true, seoHealthObserved: true, networkSeoHealthObserved: true, networkSeoPrioritiesObserved: true, seoActionHistoryObserved: true, seoActionImpactObserved: true, seoLearningObserved: true, guardedLearningPrioritizationObserved: true, explainablePriorityScoringObserved: true }));
+  const database = prisma || new PrismaClient(); const router = express.Router();
+  router.get("/health", (request, response) => response.json({ ok: true, capability: "agency-launch", version: "3.8", mode: "prepublication", legalRuntimeRequired: true, localCitationsObserved: true, localRankingsObserved: true, rankingMomentumObserved: true, rankingVisibilityTrendObserved: true, networkRankingVisibilityTrendObserved: true, rankingContentCoverageObserved: true, seoActionQueueObserved: true, seoActionCooldownObserved: true, localSeoGoalsObserved: true, networkSeoGoalsObserved: true, seoHealthObserved: true, seoHealthActionPlanObserved: true, networkSeoHealthObserved: true, networkSeoPrioritiesObserved: true, seoActionHistoryObserved: true, seoActionImpactObserved: true, seoLearningObserved: true, guardedLearningPrioritizationObserved: true, explainablePriorityScoringObserved: true }));
   router.get("/network", async (request, response) => { try { const tenantId = await tenantIdForRequest(database, request); response.json(await networkForTenant(database, tenantId)); } catch (error) { sendError(response, error); } });
   router.get("/network/seo-learning", async (request, response) => { try { const tenantId = await tenantIdForRequest(database, request); response.json(await networkSeoLearning(database, tenantId, request.query.limit)); } catch (error) { sendError(response, error); } });
   router.get("/agencies/:agencyId/readiness", async (request, response) => { try { const tenantId = await tenantIdForRequest(database, request); const agencyId = await assertAgencyInTenant(database, tenantId, request.params.agencyId); const service = new PrepublicationReadinessService({ prisma: database, tenantId }); const report = await readinessWithPublicRuntime(database, tenantId, agencyId, service); response.json({ ...report, launchState: resolveLaunchState({ site: report.site, readiness: report.readiness }) }); } catch (error) { sendError(response, error); } });
