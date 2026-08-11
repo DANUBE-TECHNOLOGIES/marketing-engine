@@ -9,7 +9,7 @@ async function handler(
   const parameters =
     await context.params;
 
-  return proxyBackendRequest({
+  const response = await proxyBackendRequest({
     request,
     prefix:
       "/media/brand-assets",
@@ -17,6 +17,15 @@ async function handler(
       parameters?.path ||
       [],
   });
+
+  if (response.ok) {
+    response.headers.set(
+      "Cache-Control",
+      "public, max-age=31536000, immutable"
+    );
+  }
+
+  return response;
 }
 
 export const dynamic =
