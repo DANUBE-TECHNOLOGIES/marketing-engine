@@ -120,6 +120,11 @@ test("MSE-25.9 frontend provides a human-gated inspiration cockpit", () => {
   assert.match(cockpit, /name="targetScope"/);
   assert.match(cockpit, /name="agencyIds"/);
   assert.match(cockpit, /name="indexAgencyId"/);
+  assert.match(cockpit, /site:\s*item\.site \|\| null/);
+  assert.match(cockpit, /canonicalSiteReady/);
+  assert.match(cockpit, /Publication locale bloquée/);
+  assert.match(cockpit, /Publication bloquée/);
+  assert.match(cockpit, /\/agency-launch/);
   assert.match(cockpit, /publishContent/);
   assert.match(cockpit, /unpublishContent/);
   assert.match(cockpit, /Le contenu généré arrive d’abord en validation/);
