@@ -2,6 +2,9 @@
 const express = require("express");
 const { AiContentService, toInspiration } = require("./service");
 const {
+  resolveEditorialCanonical,
+} = require("./editorial-canonical");
+const {
   validateEditorialUpdate,
   assertEditorialTargetingAgenciesBelongToTenant,
   assertEditableEditorialContent,
@@ -64,7 +67,17 @@ module.exports = ({ prisma }) => {
           message: "Inspiration publiée introuvable.",
         });
       }
-      return res.json(content);
+
+      const editorialCanonical = await resolveEditorialCanonical(
+        prisma,
+        req.tenant.id,
+        content
+      );
+
+      return res.json({
+        ...content,
+        editorialCanonical,
+      });
     } catch (e) { return next(e); }
   });
   router.get("/ai-content/contents", async (req, res, next) => {
