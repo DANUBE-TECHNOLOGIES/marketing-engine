@@ -138,7 +138,7 @@ export default function SeoDesignerContext({ siteId, pageSlug, keyword, mode, br
           type="button"
           disabled={preparing}
           onClick={prepareDraftProposal}
-          style={{marginTop:14,width:"100%",border:0,borderRadius:9,background:"#312e81",color:"white",padding:"10px 12px",fontWeight:800,cursor:preparing?"wait":"pointer",opacity:preparing?.7:1}}
+          style={{marginTop:14,width:"100%",border:0,borderRadius:9,background:"#312e81",color:"white",padding:"10px 12px",fontWeight:800,cursor:preparing?"wait":"pointer",opacity:preparing?0.7:1}}
         >
           {preparing ? "Préparation du brouillon…" : "Préparer les blocs SEO en brouillon"}
         </button>
