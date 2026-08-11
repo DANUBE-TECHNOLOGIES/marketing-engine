@@ -104,7 +104,6 @@ class MiniSiteStructuredDataRepository {
         { publishedAt: "desc" },
         { updatedAt: "desc" },
       ],
-      take: 500,
     });
   }
 
