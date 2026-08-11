@@ -4,10 +4,19 @@ const { buildStructuredDataPlan } = require("./planner");
 const { buildPublicSitemap } = require("./sitemap");
 const { MiniSiteStructuredDataRepository } = require("./repository");
 
+function normalizePublicOrigin(value) {
+  return String(
+    value ||
+    process.env.PUBLIC_SITE_ORIGIN ||
+    process.env.NEXT_PUBLIC_SITE_ORIGIN ||
+    "https://agences.mondescale.com"
+  ).trim().replace(/\/+$/g, "");
+}
+
 class MiniSiteStructuredDataService {
   constructor({ prisma, repository, publicOrigin } = {}) {
     this.repository = repository || new MiniSiteStructuredDataRepository(prisma);
-    this.publicOrigin = publicOrigin || "https://agences.mondescale.com";
+    this.publicOrigin = normalizePublicOrigin(publicOrigin);
   }
 
   health() {
@@ -19,6 +28,7 @@ class MiniSiteStructuredDataService {
       deterministic: true,
       tenantScoped: true,
       editorialSitemap: "canonical-agency-only",
+      publicOrigin: this.publicOrigin,
       schemas: ["TravelAgency", "LocalBusiness", "WebSite", "WebPage", "BreadcrumbList", "FAQPage"],
       operations: ["previewNetwork", "previewSitemap", "previewSite"],
     };
@@ -66,4 +76,7 @@ class MiniSiteStructuredDataService {
   }
 }
 
-module.exports = { MiniSiteStructuredDataService };
+module.exports = {
+  MiniSiteStructuredDataService,
+  normalizePublicOrigin,
+};
