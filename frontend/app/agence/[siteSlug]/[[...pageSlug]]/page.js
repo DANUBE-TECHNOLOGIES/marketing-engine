@@ -40,6 +40,11 @@ function normalizePageSlug(value) {
   return String(value || "").trim().toLowerCase();
 }
 
+function isHomePage(pageSlug) {
+  const slug = normalizePageSlug(pageSlug);
+  return !slug || ["home", "accueil", "index"].includes(slug);
+}
+
 function isLegalPage(pageSlug, page) {
   const slug = normalizePageSlug(pageSlug || page?.slug);
   if (LEGAL_PAGE_SLUGS.has(slug)) return true;
@@ -52,7 +57,7 @@ function canonicalPath({ siteSlug, pageSlug }) {
   const root = `/agence/${siteSlug}`;
   const slug = normalizePageSlug(pageSlug);
 
-  if (!slug || ["home", "accueil", "index"].includes(slug)) {
+  if (isHomePage(slug)) {
     return root;
   }
 
@@ -63,10 +68,29 @@ function canonicalUrl({ siteSlug, pageSlug }) {
   return PUBLIC_ORIGIN + canonicalPath({ siteSlug, pageSlug });
 }
 
+function localHomeTitle(site) {
+  const agency = site?.agency || {};
+  const city = String(agency.city || "").trim();
+  const name = String(site?.name || agency.name || "Mondescale Voyages").trim();
+  return city ? `Agence de voyages à ${city} | ${name}` : name;
+}
+
+function localHomeDescription(site) {
+  const agency = site?.agency || {};
+  const city = String(agency.city || "").trim();
+  const name = String(site?.name || agency.name || "Mondescale Voyages").trim();
+  const expertise = String(agency.description || "").trim();
+  const localLead = city
+    ? `${name}, agence de voyages à ${city} : conseils personnalisés, séjours, circuits, croisières et voyages sur mesure.`
+    : `${name} : conseils personnalisés, séjours, circuits, croisières et voyages sur mesure.`;
+
+  return expertise ? `${localLead} ${expertise}`.slice(0, 300).trim() : localLead;
+}
+
 async function loadPage({ siteSlug, pageSlug }) {
   const slug = normalizePageSlug(pageSlug);
 
-  if (!slug || ["home", "accueil", "index"].includes(slug)) {
+  if (isHomePage(slug)) {
     return publicSiteApi.getHome(siteSlug);
   }
 
@@ -101,12 +125,14 @@ export async function generateMetadata({ params }) {
       siteSlug: resolved.siteSlug,
       pageSlug,
     });
-    const title = page.seoTitle || page.title || site.name;
+    const homePage = isHomePage(pageSlug);
+    const title =
+      page.seoTitle ||
+      (homePage ? localHomeTitle(site) : page.title || site.name);
     const description =
       page.metaDescription ||
       page.seoDescription ||
-      site.agency?.description ||
-      `Découvrez ${site.name}.`;
+      (homePage ? localHomeDescription(site) : site.agency?.description || `Découvrez ${site.name}.`);
     const legalPage = isLegalPage(pageSlug, page);
 
     return mergePublicMetadata(
@@ -125,6 +151,8 @@ export async function generateMetadata({ params }) {
           description,
           url: canonical,
           type: "website",
+          locale: "fr_FR",
+          siteName: site.name || "Mondescale Voyages",
         },
       },
       runtime
@@ -228,3 +256,9 @@ export default async function AgencySitePage({ params }) {
     </>
   );
 }
+
+export {
+  canonicalPath,
+  localHomeDescription,
+  localHomeTitle,
+};
