@@ -20,7 +20,9 @@ import {
 
 import {
   buildBreadcrumbSchema,
+  buildServiceCatalogSchema,
   buildTravelAgencySchema,
+  extractPublishedServices,
 } from "../../../../lib/seo/json-ld";
 
 const PUBLIC_ORIGIN = String(
@@ -43,6 +45,11 @@ function normalizePageSlug(value) {
 function isHomePage(pageSlug) {
   const slug = normalizePageSlug(pageSlug);
   return !slug || ["home", "accueil", "index"].includes(slug);
+}
+
+function isServicesPage(pageSlug, page) {
+  const slug = normalizePageSlug(pageSlug || page?.slug);
+  return slug === "services";
 }
 
 function isLegalPage(pageSlug, page) {
@@ -87,6 +94,28 @@ function localHomeDescription(site) {
   return expertise ? `${localLead} ${expertise}`.slice(0, 300).trim() : localLead;
 }
 
+function localServicesTitle(site) {
+  const city = String(site?.agency?.city || "").trim();
+  const name = String(site?.name || "Mondescale Voyages").trim();
+  return city ? `Services de voyage à ${city} | ${name}` : `Services de voyage | ${name}`;
+}
+
+function localServicesDescription(site, page) {
+  const city = String(site?.agency?.city || "").trim();
+  const name = String(site?.name || "Mondescale Voyages").trim();
+  const services = extractPublishedServices(page)
+    .slice(0, 5)
+    .map((service) => service.name);
+  const expertise = services.length
+    ? ` Expertises : ${services.join(", ")}.`
+    : "";
+  const lead = city
+    ? `Découvrez les services de ${name}, votre agence de voyages à ${city}, et bénéficiez de conseils adaptés à votre projet.`
+    : `Découvrez les services de ${name} et bénéficiez de conseils adaptés à votre projet.`;
+
+  return `${lead}${expertise}`.slice(0, 300).trim();
+}
+
 async function loadPage({ siteSlug, pageSlug }) {
   const slug = normalizePageSlug(pageSlug);
 
@@ -126,13 +155,22 @@ export async function generateMetadata({ params }) {
       pageSlug,
     });
     const homePage = isHomePage(pageSlug);
+    const servicesPage = isServicesPage(pageSlug, page);
     const title =
       page.seoTitle ||
-      (homePage ? localHomeTitle(site) : page.title || site.name);
+      (homePage
+        ? localHomeTitle(site)
+        : servicesPage
+          ? localServicesTitle(site)
+          : page.title || site.name);
     const description =
       page.metaDescription ||
       page.seoDescription ||
-      (homePage ? localHomeDescription(site) : site.agency?.description || `Découvrez ${site.name}.`);
+      (homePage
+        ? localHomeDescription(site)
+        : servicesPage
+          ? localServicesDescription(site, page)
+          : site.agency?.description || `Découvrez ${site.name}.`);
     const legalPage = isLegalPage(pageSlug, page);
 
     return mergePublicMetadata(
@@ -226,6 +264,10 @@ export default async function AgencySitePage({ params }) {
   }
 
   const legalPage = isLegalPage(pageSlug, page);
+  const servicesPage = isServicesPage(pageSlug, page);
+  const serviceCatalog = servicesPage
+    ? buildServiceCatalogSchema(site, page)
+    : null;
   let legalRuntimeHtml = null;
 
   if (legalPage) {
@@ -237,6 +279,7 @@ export default async function AgencySitePage({ params }) {
     <>
       <JsonLd data={buildTravelAgencySchema(site)} />
       <JsonLd data={buildBreadcrumbSchema(breadcrumbItems)} />
+      {serviceCatalog ? <JsonLd data={serviceCatalog} /> : null}
 
       <div data-public-page-kind={legalPage ? "legal" : "content"}>
         {legalPage && legalRuntimeHtml ? (
@@ -261,4 +304,6 @@ export {
   canonicalPath,
   localHomeDescription,
   localHomeTitle,
+  localServicesDescription,
+  localServicesTitle,
 };
