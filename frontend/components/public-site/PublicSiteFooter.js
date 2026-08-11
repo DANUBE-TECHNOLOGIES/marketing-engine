@@ -4,9 +4,25 @@ function telephoneHref(phone) {
   return `tel:${String(phone || "").replace(/\s+/g, "")}`;
 }
 
+function publishedNavigationSlugs(site) {
+  const navigation = Array.isArray(site?.navigation)
+    ? site.navigation
+    : Array.isArray(site?.navigation?.main)
+      ? site.navigation.main
+      : [];
+
+  return new Set(
+    navigation
+      .map((page) => String(page?.slug || "").trim().toLowerCase())
+      .filter(Boolean)
+  );
+}
+
 export default function PublicSiteFooter({ site }) {
   const agency = site.agency || {};
   const basePath = `/agence/${site.slug}`;
+  const navigationSlugs = publishedNavigationSlugs(site);
+  const hasReviewsPage = navigationSlugs.has("avis");
 
   return (
     <footer className="public-site-footer">
@@ -55,7 +71,9 @@ export default function PublicSiteFooter({ site }) {
           <div className="public-site-footer-links">
             <Link href={`${basePath}/services`}>Nos services</Link>
             <Link href={`${basePath}/inspiration`}>Inspirations voyage</Link>
-            <Link href={`${basePath}/avis`}>Avis clients</Link>
+            {hasReviewsPage ? (
+              <Link href={`${basePath}/avis`}>Avis clients</Link>
+            ) : null}
             <Link href={`${basePath}/contact`}>Nous contacter</Link>
           </div>
         </div>
@@ -79,3 +97,8 @@ export default function PublicSiteFooter({ site }) {
     </footer>
   );
 }
+
+export {
+  publishedNavigationSlugs,
+  telephoneHref,
+};
