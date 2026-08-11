@@ -107,6 +107,28 @@ class MiniSiteStructuredDataRepository {
     });
   }
 
+  async listPublishedDestinations(tenantId) {
+    const resolvedTenantId = requireTenantId(tenantId);
+
+    return this.prisma.destination.findMany({
+      where: {
+        tenantId: resolvedTenantId,
+        status: "published",
+      },
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        publishedAt: true,
+        updatedAt: true,
+      },
+      orderBy: [
+        { updatedAt: "desc" },
+        { name: "asc" },
+      ],
+    });
+  }
+
   async listSites(tenantId) {
     const resolvedTenantId = requireTenantId(tenantId);
     const agencyFields = modelFields("Agency");
