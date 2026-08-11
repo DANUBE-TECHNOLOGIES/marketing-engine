@@ -10,6 +10,15 @@ function cleanText(value) {
   return String(value || "").trim();
 }
 
+function escapeHtml(value) {
+  return String(value || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 function placeholderHtml(section, brief) {
   const purpose = cleanText(section?.purpose);
   const proofs = Array.isArray(brief?.localProofsRequired)
@@ -32,7 +41,7 @@ function placeholderHtml(section, brief) {
   }
 
   return lines
-    .map((line) => `<p>${line || "&nbsp;"}</p>`)
+    .map((line) => `<p>${line ? escapeHtml(line) : "&nbsp;"}</p>`)
     .join("");
 }
 
@@ -112,4 +121,4 @@ export function buildSeoDraftProposal(page, brief, mode) {
   };
 }
 
-export { placeholderHtml, seoDraftBlocks };
+export { escapeHtml, placeholderHtml, seoDraftBlocks };
