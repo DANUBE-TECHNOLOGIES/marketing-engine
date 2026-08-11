@@ -38,6 +38,23 @@ function inspirationIds(pages = []) {
   return [...ids];
 }
 
+function sendPublicSiteError(response, error) {
+  const statusCode = Number(error?.statusCode || error?.status || 500);
+
+  response.status(
+    Number.isInteger(statusCode) && statusCode >= 400 && statusCode <= 599
+      ? statusCode
+      : 500
+  ).json({
+    error: error?.code || "PUBLIC_SITE_READ_ERROR",
+    message:
+      statusCode >= 500
+        ? "Le mini-site est momentanément indisponible."
+        : error?.message || "Impossible de charger le mini-site.",
+    details: statusCode >= 500 ? {} : error?.details || {},
+  });
+}
+
 async function resolvePublicTenantId(database, request) {
   const direct = String(
     request?.tenant?.id ||
@@ -147,17 +164,18 @@ function createPublicSiteReadRouter({ prisma } = {}) {
     response.json({
       ok: true,
       capability: "public-site-read",
-      version: "1.6",
+      version: "1.7",
       contentSource: "website-designer-v2-blocks",
       fallbackContentSource: "agency-site-sections",
       dynamicHydration: "single-pipeline",
       editorialTargeting: "tenant-and-agency-aware",
       publicTenantScope: "required",
+      stableJsonErrors: true,
       writeOperations: false,
     });
   });
 
-  router.post("/sites/:siteSlug/preview-hydrate", async (request, response, next) => {
+  router.post("/sites/:siteSlug/preview-hydrate", async (request, response) => {
     try {
       const tenantId = await resolvePublicTenantId(database, request);
       const result = await hydratePreviewPage({
@@ -169,11 +187,11 @@ function createPublicSiteReadRouter({ prisma } = {}) {
       response.set("Cache-Control", "private, no-store");
       response.json({ page: result.page });
     } catch (error) {
-      next(error);
+      sendPublicSiteError(response, error);
     }
   });
 
-  router.get("/sites/:siteSlug", async (request, response, next) => {
+  router.get("/sites/:siteSlug", async (request, response) => {
     try {
       const tenantId = await resolvePublicTenantId(database, request);
       const baseContract = await service.bySlug(request.params.siteSlug, tenantId);
@@ -181,7 +199,7 @@ function createPublicSiteReadRouter({ prisma } = {}) {
       response.set("Cache-Control", "public, max-age=60, s-maxage=300, stale-while-revalidate=600");
       response.json(contract);
     } catch (error) {
-      next(error);
+      sendPublicSiteError(response, error);
     }
   });
 
@@ -195,4 +213,5 @@ module.exports = {
   filterAgencyInspirations,
   inspirationIds,
   resolvePublicTenantId,
+  sendPublicSiteError,
 };
