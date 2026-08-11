@@ -7,18 +7,80 @@ const {
 } = require("./section-aware-service");
 const { hydratePublicDynamicBlocks } = require("./dynamic-block-hydrator");
 const { hydratePreviewPage } = require("./preview-hydrator");
+const {
+  contentTargetsAgency,
+} = require("../ai-content/editorial-targeting");
 
 function replacePageReference(reference, pages) {
   if (!reference) return null;
   return pages.find((page) => page.id === reference.id) || reference;
 }
 
+function blockType(block) {
+  return String(block?.blockType || block?.type || "").trim().toLowerCase();
+}
+
+function inspirationIds(pages = []) {
+  const ids = new Set();
+
+  for (const page of pages) {
+    for (const block of page?.blocks || []) {
+      if (blockType(block) !== "inspirations") continue;
+      const content = block?.content && typeof block.content === "object" ? block.content : {};
+      for (const key of ["items", "inspirations", "articles"]) {
+        for (const item of Array.isArray(content[key]) ? content[key] : []) {
+          if (item?.id !== undefined && item?.id !== null) ids.add(String(item.id));
+        }
+      }
+    }
+  }
+
+  return [...ids];
+}
+
+async function filterAgencyInspirations({ database, agencyId, pages }) {
+  const ids = inspirationIds(pages);
+  if (!ids.length || !agencyId || !database?.seoContent) return pages;
+
+  const contents = await database.seoContent.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, seo: true },
+  });
+  const allowed = new Set(
+    contents
+      .filter((content) => contentTargetsAgency(content, agencyId))
+      .map((content) => String(content.id))
+  );
+
+  return pages.map((page) => ({
+    ...page,
+    blocks: (page.blocks || []).map((block) => {
+      if (blockType(block) !== "inspirations") return block;
+      const content = block?.content && typeof block.content === "object" ? block.content : {};
+      const next = { ...content };
+
+      for (const key of ["items", "inspirations", "articles"]) {
+        if (!Array.isArray(content[key])) continue;
+        next[key] = content[key].filter((item) => allowed.has(String(item?.id)));
+      }
+
+      return { ...block, content: next };
+    }),
+  }));
+}
+
 async function hydrateContract({ database, contract }) {
-  const pages = await hydratePublicDynamicBlocks({
+  const agencyId = contract?.site?.agencyId || contract?.agency?.id || null;
+  const hydratedPages = await hydratePublicDynamicBlocks({
     prisma: database,
     tenantId: contract?.site?.tenantId || null,
-    agencyId: contract?.site?.agencyId || contract?.agency?.id || null,
+    agencyId,
     pages: contract?.pages || [],
+  });
+  const pages = await filterAgencyInspirations({
+    database,
+    agencyId,
+    pages: hydratedPages,
   });
 
   return {
@@ -38,10 +100,11 @@ function createPublicSiteReadRouter({ prisma } = {}) {
     response.json({
       ok: true,
       capability: "public-site-read",
-      version: "1.3",
+      version: "1.4",
       contentSource: "website-designer-v2-blocks",
       fallbackContentSource: "agency-site-sections",
       dynamicHydration: "single-pipeline",
+      editorialTargeting: "agency-aware",
       writeOperations: false,
     });
   });
@@ -69,10 +132,7 @@ function createPublicSiteReadRouter({ prisma } = {}) {
     async (request, response, next) => {
       try {
         const baseContract = await service.bySlug(request.params.siteSlug);
-        const contract = await hydrateContract({
-          database,
-          contract: baseContract,
-        });
+        const contract = await hydrateContract({ database, contract: baseContract });
 
         response.set(
           "Cache-Control",
@@ -92,4 +152,6 @@ module.exports = {
   createPublicSiteReadRouter,
   hydrateContract,
   replacePageReference,
+  filterAgencyInspirations,
+  inspirationIds,
 };
