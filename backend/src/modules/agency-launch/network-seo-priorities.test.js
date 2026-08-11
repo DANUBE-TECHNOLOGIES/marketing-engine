@@ -5,6 +5,7 @@ const assert = require("node:assert/strict");
 const {
   LEARNING_BONUS_CAP,
   learningBonus,
+  scoreBreakdown,
   opportunityScore,
   networkSeoPriorities,
 } = require("./network-seo-priorities");
@@ -52,6 +53,33 @@ test("credible positive learning adds only a bounded bonus", () => {
   assert.ok(bonus <= LEARNING_BONUS_CAP);
 });
 
+test("score breakdown exposes base rules and learning separately", () => {
+  const action = {
+    priority: "high",
+    source: "LOCAL_RANKINGS",
+    code: "RANKING_NEAR_TOP10",
+  };
+  const learning = {
+    groups: [{
+      source: "LOCAL_RANKINGS",
+      code: "RANKING_NEAR_TOP10",
+      samples: 7,
+      confidence: "medium",
+      improvementRate: 0.75,
+      averageDelta: 5,
+    }],
+  };
+  const scoring = scoreBreakdown(action, learning);
+  assert.equal(scoring.priorityScore, 70);
+  assert.equal(scoring.sourceScore, 20);
+  assert.equal(scoring.baseScore, 90);
+  assert.ok(scoring.learningBonus > 0);
+  assert.equal(scoring.finalScore, scoring.baseScore + scoring.learningBonus);
+  assert.equal(scoring.learning.samples, 7);
+  assert.equal(scoring.learning.confidence, "medium");
+  assert.equal(scoring.learning.applied, true);
+});
+
 test("network queue merges agency actions and keeps agency identity", () => {
   const result = networkSeoPriorities([
     {
@@ -84,6 +112,7 @@ test("network queue merges agency actions and keeps agency identity", () => {
   assert.equal(result.agenciesWithActions, 2);
   assert.equal(result.actions[0].agency.city, "Gien");
   assert.equal(result.actions[0].source, "LOCAL_RANKINGS");
+  assert.equal(result.actions[0].scoring.baseScore, 90);
 });
 
 test("network queue reports when learning actually influenced priorities", () => {
@@ -113,6 +142,7 @@ test("network queue reports when learning actually influenced priorities", () =>
 
   assert.equal(result.learningApplied, true);
   assert.ok(result.actions[0].learningBonus > 0);
+  assert.equal(result.actions[0].scoring.learning.applied, true);
 });
 
 test("network queue respects a bounded result limit", () => {
