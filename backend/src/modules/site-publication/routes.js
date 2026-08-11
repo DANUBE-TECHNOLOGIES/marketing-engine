@@ -23,6 +23,9 @@ const {
   PublishRollbackRepository,
 } = require("./publish-rollback-repository");
 const {
+  ResilientUnpublishService,
+} = require("./resilient-unpublish-service");
+const {
   SiteReadinessClient,
 } = require("./readiness-client");
 const {
@@ -193,12 +196,14 @@ function createSitePublicationRoutes(prisma, options = {}) {
           lockManager,
         }));
 
-  /*
-   * Internal page publication endpoints used by SitePublicationService.
-   * They only flip page publication state; they never rewrite page blocks.
-   * The siteId is mandatory so we can tenant-check the site first and then
-   * ensure the page belongs to that exact site in the repository update.
-   */
+  const unpublishService =
+    options.unpublishService ||
+    new ResilientUnpublishService({
+      service,
+      repository,
+      pagePublicationClient,
+    });
+
   router.post(
     "/publication/pages/:pageId/publish",
     async (request, response) => {
@@ -307,7 +312,7 @@ function createSitePublicationRoutes(prisma, options = {}) {
       );
 
       response.json(
-        await service.unpublish({
+        await unpublishService.unpublish({
           siteId: request.params.siteId,
           headers: requestHeaders(request),
         })
