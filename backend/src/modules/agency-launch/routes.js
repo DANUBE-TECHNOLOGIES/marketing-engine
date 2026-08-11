@@ -188,7 +188,7 @@ async function networkForTenant(database, tenantId) {
   const learning = await networkSeoLearning(database, tenantId, 100);
 
   return {
-    version: "3.1",
+    version: "3.2",
     mode: "prepublication",
     tenantId,
     generatedAt: new Date().toISOString(),
@@ -237,7 +237,7 @@ function createAgencyLaunchRouter({ prisma } = {}) {
     response.json({
       ok: true,
       capability: "agency-launch",
-      version: "3.1",
+      version: "3.2",
       mode: "prepublication",
       legalRuntimeRequired: true,
       localCitationsObserved: true,
@@ -250,6 +250,7 @@ function createAgencyLaunchRouter({ prisma } = {}) {
       seoActionImpactObserved: true,
       seoLearningObserved: true,
       guardedLearningPrioritizationObserved: true,
+      explainablePriorityScoringObserved: true,
     });
   });
 
