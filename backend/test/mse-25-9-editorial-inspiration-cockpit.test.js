@@ -103,6 +103,7 @@ test("MSE-25.9 exposes editorial review endpoints without auto-publishing genera
 
   assert.match(service, /status:\s*["']review["']/);
   assert.match(service, /async publishContent/);
+  assert.match(service, /assertEditorialCanonicalIsPublishable/);
   assert.doesNotMatch(service, /createContent\([\s\S]{0,400}status:\s*["']published["']/);
 });
 
@@ -114,8 +115,11 @@ test("MSE-25.9 frontend provides a human-gated inspiration cockpit", () => {
   assert.match(cockpit, /generateInspiration/);
   assert.match(cockpit, /updateContent/);
   assert.match(cockpit, /method:\s*["']PATCH["']/);
-  assert.match(cockpit, /Corriger avant publication/);
-  assert.match(cockpit, /Enregistrer les corrections/);
+  assert.match(cockpit, /Corriger et cibler avant publication/);
+  assert.match(cockpit, /Enregistrer les corrections et le ciblage/);
+  assert.match(cockpit, /name="targetScope"/);
+  assert.match(cockpit, /name="agencyIds"/);
+  assert.match(cockpit, /name="indexAgencyId"/);
   assert.match(cockpit, /publishContent/);
   assert.match(cockpit, /unpublishContent/);
   assert.match(cockpit, /Le contenu généré arrive d’abord en validation/);
