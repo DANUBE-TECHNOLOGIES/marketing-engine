@@ -38,12 +38,17 @@ function inspirationIds(pages = []) {
   return [...ids];
 }
 
-async function filterAgencyInspirations({ database, agencyId, pages }) {
+async function filterAgencyInspirations({ database, tenantId, agencyId, pages }) {
   const ids = inspirationIds(pages);
-  if (!ids.length || !agencyId || !database?.seoContent) return pages;
+  if (!ids.length || !tenantId || !agencyId || !database?.seoContent) return pages;
 
   const contents = await database.seoContent.findMany({
-    where: { id: { in: ids } },
+    where: {
+      tenantId: String(tenantId),
+      id: { in: ids },
+      status: "published",
+      publishedAt: { not: null },
+    },
     select: { id: true, seo: true },
   });
   const allowed = new Set(
@@ -70,15 +75,17 @@ async function filterAgencyInspirations({ database, agencyId, pages }) {
 }
 
 async function hydrateContract({ database, contract }) {
+  const tenantId = contract?.site?.tenantId || null;
   const agencyId = contract?.site?.agencyId || contract?.agency?.id || null;
   const hydratedPages = await hydratePublicDynamicBlocks({
     prisma: database,
-    tenantId: contract?.site?.tenantId || null,
+    tenantId,
     agencyId,
     pages: contract?.pages || [],
   });
   const pages = await filterAgencyInspirations({
     database,
+    tenantId,
     agencyId,
     pages: hydratedPages,
   });
@@ -100,50 +107,39 @@ function createPublicSiteReadRouter({ prisma } = {}) {
     response.json({
       ok: true,
       capability: "public-site-read",
-      version: "1.4",
+      version: "1.5",
       contentSource: "website-designer-v2-blocks",
       fallbackContentSource: "agency-site-sections",
       dynamicHydration: "single-pipeline",
-      editorialTargeting: "agency-aware",
+      editorialTargeting: "tenant-and-agency-aware",
       writeOperations: false,
     });
   });
 
-  router.post(
-    "/sites/:siteSlug/preview-hydrate",
-    async (request, response, next) => {
-      try {
-        const result = await hydratePreviewPage({
-          prisma: database,
-          siteSlug: request.params.siteSlug,
-          page: request.body?.page || request.body || {},
-        });
-
-        response.set("Cache-Control", "private, no-store");
-        response.json({ page: result.page });
-      } catch (error) {
-        next(error);
-      }
+  router.post("/sites/:siteSlug/preview-hydrate", async (request, response, next) => {
+    try {
+      const result = await hydratePreviewPage({
+        prisma: database,
+        siteSlug: request.params.siteSlug,
+        page: request.body?.page || request.body || {},
+      });
+      response.set("Cache-Control", "private, no-store");
+      response.json({ page: result.page });
+    } catch (error) {
+      next(error);
     }
-  );
+  });
 
-  router.get(
-    "/sites/:siteSlug",
-    async (request, response, next) => {
-      try {
-        const baseContract = await service.bySlug(request.params.siteSlug);
-        const contract = await hydrateContract({ database, contract: baseContract });
-
-        response.set(
-          "Cache-Control",
-          "public, max-age=60, s-maxage=300, stale-while-revalidate=600"
-        );
-        response.json(contract);
-      } catch (error) {
-        next(error);
-      }
+  router.get("/sites/:siteSlug", async (request, response, next) => {
+    try {
+      const baseContract = await service.bySlug(request.params.siteSlug);
+      const contract = await hydrateContract({ database, contract: baseContract });
+      response.set("Cache-Control", "public, max-age=60, s-maxage=300, stale-while-revalidate=600");
+      response.json(contract);
+    } catch (error) {
+      next(error);
     }
-  );
+  });
 
   return router;
 }
