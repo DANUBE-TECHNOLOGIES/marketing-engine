@@ -38,6 +38,46 @@ function inspirationIds(pages = []) {
   return [...ids];
 }
 
+async function resolvePublicTenantId(database, request) {
+  const direct = String(
+    request?.tenant?.id ||
+    request?.tenantId ||
+    request?.get?.("x-tenant-id") ||
+    ""
+  ).trim();
+
+  if (direct) return direct;
+
+  const slug = String(
+    request?.tenant?.slug ||
+    request?.tenantSlug ||
+    request?.get?.("x-tenant-slug") ||
+    ""
+  ).trim();
+
+  if (!slug) {
+    const error = new Error("Tenant public obligatoire.");
+    error.code = "PUBLIC_SITE_TENANT_REQUIRED";
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const tenant = await database.tenant.findUnique({
+    where: { slug },
+    select: { id: true },
+  });
+
+  if (!tenant) {
+    const error = new Error("Tenant public introuvable.");
+    error.code = "PUBLIC_SITE_TENANT_NOT_FOUND";
+    error.statusCode = 404;
+    error.details = { slug };
+    throw error;
+  }
+
+  return String(tenant.id);
+}
+
 async function filterAgencyInspirations({ database, tenantId, agencyId, pages }) {
   const ids = inspirationIds(pages);
   if (!ids.length || !tenantId || !agencyId || !database?.seoContent) return pages;
@@ -107,20 +147,23 @@ function createPublicSiteReadRouter({ prisma } = {}) {
     response.json({
       ok: true,
       capability: "public-site-read",
-      version: "1.5",
+      version: "1.6",
       contentSource: "website-designer-v2-blocks",
       fallbackContentSource: "agency-site-sections",
       dynamicHydration: "single-pipeline",
       editorialTargeting: "tenant-and-agency-aware",
+      publicTenantScope: "required",
       writeOperations: false,
     });
   });
 
   router.post("/sites/:siteSlug/preview-hydrate", async (request, response, next) => {
     try {
+      const tenantId = await resolvePublicTenantId(database, request);
       const result = await hydratePreviewPage({
         prisma: database,
         siteSlug: request.params.siteSlug,
+        tenantId,
         page: request.body?.page || request.body || {},
       });
       response.set("Cache-Control", "private, no-store");
@@ -132,7 +175,8 @@ function createPublicSiteReadRouter({ prisma } = {}) {
 
   router.get("/sites/:siteSlug", async (request, response, next) => {
     try {
-      const baseContract = await service.bySlug(request.params.siteSlug);
+      const tenantId = await resolvePublicTenantId(database, request);
+      const baseContract = await service.bySlug(request.params.siteSlug, tenantId);
       const contract = await hydrateContract({ database, contract: baseContract });
       response.set("Cache-Control", "public, max-age=60, s-maxage=300, stale-while-revalidate=600");
       response.json(contract);
@@ -150,4 +194,5 @@ module.exports = {
   replacePageReference,
   filterAgencyInspirations,
   inspirationIds,
+  resolvePublicTenantId,
 };
