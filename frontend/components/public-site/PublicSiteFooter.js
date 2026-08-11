@@ -54,7 +54,7 @@ export default function PublicSiteFooter({ site }) {
 
           <div className="public-site-footer-links">
             <Link href={`${basePath}/services`}>Nos services</Link>
-            <Link href={`${basePath}/inspirations`}>Inspirations voyage</Link>
+            <Link href={`${basePath}/inspiration`}>Inspirations voyage</Link>
             <Link href={`${basePath}/avis`}>Avis clients</Link>
             <Link href={`${basePath}/contact`}>Nous contacter</Link>
           </div>
