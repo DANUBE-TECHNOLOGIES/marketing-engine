@@ -23,6 +23,12 @@ test("TravelAgency schema can reconcile important local profiles", () => {
   assert.match(schema, /instagramUrl/);
 });
 
+test("French local phone numbers are normalized for structured data", () => {
+  assert.match(schema, /normalizeFrenchPhone/);
+  assert.match(schema, /\+33\$\{compact\.slice\(1\)\}/);
+  assert.match(schema, /telephone: normalizeFrenchPhone/);
+});
+
 test("destination provider references the canonical local agency entity", () => {
   assert.match(schema, /#travel-agency/);
   assert.match(schema, /provider:/);
