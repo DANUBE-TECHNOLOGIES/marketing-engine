@@ -17,6 +17,7 @@ const {
 class PagePublicationClient {
   constructor({
     backendOrigin,
+    publicationPathPrefix = "/api/site-publication",
   }) {
     this.backendOrigin =
       String(
@@ -26,6 +27,15 @@ class PagePublicationClient {
         /\/+$/,
         ""
       );
+
+    this.publicationPathPrefix =
+      `/${String(
+        publicationPathPrefix ||
+        "api/site-publication"
+      ).replace(
+        /^\/+|\/+$/g,
+        ""
+      )}`;
   }
 
   async action({
@@ -58,7 +68,7 @@ class PagePublicationClient {
 
     const url =
       `${this.backendOrigin}` +
-      `/publication/pages/` +
+      `${this.publicationPathPrefix}/publication/pages/` +
       encodeURIComponent(
         String(pageId)
       ) +
