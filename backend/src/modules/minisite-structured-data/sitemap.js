@@ -59,10 +59,16 @@ function inspirationUrl(publicOrigin, siteSlug, contentSlug) {
   return `${origin}/agence/${encodeURIComponent(siteSlug)}/inspiration/${encodeURIComponent(contentSlug)}`;
 }
 
-function buildPublicSitemap({ sites, inspirations, publicOrigin } = {}) {
+function destinationUrl(publicOrigin, siteSlug, destinationSlug) {
+  const origin = String(publicOrigin || "").replace(/\/+$/g, "");
+  return `${origin}/agence/${encodeURIComponent(siteSlug)}/destination/${encodeURIComponent(destinationSlug)}`;
+}
+
+function buildPublicSitemap({ sites, inspirations, destinations, publicOrigin } = {}) {
   const entries = [];
   const excluded = [];
   const publishedSitesByAgency = new Map();
+  const publishedSites = [];
 
   for (const site of sites || []) {
     if (!isPublishedSite(site)) {
@@ -75,6 +81,7 @@ function buildPublicSitemap({ sites, inspirations, publicOrigin } = {}) {
       continue;
     }
 
+    publishedSites.push(site);
     const agencyId = site.agency?.id || site.agencyId;
     if (agencyId !== undefined && agencyId !== null) {
       publishedSitesByAgency.set(String(agencyId), site);
@@ -117,6 +124,34 @@ function buildPublicSitemap({ sites, inspirations, publicOrigin } = {}) {
         agencyId,
         siteSlug: site.slug,
         pageSlug: slug,
+      });
+    }
+  }
+
+  for (const destination of destinations || []) {
+    const slug = String(destination?.slug || "").trim();
+    if (!slug) {
+      excluded.push({
+        type: "destination",
+        destinationId: destination?.id,
+        reason: "missing-slug",
+      });
+      continue;
+    }
+
+    for (const site of publishedSites) {
+      const agencyId = site.agency?.id || site.agencyId;
+      entries.push({
+        url: destinationUrl(publicOrigin, site.slug, slug),
+        lastModified: normalizeDate(destination.updatedAt || destination.publishedAt || site.updatedAt),
+        changeFrequency: "monthly",
+        priority: 0.7,
+        agencyId,
+        siteSlug: site.slug,
+        pageSlug: `destination/${slug}`,
+        destinationId: destination.id,
+        destinationSlug: slug,
+        type: "destination",
       });
     }
   }
@@ -169,7 +204,9 @@ function buildPublicSitemap({ sites, inspirations, publicOrigin } = {}) {
     generatedAt: new Date().toISOString(),
     summary: {
       totalSites: (sites || []).length,
-      publishedSites: (sites || []).filter(isPublishedSite).length,
+      publishedSites: publishedSites.length,
+      destinations: (destinations || []).length,
+      indexedDestinationPages: deduplicated.filter((entry) => entry.type === "destination").length,
       editorialContents: (inspirations || []).length,
       indexedEditorialContents: deduplicated.filter((entry) => entry.type === "inspiration").length,
       entryCount: deduplicated.length,
@@ -185,6 +222,7 @@ module.exports = {
   NOINDEX_SLUGS,
   buildPublicSitemap,
   inspirationUrl,
+  destinationUrl,
   isPublishedPage,
   isPublishedSite,
   pageChangeFrequency,
