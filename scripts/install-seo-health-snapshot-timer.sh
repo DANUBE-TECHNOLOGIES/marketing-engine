@@ -21,12 +21,18 @@ for file in \
   fi
 done
 
-install -m 0755 "$PROJECT_DIR/scripts/seo-health-daily-snapshot.sh" "$PROJECT_DIR/scripts/seo-health-daily-snapshot.sh"
+chmod 0755 "$PROJECT_DIR/scripts/seo-health-daily-snapshot.sh"
 install -m 0644 "$PROJECT_DIR/ops/systemd/$SERVICE_NAME" "$SYSTEMD_DIR/$SERVICE_NAME"
 install -m 0644 "$PROJECT_DIR/ops/systemd/$TIMER_NAME" "$SYSTEMD_DIR/$TIMER_NAME"
 
 systemctl daemon-reload
 systemctl enable --now "$TIMER_NAME"
+
+if [[ "${RUN_NOW:-0}" == "1" ]]; then
+  echo "Exécution de validation immédiate..."
+  systemctl start "$SERVICE_NAME"
+  systemctl --no-pager --full status "$SERVICE_NAME" || true
+fi
 
 echo "Timer activé: $TIMER_NAME"
 systemctl --no-pager --full status "$TIMER_NAME" || true
