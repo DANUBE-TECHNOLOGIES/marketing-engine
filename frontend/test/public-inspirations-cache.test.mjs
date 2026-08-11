@@ -12,6 +12,6 @@ test("published inspirations can be cached briefly by shared caches", () => {
 });
 
 test("inspiration backend failures are never cached", () => {
-  assert.match(route, /: "no-store"/);
-  assert.match(route, /status: 502/);
+  assert.match(route, /response\.ok[\s\S]*?\? "public, max-age=30, s-maxage=120, stale-while-revalidate=300"[\s\S]*?: "no-store"/);
+  assert.match(route, /status: 502[\s\S]*?"cache-control": "no-store"/);
 });
