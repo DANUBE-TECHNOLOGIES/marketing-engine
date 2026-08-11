@@ -9,6 +9,13 @@ test("public agency routes bypass Basic Auth", () => {
   assert.match(proxy, /pathname\.startsWith\("\/agence\/"\)/);
 });
 
+test("public media and brand runtime bypass Basic Auth", () => {
+  assert.match(proxy, /pathname === "\/media"/);
+  assert.match(proxy, /pathname\.startsWith\("\/media\/"\)/);
+  assert.match(proxy, /pathname === "\/api\/public-brand-legal"/);
+  assert.match(proxy, /pathname\.startsWith\("\/api\/public-brand-legal\/"\)/);
+});
+
 test("SEO discovery files bypass Basic Auth", () => {
   assert.match(proxy, /pathname === "\/robots\.txt"/);
   assert.match(proxy, /pathname === "\/sitemap\.xml"/);
