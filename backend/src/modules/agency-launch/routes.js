@@ -19,6 +19,10 @@ const {
   localCitationsReadiness,
   applyLocalCitationsToReadiness,
 } = require("./local-citations-readiness");
+const {
+  localRankingsReadiness,
+  applyLocalRankingsToReadiness,
+} = require("./local-rankings-readiness");
 
 function createHttpError(statusCode, code, message) {
   const error = new Error(message);
@@ -42,85 +46,56 @@ async function tenantIdForRequest(database, request) {
   const direct = String(
     request.tenantId || request?.tenant?.id || request.get("x-tenant-id") || ""
   ).trim();
-
-  if (direct) {
-    return direct;
-  }
+  if (direct) return direct;
 
   const slug = String(
     request.tenantSlug || request?.tenant?.slug || request.get("x-tenant-slug") || ""
   ).trim();
-
   if (!slug) {
-    throw createHttpError(
-      400,
-      "AGENCY_LAUNCH_TENANT_REQUIRED",
-      "Le tenant est obligatoire."
-    );
+    throw createHttpError(400, "AGENCY_LAUNCH_TENANT_REQUIRED", "Le tenant est obligatoire.");
   }
 
   const tenant = await database.tenant.findUnique({
     where: { slug },
     select: { id: true },
   });
-
   if (!tenant) {
-    throw createHttpError(
-      404,
-      "AGENCY_LAUNCH_TENANT_NOT_FOUND",
-      "Tenant introuvable."
-    );
+    throw createHttpError(404, "AGENCY_LAUNCH_TENANT_NOT_FOUND", "Tenant introuvable.");
   }
-
   return tenant.id;
 }
 
 async function assertAgencyInTenant(database, tenantId, agencyId) {
   const id = Number(agencyId);
-
   if (!Number.isInteger(id) || id <= 0) {
-    throw createHttpError(
-      400,
-      "AGENCY_LAUNCH_INVALID_AGENCY_ID",
-      "Identifiant agence invalide."
-    );
+    throw createHttpError(400, "AGENCY_LAUNCH_INVALID_AGENCY_ID", "Identifiant agence invalide.");
   }
 
   const agency = await database.agency.findFirst({
     where: { id, tenantId },
     select: { id: true },
   });
-
   if (!agency) {
-    throw createHttpError(
-      404,
-      "AGENCY_LAUNCH_AGENCY_NOT_FOUND",
-      "Agence introuvable dans ce tenant."
-    );
+    throw createHttpError(404, "AGENCY_LAUNCH_AGENCY_NOT_FOUND", "Agence introuvable dans ce tenant.");
   }
-
   return agency.id;
 }
 
 async function readinessWithPublicRuntime(database, tenantId, agencyId, service) {
   const report = await service.readiness(agencyId);
-  const [legalRuntime, localCitations] = await Promise.all([
+  const [legalRuntime, localCitations, localRankings] = await Promise.all([
     legalRuntimeReadiness(database, tenantId, agencyId),
     localCitationsReadiness(database, tenantId, agencyId),
+    localRankingsReadiness(database, tenantId, agencyId),
   ]);
-  const withLegal = applyLegalRuntimeToReadiness(report, legalRuntime, {
-    score,
-    blockers,
-  });
 
-  return applyLocalCitationsToReadiness(withLegal, localCitations);
+  const withLegal = applyLegalRuntimeToReadiness(report, legalRuntime, { score, blockers });
+  const withCitations = applyLocalCitationsToReadiness(withLegal, localCitations);
+  return applyLocalRankingsToReadiness(withCitations, localRankings);
 }
 
 async function networkForTenant(database, tenantId) {
-  const service = new PrepublicationReadinessService({
-    prisma: database,
-    tenantId,
-  });
+  const service = new PrepublicationReadinessService({ prisma: database, tenantId });
   const agencies = await database.agency.findMany({
     where: { tenantId },
     orderBy: [{ city: "asc" }, { name: "asc" }],
@@ -128,24 +103,11 @@ async function networkForTenant(database, tenantId) {
   });
 
   const items = [];
-
   for (const agency of agencies) {
     try {
-      const report = await readinessWithPublicRuntime(
-        database,
-        tenantId,
-        agency.id,
-        service
-      );
-      const launchState = resolveLaunchState({
-        site: report.site,
-        readiness: report.readiness,
-      });
-
-      items.push({
-        ...report,
-        launchState,
-      });
+      const report = await readinessWithPublicRuntime(database, tenantId, agency.id, service);
+      const launchState = resolveLaunchState({ site: report.site, readiness: report.readiness });
+      items.push({ ...report, launchState });
     } catch (error) {
       items.push({
         agency: { id: agency.id },
@@ -166,7 +128,7 @@ async function networkForTenant(database, tenantId) {
   }
 
   return {
-    version: "2.1",
+    version: "2.2",
     mode: "prepublication",
     tenantId,
     generatedAt: new Date().toISOString(),
@@ -183,10 +145,11 @@ function createAgencyLaunchRouter({ prisma } = {}) {
     response.json({
       ok: true,
       capability: "agency-launch",
-      version: "2.1",
+      version: "2.2",
       mode: "prepublication",
       legalRuntimeRequired: true,
       localCitationsObserved: true,
+      localRankingsObserved: true,
     });
   });
 
@@ -199,39 +162,21 @@ function createAgencyLaunchRouter({ prisma } = {}) {
     }
   });
 
-  router.get(
-    "/agencies/:agencyId/readiness",
-    async (request, response) => {
-      try {
-        const tenantId = await tenantIdForRequest(database, request);
-        const agencyId = await assertAgencyInTenant(
-          database,
-          tenantId,
-          request.params.agencyId
-        );
-        const service = new PrepublicationReadinessService({
-          prisma: database,
-          tenantId,
-        });
-        const report = await readinessWithPublicRuntime(
-          database,
-          tenantId,
-          agencyId,
-          service
-        );
+  router.get("/agencies/:agencyId/readiness", async (request, response) => {
+    try {
+      const tenantId = await tenantIdForRequest(database, request);
+      const agencyId = await assertAgencyInTenant(database, tenantId, request.params.agencyId);
+      const service = new PrepublicationReadinessService({ prisma: database, tenantId });
+      const report = await readinessWithPublicRuntime(database, tenantId, agencyId, service);
 
-        response.json({
-          ...report,
-          launchState: resolveLaunchState({
-            site: report.site,
-            readiness: report.readiness,
-          }),
-        });
-      } catch (error) {
-        sendError(response, error);
-      }
+      response.json({
+        ...report,
+        launchState: resolveLaunchState({ site: report.site, readiness: report.readiness }),
+      });
+    } catch (error) {
+      sendError(response, error);
     }
-  );
+  });
 
   return router;
 }
