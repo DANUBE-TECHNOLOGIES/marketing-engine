@@ -126,11 +126,23 @@ class SectionAwarePublicSiteReadService extends PublicSiteReadService {
     return select;
   }
 
-  async bySlug(siteSlug) {
+  async bySlug(siteSlug, tenantId) {
     const slug = normalizeSlug(siteSlug);
+    const normalizedTenantId = String(tenantId || "").trim();
+
+    if (!normalizedTenantId) {
+      const error = new Error("Tenant public obligatoire.");
+      error.code = "PUBLIC_SITE_TENANT_REQUIRED";
+      error.statusCode = 400;
+      error.details = { siteSlug: slug };
+      throw error;
+    }
 
     const site = await this.prisma.agencySite.findFirst({
-      where: { slug },
+      where: {
+        slug,
+        tenantId: normalizedTenantId,
+      },
       select: this.buildSelect(),
     });
 
@@ -170,7 +182,7 @@ class SectionAwarePublicSiteReadService extends PublicSiteReadService {
     const canonicalBasePath = `/agence/${site.slug}`;
 
     return {
-      version: "1.2",
+      version: "1.3",
       site: {
         id: site.id,
         agencyId: site.agencyId,
