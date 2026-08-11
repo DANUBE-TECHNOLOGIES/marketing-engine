@@ -35,7 +35,11 @@ const {
 const {
   recordSeoAction,
   seoActionHistory,
+  actionMetadata,
 } = require("./seo-action-history");
+const {
+  seoActionImpact,
+} = require("./seo-action-impact");
 
 function createHttpError(statusCode, code, message) {
   const error = new Error(message);
@@ -179,7 +183,7 @@ async function networkForTenant(database, tenantId) {
   }
 
   return {
-    version: "2.8",
+    version: "2.9",
     mode: "prepublication",
     tenantId,
     generatedAt: new Date().toISOString(),
@@ -197,7 +201,7 @@ function createAgencyLaunchRouter({ prisma } = {}) {
     response.json({
       ok: true,
       capability: "agency-launch",
-      version: "2.8",
+      version: "2.9",
       mode: "prepublication",
       legalRuntimeRequired: true,
       localCitationsObserved: true,
@@ -207,6 +211,7 @@ function createAgencyLaunchRouter({ prisma } = {}) {
       seoActionQueueObserved: true,
       networkSeoPrioritiesObserved: true,
       seoActionHistoryObserved: true,
+      seoActionImpactObserved: true,
     });
   });
 
@@ -240,7 +245,17 @@ function createAgencyLaunchRouter({ prisma } = {}) {
       const tenantId = await tenantIdForRequest(database, request);
       const agencyId = await assertAgencyInTenant(database, tenantId, request.params.agencyId);
       const actions = await seoActionHistory(database, tenantId, agencyId, request.query.limit);
-      response.json({ version: "1.0", agencyId, total: actions.length, actions });
+      const impacts = await seoActionImpact(database, tenantId, agencyId, actions);
+      const impactByAction = new Map(impacts.map((impact) => [impact.actionId, impact]));
+      response.json({
+        version: "1.1",
+        agencyId,
+        total: actions.length,
+        actions: actions.map((action) => ({
+          ...action,
+          impact: impactByAction.get(action.id) || null,
+        })),
+      });
     } catch (error) {
       sendError(response, error);
     }
@@ -256,7 +271,7 @@ function createAgencyLaunchRouter({ prisma } = {}) {
       });
       response.status(201).json({
         version: "1.0",
-        action: actionMetadataForResponse(action),
+        action: actionMetadata(action),
       });
     } catch (error) {
       sendError(response, error);
@@ -264,11 +279,6 @@ function createAgencyLaunchRouter({ prisma } = {}) {
   });
 
   return router;
-}
-
-function actionMetadataForResponse(action) {
-  const { actionMetadata } = require("./seo-action-history");
-  return actionMetadata(action);
 }
 
 module.exports = {
