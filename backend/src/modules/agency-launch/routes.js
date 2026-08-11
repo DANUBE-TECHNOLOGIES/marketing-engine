@@ -128,7 +128,7 @@ async function networkForTenant(database, tenantId) {
   }
 
   return {
-    version: "2.2",
+    version: "2.3",
     mode: "prepublication",
     tenantId,
     generatedAt: new Date().toISOString(),
@@ -145,7 +145,7 @@ function createAgencyLaunchRouter({ prisma } = {}) {
     response.json({
       ok: true,
       capability: "agency-launch",
-      version: "2.2",
+      version: "2.3",
       mode: "prepublication",
       legalRuntimeRequired: true,
       localCitationsObserved: true,
