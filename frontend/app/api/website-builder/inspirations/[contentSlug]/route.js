@@ -8,18 +8,25 @@ const TENANT_SLUG =
 
 export async function GET(request, context) {
   const { contentSlug } = await context.params;
-
-  const response = await fetch(
-    `${BACKEND_URL}/ai-content/published/${encodeURIComponent(contentSlug)}`,
-    {
-      method: "GET",
-      headers: {
-        accept: "application/json",
-        "x-tenant-slug": TENANT_SLUG,
-      },
-      cache: "no-store",
-    }
+  const requestUrl = new URL(request.url);
+  const agencyId = String(requestUrl.searchParams.get("agencyId") || "").trim();
+  const backendUrl = new URL(
+    `/ai-content/published/${encodeURIComponent(contentSlug)}`,
+    BACKEND_URL
   );
+
+  if (agencyId) {
+    backendUrl.searchParams.set("agencyId", agencyId);
+  }
+
+  const response = await fetch(backendUrl, {
+    method: "GET",
+    headers: {
+      accept: "application/json",
+      "x-tenant-slug": TENANT_SLUG,
+    },
+    cache: "no-store",
+  });
 
   const body = await response.arrayBuffer();
 
