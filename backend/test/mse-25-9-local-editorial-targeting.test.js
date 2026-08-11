@@ -11,6 +11,9 @@ const {
   contentIndexesForAgency,
 } = require("../src/modules/ai-content/editorial-targeting");
 const {
+  assertEditorialTargetingAgenciesBelongToTenant,
+} = require("../src/modules/ai-content/editorial-update");
+const {
   buildPublicSitemap,
 } = require("../src/modules/minisite-structured-data/sitemap");
 
@@ -52,6 +55,64 @@ test("MSE-25.9 normalizes network and agency editorial targeting", () => {
     () => normalizeEditorialTargeting({ scope: "agencies", agencyIds: ["3"], indexAgencyId: "6" }),
     (error) => error?.code === "AI_CONTENT_INDEX_AGENCY_INVALID"
   );
+});
+
+test("MSE-25.9 rejects editorial agency targets outside the current tenant", async () => {
+  const calls = [];
+  const prisma = {
+    agency: {
+      findMany: async (args) => {
+        calls.push(args);
+        return [{ id: 3 }];
+      },
+    },
+  };
+
+  await assert.rejects(
+    () => assertEditorialTargetingAgenciesBelongToTenant(prisma, "tenant-mondescale", {
+      scope: "agencies",
+      agencyIds: ["3", "6"],
+      indexAgencyId: "3",
+    }),
+    (error) => error?.code === "AI_CONTENT_TARGET_AGENCY_INVALID"
+  );
+
+  assert.equal(calls.length, 1);
+  assert.deepEqual(calls[0].where, {
+    tenantId: "tenant-mondescale",
+    id: { in: [3, 6] },
+  });
+
+  await assert.doesNotReject(
+    () => assertEditorialTargetingAgenciesBelongToTenant(prisma, "tenant-mondescale", {
+      scope: "network",
+      agencyIds: [],
+      indexAgencyId: null,
+    })
+  );
+  assert.equal(calls.length, 1);
+});
+
+test("MSE-25.9 rejects malformed editorial agency identifiers before querying Prisma", async () => {
+  let queried = false;
+  const prisma = {
+    agency: {
+      findMany: async () => {
+        queried = true;
+        return [];
+      },
+    },
+  };
+
+  await assert.rejects(
+    () => assertEditorialTargetingAgenciesBelongToTenant(prisma, "tenant-mondescale", {
+      scope: "agencies",
+      agencyIds: ["not-an-id"],
+      indexAgencyId: "not-an-id",
+    }),
+    (error) => error?.code === "AI_CONTENT_TARGET_AGENCY_INVALID"
+  );
+  assert.equal(queried, false);
 });
 
 test("MSE-25.9 keeps visibility separate from canonical indexing", () => {
@@ -132,6 +193,8 @@ test("MSE-25.9 public routes and clients propagate tenant and agency scope", () 
   const studio = source("frontend/app/editorial-content/page.js");
 
   assert.match(aiRoutes, /agencyId/);
+  assert.match(aiRoutes, /assertEditorialTargetingAgenciesBelongToTenant/);
+  assert.match(aiRoutes, /req\.tenant\.id/);
   assert.match(publicRoutes, /filterAgencyInspirations/);
   assert.match(publicRoutes, /tenantId:\s*String\(tenantId\)/);
   assert.match(publicRoutes, /editorialTargeting:\s*"tenant-and-agency-aware"/);
