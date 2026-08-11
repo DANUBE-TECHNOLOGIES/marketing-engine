@@ -6,6 +6,7 @@ import {
   publicSiteApi,
 } from "../../../../lib/public-site-api";
 
+import LegalJourneyCta from "../../../../components/public-site/LegalJourneyCta";
 import PublicSiteSections from "../../../../components/public-site/PublicSiteSections";
 
 import JsonLd from "../../../../components/JsonLd";
@@ -25,6 +26,14 @@ const PUBLIC_ORIGIN =
     ""
   );
 
+const LEGAL_PAGE_SLUGS = new Set([
+  "mentions-legales",
+  "mentions_legales",
+  "confidentialite",
+  "politique-de-confidentialite",
+  "privacy",
+]);
+
 function normalizePageSlug(
   value
 ) {
@@ -34,6 +43,14 @@ function normalizePageSlug(
   )
     .trim()
     .toLowerCase();
+}
+
+function isLegalPage(pageSlug, page) {
+  const slug = normalizePageSlug(pageSlug || page?.slug);
+  if (LEGAL_PAGE_SLUGS.has(slug)) return true;
+
+  const title = String(page?.title || "").trim().toLowerCase();
+  return title.includes("mentions légales") || title.includes("confidentialité");
 }
 
 function canonicalPath({
@@ -285,6 +302,8 @@ export async function generateMetadata({
         ?.description ||
       `Découvrez ${site.name}.`;
 
+    const legalPage = isLegalPage(pageSlug, page);
+
     return {
       title,
 
@@ -296,7 +315,7 @@ export async function generateMetadata({
 
       robots: {
         index:
-          true,
+          !legalPage,
 
         follow:
           true,
@@ -436,6 +455,8 @@ export default async function AgencySitePage({
     });
   }
 
+  const legalPage = isLegalPage(pageSlug, page);
+
   return (
     <>
       <JsonLd
@@ -454,10 +475,14 @@ export default async function AgencySitePage({
         }
       />
 
-      <PublicSiteSections
-        site={site}
-        page={page}
-      />
+      <div data-public-page-kind={legalPage ? "legal" : "content"}>
+        <PublicSiteSections
+          site={site}
+          page={page}
+        />
+
+        {legalPage ? <LegalJourneyCta site={site} /> : null}
+      </div>
     </>
   );
 }
