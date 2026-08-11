@@ -14,6 +14,7 @@ import JsonLd from "../../../../components/JsonLd";
 
 import {
   fetchPublicBrandLegalRuntime,
+  mergePublicMetadata,
   resolveLegalPageHtml,
 } from "../../../../lib/public-brand-legal-runtime";
 
@@ -87,12 +88,13 @@ export async function generateMetadata({ params }) {
   const pageSlug = resolved.pageSlug?.[0] || "";
 
   try {
-    const [site, page] = await Promise.all([
+    const [site, page, runtime] = await Promise.all([
       publicSiteApi.getSite(resolved.siteSlug),
       loadPage({
         siteSlug: resolved.siteSlug,
         pageSlug,
       }),
+      fetchPublicBrandLegalRuntime(resolved.siteSlug),
     ]);
 
     const canonical = canonicalUrl({
@@ -107,23 +109,26 @@ export async function generateMetadata({ params }) {
       `Découvrez ${site.name}.`;
     const legalPage = isLegalPage(pageSlug, page);
 
-    return {
-      title,
-      description,
-      alternates: {
-        canonical,
-      },
-      robots: {
-        index: !legalPage,
-        follow: true,
-      },
-      openGraph: {
+    return mergePublicMetadata(
+      {
         title,
         description,
-        url: canonical,
-        type: "website",
+        alternates: {
+          canonical,
+        },
+        robots: {
+          index: !legalPage,
+          follow: true,
+        },
+        openGraph: {
+          title,
+          description,
+          url: canonical,
+          type: "website",
+        },
       },
-    };
+      runtime
+    );
   } catch (error) {
     if (error?.statusCode === 404) {
       return {
