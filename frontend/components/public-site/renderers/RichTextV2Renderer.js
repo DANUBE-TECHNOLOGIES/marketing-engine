@@ -69,9 +69,10 @@ function legalHeading(value) {
     };
   }
 
-  if (String(value || "").trim().endsWith(":" ) && String(value || "").trim().length <= 64) {
+  const raw = String(value || "").trim();
+  if (raw.endsWith(":") && raw.length <= 64) {
     return {
-      title: String(value).trim().replace(/\s*:\s*$/, ""),
+      title: raw.replace(/\s*:\s*$/, ""),
       icon: "•",
     };
   }
@@ -125,10 +126,10 @@ function buildLegalGroups(values) {
 function LegalDocument({ section, page, content, paragraphs }) {
   const title = getSectionTitle(section, null) || page?.title || "Informations légales";
   const values = [
-    content.text,
-    content.description,
+    ...textParagraphs(content.text),
+    ...textParagraphs(content.description),
     ...paragraphs,
-  ].filter(Boolean);
+  ];
   const groups = buildLegalGroups(values);
 
   return (
