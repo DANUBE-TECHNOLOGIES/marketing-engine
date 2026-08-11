@@ -32,6 +32,10 @@ const {
 const {
   networkSeoPriorities,
 } = require("./network-seo-priorities");
+const {
+  recordSeoAction,
+  seoActionHistory,
+} = require("./seo-action-history");
 
 function createHttpError(statusCode, code, message) {
   const error = new Error(message);
@@ -175,7 +179,7 @@ async function networkForTenant(database, tenantId) {
   }
 
   return {
-    version: "2.7",
+    version: "2.8",
     mode: "prepublication",
     tenantId,
     generatedAt: new Date().toISOString(),
@@ -193,7 +197,7 @@ function createAgencyLaunchRouter({ prisma } = {}) {
     response.json({
       ok: true,
       capability: "agency-launch",
-      version: "2.7",
+      version: "2.8",
       mode: "prepublication",
       legalRuntimeRequired: true,
       localCitationsObserved: true,
@@ -202,6 +206,7 @@ function createAgencyLaunchRouter({ prisma } = {}) {
       rankingContentCoverageObserved: true,
       seoActionQueueObserved: true,
       networkSeoPrioritiesObserved: true,
+      seoActionHistoryObserved: true,
     });
   });
 
@@ -230,7 +235,40 @@ function createAgencyLaunchRouter({ prisma } = {}) {
     }
   });
 
+  router.get("/agencies/:agencyId/seo-actions/history", async (request, response) => {
+    try {
+      const tenantId = await tenantIdForRequest(database, request);
+      const agencyId = await assertAgencyInTenant(database, tenantId, request.params.agencyId);
+      const actions = await seoActionHistory(database, tenantId, agencyId, request.query.limit);
+      response.json({ version: "1.0", agencyId, total: actions.length, actions });
+    } catch (error) {
+      sendError(response, error);
+    }
+  });
+
+  router.post("/agencies/:agencyId/seo-actions/executed", async (request, response) => {
+    try {
+      const tenantId = await tenantIdForRequest(database, request);
+      const agencyId = await assertAgencyInTenant(database, tenantId, request.params.agencyId);
+      const action = await recordSeoAction(database, tenantId, {
+        ...(request.body || {}),
+        agencyId,
+      });
+      response.status(201).json({
+        version: "1.0",
+        action: actionMetadataForResponse(action),
+      });
+    } catch (error) {
+      sendError(response, error);
+    }
+  });
+
   return router;
+}
+
+function actionMetadataForResponse(action) {
+  const { actionMetadata } = require("./seo-action-history");
+  return actionMetadata(action);
 }
 
 module.exports = {
