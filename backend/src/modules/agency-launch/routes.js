@@ -30,6 +30,9 @@ const {
   applySeoActionQueue,
 } = require("./seo-action-queue");
 const {
+  applySeoActionCooldown,
+} = require("./seo-action-cooldown");
+const {
   networkSeoPriorities,
 } = require("./network-seo-priorities");
 const {
@@ -113,43 +116,52 @@ async function readinessWithPublicRuntime(database, tenantId, agencyId, service)
   const withCitations = applyLocalCitationsToReadiness(withLegal, localCitations);
   const withRankings = applyLocalRankingsToReadiness(withCitations, localRankings);
 
-  const pages = await database.agencySitePage.findMany({
-    where: {
-      site: {
-        agencyId: Number(agencyId),
-        tenantId,
-      },
-    },
-    orderBy: { displayOrder: "asc" },
-    select: {
-      id: true,
-      slug: true,
-      title: true,
-      h1: true,
-      status: true,
-      published: true,
-      seoTitle: true,
-      metaDescription: true,
-      blocks: {
-        orderBy: { displayOrder: "asc" },
-        select: {
-          status: true,
-          content: true,
+  const [pages, recentHistory] = await Promise.all([
+    database.agencySitePage.findMany({
+      where: {
+        site: {
+          agencyId: Number(agencyId),
+          tenantId,
         },
       },
-      sections: {
-        orderBy: { displayOrder: "asc" },
-        select: {
-          status: true,
-          jsonContent: true,
+      orderBy: { displayOrder: "asc" },
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        h1: true,
+        status: true,
+        published: true,
+        seoTitle: true,
+        metaDescription: true,
+        blocks: {
+          orderBy: { displayOrder: "asc" },
+          select: {
+            status: true,
+            content: true,
+          },
+        },
+        sections: {
+          orderBy: { displayOrder: "asc" },
+          select: {
+            status: true,
+            jsonContent: true,
+          },
         },
       },
-    },
-  });
+    }),
+    seoActionHistory(database, tenantId, agencyId, 100),
+  ]);
 
-  return applySeoActionQueue(
+  const queued = applySeoActionQueue(
     applyRankingContentCoverage(withRankings, pages)
   );
+
+  return {
+    ...queued,
+    version: "3.3",
+    seoActions: applySeoActionCooldown(queued.seoActions, recentHistory),
+  };
 }
 
 async function networkForTenant(database, tenantId) {
@@ -188,7 +200,7 @@ async function networkForTenant(database, tenantId) {
   const learning = await networkSeoLearning(database, tenantId, 100);
 
   return {
-    version: "3.2",
+    version: "3.3",
     mode: "prepublication",
     tenantId,
     generatedAt: new Date().toISOString(),
@@ -237,7 +249,7 @@ function createAgencyLaunchRouter({ prisma } = {}) {
     response.json({
       ok: true,
       capability: "agency-launch",
-      version: "3.2",
+      version: "3.3",
       mode: "prepublication",
       legalRuntimeRequired: true,
       localCitationsObserved: true,
@@ -245,6 +257,7 @@ function createAgencyLaunchRouter({ prisma } = {}) {
       rankingMomentumObserved: true,
       rankingContentCoverageObserved: true,
       seoActionQueueObserved: true,
+      seoActionCooldownObserved: true,
       networkSeoPrioritiesObserved: true,
       seoActionHistoryObserved: true,
       seoActionImpactObserved: true,
