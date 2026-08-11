@@ -175,7 +175,7 @@ async function networkForTenant(database, tenantId) {
   }
 
   return {
-    version: "2.6",
+    version: "2.7",
     mode: "prepublication",
     tenantId,
     generatedAt: new Date().toISOString(),
@@ -193,11 +193,12 @@ function createAgencyLaunchRouter({ prisma } = {}) {
     response.json({
       ok: true,
       capability: "agency-launch",
-      version: "2.6",
+      version: "2.7",
       mode: "prepublication",
       legalRuntimeRequired: true,
       localCitationsObserved: true,
       localRankingsObserved: true,
+      rankingMomentumObserved: true,
       rankingContentCoverageObserved: true,
       seoActionQueueObserved: true,
       networkSeoPrioritiesObserved: true,
