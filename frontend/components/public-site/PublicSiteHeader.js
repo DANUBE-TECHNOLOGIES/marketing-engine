@@ -23,13 +23,22 @@ function extractSlug(path = "") {
   return parts.at(-1) || "";
 }
 
+function normalizePageSlug(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
 function pageHref(siteSlug, page) {
-  const slug =
+  const slug = normalizePageSlug(
     page.slug !== undefined
       ? page.slug
-      : extractSlug(page.path);
+      : extractSlug(page.path)
+  );
 
-  if (!slug || page.title === "Accueil") {
+  if (
+    !slug ||
+    ["home", "accueil", "index"].includes(slug) ||
+    page.title === "Accueil"
+  ) {
     return `/agence/${siteSlug}`;
   }
 
@@ -178,3 +187,11 @@ export default function PublicSiteHeader({
     </>
   );
 }
+
+export {
+  extractSlug,
+  normalizeNavigation,
+  normalizePageSlug,
+  pageHref,
+  telephoneHref,
+};
