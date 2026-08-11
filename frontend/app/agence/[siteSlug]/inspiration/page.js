@@ -41,6 +41,8 @@ export async function generateMetadata({ params }) {
         description,
         url: canonical,
         type: "website",
+        locale: "fr_FR",
+        siteName: site.name,
       },
     };
   } catch (error) {
@@ -71,6 +73,8 @@ export default async function InspirationIndexPage({ params }) {
   }
 
   const canonical = `${PUBLIC_ORIGIN}${canonicalPath(siteSlug)}`;
+  const homePath = `/agence/${encodeURIComponent(siteSlug)}`;
+  const contactPath = `${homePath}/contact`;
   const breadcrumb = buildBreadcrumbSchema([
     { name: "Accueil", path: site.basePath },
     { name: "Inspirations voyage", path: canonical },
@@ -83,6 +87,12 @@ export default async function InspirationIndexPage({ params }) {
 
       <section className="public-site-section">
         <div className="public-site-container public-site-prose">
+          <nav aria-label="Fil d’Ariane" className="public-site-breadcrumb">
+            <Link href={homePath}>Accueil de {site.name}</Link>
+            <span aria-hidden="true">›</span>
+            <span>Inspirations voyage</span>
+          </nav>
+
           <p className="public-site-eyebrow">Idées & conseils</p>
           <h1>Inspirations voyage</h1>
           <p>
@@ -109,18 +119,19 @@ export default async function InspirationIndexPage({ params }) {
                   seo.openGraph?.image ||
                   seo.openGraph?.imageUrl ||
                   null;
+                const title = String(item.title || "Cette inspiration").trim();
 
                 return (
                   <article className="public-site-card" key={item.id || slug}>
                     {image ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={image} alt="" loading="lazy" />
+                      <img src={image} alt={body.imageAlt || title} loading="lazy" />
                     ) : null}
                     <p className="public-site-eyebrow">Inspiration</p>
-                    <h2>{item.title}</h2>
+                    <h2>{title}</h2>
                     {item.excerpt ? <p>{item.excerpt}</p> : null}
                     <Link href={`${canonicalPath(siteSlug)}/${encodeURIComponent(slug)}`}>
-                      Lire l’inspiration
+                      Découvrir {title}
                     </Link>
                   </article>
                 );
@@ -133,11 +144,16 @@ export default async function InspirationIndexPage({ params }) {
                 Votre agence prépare actuellement de nouvelles idées de voyages.
                 Contactez-nous pour construire dès maintenant votre prochain départ.
               </p>
-              <Link href={`/agence/${encodeURIComponent(siteSlug)}/contact`}>
+              <Link href={contactPath}>
                 Contacter l’agence
               </Link>
             </div>
           )}
+
+          <div className="public-site-related-links" aria-label="Liens utiles">
+            <Link href={homePath}>Découvrir votre agence {site.name}</Link>
+            <Link href={contactPath}>Parler de votre projet de voyage</Link>
+          </div>
         </div>
       </section>
     </>
