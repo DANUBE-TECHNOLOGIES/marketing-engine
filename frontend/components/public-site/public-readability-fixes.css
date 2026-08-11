@@ -1,0 +1,76 @@
+/*
+ * Launch-readiness visual hardening for the public mini-sites.
+ * Keep critical contrast and navigation legibility independent from tenant theme values.
+ */
+
+.public-site-stats {
+  color: #ffffff !important;
+  background:
+    radial-gradient(
+      circle at 88% 12%,
+      color-mix(in srgb, var(--public-accent) 22%, transparent),
+      transparent 30%
+    ),
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--public-secondary) 76%, #071d30),
+      #071d30 78%
+    ) !important;
+}
+
+.public-site-stats h2,
+.public-site-stats h3,
+.public-site-stats p,
+.public-site-stats strong,
+.public-site-stats span,
+.public-site-stats .public-site-eyebrow {
+  color: #ffffff !important;
+}
+
+.public-site-stats .public-site-eyebrow,
+.public-site-stats p,
+.public-site-stats-grid span {
+  opacity: 0.92;
+}
+
+.public-site-stats-grid article {
+  border-color: rgba(255, 255, 255, 0.28) !important;
+  background: rgba(255, 255, 255, 0.14) !important;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.2) !important;
+}
+
+.public-site-stats-grid strong {
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.18);
+}
+
+.public-site-header-navrow .public-site-container {
+  scroll-padding-inline: 20px;
+}
+
+.public-site-navigation {
+  box-sizing: border-box;
+  padding-inline: clamp(14px, 2vw, 28px);
+  justify-content: safe center;
+}
+
+.public-site-navigation a {
+  flex: 0 0 auto;
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+@media (max-width: 1180px) {
+  .public-site-navigation {
+    justify-content: flex-start;
+    min-width: max-content;
+    padding-right: 34px;
+  }
+}
+
+@media (max-width: 760px) {
+  .public-site-navigation {
+    padding-inline: 14px 30px;
+  }
+}
