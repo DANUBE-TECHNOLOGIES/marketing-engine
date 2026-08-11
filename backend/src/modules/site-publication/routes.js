@@ -20,6 +20,9 @@ const {
   PagePublicationClient,
 } = require("./page-publication-client");
 const {
+  PublishRollbackRepository,
+} = require("./publish-rollback-repository");
+const {
   SiteReadinessClient,
 } = require("./readiness-client");
 const {
@@ -178,6 +181,18 @@ function createSitePublicationRoutes(prisma, options = {}) {
       lockManager,
     });
 
+  const publishService =
+    options.publishService ||
+    (options.service
+      ? options.service
+      : new SitePublicationService({
+          repository: new PublishRollbackRepository(repository),
+          readinessClient,
+          pagePublicationClient,
+          historyStore,
+          lockManager,
+        }));
+
   /*
    * Internal page publication endpoints used by SitePublicationService.
    * They only flip page publication state; they never rewrite page blocks.
@@ -261,7 +276,7 @@ function createSitePublicationRoutes(prisma, options = {}) {
     try {
       await assertSiteInTenant(prisma, request, request.params.siteId);
 
-      const result = await service.publish({
+      const result = await publishService.publish({
         siteId: request.params.siteId,
         headers: {
           ...requestHeaders(request),
