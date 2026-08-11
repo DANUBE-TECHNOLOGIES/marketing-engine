@@ -30,7 +30,6 @@ async function publishedCanonicalEditorialDependencies(prisma, tenantId, agencyI
       { publishedAt: "desc" },
       { updatedAt: "desc" },
     ],
-    take: 500,
   });
 
   return contents
