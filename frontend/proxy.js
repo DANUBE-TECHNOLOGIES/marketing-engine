@@ -4,6 +4,11 @@ export function proxy(request) {
   const pathname =
     request.nextUrl?.pathname || new URL(request.url).pathname;
 
+  const isPublicInspirationRead =
+    request.method === "GET" &&
+    (pathname === "/api/website-builder/inspirations" ||
+      pathname.startsWith("/api/website-builder/inspirations/"));
+
   const isPublicRoute =
     pathname === "/agence" ||
     pathname.startsWith("/agence/") ||
@@ -21,7 +26,8 @@ export function proxy(request) {
     pathname === "/favicon.ico" ||
     pathname === "/robots.txt" ||
     pathname === "/sitemap.xml" ||
-    pathname === "/api/google/callback";
+    pathname === "/api/google/callback" ||
+    isPublicInspirationRead;
 
   if (isPublicRoute) {
     return NextResponse.next();
