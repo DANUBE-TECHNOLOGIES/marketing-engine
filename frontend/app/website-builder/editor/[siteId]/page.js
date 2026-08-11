@@ -62,6 +62,7 @@ export default async function MiniSiteEditorPage({
         siteId={resolvedParams.siteId}
       />
       <SeoDesignerContext
+        siteId={resolvedParams.siteId}
         pageSlug={query.seoPageSlug || ""}
         keyword={query.seoKeyword || ""}
         mode={query.seoMode || "monitor"}
