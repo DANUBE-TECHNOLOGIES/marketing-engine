@@ -1,13 +1,18 @@
 class DestinationRepository {
   constructor(prisma) { this.prisma = prisma; }
   findBySlug(slug, publishedOnly = false) {
-    return this.prisma.destination.findUnique({
-      where: { slug },
+    return this.prisma.destination.findFirst({
+      where: { slug, ...(publishedOnly ? { status: 'published' } : {}) },
       include: { sections: { orderBy: { position: 'asc' } }, faqs: { orderBy: { position: 'asc' } } }
-    }).then((d) => (!d || (publishedOnly && d.status !== 'published') ? null : d));
+    });
   }
-  findPublicSite(slug) {
-    return this.prisma.agencySite.findUnique({ where: { slug }, include: { agency: true } });
+  findPublicSite(slug, tenantId) {
+    const normalizedTenantId = String(tenantId || '').trim();
+    if (!normalizedTenantId) return null;
+    return this.prisma.agencySite.findFirst({
+      where: { slug, tenantId: normalizedTenantId },
+      include: { agency: true }
+    });
   }
   list(publishedOnly = false) {
     return this.prisma.destination.findMany({
