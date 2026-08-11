@@ -25,11 +25,9 @@ export async function GET(request) {
       BACKEND_URL
     );
 
-    for (const name of ["limit", "channel", "ids"]) {
+    for (const name of ["limit", "channel", "ids", "agencyId"]) {
       const value = requestUrl.searchParams.get(name);
-      if (value) {
-        backendUrl.searchParams.set(name, value);
-      }
+      if (value) backendUrl.searchParams.set(name, value);
     }
 
     const response = await fetch(backendUrl, {
