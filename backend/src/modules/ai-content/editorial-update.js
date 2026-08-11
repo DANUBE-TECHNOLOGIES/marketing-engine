@@ -4,9 +4,9 @@ const {
   normalizeEditorialTargeting,
 } = require("./editorial-targeting");
 
-function httpError(message, code) {
+function httpError(message, code, statusCode = 400) {
   return Object.assign(new Error(message), {
-    statusCode: 400,
+    statusCode,
     code,
   });
 }
@@ -43,6 +43,38 @@ function validateEditorialUpdate(input = {}) {
   return patch;
 }
 
+async function assertEditorialTargetingAgenciesBelongToTenant(prisma, tenantId, targeting) {
+  if (!targeting || targeting.scope !== "agencies") return;
+
+  const requestedIds = targeting.agencyIds.map((value) => Number(value));
+  if (
+    requestedIds.some((value) => !Number.isSafeInteger(value) || value <= 0) ||
+    !String(tenantId || "").trim()
+  ) {
+    throw httpError(
+      "Une ou plusieurs agences ciblées sont invalides.",
+      "AI_CONTENT_TARGET_AGENCY_INVALID"
+    );
+  }
+
+  const agencies = await prisma.agency.findMany({
+    where: {
+      tenantId: String(tenantId),
+      id: { in: requestedIds },
+    },
+    select: { id: true },
+  });
+  const allowedIds = new Set(agencies.map((agency) => String(agency.id)));
+  const invalidIds = targeting.agencyIds.filter((id) => !allowedIds.has(String(id)));
+
+  if (invalidIds.length) {
+    throw httpError(
+      "Une ou plusieurs agences ciblées ne sont pas disponibles pour ce réseau.",
+      "AI_CONTENT_TARGET_AGENCY_INVALID"
+    );
+  }
+}
+
 function assertEditableEditorialContent(content) {
   const status = String(content?.status || "").toLowerCase();
 
@@ -76,5 +108,6 @@ function assertEditableEditorialContent(content) {
 
 module.exports = {
   validateEditorialUpdate,
+  assertEditorialTargetingAgenciesBelongToTenant,
   assertEditableEditorialContent,
 };
