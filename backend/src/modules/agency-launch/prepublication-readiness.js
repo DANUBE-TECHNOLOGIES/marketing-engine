@@ -130,6 +130,31 @@ function identityCheck(agency) {
   };
 }
 
+function localSeoCheck(agency) {
+  const signals = {
+    website: Boolean(String(agency?.website || "").trim()),
+    googleLocation: Boolean(String(agency?.googleLocationId || "").trim()),
+    googleReviewUrl: Boolean(String(agency?.googleReviewUrl || "").trim()),
+  };
+
+  const missing = Object.entries(signals)
+    .filter(([, present]) => !present)
+    .map(([name]) => name);
+
+  return {
+    code: "LOCAL_SEO",
+    label: "SEO local avancé",
+    required: false,
+    passed: missing.length === 0,
+    signals,
+    missing,
+    recommendation:
+      missing.length > 0
+        ? "Compléter les liens et identifiants Google pour renforcer la cohérence entre mini-site et fiche établissement."
+        : null,
+  };
+}
+
 function contentCheck(site) {
   const pages = site?.pages || [];
   const requiredPages = REQUIRED_CONTENT_PAGES.map(
@@ -225,7 +250,8 @@ function score(checks) {
     IDENTITY: 20,
     GENERAL_CONTENT: 30,
     LEGAL: 15,
-    SEO: 20,
+    SEO: 15,
+    LOCAL_SEO: 5,
   };
 
   return checks.reduce(
@@ -268,6 +294,9 @@ class PrepublicationReadinessService {
         postalCode: true,
         phone: true,
         email: true,
+        website: true,
+        googleReviewUrl: true,
+        googleLocationId: true,
         tenantId: true,
         agencySites: {
           where: { tenantId: this.tenantId },
@@ -339,13 +368,14 @@ class PrepublicationReadinessService {
       contentCheck(site),
       legalCheck(site),
       seoCheck(site),
+      localSeoCheck(agency),
     ];
 
     const launchBlockers = blockers(checks);
     const launchScore = score(checks);
 
     return {
-      version: "1.6",
+      version: "1.7",
       mode: "prepublication",
       agency: {
         id: agency.id,
@@ -385,6 +415,7 @@ module.exports = {
   designerContentState,
   pagePresenceCheck,
   identityCheck,
+  localSeoCheck,
   contentCheck,
   legalCheck,
   seoCheck,
