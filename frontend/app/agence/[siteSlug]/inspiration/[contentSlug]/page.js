@@ -43,6 +43,10 @@ function canonicalSiteSlug(siteSlug, content) {
   return siteSlug;
 }
 
+function canonicalPublisherName(site, content) {
+  return String(content?.editorialCanonical?.siteName || site?.name || "Mondescale Voyages").trim();
+}
+
 async function load(siteSlug, contentSlug) {
   try {
     const [site, content] = await Promise.all([
@@ -101,6 +105,7 @@ export default async function InspirationPage({ params }) {
 
   const canonicalOwnerSlug = canonicalSiteSlug(siteSlug, data.content);
   const canonical = `${PUBLIC_ORIGIN}${canonicalPath(canonicalOwnerSlug, contentSlug)}`;
+  const publisherName = canonicalPublisherName(data.site, data.content);
   const schemaOrg = data.content?.schemaOrg && typeof data.content.schemaOrg === "object"
     ? {
         ...data.content.schemaOrg,
@@ -116,7 +121,7 @@ export default async function InspirationPage({ params }) {
         mainEntityOfPage: canonical,
         publisher: {
           "@type": "TravelAgency",
-          name: data.site.name,
+          name: publisherName,
         },
       };
 
