@@ -12,8 +12,6 @@ const seoPlatform = require("./seo-platform");
 const knowledgeGraph = require("./knowledge-graph");
 const agencySite = require("./agency-site");
 const agencyProfile = require("./agency-profile");
-const agencyLaunch = require("./agency-launch");
-const sitePublication = require("./site-publication");
 const googleBusinessPhotos = require("./google-business-photos");
 const contentQuality = require("./content-quality");
 const marketingAutomation = require("./marketing-automation");
@@ -115,7 +113,6 @@ module.exports = function registerModules(app, { prisma }) {
     app.use(knowledgeGraph.routes({ prisma }));
   }
 
-
   if (contentQuality.routes) {
     app.use(contentQuality.routes({ prisma }));
   }
@@ -160,18 +157,13 @@ module.exports = function registerModules(app, { prisma }) {
     app.use(agencyProfile.routes({ prisma }));
   }
 
-  if (agencyLaunch.createAgencyLaunchRouter) {
-    app.use(agencyLaunch.createAgencyLaunchRouter({ prisma }));
-  }
-
-  if (sitePublication.createSitePublicationRoutes) {
-    app.use(sitePublication.createSitePublicationRoutes(prisma));
-  }
+  // Agency Launch et Site Publication sont montés une seule fois dans server.js
+  // sous /api/agency-launch et /api/site-publication. Ne pas les remonter ici
+  // à la racine : cela créerait deux contrats HTTP pour les mêmes mutations.
 
   if (googleBusinessPhotos.routes) {
     app.use(googleBusinessPhotos.routes({ prisma }));
   }
-
 
   if (pageBuilderPersistence.routes) {
     app.use(
@@ -191,7 +183,6 @@ module.exports = function registerModules(app, { prisma }) {
     );
   }
 
-
   if (minisiteBlueprintPersistence.routes) {
     app.use(
       minisiteBlueprintPersistence.routes({
@@ -199,7 +190,6 @@ module.exports = function registerModules(app, { prisma }) {
       })
     );
   }
-
 
   if (minisiteSeoEnrichment.routes) {
     app.use(
@@ -209,7 +199,6 @@ module.exports = function registerModules(app, { prisma }) {
     );
   }
 
-
   if (minisiteStructuredData.routes) {
     app.use(
       minisiteStructuredData.routes({
@@ -217,5 +206,4 @@ module.exports = function registerModules(app, { prisma }) {
       })
     );
   }
-
 };
