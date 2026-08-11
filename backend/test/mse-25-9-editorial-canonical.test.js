@@ -21,7 +21,7 @@ test("MSE-25.9 resolves the published canonical agency site inside the current t
     agencySite: {
       findFirst: async (args) => {
         calls.push(args);
-        return { agencyId: 6, slug: "bois-colombes" };
+        return { agencyId: 6, slug: "bois-colombes", name: "Mondescale Bois-Colombes" };
       },
     },
   };
@@ -39,6 +39,7 @@ test("MSE-25.9 resolves the published canonical agency site inside the current t
   assert.deepEqual(canonical, {
     agencyId: "6",
     siteSlug: "bois-colombes",
+    siteName: "Mondescale Bois-Colombes",
   });
   assert.equal(calls.length, 1);
   assert.equal(calls[0].where.tenantId, "tenant-mondescale");
@@ -85,5 +86,7 @@ test("MSE-25.9 public inspiration metadata canonicalizes copies to the index own
   assert.match(page, /canonicalPath\(canonicalOwnerSlug, contentSlug\)/);
   assert.match(page, /robots:\s*\{[\s\S]*index:\s*indexOwner/);
   assert.match(page, /openGraph:[\s\S]*url:\s*`\$\{PUBLIC_ORIGIN\}\$\{canonical\}`/);
+  assert.match(page, /canonicalPublisherName/);
+  assert.match(page, /editorialCanonical\?\.siteName/);
   assert.match(page, /mainEntityOfPage:\s*canonical/);
 });
