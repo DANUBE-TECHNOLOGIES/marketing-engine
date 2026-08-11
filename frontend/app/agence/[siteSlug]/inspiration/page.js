@@ -17,6 +17,22 @@ function canonicalPath(siteSlug) {
   return `/agence/${encodeURIComponent(siteSlug)}/inspiration`;
 }
 
+function formatPublishedDate(value) {
+  if (!value) return null;
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+
+  return {
+    iso: date.toISOString(),
+    label: new Intl.DateTimeFormat("fr-FR", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }).format(date),
+  };
+}
+
 export async function generateMetadata({ params }) {
   const { siteSlug } = await params;
 
@@ -120,6 +136,9 @@ export default async function InspirationIndexPage({ params }) {
                   seo.openGraph?.imageUrl ||
                   null;
                 const title = String(item.title || "Cette inspiration").trim();
+                const published = formatPublishedDate(
+                  item.publishedAt || item.createdAt
+                );
 
                 return (
                   <article className="public-site-card" key={item.id || slug}>
@@ -129,6 +148,14 @@ export default async function InspirationIndexPage({ params }) {
                     ) : null}
                     <p className="public-site-eyebrow">Inspiration</p>
                     <h2>{title}</h2>
+                    {published ? (
+                      <p className="public-site-content-date">
+                        Publié le{" "}
+                        <time dateTime={published.iso}>
+                          {published.label}
+                        </time>
+                      </p>
+                    ) : null}
                     {item.excerpt ? <p>{item.excerpt}</p> : null}
                     <Link href={`${canonicalPath(siteSlug)}/${encodeURIComponent(slug)}`}>
                       Découvrir {title}
@@ -160,4 +187,4 @@ export default async function InspirationIndexPage({ params }) {
   );
 }
 
-export { canonicalPath };
+export { canonicalPath, formatPublishedDate };
