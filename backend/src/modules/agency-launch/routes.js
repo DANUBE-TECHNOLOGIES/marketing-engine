@@ -8,7 +8,13 @@ const {
 } = require("./service");
 const {
   PrepublicationReadinessService,
+  score,
+  blockers,
 } = require("./prepublication-readiness");
+const {
+  legalRuntimeReadiness,
+  applyLegalRuntimeToReadiness,
+} = require("./legal-runtime-readiness");
 
 function createHttpError(statusCode, code, message) {
   const error = new Error(message);
@@ -30,7 +36,7 @@ function sendError(response, error) {
 
 async function tenantIdForRequest(database, request) {
   const direct = String(
-    request.tenantId || request.get("x-tenant-id") || ""
+    request.tenantId || request?.tenant?.id || request.get("x-tenant-id") || ""
   ).trim();
 
   if (direct) {
@@ -38,7 +44,7 @@ async function tenantIdForRequest(database, request) {
   }
 
   const slug = String(
-    request.tenantSlug || request.get("x-tenant-slug") || ""
+    request.tenantSlug || request?.tenant?.slug || request.get("x-tenant-slug") || ""
   ).trim();
 
   if (!slug) {
@@ -92,6 +98,16 @@ async function assertAgencyInTenant(database, tenantId, agencyId) {
   return agency.id;
 }
 
+async function readinessWithPublicRuntime(database, tenantId, agencyId, service) {
+  const report = await service.readiness(agencyId);
+  const legalRuntime = await legalRuntimeReadiness(database, tenantId, agencyId);
+
+  return applyLegalRuntimeToReadiness(report, legalRuntime, {
+    score,
+    blockers,
+  });
+}
+
 async function networkForTenant(database, tenantId) {
   const service = new PrepublicationReadinessService({
     prisma: database,
@@ -107,7 +123,12 @@ async function networkForTenant(database, tenantId) {
 
   for (const agency of agencies) {
     try {
-      const report = await service.readiness(agency.id);
+      const report = await readinessWithPublicRuntime(
+        database,
+        tenantId,
+        agency.id,
+        service
+      );
       const launchState = resolveLaunchState({
         site: report.site,
         readiness: report.readiness,
@@ -137,7 +158,7 @@ async function networkForTenant(database, tenantId) {
   }
 
   return {
-    version: "1.2",
+    version: "1.3",
     mode: "prepublication",
     tenantId,
     generatedAt: new Date().toISOString(),
@@ -154,8 +175,9 @@ function createAgencyLaunchRouter({ prisma } = {}) {
     response.json({
       ok: true,
       capability: "agency-launch",
-      version: "1.2",
+      version: "1.3",
       mode: "prepublication",
+      legalRuntimeRequired: true,
     });
   });
 
@@ -182,7 +204,12 @@ function createAgencyLaunchRouter({ prisma } = {}) {
           prisma: database,
           tenantId,
         });
-        const report = await service.readiness(agencyId);
+        const report = await readinessWithPublicRuntime(
+          database,
+          tenantId,
+          agencyId,
+          service
+        );
 
         response.json({
           ...report,
@@ -204,5 +231,6 @@ module.exports = {
   createAgencyLaunchRouter,
   tenantIdForRequest,
   assertAgencyInTenant,
+  readinessWithPublicRuntime,
   networkForTenant,
 };
