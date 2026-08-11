@@ -109,18 +109,21 @@ export default async function SeoCockpitPage() {
                           <span className={`rounded-full px-2.5 py-1 text-xs font-bold uppercase ${priorityClasses(action.priority)}`}>
                             {action.priority || "low"}
                           </span>
-                          <span className="text-sm font-semibold text-slate-700">
-                            {action.agency?.name || `Agence #${action.agency?.id || "?"}`}
-                            {action.agency?.city ? ` · ${action.agency.city}` : ""}
-                          </span>
+                          {action.agency?.id ? (
+                            <Link href={`/seo-cockpit/${action.agency.id}`} className="text-sm font-semibold text-cyan-900 hover:underline">
+                              {action.agency?.name || `Agence #${action.agency.id}`}
+                              {action.agency?.city ? ` · ${action.agency.city}` : ""}
+                            </Link>
+                          ) : (
+                            <span className="text-sm font-semibold text-slate-700">Action réseau</span>
+                          )}
                         </div>
                         <h3 className="mt-3 text-lg font-bold text-slate-950">{action.title}</h3>
                         <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">{action.detail}</p>
-                        {action.targetPage?.slug ? (
-                          <div className="mt-3 text-xs font-medium text-slate-500">
-                            Page cible : /{action.targetPage.slug}
-                          </div>
-                        ) : null}
+                        <div className="mt-3 flex flex-wrap items-center gap-3 text-xs font-medium">
+                          {action.targetPage?.slug ? <span className="text-slate-500">Page cible : /{action.targetPage.slug}</span> : null}
+                          {action.agency?.id ? <Link href={`/seo-cockpit/${action.agency.id}`} className="text-cyan-800 hover:underline">Voir le détail agence →</Link> : null}
+                        </div>
                       </div>
 
                       <div className="rounded-xl bg-slate-50 p-4">
