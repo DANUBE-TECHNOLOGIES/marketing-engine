@@ -8,97 +8,54 @@ const {
   publicBrandLegalError,
 } = require("./errors");
 
-function modelFields(
-  modelName
-) {
-  const model =
-    Prisma.dmmf.datamodel.models
-      .find(
-        (
-          entry
-        ) =>
-          entry.name ===
-          modelName
-      );
-
-  return new Set(
-    model?.fields.map(
-      (
-        field
-      ) =>
-        field.name
-    ) || []
+function modelFields(modelName) {
+  const model = Prisma.dmmf.datamodel.models.find(
+    (entry) => entry.name === modelName
   );
+
+  return new Set(model?.fields.map((field) => field.name) || []);
 }
 
 function agencySiteSelect() {
-  const fields =
-    modelFields(
-      "AgencySite"
-    );
+  const fields = modelFields("AgencySite");
 
   const select = {
-    id:
-      true,
-
-    agencyId:
-      true,
-
-    slug:
-      true,
+    id: true,
+    agencyId: true,
+    slug: true,
   };
 
-  for (
-    const field
-    of [
-      "name",
-      "basePath",
-      "status",
-      "publishedAt",
-      "generatedAt",
-      "createdAt",
-      "updatedAt",
-    ]
-  ) {
-    if (
-      fields.has(
-        field
-      )
-    ) {
-      select[field] =
-        true;
+  for (const field of [
+    "tenantId",
+    "name",
+    "basePath",
+    "status",
+    "publishedAt",
+    "generatedAt",
+    "createdAt",
+    "updatedAt",
+  ]) {
+    if (fields.has(field)) {
+      select[field] = true;
     }
   }
 
   select.agency = {
     select: {
-      id:
-        true,
-
-      name:
-        true,
-
-      tenantId:
-        true,
+      id: true,
+      name: true,
+      tenantId: true,
     },
   };
 
   return select;
 }
 
-function normalizeSiteSlug(
-  value
-) {
-  const normalized =
-    String(
-      value || ""
-    )
-      .trim()
-      .toLowerCase()
-      .replace(
-        /^\/+|\/+$/g,
-        ""
-      );
+function normalizeSiteSlug(value) {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/^\/+|\/+$/g, "");
 
   if (!normalized) {
     throw publicBrandLegalError(
@@ -107,78 +64,67 @@ function normalizeSiteSlug(
     );
   }
 
-  if (
-    !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(
-      normalized
-    )
-  ) {
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(normalized)) {
     throw publicBrandLegalError(
       "PUBLIC_BRAND_LEGAL_SITE_SLUG_INVALID",
       "Le slug du mini-site est invalide.",
-      {
-        siteSlug:
-          value,
-      }
+      { siteSlug: value }
     );
   }
 
   return normalized;
 }
 
-function normalizeAgencyId(
-  value
-) {
-  const normalized =
-    Number(value);
+function normalizeAgencyId(value) {
+  const normalized = Number(value);
 
-  if (
-    !Number.isInteger(
-      normalized
-    ) ||
-    normalized <= 0
-  ) {
+  if (!Number.isInteger(normalized) || normalized <= 0) {
     throw publicBrandLegalError(
       "PUBLIC_BRAND_LEGAL_AGENCY_ID_INVALID",
       "L’identifiant de l’agence doit être un entier positif.",
-      {
-        agencyId:
-          value,
-      }
+      { agencyId: value }
     );
   }
 
   return normalized;
+}
+
+function requireTenantId(value) {
+  const tenantId = String(value || "").trim();
+
+  if (!tenantId) {
+    throw publicBrandLegalError(
+      "PUBLIC_BRAND_LEGAL_TENANT_REQUIRED",
+      "Le tenant est obligatoire pour le runtime public Brand + Legal."
+    );
+  }
+
+  return tenantId;
 }
 
 async function findSiteBySlug({
   prisma,
   siteSlug,
+  tenantId,
 }) {
-  const normalizedSlug =
-    normalizeSiteSlug(
-      siteSlug
-    );
+  const normalizedSlug = normalizeSiteSlug(siteSlug);
+  const normalizedTenantId = requireTenantId(tenantId);
 
-  const site =
-    await prisma
-      .agencySite
-      .findFirst({
-        where: {
-          slug:
-            normalizedSlug,
-        },
-
-        select:
-          agencySiteSelect(),
-      });
+  const site = await prisma.agencySite.findFirst({
+    where: {
+      slug: normalizedSlug,
+      tenantId: normalizedTenantId,
+    },
+    select: agencySiteSelect(),
+  });
 
   if (!site) {
     throw publicBrandLegalError(
       "PUBLIC_BRAND_LEGAL_SITE_NOT_FOUND",
       "Le mini-site demandé est introuvable.",
       {
-        siteSlug:
-          normalizedSlug,
+        siteSlug: normalizedSlug,
+        tenantId: normalizedTenantId,
       },
       404
     );
@@ -190,37 +136,29 @@ async function findSiteBySlug({
 async function findSiteByAgencyId({
   prisma,
   agencyId,
+  tenantId,
 }) {
-  const normalizedAgencyId =
-    normalizeAgencyId(
-      agencyId
-    );
+  const normalizedAgencyId = normalizeAgencyId(agencyId);
+  const normalizedTenantId = requireTenantId(tenantId);
 
-  const site =
-    await prisma
-      .agencySite
-      .findFirst({
-        where: {
-          agencyId:
-            normalizedAgencyId,
-        },
-
-        orderBy: {
-          updatedAt:
-            "desc",
-        },
-
-        select:
-          agencySiteSelect(),
-      });
+  const site = await prisma.agencySite.findFirst({
+    where: {
+      agencyId: normalizedAgencyId,
+      tenantId: normalizedTenantId,
+    },
+    orderBy: {
+      updatedAt: "desc",
+    },
+    select: agencySiteSelect(),
+  });
 
   if (!site) {
     throw publicBrandLegalError(
       "PUBLIC_BRAND_LEGAL_SITE_NOT_FOUND",
       "Aucun mini-site n’est associé à cette agence.",
       {
-        agencyId:
-          normalizedAgencyId,
+        agencyId: normalizedAgencyId,
+        tenantId: normalizedTenantId,
       },
       404
     );
@@ -229,47 +167,20 @@ async function findSiteByAgencyId({
   return site;
 }
 
-function publicSiteContract(
-  site
-) {
+function publicSiteContract(site) {
   return {
-    id:
-      site.id,
-
-    slug:
-      site.slug,
-
-    agencyId:
-      site.agencyId,
-
-    name:
-      site.name ??
-      null,
-
-    basePath:
-      site.basePath ??
-      null,
-
-    status:
-      site.status ??
-      null,
-
-    publishedAt:
-      site.publishedAt ??
-      null,
-
+    id: site.id,
+    slug: site.slug,
+    agencyId: site.agencyId,
+    tenantId: site.tenantId ?? site.agency?.tenantId ?? null,
+    name: site.name ?? null,
+    basePath: site.basePath ?? null,
+    status: site.status ?? null,
+    publishedAt: site.publishedAt ?? null,
     agency: {
-      id:
-        site.agency?.id ??
-        site.agencyId,
-
-      name:
-        site.agency?.name ??
-        null,
-
-      tenantId:
-        site.agency?.tenantId ??
-        null,
+      id: site.agency?.id ?? site.agencyId,
+      name: site.agency?.name ?? null,
+      tenantId: site.agency?.tenantId ?? site.tenantId ?? null,
     },
   };
 }
@@ -279,6 +190,7 @@ module.exports = {
   agencySiteSelect,
   normalizeSiteSlug,
   normalizeAgencyId,
+  requireTenantId,
   findSiteBySlug,
   findSiteByAgencyId,
   publicSiteContract,
