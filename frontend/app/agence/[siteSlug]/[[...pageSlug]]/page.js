@@ -7,9 +7,15 @@ import {
 } from "../../../../lib/public-site-api";
 
 import LegalJourneyCta from "../../../../components/public-site/LegalJourneyCta";
+import LegalRuntimeDocument from "../../../../components/public-site/LegalRuntimeDocument";
 import PublicSiteSections from "../../../../components/public-site/PublicSiteSections";
 
 import JsonLd from "../../../../components/JsonLd";
+
+import {
+  fetchPublicBrandLegalRuntime,
+  resolveLegalPageHtml,
+} from "../../../../lib/public-brand-legal-runtime";
 
 import {
   buildBreadcrumbSchema,
@@ -187,6 +193,12 @@ export default async function AgencySitePage({ params }) {
   }
 
   const legalPage = isLegalPage(pageSlug, page);
+  let legalRuntimeHtml = null;
+
+  if (legalPage) {
+    const runtime = await fetchPublicBrandLegalRuntime(resolved.siteSlug);
+    legalRuntimeHtml = resolveLegalPageHtml(pageSlug, runtime);
+  }
 
   return (
     <>
@@ -194,10 +206,17 @@ export default async function AgencySitePage({ params }) {
       <JsonLd data={buildBreadcrumbSchema(breadcrumbItems)} />
 
       <div data-public-page-kind={legalPage ? "legal" : "content"}>
-        <PublicSiteSections
-          site={site}
-          page={page}
-        />
+        {legalPage && legalRuntimeHtml ? (
+          <LegalRuntimeDocument
+            title={page.title}
+            html={legalRuntimeHtml}
+          />
+        ) : (
+          <PublicSiteSections
+            site={site}
+            page={page}
+          />
+        )}
 
         {legalPage ? <LegalJourneyCta site={site} /> : null}
       </div>
