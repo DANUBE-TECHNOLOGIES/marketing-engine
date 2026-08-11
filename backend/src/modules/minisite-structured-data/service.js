@@ -1,7 +1,11 @@
 "use strict";
 
 const { buildStructuredDataPlan } = require("./planner");
-const { buildPublicSitemap } = require("./sitemap");
+const {
+  buildPublicSitemap,
+  isPublishedPage,
+  isPublishedSite,
+} = require("./sitemap");
 const { MiniSiteStructuredDataRepository } = require("./repository");
 
 function normalizePublicOrigin(value) {
@@ -11,6 +15,26 @@ function normalizePublicOrigin(value) {
     process.env.NEXT_PUBLIC_SITE_ORIGIN ||
     "https://agences.mondescale.com"
   ).trim().replace(/\/+$/g, "");
+}
+
+function isPublishedBlock(block) {
+  if (!block) return false;
+  if (block.published === true || block.isPublished === true) return true;
+  return String(block.status || "").trim().toLowerCase() === "published";
+}
+
+function publicStructuredDataSite(site) {
+  if (!isPublishedSite(site)) return null;
+
+  return {
+    ...site,
+    pages: (site.pages || [])
+      .filter(isPublishedPage)
+      .map((page) => ({
+        ...page,
+        blocks: (page.blocks || []).filter(isPublishedBlock),
+      })),
+  };
 }
 
 class MiniSiteStructuredDataService {
@@ -27,6 +51,7 @@ class MiniSiteStructuredDataService {
       destructive: false,
       deterministic: true,
       tenantScoped: true,
+      publicGraphPublishedOnly: true,
       destinationSitemap: "localized-per-published-agency-site",
       editorialSitemap: "canonical-agency-only",
       publicOrigin: this.publicOrigin,
@@ -37,14 +62,16 @@ class MiniSiteStructuredDataService {
 
   async previewSite({ siteSlug, tenantId } = {}) {
     const site = await this.repository.findSiteBySlug(siteSlug, tenantId);
-    if (!site) {
-      const error = new Error(`Mini-site introuvable : ${siteSlug}`);
+    const publicSite = publicStructuredDataSite(site);
+
+    if (!publicSite) {
+      const error = new Error(`Mini-site public introuvable : ${siteSlug}`);
       error.code = "MINISITE_STRUCTURED_DATA_SITE_NOT_FOUND";
       error.status = 404;
       throw error;
     }
 
-    const plan = buildStructuredDataPlan({ sites: [site], publicOrigin: this.publicOrigin });
+    const plan = buildStructuredDataPlan({ sites: [publicSite], publicOrigin: this.publicOrigin });
     const item = plan.items[0];
     return {
       version: plan.version,
@@ -82,4 +109,6 @@ class MiniSiteStructuredDataService {
 module.exports = {
   MiniSiteStructuredDataService,
   normalizePublicOrigin,
+  isPublishedBlock,
+  publicStructuredDataSite,
 };
