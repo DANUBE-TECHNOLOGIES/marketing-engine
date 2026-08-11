@@ -18,12 +18,8 @@ async function request(path) {
     }
   );
 
-  const contentType =
-    response.headers.get("content-type") || "";
-
-  const payload = contentType.includes(
-    "application/json"
-  )
+  const contentType = response.headers.get("content-type") || "";
+  const payload = contentType.includes("application/json")
     ? await response.json()
     : await response.text();
 
@@ -34,7 +30,6 @@ async function request(path) {
         payload?.message ||
         "Mini-site introuvable"
     );
-
     error.statusCode = response.status;
     throw error;
   }
@@ -69,51 +64,31 @@ async function requestWebsiteBuilder(path) {
 }
 
 function siteFromContract(payload) {
-  const site =
-    payload?.site &&
-    typeof payload.site === "object"
-      ? payload.site
-      : payload;
+  const site = payload?.site && typeof payload.site === "object"
+    ? payload.site
+    : payload;
 
-  if (
-    !site ||
-    typeof site !== "object"
-  ) {
-    return site;
-  }
+  if (!site || typeof site !== "object") return site;
 
   return {
     ...site,
-    navigation:
-      payload?.navigation ||
-      site.navigation ||
-      [],
+    navigation: payload?.navigation || site.navigation || [],
   };
 }
 
 function pageFromContract(payload) {
-  return (
-    payload?.page ||
-    payload?.currentPage ||
-    payload?.requestedPage ||
-    payload
-  );
+  return payload?.page || payload?.currentPage || payload?.requestedPage || payload;
 }
 
 export const publicSiteApi = {
   async getSite(siteSlug) {
     const [payload, hours] = await Promise.all([
-      request(
-        `/${encodeURIComponent(siteSlug)}`
-      ),
+      request(`/${encodeURIComponent(siteSlug)}`),
       getPublicHours(siteSlug).catch(() => null),
     ]);
 
     const site = siteFromContract(payload);
-
-    if (!site || typeof site !== "object") {
-      return site;
-    }
+    if (!site || typeof site !== "object") return site;
 
     return {
       ...site,
@@ -123,18 +98,14 @@ export const publicSiteApi = {
 
   async getHome(siteSlug) {
     return pageFromContract(
-      await request(
-        `/${encodeURIComponent(siteSlug)}/pages/home`
-      )
+      await request(`/${encodeURIComponent(siteSlug)}/pages/home`)
     );
   },
 
   async getPage(siteSlug, pageSlug) {
     return pageFromContract(
       await request(
-        `/${encodeURIComponent(siteSlug)}/pages/${encodeURIComponent(
-          pageSlug
-        )}`
+        `/${encodeURIComponent(siteSlug)}/pages/${encodeURIComponent(pageSlug)}`
       )
     );
   },
@@ -143,10 +114,14 @@ export const publicSiteApi = {
     limit = 6,
     channel = "article",
     ids = [],
+    agencyId = null,
   } = {}) {
     const params = new URLSearchParams();
     params.set("limit", String(limit));
     if (channel) params.set("channel", channel);
+    if (agencyId !== null && agencyId !== undefined && String(agencyId).trim()) {
+      params.set("agencyId", String(agencyId).trim());
+    }
     if (Array.isArray(ids) && ids.length) {
       params.set("ids", ids.map(String).join(","));
     }
@@ -155,15 +130,22 @@ export const publicSiteApi = {
       `/inspirations?${params.toString()}`
     );
 
-    return Array.isArray(payload?.items)
-      ? payload.items
-      : [];
+    return Array.isArray(payload?.items) ? payload.items : [];
   },
 
   async getInspiration(siteSlug, contentSlug) {
-    await request(`/${encodeURIComponent(siteSlug)}`);
+    const site = siteFromContract(
+      await request(`/${encodeURIComponent(siteSlug)}`)
+    );
+    const agencyId = site?.agencyId || site?.agency?.id || null;
+    const params = new URLSearchParams();
+    if (agencyId !== null && agencyId !== undefined && String(agencyId).trim()) {
+      params.set("agencyId", String(agencyId).trim());
+    }
+
+    const suffix = params.toString() ? `?${params.toString()}` : "";
     return requestWebsiteBuilder(
-      `/inspirations/${encodeURIComponent(contentSlug)}`
+      `/inspirations/${encodeURIComponent(contentSlug)}${suffix}`
     );
   },
 };
