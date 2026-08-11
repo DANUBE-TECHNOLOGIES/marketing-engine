@@ -3,6 +3,7 @@ const express = require("express");
 const { AiContentService, toInspiration } = require("./service");
 const {
   validateEditorialUpdate,
+  assertEditorialTargetingAgenciesBelongToTenant,
   assertEditableEditorialContent,
 } = require("./editorial-update");
 
@@ -85,6 +86,11 @@ module.exports = ({ prisma }) => {
       delete patch.editorialTargeting;
 
       if (editorialTargeting) {
+        await assertEditorialTargetingAgenciesBelongToTenant(
+          prisma,
+          req.tenant.id,
+          editorialTargeting
+        );
         patch.seo = {
           ...asObject(content.seo),
           editorialTargeting,
