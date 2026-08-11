@@ -59,12 +59,14 @@ export default async function SeoCockpitPage() {
 
   const priorities = payload?.seoPriorities || {};
   const learning = payload?.seoLearning || {};
+  const goals = payload?.seoGoals || {};
   const actions = Array.isArray(priorities.actions) ? priorities.actions : [];
+  const priorityAgencies = Array.isArray(goals.priorityAgencies) ? goals.priorityAgencies : [];
 
   return (
     <MainLayout
       title="Cockpit SEO réseau"
-      subtitle="Priorités locales, score explicable et apprentissage observé sur les mini-sites Mondescale."
+      subtitle="Priorités locales, objectifs Top 10, score explicable et apprentissage observé sur les mini-sites Mondescale."
     >
       {error ? (
         <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-red-800">
@@ -73,16 +75,54 @@ export default async function SeoCockpitPage() {
       ) : (
         <>
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-            <Card label="Actions détectées" value={priorities.total || 0} />
-            <Card label="Priorité haute" value={priorities.highPriority || 0} />
-            <Card label="Agences concernées" value={priorities.agenciesWithActions || 0} />
-            <Card label="Actions mesurées" value={learning.measuredActions || 0} />
-            <Card
-              label="Apprentissage actif"
-              value={priorities.learningApplied ? "Oui" : "Non"}
-              hint="Seulement avec un échantillon suffisamment crédible."
-            />
+            <Card label="Top 10 actuel" value={goals.currentTop10 || 0} hint={`${goals.agenciesObserved || 0} agences observées`} />
+            <Card label="Objectif Top 10" value={goals.targetTop10 || 0} hint={`${goals.remainingTop10 || 0} entrées restantes`} />
+            <Card label="Progression objectif" value={`${Number(goals.progress || 0).toFixed(1)} %`} hint={`${goals.opportunityKeywords || 0} requêtes proches`} />
+            <Card label="Actions prioritaires" value={priorities.highPriority || 0} />
+            <Card label="Actions mesurées" value={learning.measuredActions || 0} hint={priorities.learningApplied ? "Apprentissage réseau actif" : "Apprentissage encore prudent"} />
           </div>
+
+          <section className="mt-6 rounded-2xl border border-cyan-200 bg-cyan-50 shadow-sm">
+            <div className="border-b border-cyan-200 px-6 py-5">
+              <h2 className="text-xl font-bold text-cyan-950">Potentiel Top 10 du réseau</h2>
+              <p className="mt-1 text-sm text-cyan-900">
+                Agences classées selon leurs objectifs réels et la proximité de leurs requêtes avec la première page.
+              </p>
+            </div>
+            <div className="divide-y divide-cyan-100">
+              {priorityAgencies.map((row) => (
+                <div key={row.agency?.id} className="grid gap-4 px-6 py-4 lg:grid-cols-[1.3fr_0.7fr_0.7fr_1fr] lg:items-center">
+                  <div>
+                    <Link href={`/seo-cockpit/${row.agency?.id}`} className="font-bold text-cyan-950 hover:underline">
+                      {row.agency?.name || `Agence #${row.agency?.id}`}
+                    </Link>
+                    <div className="mt-1 text-xs text-cyan-800">{row.agency?.city || "Ville non renseignée"}</div>
+                  </div>
+                  <div className="text-sm text-cyan-950">
+                    <span className="text-cyan-700">Top 10</span>
+                    <div className="font-bold">{row.currentTop10} → {row.targetTop10}</div>
+                  </div>
+                  <div className="text-sm text-cyan-950">
+                    <span className="text-cyan-700">Opportunités</span>
+                    <div className="font-bold">{row.opportunityKeywords}</div>
+                  </div>
+                  <div className="text-sm text-cyan-950">
+                    {row.nearestOpportunity ? (
+                      <>
+                        <div className="font-semibold">{row.nearestOpportunity.keyword}</div>
+                        <div className="mt-1 text-xs text-cyan-800">Position {row.nearestOpportunity.currentPosition} · {row.nearestOpportunity.remainingPositions} position{row.nearestOpportunity.remainingPositions > 1 ? "s" : ""} à gagner</div>
+                      </>
+                    ) : (
+                      <span className="text-cyan-700">Pas d’opportunité proche actuellement.</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {!priorityAgencies.length ? (
+                <div className="px-6 py-10 text-center text-cyan-900">Aucune opportunité Top 10 mesurable actuellement.</div>
+              ) : null}
+            </div>
+          </section>
 
           <div className="mt-6 rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="flex flex-col gap-3 border-b border-slate-200 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
