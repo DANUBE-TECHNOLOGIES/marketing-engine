@@ -55,6 +55,13 @@ function formatPeriods(periods) {
     .join(" / ");
 }
 
+function defaultAgencySectionTitle(agency) {
+  const city = String(agency?.city || "").trim();
+  return city
+    ? `Votre agence de voyages à ${city}`
+    : "Votre agence de voyages";
+}
+
 export default function AgencyV2Renderer({
   section,
   site,
@@ -84,7 +91,7 @@ export default function AgencyV2Renderer({
         <h2>
           {getSectionTitle(
             section,
-            "Votre agence de voyages"
+            defaultAgencySectionTitle(agency)
           )}
         </h2>
 
@@ -97,11 +104,11 @@ export default function AgencyV2Renderer({
               <div>
                 <small>Adresse</small>
                 <strong>{agency.name || site?.name}</strong>
-                <p>
+                <address>
                   {agency.address}
                   <br />
                   {agency.postalCode} {agency.city}
-                </p>
+                </address>
 
                 {directionsUrl ? (
                   <a
@@ -201,3 +208,7 @@ export default function AgencyV2Renderer({
     </section>
   );
 }
+
+export {
+  defaultAgencySectionTitle,
+};
