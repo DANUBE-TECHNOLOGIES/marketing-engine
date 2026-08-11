@@ -122,21 +122,27 @@ test("MSE-25.9 sitemap indexes one local inspiration only on its canonical agenc
   );
 });
 
-test("MSE-25.9 public routes and clients propagate the agency scope", () => {
+test("MSE-25.9 public routes and clients propagate tenant and agency scope", () => {
   const aiRoutes = source("backend/src/modules/ai-content/routes.js");
   const publicRoutes = source("backend/src/modules/public-site-read/routes.js");
   const proxyList = source("frontend/app/api/website-builder/inspirations/route.js");
   const proxyDetail = source("frontend/app/api/website-builder/inspirations/[contentSlug]/route.js");
   const client = source("frontend/lib/public-site-api.js");
   const detailPage = source("frontend/app/agence/[siteSlug]/inspiration/[contentSlug]/page.js");
+  const studio = source("frontend/app/editorial-content/page.js");
 
   assert.match(aiRoutes, /agencyId/);
   assert.match(publicRoutes, /filterAgencyInspirations/);
-  assert.match(publicRoutes, /editorialTargeting:\s*"agency-aware"/);
+  assert.match(publicRoutes, /tenantId:\s*String\(tenantId\)/);
+  assert.match(publicRoutes, /editorialTargeting:\s*"tenant-and-agency-aware"/);
   assert.match(proxyList, /"agencyId"/);
   assert.match(proxyDetail, /searchParams\.set\("agencyId"/);
   assert.match(client, /getInspiration\(siteSlug, contentSlug\)/);
   assert.match(client, /site\?\.agencyId \|\| site\?\.agency\?\.id/);
   assert.match(detailPage, /isIndexOwner/);
   assert.match(detailPage, /index:\s*indexOwner/);
+  assert.match(studio, /name="targetScope"/);
+  assert.match(studio, /name="agencyIds"/);
+  assert.match(studio, /name="indexAgencyId"/);
+  assert.match(studio, /"x-tenant-slug": TENANT_SLUG/);
 });
