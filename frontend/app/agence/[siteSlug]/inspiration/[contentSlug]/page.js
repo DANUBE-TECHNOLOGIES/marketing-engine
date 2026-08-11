@@ -13,6 +13,23 @@ function canonicalPath(siteSlug, contentSlug) {
   return `/agence/${encodeURIComponent(siteSlug)}/inspiration/${encodeURIComponent(contentSlug)}`;
 }
 
+function editorialTargeting(content) {
+  const value = content?.seo?.editorialTargeting;
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value
+    : { scope: "network", agencyIds: [], indexAgencyId: null };
+}
+
+function isIndexOwner(site, content) {
+  const targeting = editorialTargeting(content);
+  if (String(targeting.scope || "network").toLowerCase() !== "agencies") {
+    return false;
+  }
+
+  const agencyId = String(site?.agencyId || site?.agency?.id || "").trim();
+  return Boolean(agencyId) && String(targeting.indexAgencyId || "").trim() === agencyId;
+}
+
 async function load(siteSlug, contentSlug) {
   try {
     const [site, content] = await Promise.all([
@@ -35,6 +52,7 @@ export async function generateMetadata({ params }) {
   const seo = data.content?.seo || {};
   const openGraph = seo.openGraph || {};
   const canonical = canonicalPath(siteSlug, contentSlug);
+  const indexOwner = isIndexOwner(data.site, data.content);
 
   return {
     title: seo.title || `${data.content.title} | ${data.site.name}`,
@@ -42,7 +60,10 @@ export async function generateMetadata({ params }) {
     alternates: {
       canonical,
     },
-    robots: seo.robots || "index,follow",
+    robots: {
+      index: indexOwner,
+      follow: true,
+    },
     openGraph: {
       title: openGraph.title || seo.title || data.content.title,
       description:
