@@ -44,7 +44,9 @@ export async function GET(request) {
         "content-type":
           response.headers.get("content-type") ||
           "application/json",
-        "cache-control": "private, no-store",
+        "cache-control": response.ok
+          ? "public, max-age=30, s-maxage=120, stale-while-revalidate=300"
+          : "no-store",
       },
     });
   } catch (error) {
@@ -56,6 +58,9 @@ export async function GET(request) {
       },
       {
         status: 502,
+        headers: {
+          "cache-control": "no-store",
+        },
       }
     );
   }
