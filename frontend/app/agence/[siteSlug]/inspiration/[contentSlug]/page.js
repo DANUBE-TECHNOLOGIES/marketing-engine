@@ -30,6 +30,19 @@ function isIndexOwner(site, content) {
   return Boolean(agencyId) && String(targeting.indexAgencyId || "").trim() === agencyId;
 }
 
+function canonicalSiteSlug(siteSlug, content) {
+  const canonical = content?.editorialCanonical;
+  if (
+    canonical &&
+    typeof canonical === "object" &&
+    !Array.isArray(canonical) &&
+    String(canonical.siteSlug || "").trim()
+  ) {
+    return String(canonical.siteSlug).trim();
+  }
+  return siteSlug;
+}
+
 async function load(siteSlug, contentSlug) {
   try {
     const [site, content] = await Promise.all([
@@ -51,7 +64,8 @@ export async function generateMetadata({ params }) {
 
   const seo = data.content?.seo || {};
   const openGraph = seo.openGraph || {};
-  const canonical = canonicalPath(siteSlug, contentSlug);
+  const canonicalOwnerSlug = canonicalSiteSlug(siteSlug, data.content);
+  const canonical = canonicalPath(canonicalOwnerSlug, contentSlug);
   const indexOwner = isIndexOwner(data.site, data.content);
 
   return {
@@ -85,7 +99,8 @@ export default async function InspirationPage({ params }) {
   const data = await load(siteSlug, contentSlug);
   if (!data) notFound();
 
-  const canonical = `${PUBLIC_ORIGIN}${canonicalPath(siteSlug, contentSlug)}`;
+  const canonicalOwnerSlug = canonicalSiteSlug(siteSlug, data.content);
+  const canonical = `${PUBLIC_ORIGIN}${canonicalPath(canonicalOwnerSlug, contentSlug)}`;
   const schemaOrg = data.content?.schemaOrg && typeof data.content.schemaOrg === "object"
     ? {
         ...data.content.schemaOrg,
