@@ -221,6 +221,89 @@ function seoCheck(site) {
   };
 }
 
+function textValues(value, output = []) {
+  if (typeof value === "string") {
+    const normalized = value.replace(/\s+/g, " ").trim();
+    if (normalized) output.push(normalized);
+    return output;
+  }
+
+  if (Array.isArray(value)) {
+    value.forEach((item) => textValues(item, output));
+    return output;
+  }
+
+  if (value && typeof value === "object") {
+    Object.entries(value).forEach(([key, item]) => {
+      if (["id", "url", "href", "imageUrl", "image", "icon"].includes(key)) return;
+      textValues(item, output);
+    });
+  }
+
+  return output;
+}
+
+function publishedPageText(page) {
+  if (!page) return "";
+
+  const blocks = Array.isArray(page.blocks) ? page.blocks : [];
+  const sections = Array.isArray(page.sections) ? page.sections : [];
+  const source = blocks.length > 0 ? blocks : sections;
+  const entries = source.filter(
+    (entry) =>
+      String(entry?.status || "").toLowerCase() !== "hidden" &&
+      isPublished(entry)
+  );
+
+  return textValues([
+    page.title,
+    page.h1,
+    page.seoTitle,
+    page.metaDescription,
+    ...entries.map((entry) => entry.content ?? entry.jsonContent ?? {}),
+  ]).join(" ");
+}
+
+function localDifferentiationCheck(site, agency) {
+  const pages = site?.pages || [];
+  const city = String(agency?.city || "").trim().toLowerCase();
+  const agencyName = String(agency?.name || "").trim().toLowerCase();
+  const details = REQUIRED_CONTENT_PAGES.map((definition) => {
+    const page = pageByKey(pages, definition.key);
+    const text = publishedPageText(page);
+    const normalized = text.toLowerCase();
+    const wordCount = text ? text.split(/\s+/).filter(Boolean).length : 0;
+    const hasCity = Boolean(city) && normalized.includes(city);
+    const hasAgencyName = Boolean(agencyName) && normalized.includes(agencyName);
+    const locallyAnchored = hasCity || hasAgencyName;
+
+    return {
+      slug: definition.key,
+      wordCount,
+      hasCity,
+      hasAgencyName,
+      locallyAnchored,
+    };
+  });
+
+  const substantivePages = details.filter((item) => item.wordCount >= 45).length;
+  const locallyAnchoredPages = details.filter((item) => item.locallyAnchored).length;
+  const passed = substantivePages >= 2 && locallyAnchoredPages >= 3;
+
+  return {
+    code: "LOCAL_CONTENT",
+    label: "Différenciation du contenu local",
+    required: false,
+    passed,
+    substantivePages,
+    locallyAnchoredPages,
+    pages: details,
+    recommendation: passed
+      ? null
+      : "Enrichir au moins deux pages avec du contenu propre à l'agence (équipe, expertises, accompagnement, zone locale ou conseils) et conserver des références naturelles à l'agence ou à sa ville.",
+  };
+}
+
 function publicSiteSlugValid(value) {
   const slug = String(value || "").trim().toLowerCase();
   return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug);
@@ -248,10 +331,11 @@ function score(checks) {
   const weights = {
     SITE: 15,
     IDENTITY: 20,
-    GENERAL_CONTENT: 30,
+    GENERAL_CONTENT: 25,
     LEGAL: 15,
     SEO: 15,
     LOCAL_SEO: 5,
+    LOCAL_CONTENT: 5,
   };
 
   return checks.reduce(
@@ -318,6 +402,7 @@ class PrepublicationReadinessService {
                 id: true,
                 slug: true,
                 title: true,
+                h1: true,
                 status: true,
                 published: true,
                 seoTitle: true,
@@ -328,6 +413,7 @@ class PrepublicationReadinessService {
                   select: {
                     id: true,
                     blockType: true,
+                    content: true,
                     status: true,
                     displayOrder: true,
                   },
@@ -337,6 +423,7 @@ class PrepublicationReadinessService {
                   select: {
                     id: true,
                     sectionType: true,
+                    jsonContent: true,
                     status: true,
                     displayOrder: true,
                   },
@@ -369,13 +456,14 @@ class PrepublicationReadinessService {
       legalCheck(site),
       seoCheck(site),
       localSeoCheck(agency),
+      localDifferentiationCheck(site, agency),
     ];
 
     const launchBlockers = blockers(checks);
     const launchScore = score(checks);
 
     return {
-      version: "1.7",
+      version: "1.8",
       mode: "prepublication",
       agency: {
         id: agency.id,
@@ -419,6 +507,9 @@ module.exports = {
   contentCheck,
   legalCheck,
   seoCheck,
+  textValues,
+  publishedPageText,
+  localDifferentiationCheck,
   publicSiteSlugValid,
   siteCheck,
   score,
