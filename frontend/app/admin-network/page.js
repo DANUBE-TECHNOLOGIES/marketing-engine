@@ -7,6 +7,7 @@ const sections = [
     links: [
       ["SEO Direction", "/seo-direction"],
       ["SEO Today", "/seo-today"],
+      ["Cockpit SEO réseau", "/seo-cockpit"],
       ["Production", "/production"],
       ["Mise en ligne mini-sites", "/agency-launch"],
       ["Studio éditorial Inspirations", "/editorial-content"]
