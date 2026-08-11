@@ -1,5 +1,9 @@
 "use strict";
 
+const {
+  normalizeEditorialTargeting,
+} = require("./editorial-targeting");
+
 function httpError(message, code) {
   return Object.assign(new Error(message), {
     statusCode: 400,
@@ -30,6 +34,10 @@ function validateEditorialUpdate(input = {}) {
 
   if (input.body && typeof input.body === "object" && !Array.isArray(input.body)) {
     patch.body = input.body;
+  }
+
+  if (input.editorialTargeting !== undefined) {
+    patch.editorialTargeting = normalizeEditorialTargeting(input.editorialTargeting);
   }
 
   return patch;
