@@ -87,18 +87,18 @@ function buildGeneralSeo(
       return {
         title:
           truncate(
-            `Services de votre agence de voyages à ${agency.city}`,
+            `Services de voyage à ${agency.city} | ${agency.name}`,
             65
           ),
 
         description:
           truncate(
-            `Séjours, circuits, croisières et voyages sur mesure : découvrez les services proposés par ${agency.name}.`,
+            `Découvrez les services réellement proposés par ${agency.name}, votre agence de voyages à ${agency.city}, et bénéficiez de conseils adaptés à votre projet.`,
             160
           ),
 
         h1:
-          "Nos services voyage",
+          `Nos services de voyage à ${agency.city}`,
 
         schemaType:
           "Service",
