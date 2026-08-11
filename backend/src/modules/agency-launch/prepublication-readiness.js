@@ -21,6 +21,10 @@ const RECOMMENDED_PAGES = [
   { key: "avis", label: "Avis clients" },
 ];
 
+const SIMILARITY_PAGE_KEYS = ["home", "agence", "services"];
+const SIMILARITY_THRESHOLD = 0.82;
+const SIMILARITY_MIN_WORDS = 60;
+
 function normalizeSlug(value) {
   return String(value || "").trim().toLowerCase();
 }
@@ -304,6 +308,114 @@ function localDifferentiationCheck(site, agency) {
   };
 }
 
+function stripDiacritics(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function comparisonTokens(text, agency) {
+  const ignored = new Set(
+    textValues([agency?.name, agency?.city])
+      .flatMap((value) => stripDiacritics(value).toLowerCase().split(/[^a-z0-9]+/))
+      .filter((value) => value.length >= 2)
+  );
+
+  return stripDiacritics(text)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter((token) => token.length >= 2 && !ignored.has(token));
+}
+
+function tokenShingles(tokens, size = 3) {
+  const shingles = new Set();
+  if (!Array.isArray(tokens) || tokens.length < size) return shingles;
+
+  for (let index = 0; index <= tokens.length - size; index += 1) {
+    shingles.add(tokens.slice(index, index + size).join(" "));
+  }
+
+  return shingles;
+}
+
+function jaccardSimilarity(left, right) {
+  if (!left?.size || !right?.size) return 0;
+
+  let intersection = 0;
+  const smaller = left.size <= right.size ? left : right;
+  const larger = left.size <= right.size ? right : left;
+
+  smaller.forEach((value) => {
+    if (larger.has(value)) intersection += 1;
+  });
+
+  return intersection / (left.size + right.size - intersection);
+}
+
+function pageSimilarity(currentPage, currentAgency, peerPage, peerAgency) {
+  const currentText = publishedPageText(currentPage);
+  const peerText = publishedPageText(peerPage);
+  const currentTokens = comparisonTokens(currentText, currentAgency);
+  const peerTokens = comparisonTokens(peerText, peerAgency);
+
+  if (
+    currentTokens.length < SIMILARITY_MIN_WORDS ||
+    peerTokens.length < SIMILARITY_MIN_WORDS
+  ) {
+    return null;
+  }
+
+  return jaccardSimilarity(
+    tokenShingles(currentTokens),
+    tokenShingles(peerTokens)
+  );
+}
+
+function interAgencySimilarityCheck(site, agency, peers = []) {
+  const matches = [];
+
+  for (const peerAgency of peers || []) {
+    const peerSite = peerAgency?.agencySites?.[0] || null;
+    if (!peerSite || !isPublished(peerSite)) continue;
+
+    for (const slug of SIMILARITY_PAGE_KEYS) {
+      const currentPage = pageByKey(site?.pages || [], slug);
+      const peerPage = pageByKey(peerSite.pages || [], slug);
+      if (!currentPage || !peerPage || !isPublished(currentPage) || !isPublished(peerPage)) continue;
+
+      const similarity = pageSimilarity(currentPage, agency, peerPage, peerAgency);
+      if (similarity == null || similarity < SIMILARITY_THRESHOLD) continue;
+
+      matches.push({
+        slug,
+        peerAgencyId: peerAgency.id,
+        peerAgencyName: peerAgency.name,
+        peerCity: peerAgency.city,
+        similarity: Math.round(similarity * 1000) / 1000,
+      });
+    }
+  }
+
+  matches.sort((left, right) => right.similarity - left.similarity);
+
+  return {
+    code: "CONTENT_SIMILARITY",
+    label: "Similarité inter-agences",
+    required: false,
+    passed: matches.length === 0,
+    threshold: SIMILARITY_THRESHOLD,
+    minimumWords: SIMILARITY_MIN_WORDS,
+    comparedPages: SIMILARITY_PAGE_KEYS,
+    matches: matches.slice(0, 12),
+    recommendation:
+      matches.length > 0
+        ? "Certaines pages ressemblent fortement à celles d'une autre agence après neutralisation du nom et de la ville. Ajouter des éléments réellement propres à l'équipe, aux expertises, à la clientèle locale ou aux pratiques de l'agence avant de renforcer leur indexation."
+        : null,
+  };
+}
+
 function publicSiteSlugValid(value) {
   const slug = String(value || "").trim().toLowerCase();
   return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug);
@@ -349,6 +461,38 @@ function blockers(checks) {
     .filter((check) => check.required && !check.passed)
     .map((check) => ({ code: check.code, label: check.label }));
 }
+
+const PUBLIC_CONTENT_SELECT = {
+  id: true,
+  slug: true,
+  title: true,
+  h1: true,
+  status: true,
+  published: true,
+  seoTitle: true,
+  metaDescription: true,
+  displayOrder: true,
+  blocks: {
+    orderBy: { displayOrder: "asc" },
+    select: {
+      id: true,
+      blockType: true,
+      content: true,
+      status: true,
+      displayOrder: true,
+    },
+  },
+  sections: {
+    orderBy: { displayOrder: "asc" },
+    select: {
+      id: true,
+      sectionType: true,
+      jsonContent: true,
+      status: true,
+      displayOrder: true,
+    },
+  },
+};
 
 class PrepublicationReadinessService {
   constructor({ prisma, tenantId } = {}) {
@@ -398,37 +542,7 @@ class PrepublicationReadinessService {
             updatedAt: true,
             pages: {
               orderBy: { displayOrder: "asc" },
-              select: {
-                id: true,
-                slug: true,
-                title: true,
-                h1: true,
-                status: true,
-                published: true,
-                seoTitle: true,
-                metaDescription: true,
-                displayOrder: true,
-                blocks: {
-                  orderBy: { displayOrder: "asc" },
-                  select: {
-                    id: true,
-                    blockType: true,
-                    content: true,
-                    status: true,
-                    displayOrder: true,
-                  },
-                },
-                sections: {
-                  orderBy: { displayOrder: "asc" },
-                  select: {
-                    id: true,
-                    sectionType: true,
-                    jsonContent: true,
-                    status: true,
-                    displayOrder: true,
-                  },
-                },
-              },
+              select: PUBLIC_CONTENT_SELECT,
             },
           },
         },
@@ -445,8 +559,40 @@ class PrepublicationReadinessService {
     return agency;
   }
 
+  async loadPeerAgencies(agencyId) {
+    return this.prisma.agency.findMany({
+      where: {
+        tenantId: this.tenantId,
+        id: { not: Number(agencyId) },
+        agencySites: { some: { status: "published", tenantId: this.tenantId } },
+      },
+      select: {
+        id: true,
+        name: true,
+        city: true,
+        agencySites: {
+          where: { tenantId: this.tenantId, status: "published" },
+          orderBy: { publishedAt: "desc" },
+          take: 1,
+          select: {
+            id: true,
+            status: true,
+            pages: {
+              where: { published: true },
+              orderBy: { displayOrder: "asc" },
+              select: PUBLIC_CONTENT_SELECT,
+            },
+          },
+        },
+      },
+    });
+  }
+
   async readiness(agencyId) {
-    const agency = await this.loadAgency(agencyId);
+    const [agency, peers] = await Promise.all([
+      this.loadAgency(agencyId),
+      this.loadPeerAgencies(agencyId),
+    ]);
     const site = agency.agencySites?.[0] || null;
 
     const checks = [
@@ -457,13 +603,14 @@ class PrepublicationReadinessService {
       seoCheck(site),
       localSeoCheck(agency),
       localDifferentiationCheck(site, agency),
+      interAgencySimilarityCheck(site, agency, peers),
     ];
 
     const launchBlockers = blockers(checks);
     const launchScore = score(checks);
 
     return {
-      version: "1.8",
+      version: "1.9",
       mode: "prepublication",
       agency: {
         id: agency.id,
@@ -510,6 +657,12 @@ module.exports = {
   textValues,
   publishedPageText,
   localDifferentiationCheck,
+  stripDiacritics,
+  comparisonTokens,
+  tokenShingles,
+  jaccardSimilarity,
+  pageSimilarity,
+  interAgencySimilarityCheck,
   publicSiteSlugValid,
   siteCheck,
   score,
