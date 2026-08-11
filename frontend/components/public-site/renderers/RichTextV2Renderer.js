@@ -20,9 +20,7 @@ function textParagraphs(value) {
 }
 
 function normalizeAlignment(value) {
-  return ["left", "center", "right"].includes(value)
-    ? value
-    : "left";
+  return ["left", "center", "right"].includes(value) ? value : "left";
 }
 
 function normalizeLabel(value) {
@@ -61,76 +59,87 @@ const LEGAL_HEADINGS = [
 function legalHeading(value) {
   const normalized = normalizeLabel(value);
   const found = LEGAL_HEADINGS.find(([key]) => normalized === key);
-
-  if (found) {
-    return {
-      title: found[1],
-      icon: found[2],
-    };
-  }
+  if (found) return { title: found[1], icon: found[2] };
 
   const raw = String(value || "").trim();
   if (raw.endsWith(":") && raw.length <= 64) {
-    return {
-      title: raw.replace(/\s*:\s*$/, ""),
-      icon: "•",
-    };
+    return { title: raw.replace(/\s*:\s*$/, ""), icon: "•" };
   }
-
   return null;
 }
 
 function isLegalPage(page) {
   const slug = normalizeLabel(page?.slug).replace(/_/g, "-");
   const title = normalizeLabel(page?.title);
-
-  return [
-    "mentions-legales",
-    "confidentialite",
-    "politique-de-confidentialite",
-    "privacy",
-  ].includes(slug) || title.includes("mentions legales") || title.includes("confidentialite");
+  return ["mentions-legales", "confidentialite", "politique-de-confidentialite", "privacy"].includes(slug)
+    || title.includes("mentions legales")
+    || title.includes("confidentialite");
 }
 
 function buildLegalGroups(values) {
   const groups = [];
   let current = null;
-
   for (const value of values) {
     const heading = legalHeading(value);
-
     if (heading) {
-      current = {
-        ...heading,
-        paragraphs: [],
-      };
+      current = { ...heading, paragraphs: [] };
       groups.push(current);
       continue;
     }
-
     if (!current) {
-      current = {
-        title: "Informations",
-        icon: "i",
-        paragraphs: [],
-      };
+      current = { title: "Informations", icon: "i", paragraphs: [] };
       groups.push(current);
     }
-
     current.paragraphs.push(value);
   }
-
   return groups.filter((group) => group.paragraphs.length > 0);
+}
+
+function isPersonalDataGroup(group) {
+  const label = normalizeLabel(group?.title);
+  return label === "donnees personnelles" || label === "politique de confidentialite";
+}
+
+function LegalCard({ group, index }) {
+  return (
+    <article className="public-site-legal-card" key={`${group.title}-${index}`}>
+      <div className="public-site-legal-card-heading">
+        <span className="public-site-legal-card-icon" aria-hidden="true">{group.icon}</span>
+        <h2>{group.title}</h2>
+      </div>
+      <div className="public-site-legal-card-copy">
+        {group.paragraphs.map((paragraph, paragraphIndex) => (
+          <p key={`${index}-${paragraphIndex}`}>{paragraph}</p>
+        ))}
+      </div>
+    </article>
+  );
+}
+
+function PersonalDataDisclosure({ group }) {
+  return (
+    <details className="public-site-legal-disclosure">
+      <summary>
+        <span className="public-site-legal-card-icon" aria-hidden="true">{group.icon}</span>
+        <span className="public-site-legal-disclosure-copy">
+          <strong>{group.title}</strong>
+          <span>Vos droits, nos engagements et la gestion des données.</span>
+        </span>
+        <span className="public-site-legal-disclosure-chevron" aria-hidden="true">⌄</span>
+      </summary>
+      <div className="public-site-legal-disclosure-content">
+        {group.paragraphs.map((paragraph, index) => <p key={index}>{paragraph}</p>)}
+      </div>
+    </details>
+  );
 }
 
 function LegalDocument({ section, page, content, paragraphs }) {
   const title = getSectionTitle(section, null) || page?.title || "Informations légales";
-  const values = [
-    ...textParagraphs(content.text),
-    ...textParagraphs(content.description),
-    ...paragraphs,
-  ];
+  const values = [...textParagraphs(content.text), ...textParagraphs(content.description), ...paragraphs];
   const groups = buildLegalGroups(values);
+  const compactGroups = groups.filter((group) => !isPersonalDataGroup(group));
+  const personalDataGroup = groups.find(isPersonalDataGroup);
 
   return (
     <section className="public-site-section public-site-legal-document">
@@ -141,26 +150,10 @@ function LegalDocument({ section, page, content, paragraphs }) {
         </header>
 
         <div className="public-site-legal-grid">
-          {groups.map((group, index) => (
-            <article
-              className="public-site-legal-card"
-              key={`${group.title}-${index}`}
-            >
-              <div className="public-site-legal-card-heading">
-                <span className="public-site-legal-card-icon" aria-hidden="true">
-                  {group.icon}
-                </span>
-                <h2>{group.title}</h2>
-              </div>
-
-              <div className="public-site-legal-card-copy">
-                {group.paragraphs.map((paragraph, paragraphIndex) => (
-                  <p key={`${index}-${paragraphIndex}`}>{paragraph}</p>
-                ))}
-              </div>
-            </article>
-          ))}
+          {compactGroups.map((group, index) => <LegalCard group={group} index={index} key={`${group.title}-${index}`} />)}
         </div>
+
+        {personalDataGroup ? <PersonalDataDisclosure group={personalDataGroup} /> : null}
       </div>
     </section>
   );
@@ -172,40 +165,20 @@ export default function RichTextV2Renderer({ section, page }) {
   const paragraphs = textParagraphs(content.html);
 
   if (isLegalPage(page)) {
-    return (
-      <LegalDocument
-        section={section}
-        page={page}
-        content={content}
-        paragraphs={paragraphs}
-      />
-    );
+    return <LegalDocument section={section} page={page} content={content} paragraphs={paragraphs} />;
   }
 
   return (
     <section className="public-site-section public-site-rich-text">
-      <div
-        className="public-site-container public-site-prose"
-        style={{ textAlign: alignment }}
-      >
+      <div className="public-site-container public-site-prose" style={{ textAlign: alignment }}>
         {getSectionTitle(section, null) ? (
-          <h2
-            style={
-              alignment === "left"
-                ? undefined
-                : { marginInline: alignment === "center" ? "auto" : "0 0 22px auto" }
-            }
-          >
+          <h2 style={alignment === "left" ? undefined : { marginInline: alignment === "center" ? "auto" : "0 0 22px auto" }}>
             {getSectionTitle(section, null)}
           </h2>
         ) : null}
-
         {content.text ? <p>{content.text}</p> : null}
         {content.description ? <p>{content.description}</p> : null}
-
-        {paragraphs.map((paragraph, index) => (
-          <p key={`paragraph-${index}`}>{paragraph}</p>
-        ))}
+        {paragraphs.map((paragraph, index) => <p key={`paragraph-${index}`}>{paragraph}</p>)}
       </div>
     </section>
   );
