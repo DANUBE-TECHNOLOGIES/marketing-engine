@@ -11,6 +11,7 @@ const { applyRankingContentCoverage } = require("./ranking-content-coverage");
 const { applySeoActionQueue } = require("./seo-action-queue");
 const { applySeoActionCooldown } = require("./seo-action-cooldown");
 const { applyLocalSeoGoals } = require("./local-seo-goals");
+const { networkSeoGoals } = require("./network-seo-goals");
 const { networkSeoPriorities } = require("./network-seo-priorities");
 const { recordSeoAction, seoActionHistory, actionMetadata } = require("./seo-action-history");
 const { seoActionImpact } = require("./seo-action-impact");
@@ -91,8 +92,9 @@ async function networkForTenant(database, tenantId) {
   }
   const learning = await networkSeoLearning(database, tenantId, 100);
   return {
-    version: "3.4", mode: "prepublication", tenantId, generatedAt: new Date().toISOString(),
+    version: "3.5", mode: "prepublication", tenantId, generatedAt: new Date().toISOString(),
     summary: summarizeLaunchStates(items),
+    seoGoals: networkSeoGoals(items),
     seoPriorities: networkSeoPriorities(items, 25, learning),
     seoLearning: { measuredActions: learning.measuredActions, improvedActions: learning.improvedActions, declinedActions: learning.declinedActions, groups: learning.groups },
     items,
@@ -116,7 +118,7 @@ function createAgencyLaunchRouter({ prisma } = {}) {
   const database = prisma || new PrismaClient();
   const router = express.Router();
   router.get("/health", (request, response) => {
-    response.json({ ok: true, capability: "agency-launch", version: "3.4", mode: "prepublication", legalRuntimeRequired: true, localCitationsObserved: true, localRankingsObserved: true, rankingMomentumObserved: true, rankingContentCoverageObserved: true, seoActionQueueObserved: true, seoActionCooldownObserved: true, localSeoGoalsObserved: true, networkSeoPrioritiesObserved: true, seoActionHistoryObserved: true, seoActionImpactObserved: true, seoLearningObserved: true, guardedLearningPrioritizationObserved: true, explainablePriorityScoringObserved: true });
+    response.json({ ok: true, capability: "agency-launch", version: "3.5", mode: "prepublication", legalRuntimeRequired: true, localCitationsObserved: true, localRankingsObserved: true, rankingMomentumObserved: true, rankingContentCoverageObserved: true, seoActionQueueObserved: true, seoActionCooldownObserved: true, localSeoGoalsObserved: true, networkSeoGoalsObserved: true, networkSeoPrioritiesObserved: true, seoActionHistoryObserved: true, seoActionImpactObserved: true, seoLearningObserved: true, guardedLearningPrioritizationObserved: true, explainablePriorityScoringObserved: true });
   });
   router.get("/network", async (request, response) => { try { const tenantId = await tenantIdForRequest(database, request); response.json(await networkForTenant(database, tenantId)); } catch (error) { sendError(response, error); } });
   router.get("/network/seo-learning", async (request, response) => { try { const tenantId = await tenantIdForRequest(database, request); response.json(await networkSeoLearning(database, tenantId, request.query.limit)); } catch (error) { sendError(response, error); } });
