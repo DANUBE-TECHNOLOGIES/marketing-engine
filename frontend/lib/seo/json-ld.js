@@ -27,17 +27,6 @@ export function buildWebSiteSchema() {
   });
 }
 
-function normalizeFrenchPhone(value) {
-  const raw = String(value || "").trim();
-  if (!raw) return undefined;
-
-  const compact = raw.replace(/[\s.()-]/g, "");
-  if (/^\+33\d{9}$/.test(compact)) return compact;
-  if (/^0033\d{9}$/.test(compact)) return `+${compact.slice(2)}`;
-  if (/^0\d{9}$/.test(compact)) return `+33${compact.slice(1)}`;
-  return raw;
-}
-
 function openingHoursSpecification(hours) {
   const weekly = Array.isArray(hours?.weekly) ? hours.weekly : [];
 
@@ -72,6 +61,65 @@ function servedAreas(site, agency) {
   );
 }
 
+function internationalPhone(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return undefined;
+  const compact = raw.replace(/[^\d+]/g, "");
+  if (compact.startsWith("+")) return compact;
+  if (/^0\d{9}$/.test(compact)) return `+33${compact.slice(1)}`;
+  return raw;
+}
+
+function sectionContent(section) {
+  const candidates = [
+    section?.content,
+    section?.jsonContent,
+    section?.props,
+    section?.data,
+  ];
+  return candidates.find(
+    (value) => value && typeof value === "object" && !Array.isArray(value)
+  ) || {};
+}
+
+export function extractPublishedServices(page) {
+  const entries = Array.isArray(page?.blocks)
+    ? page.blocks
+    : Array.isArray(page?.sections)
+      ? page.sections
+      : [];
+  const seen = new Set();
+  const services = [];
+
+  for (const entry of entries) {
+    const status = String(entry?.status || "published").toLowerCase();
+    if (status === "hidden" || status === "draft") continue;
+
+    const content = sectionContent(entry);
+    const items =
+      content.services ||
+      content.items ||
+      content.cards ||
+      [];
+
+    if (!Array.isArray(items)) continue;
+
+    for (const item of items) {
+      const name = String(item?.title || item?.name || item?.label || "").trim();
+      if (!name) continue;
+      const key = name.toLocaleLowerCase("fr-FR");
+      if (seen.has(key)) continue;
+      seen.add(key);
+      services.push({
+        name,
+        description: String(item?.description || item?.text || "").trim() || undefined,
+      });
+    }
+  }
+
+  return services.slice(0, 12);
+}
+
 export function buildTravelAgencySchema(site) {
   const agency = site?.agency || site;
   const latitude = agency?.latitude ?? site?.latitude;
@@ -83,7 +131,7 @@ export function buildTravelAgencySchema(site) {
     "@id": `${absoluteUrl(site.basePath)}#travel-agency`,
     name: site.name || agency.name,
     url: absoluteUrl(site.basePath),
-    telephone: normalizeFrenchPhone(agency.phone || site.phone),
+    telephone: internationalPhone(agency.phone || site.phone),
     email: agency.email || site.email,
     image:
       agency.imageUrl ||
@@ -118,6 +166,37 @@ export function buildTravelAgencySchema(site) {
       agency.instagramUrl,
       agency.linkedinUrl,
     ].filter(Boolean),
+  });
+}
+
+export function buildServiceCatalogSchema(site, page) {
+  const services = extractPublishedServices(page);
+  if (!services.length) return null;
+
+  const url = absoluteUrl(`/agence/${site.slug}/services`);
+  const providerId = `${absoluteUrl(site.basePath)}#travel-agency`;
+
+  return compactJsonLd({
+    "@context": "https://schema.org",
+    "@type": "OfferCatalog",
+    "@id": `${url}#services`,
+    name: `Services de ${site.name}`,
+    url,
+    itemListElement: services.map((service, index) => ({
+      "@type": "Offer",
+      position: index + 1,
+      itemOffered: {
+        "@type": "Service",
+        name: service.name,
+        description: service.description,
+        provider: {
+          "@type": "TravelAgency",
+          "@id": providerId,
+          name: site.name,
+          url: absoluteUrl(site.basePath),
+        },
+      },
+    })),
   });
 }
 
@@ -175,5 +254,3 @@ export function buildDestinationSchema(data) {
       : undefined,
   });
 }
-
-export { normalizeFrenchPhone };
