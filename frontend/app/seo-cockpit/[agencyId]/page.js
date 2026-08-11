@@ -53,6 +53,9 @@ export default async function AgencySeoPage({ params }) {
   const localSeo = check(report, "LOCAL_SEO") || {};
   const content = check(report, "LOCAL_CONTENT") || {};
   const similarity = check(report, "CONTENT_SIMILARITY") || {};
+  const goals = report?.seoGoals || {};
+  const primaryGoal = goals.primary || {};
+  const keywordGoals = Array.isArray(goals.keywords) ? goals.keywords : [];
   const actions = Array.isArray(report?.seoActions?.actions) ? report.seoActions.actions : [];
   const observing = Array.isArray(report?.seoActions?.suppressed) ? report.seoActions.suppressed : [];
   const rankingItems = Array.isArray(rankings.items) ? rankings.items : [];
@@ -77,6 +80,14 @@ export default async function AgencySeoPage({ params }) {
           <Stat label="Actions ouvertes" value={actions.length} />
           <Stat label="En observation" value={observing.length} hint="Actions récemment réalisées" />
         </div>
+
+        {primaryGoal.status !== "not_applicable" ? <section className="mt-6 rounded-2xl border border-violet-200 bg-violet-50 shadow-sm">
+          <div className="border-b border-violet-200 px-6 py-5"><h2 className="text-xl font-bold text-violet-950">Objectifs SEO locaux</h2><p className="mt-1 text-sm text-violet-800">Objectifs calculés uniquement à partir des mots-clés réellement suivis et des opportunités proches du Top 10.</p></div>
+          <div className="grid gap-5 px-6 py-5 lg:grid-cols-[0.8fr_1.4fr]">
+            <div className="rounded-xl bg-white/80 p-4"><div className="text-sm text-violet-800">Objectif principal</div><div className="mt-2 text-3xl font-black text-violet-950">{primaryGoal.current || 0} / {primaryGoal.target || 0}</div><div className="mt-1 text-sm text-violet-800">mots-clés dans le Top 10</div><div className="mt-4 h-2 overflow-hidden rounded-full bg-violet-100"><div className="h-full rounded-full bg-violet-600" style={{ width: `${Math.min(100, Number(primaryGoal.progress || 0))}%` }} /></div><div className="mt-2 text-xs text-violet-700">{primaryGoal.remaining > 0 ? `${primaryGoal.remaining} entrée${primaryGoal.remaining > 1 ? "s" : ""} supplémentaire${primaryGoal.remaining > 1 ? "s" : ""} à obtenir` : "Objectif atteint"}</div></div>
+            <div className="space-y-3">{keywordGoals.map((goal) => <div key={goal.keywordId} className="grid gap-3 rounded-xl bg-white/80 p-4 md:grid-cols-[1.5fr_0.7fr] md:items-center"><div><div className="font-semibold text-violet-950">{goal.keyword}</div><div className="mt-1 text-xs text-violet-700">{goal.city || agency.city || ""} · {statusText(goal.momentum?.status)}</div></div><div className="text-sm text-violet-900">Position actuelle <strong>{goal.currentPosition}</strong> → objectif <strong>Top 10</strong><div className="mt-1 text-xs text-violet-700">{goal.remainingPositions} position{goal.remainingPositions > 1 ? "s" : ""} à gagner</div></div></div>)}{!keywordGoals.length ? <div className="rounded-xl bg-white/70 p-4 text-sm text-violet-800">Aucune requête actuellement située entre les positions 11 et 20.</div> : null}</div>
+          </div>
+        </section> : null}
 
         <div className="mt-6 grid gap-6 xl:grid-cols-[1.5fr_1fr]">
           <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
