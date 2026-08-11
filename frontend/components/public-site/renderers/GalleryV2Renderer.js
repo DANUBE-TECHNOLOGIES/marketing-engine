@@ -16,7 +16,20 @@ function minCardWidth(columns) {
   return 520;
 }
 
-export default function GalleryV2Renderer({ section }) {
+function galleryAlt(image, section, site) {
+  const explicit = String(image?.alt || "").trim();
+  if (explicit) return explicit;
+
+  const caption = String(image?.caption || "").trim();
+  if (caption) return caption;
+
+  const title = String(getSectionTitle(section, "") || "").trim();
+  const city = String(site?.agency?.city || site?.city || "").trim();
+  if (title && city) return `${title} – ${city}`;
+  return title || "";
+}
+
+export default function GalleryV2Renderer({ section, site }) {
   const content = getSectionContent(section);
   const images = Array.isArray(content.images)
     ? content.images
@@ -59,8 +72,9 @@ export default function GalleryV2Renderer({ section }) {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={image.url}
-                    alt={image.alt || ""}
+                    alt={galleryAlt(image, section, site)}
                     loading="lazy"
+                    decoding="async"
                     style={{
                       width: "100%",
                       height: "100%",
@@ -83,3 +97,7 @@ export default function GalleryV2Renderer({ section }) {
     </section>
   );
 }
+
+export {
+  galleryAlt,
+};
