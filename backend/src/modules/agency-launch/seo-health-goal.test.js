@@ -1,0 +1,7 @@
+"use strict";
+const test=require("node:test");
+const assert=require("node:assert/strict");
+const {nextHealthTarget,seoHealthGoal}=require("./seo-health-goal");
+test("selects the next meaningful health threshold",()=>{assert.equal(nextHealthTarget(58),60);assert.equal(nextHealthTarget(60),70);assert.equal(nextHealthTarget(83),90);assert.equal(nextHealthTarget(95),100)});
+test("builds the smallest ordered actionable plan able to reach the threshold",()=>{const goal=seoHealthGoal({seoHealth:{score:58},seoActionPlan:{steps:[{order:1,component:"visibility",label:"Visibilité",lostPoints:5,status:"actionable",action:{title:"Rankings"}},{order:2,component:"citations",label:"Citations",lostPoints:4,status:"actionable",action:{title:"Citations"}}]}});assert.equal(goal.target,60);assert.equal(goal.requiredGain,2);assert.equal(goal.reachable,true);assert.equal(goal.recommendedSteps.length,1);assert.equal(goal.recommendedSteps[0].component,"visibility")});
+test("does not claim reachability when actionable potential is insufficient",()=>{const goal=seoHealthGoal({seoHealth:{score:68},seoActionPlan:{steps:[{order:1,component:"trend",label:"Tendance",lostPoints:5,status:"monitor",action:null},{order:2,component:"citations",label:"Citations",lostPoints:1,status:"actionable",action:{title:"Fix"}}]}});assert.equal(goal.target,70);assert.equal(goal.reachable,false);assert.equal(goal.actionablePotential,1)});
