@@ -6,6 +6,18 @@ import {
   resolvePublicCtaHref,
 } from "./ctaLinks";
 
+function imageAltText(section, content, site) {
+  const explicit = String(content.imageAlt || "").trim();
+  if (explicit) return explicit;
+
+  const title = String(getSectionTitle(section, "") || "").trim();
+  const city = String(site?.agency?.city || site?.city || "").trim();
+
+  if (title && city) return `${title} – ${city}`;
+  if (title) return title;
+  return "";
+}
+
 export default function ImageTextV2Renderer({
   section,
   site,
@@ -44,8 +56,9 @@ export default function ImageTextV2Renderer({
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={content.imageUrl}
-              alt={content.imageAlt || ""}
+              alt={imageAltText(section, content, site)}
               loading="lazy"
+              decoding="async"
               style={{
                 width: "100%",
                 height: "auto",
@@ -94,3 +107,7 @@ export default function ImageTextV2Renderer({
     </section>
   );
 }
+
+export {
+  imageAltText,
+};
