@@ -1,5 +1,7 @@
 "use strict";
 
+const { responseForAnomaly } = require("./seo-anomaly-response");
+
 function rankingAnomalies(report) {
   const rankings=(report?.checks||[]).find(item=>item?.code==="LOCAL_RANKINGS")||{};
   const items=Array.isArray(rankings.items)?rankings.items:[];
@@ -33,19 +35,24 @@ function healthAnomalies(report){
   return anomalies;
 }
 
+function withResponse(anomaly){
+  return {...anomaly,response:responseForAnomaly(anomaly)};
+}
+
 function agencySeoAnomalies(report){
   const anomalies=[...rankingAnomalies(report),...healthAnomalies(report)];
   const severityRank={critical:0,warning:1,info:2};
   anomalies.sort((a,b)=>(severityRank[a.severity]??9)-(severityRank[b.severity]??9));
-  return {version:"1.0",total:anomalies.length,critical:anomalies.filter(a=>a.severity==="critical").length,warning:anomalies.filter(a=>a.severity==="warning").length,anomalies};
+  const enriched=anomalies.map(withResponse);
+  return {version:"1.1",total:enriched.length,critical:enriched.filter(a=>a.severity==="critical").length,warning:enriched.filter(a=>a.severity==="warning").length,anomalies:enriched};
 }
 
 function summarizeNetworkAnomalies(items=[]){
   const rows=[];
-  for(const item of items){for(const anomaly of item?.seoAnomalies?.anomalies||[]) rows.push({agency:item.agency,...anomaly});}
+  for(const item of items){for(const anomaly of item?.seoAnomalies?.anomalies||[]) rows.push({agency:item.agency,...anomaly,response:anomaly.response||responseForAnomaly(anomaly)});}
   const severityRank={critical:0,warning:1,info:2};
-  rows.sort((a,b)=>(severityRank[a.severity]??9)-(severityRank[b.severity]??9));
-  return {version:"1.0",total:rows.length,critical:rows.filter(r=>r.severity==="critical").length,warning:rows.filter(r=>r.severity==="warning").length,agenciesAffected:new Set(rows.map(r=>r.agency?.id).filter(Boolean)).size,alerts:rows.slice(0,50)};
+  rows.sort((a,b)=>{const severity=(severityRank[a.severity]??9)-(severityRank[b.severity]??9);if(severity!==0)return severity;return Number(a.response?.priority||9)-Number(b.response?.priority||9);});
+  return {version:"1.1",total:rows.length,critical:rows.filter(r=>r.severity==="critical").length,warning:rows.filter(r=>r.severity==="warning").length,agenciesAffected:new Set(rows.map(r=>r.agency?.id).filter(Boolean)).size,alerts:rows.slice(0,50)};
 }
 
-module.exports={rankingAnomalies,healthAnomalies,agencySeoAnomalies,summarizeNetworkAnomalies};
+module.exports={rankingAnomalies,healthAnomalies,withResponse,agencySeoAnomalies,summarizeNetworkAnomalies};
