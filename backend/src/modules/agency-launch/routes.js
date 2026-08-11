@@ -23,6 +23,9 @@ const {
   localRankingsReadiness,
   applyLocalRankingsToReadiness,
 } = require("./local-rankings-readiness");
+const {
+  applyRankingContentCoverage,
+} = require("./ranking-content-coverage");
 
 function createHttpError(statusCode, code, message) {
   const error = new Error(message);
@@ -91,7 +94,43 @@ async function readinessWithPublicRuntime(database, tenantId, agencyId, service)
 
   const withLegal = applyLegalRuntimeToReadiness(report, legalRuntime, { score, blockers });
   const withCitations = applyLocalCitationsToReadiness(withLegal, localCitations);
-  return applyLocalRankingsToReadiness(withCitations, localRankings);
+  const withRankings = applyLocalRankingsToReadiness(withCitations, localRankings);
+
+  const pages = await database.agencySitePage.findMany({
+    where: {
+      site: {
+        agencyId: Number(agencyId),
+        tenantId,
+      },
+    },
+    orderBy: { displayOrder: "asc" },
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      h1: true,
+      status: true,
+      published: true,
+      seoTitle: true,
+      metaDescription: true,
+      blocks: {
+        orderBy: { displayOrder: "asc" },
+        select: {
+          status: true,
+          content: true,
+        },
+      },
+      sections: {
+        orderBy: { displayOrder: "asc" },
+        select: {
+          status: true,
+          jsonContent: true,
+        },
+      },
+    },
+  });
+
+  return applyRankingContentCoverage(withRankings, pages);
 }
 
 async function networkForTenant(database, tenantId) {
@@ -128,7 +167,7 @@ async function networkForTenant(database, tenantId) {
   }
 
   return {
-    version: "2.3",
+    version: "2.4",
     mode: "prepublication",
     tenantId,
     generatedAt: new Date().toISOString(),
@@ -145,11 +184,12 @@ function createAgencyLaunchRouter({ prisma } = {}) {
     response.json({
       ok: true,
       capability: "agency-launch",
-      version: "2.3",
+      version: "2.4",
       mode: "prepublication",
       legalRuntimeRequired: true,
       localCitationsObserved: true,
       localRankingsObserved: true,
+      rankingContentCoverageObserved: true,
     });
   });
 
