@@ -10,5 +10,5 @@ const component = await readFile(
 test("priority public logo is fetched eagerly with high priority", () => {
   assert.match(component, /loading=/);
   assert.match(component, /fetchPriority=/);
-  assert.match(component, /\? "high"/);
+  assert.match(component, /priority\s*\?\s*"high"/);
 });
