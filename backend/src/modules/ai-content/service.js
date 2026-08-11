@@ -3,6 +3,7 @@
 const AiContentRepository = require("./repository");
 const { validateGenerate } = require("./validation");
 const { createProvider } = require("./providers");
+const { targetingFromContent } = require("./editorial-targeting");
 
 function httpError(message, statusCode, code) { return Object.assign(new Error(message), { statusCode, code }); }
 function slugify(value) { return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 90); }
@@ -61,6 +62,36 @@ function assertStandalonePublication(content) {
   }
 }
 
+async function assertEditorialCanonicalIsPublishable(repo, content) {
+  const targeting = targetingFromContent(content);
+  if (targeting.scope !== "agencies") return;
+
+  if (!targeting.indexAgencyId) {
+    throw httpError(
+      "Définissez une agence propriétaire de l’indexation SEO avant publication.",
+      409,
+      "AI_CONTENT_CANONICAL_AGENCY_REQUIRED"
+    );
+  }
+
+  if (typeof repo.getPublishedAgencySiteByAgencyId !== "function") {
+    throw httpError(
+      "Impossible de vérifier le mini-site canonique avant publication.",
+      503,
+      "AI_CONTENT_CANONICAL_SITE_CHECK_UNAVAILABLE"
+    );
+  }
+
+  const site = await repo.getPublishedAgencySiteByAgencyId(targeting.indexAgencyId);
+  if (!site?.slug) {
+    throw httpError(
+      "L’agence propriétaire de l’indexation SEO doit disposer d’un mini-site publié avant de publier cette inspiration.",
+      409,
+      "AI_CONTENT_CANONICAL_SITE_NOT_PUBLISHED"
+    );
+  }
+}
+
 class AiContentService {
   constructor(prismaOrRepo, tenantId, { provider, env } = {}) {
     this.repo = prismaOrRepo?.createJob ? prismaOrRepo : new AiContentRepository(prismaOrRepo, tenantId);
@@ -104,6 +135,8 @@ class AiContentService {
         "AI_CONTENT_NOT_PUBLISHABLE"
       );
     }
+
+    await assertEditorialCanonicalIsPublishable(this.repo, content);
 
     return this.repo.updateContent(content.id, {
       status: "published",
@@ -270,4 +303,4 @@ class AiContentService {
   }
 }
 
-module.exports = { AiContentService, slugify, toInspiration, assertStandalonePublication };
+module.exports = { AiContentService, slugify, toInspiration, assertStandalonePublication, assertEditorialCanonicalIsPublishable };
