@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import JsonLd from "../../../../../components/JsonLd";
 import InspirationArticle from "../../../../../components/public-site/InspirationArticle";
 import { publicSiteApi } from "../../../../../lib/public-site-api";
+import { buildBreadcrumbSchema } from "../../../../../lib/seo/json-ld";
 
 const PUBLIC_ORIGIN = String(
   process.env.NEXT_PUBLIC_SITE_ORIGIN ||
@@ -47,6 +48,28 @@ function canonicalPublisherName(site, content) {
   return String(content?.editorialCanonical?.siteName || site?.name || "Mondescale Voyages").trim();
 }
 
+function articleImage(content) {
+  const body = content?.body && typeof content.body === "object" ? content.body : {};
+  const seo = content?.seo && typeof content.seo === "object" ? content.seo : {};
+  const openGraph = seo.openGraph && typeof seo.openGraph === "object" ? seo.openGraph : {};
+
+  return (
+    body.imageUrl ||
+    body.heroImage ||
+    body.hero?.imageUrl ||
+    openGraph.image ||
+    openGraph.imageUrl ||
+    null
+  );
+}
+
+function articleDates(content) {
+  return {
+    published: content?.publishedAt || content?.createdAt || undefined,
+    modified: content?.updatedAt || content?.publishedAt || undefined,
+  };
+}
+
 async function load(siteSlug, contentSlug) {
   try {
     const [site, content] = await Promise.all([
@@ -69,8 +92,10 @@ export async function generateMetadata({ params }) {
   const seo = data.content?.seo || {};
   const openGraph = seo.openGraph || {};
   const canonicalOwnerSlug = canonicalSiteSlug(siteSlug, data.content);
-  const canonical = canonicalPath(canonicalOwnerSlug, contentSlug);
+  const canonical = `${PUBLIC_ORIGIN}${canonicalPath(canonicalOwnerSlug, contentSlug)}`;
   const indexOwner = isIndexOwner(data.site, data.content);
+  const image = articleImage(data.content);
+  const dates = articleDates(data.content);
 
   return {
     title: seo.title || `${data.content.title} | ${data.site.name}`,
@@ -90,10 +115,12 @@ export async function generateMetadata({ params }) {
         data.content.excerpt ||
         undefined,
       type: "article",
-      url: `${PUBLIC_ORIGIN}${canonical}`,
-      ...(openGraph.image || openGraph.imageUrl
-        ? { images: [openGraph.image || openGraph.imageUrl] }
-        : {}),
+      url: canonical,
+      locale: "fr_FR",
+      siteName: data.site.name,
+      publishedTime: dates.published,
+      modifiedTime: dates.modified,
+      ...(image ? { images: [image] } : {}),
     },
   };
 }
@@ -106,29 +133,57 @@ export default async function InspirationPage({ params }) {
   const canonicalOwnerSlug = canonicalSiteSlug(siteSlug, data.content);
   const canonical = `${PUBLIC_ORIGIN}${canonicalPath(canonicalOwnerSlug, contentSlug)}`;
   const publisherName = canonicalPublisherName(data.site, data.content);
+  const image = articleImage(data.content);
+  const dates = articleDates(data.content);
+  const publisherUrl = `${PUBLIC_ORIGIN}/agence/${encodeURIComponent(canonicalOwnerSlug)}`;
+  const breadcrumb = buildBreadcrumbSchema([
+    { name: "Accueil", path: publisherUrl },
+    { name: "Inspirations voyage", path: `${publisherUrl}/inspiration` },
+    { name: data.content.title, path: canonical },
+  ]);
   const schemaOrg = data.content?.schemaOrg && typeof data.content.schemaOrg === "object"
     ? {
         ...data.content.schemaOrg,
         url: canonical,
         mainEntityOfPage: canonical,
+        datePublished: data.content.schemaOrg.datePublished || dates.published,
+        dateModified: data.content.schemaOrg.dateModified || dates.modified,
+        image: data.content.schemaOrg.image || image || undefined,
       }
     : {
         "@context": "https://schema.org",
         "@type": "Article",
         headline: data.content.title,
         description: data.content.excerpt || undefined,
+        image: image || undefined,
+        datePublished: dates.published,
+        dateModified: dates.modified,
         url: canonical,
         mainEntityOfPage: canonical,
+        author: {
+          "@type": "Organization",
+          name: publisherName,
+          url: publisherUrl,
+        },
         publisher: {
           "@type": "TravelAgency",
+          "@id": `${publisherUrl}#travel-agency`,
           name: publisherName,
+          url: publisherUrl,
         },
       };
 
   return (
     <>
       <JsonLd data={schemaOrg} />
+      <JsonLd data={breadcrumb} />
       <InspirationArticle content={data.content} site={data.site} />
     </>
   );
 }
+
+export {
+  articleDates,
+  articleImage,
+  canonicalPath,
+};
