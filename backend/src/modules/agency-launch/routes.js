@@ -29,6 +29,9 @@ const {
 const {
   applySeoActionQueue,
 } = require("./seo-action-queue");
+const {
+  networkSeoPriorities,
+} = require("./network-seo-priorities");
 
 function createHttpError(statusCode, code, message) {
   const error = new Error(message);
@@ -172,11 +175,12 @@ async function networkForTenant(database, tenantId) {
   }
 
   return {
-    version: "2.5",
+    version: "2.6",
     mode: "prepublication",
     tenantId,
     generatedAt: new Date().toISOString(),
     summary: summarizeLaunchStates(items),
+    seoPriorities: networkSeoPriorities(items),
     items,
   };
 }
@@ -189,13 +193,14 @@ function createAgencyLaunchRouter({ prisma } = {}) {
     response.json({
       ok: true,
       capability: "agency-launch",
-      version: "2.5",
+      version: "2.6",
       mode: "prepublication",
       legalRuntimeRequired: true,
       localCitationsObserved: true,
       localRankingsObserved: true,
       rankingContentCoverageObserved: true,
       seoActionQueueObserved: true,
+      networkSeoPrioritiesObserved: true,
     });
   });
 
