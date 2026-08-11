@@ -21,6 +21,18 @@ function normalizeAlignment(value) {
     : "left";
 }
 
+function defaultHeroTitle(site) {
+  const city = String(site?.agency?.city || site?.city || "").trim();
+  return city
+    ? `Votre agence de voyages à ${city}`
+    : site?.name || "Votre agence de voyages";
+}
+
+function defaultHeroEyebrow(site) {
+  const city = String(site?.agency?.city || site?.city || "").trim();
+  return city ? `Agence de voyages · ${city}` : "Agence de voyages";
+}
+
 export default function HeroV2Renderer({
   section,
   site,
@@ -30,8 +42,7 @@ export default function HeroV2Renderer({
     content.title ||
     content.heading ||
     section.title ||
-    site?.name ||
-    "Votre agence de voyages";
+    defaultHeroTitle(site);
   const subtitle =
     content.subtitle ||
     content.text ||
@@ -111,8 +122,7 @@ export default function HeroV2Renderer({
         style={contentStyle}
       >
         <p className="public-site-eyebrow">
-          {content.eyebrow ||
-            "Agence de voyages"}
+          {content.eyebrow || defaultHeroEyebrow(site)}
         </p>
 
         <h1
@@ -183,3 +193,8 @@ export default function HeroV2Renderer({
     </section>
   );
 }
+
+export {
+  defaultHeroEyebrow,
+  defaultHeroTitle,
+};
