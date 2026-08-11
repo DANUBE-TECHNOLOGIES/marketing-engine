@@ -67,6 +67,22 @@ function isLongText(value, limit = 260) {
     .length > limit;
 }
 
+function defaultReviewsTitle(site) {
+  const city = String(site?.agency?.city || site?.city || "").trim();
+  return city
+    ? `Les avis clients de notre agence à ${city}`
+    : "Les avis clients de notre agence";
+}
+
+function defaultReviewsIntro(site, total) {
+  const city = String(site?.agency?.city || site?.city || "").trim();
+  if (!total) return null;
+
+  return city
+    ? `Découvrez les retours publiés sur Google par les voyageurs accompagnés par notre agence de ${city}.`
+    : "Découvrez les retours publiés sur Google par les voyageurs accompagnés par notre agence.";
+}
+
 export default async function ReviewsRenderer({
   section,
   site,
@@ -98,6 +114,10 @@ export default async function ReviewsRenderer({
     Number(data?.summary?.total) ||
     0;
 
+  const introduction =
+    content.text ||
+    defaultReviewsIntro(site, total);
+
   return (
     <section className="public-site-section public-site-reviews">
       <div className="public-site-container">
@@ -110,12 +130,12 @@ export default async function ReviewsRenderer({
             <h2>
               {getSectionTitle(
                 section,
-                "Ils nous ont confié leurs voyages"
+                defaultReviewsTitle(site)
               )}
             </h2>
 
-            {content.text ? (
-              <p>{content.text}</p>
+            {introduction ? (
+              <p>{introduction}</p>
             ) : null}
           </div>
 
@@ -154,6 +174,7 @@ export default async function ReviewsRenderer({
             {reviews.map((review) => {
               const longComment = isLongText(review.comment);
               const hasReply = Boolean(review.reply);
+              const publishedLabel = formatDate(review.publishedAt);
 
               return (
                 <article
@@ -170,9 +191,11 @@ export default async function ReviewsRenderer({
                         {review.authorName || "Voyageur"}
                       </strong>
 
-                      <small>
-                        {formatDate(review.publishedAt)}
-                      </small>
+                      {publishedLabel ? (
+                        <time dateTime={review.publishedAt}>
+                          {publishedLabel}
+                        </time>
+                      ) : null}
                     </div>
 
                     <span className="public-site-review-google-mark" aria-label="Avis Google">
@@ -248,3 +271,8 @@ export default async function ReviewsRenderer({
     </section>
   );
 }
+
+export {
+  defaultReviewsIntro,
+  defaultReviewsTitle,
+};
