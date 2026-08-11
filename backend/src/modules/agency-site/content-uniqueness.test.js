@@ -1,0 +1,5 @@
+"use strict";
+const test=require("node:test"),assert=require("node:assert/strict");const{similarity,analyzeUniqueness}=require("./content-uniqueness");
+test("identical local copy is detected",()=>{assert.equal(similarity("agence voyage locale conseil expert famille paris","agence voyage locale conseil expert famille paris"),1)});
+test("different copy remains distinct",()=>{assert.ok(similarity("conseillers bois colombes rendez vous avenue argenteuil voyages sur mesure","equipe gien circuits groupes depart montargis accompagnement croisiere")<0.3)});
+test("high network similarity blocks readiness",()=>{const sections=[{jsonContent:{html:"Notre agence locale vous accompagne pour construire votre voyage sur mesure avec des conseils personnalises et un suivi avant pendant apres votre depart."}}];const target={id:"a",title:"Voyage sur mesure",sections},other={id:"b",title:"Voyage sur mesure",sections,site:{agencyId:2,agency:{name:"Agence B"}}};const result=analyzeUniqueness(target,[other]);assert.equal(result.ready,false);assert.equal(result.severity,"blocker")});
