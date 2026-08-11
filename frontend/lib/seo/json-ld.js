@@ -27,6 +27,17 @@ export function buildWebSiteSchema() {
   });
 }
 
+function normalizeFrenchPhone(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return undefined;
+
+  const compact = raw.replace(/[\s.()-]/g, "");
+  if (/^\+33\d{9}$/.test(compact)) return compact;
+  if (/^0033\d{9}$/.test(compact)) return `+${compact.slice(2)}`;
+  if (/^0\d{9}$/.test(compact)) return `+33${compact.slice(1)}`;
+  return raw;
+}
+
 function openingHoursSpecification(hours) {
   const weekly = Array.isArray(hours?.weekly) ? hours.weekly : [];
 
@@ -72,7 +83,7 @@ export function buildTravelAgencySchema(site) {
     "@id": `${absoluteUrl(site.basePath)}#travel-agency`,
     name: site.name || agency.name,
     url: absoluteUrl(site.basePath),
-    telephone: agency.phone || site.phone,
+    telephone: normalizeFrenchPhone(agency.phone || site.phone),
     email: agency.email || site.email,
     image:
       agency.imageUrl ||
@@ -164,3 +175,5 @@ export function buildDestinationSchema(data) {
       : undefined,
   });
 }
+
+export { normalizeFrenchPhone };
