@@ -16,6 +16,7 @@ import "../../sites/[siteSlug]/public-site.css";
 import "../../../components/public-site/brand-runtime.css";
 import "../../../components/public-site/premium-public.css";
 import "../../../components/public-site/premium-sections.css";
+import "../../../components/public-site/legal-experience.css";
 
 export default async function PublicAgencySiteLayout({ children, params }) {
   const { siteSlug } = await params;
