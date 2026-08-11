@@ -26,6 +26,9 @@ const {
 const {
   applyRankingContentCoverage,
 } = require("./ranking-content-coverage");
+const {
+  applySeoActionQueue,
+} = require("./seo-action-queue");
 
 function createHttpError(statusCode, code, message) {
   const error = new Error(message);
@@ -130,7 +133,9 @@ async function readinessWithPublicRuntime(database, tenantId, agencyId, service)
     },
   });
 
-  return applyRankingContentCoverage(withRankings, pages);
+  return applySeoActionQueue(
+    applyRankingContentCoverage(withRankings, pages)
+  );
 }
 
 async function networkForTenant(database, tenantId) {
@@ -167,7 +172,7 @@ async function networkForTenant(database, tenantId) {
   }
 
   return {
-    version: "2.4",
+    version: "2.5",
     mode: "prepublication",
     tenantId,
     generatedAt: new Date().toISOString(),
@@ -184,12 +189,13 @@ function createAgencyLaunchRouter({ prisma } = {}) {
     response.json({
       ok: true,
       capability: "agency-launch",
-      version: "2.4",
+      version: "2.5",
       mode: "prepublication",
       legalRuntimeRequired: true,
       localCitationsObserved: true,
       localRankingsObserved: true,
       rankingContentCoverageObserved: true,
+      seoActionQueueObserved: true,
     });
   });
 
