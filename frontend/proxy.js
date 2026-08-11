@@ -11,6 +11,10 @@ export function proxy(request) {
     pathname.startsWith("/sites/") ||
     pathname === "/api/public-sites" ||
     pathname.startsWith("/api/public-sites/") ||
+    pathname === "/api/public-brand-legal" ||
+    pathname.startsWith("/api/public-brand-legal/") ||
+    pathname === "/media/brand-assets" ||
+    pathname.startsWith("/media/brand-assets/") ||
     pathname === "/brand" ||
     pathname.startsWith("/brand/") ||
     pathname.startsWith("/_next/") ||
