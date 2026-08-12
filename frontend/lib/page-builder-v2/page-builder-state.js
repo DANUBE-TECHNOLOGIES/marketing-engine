@@ -22,18 +22,23 @@ export function createLocalId(prefix = "block") {
 
 export function normalizeBlock(block, index = 0) {
   const type =
-    String(block?.type || block?.blockType || "rich_text")
+    String(block?.type || block?.blockType || block?.sectionType || "rich_text")
+      .replace(/--\d+$/, "")
       .trim()
       .toLowerCase();
 
   const definition = getBlockDefinition(type);
+  const rawPosition =
+    block?.position ??
+    block?.displayOrder ??
+    index;
 
   return {
     id: String(block?.id || createLocalId()),
     type,
     status: String(block?.status || "draft"),
-    position: Number.isInteger(Number(block?.position))
-      ? Number(block.position)
+    position: Number.isFinite(Number(rawPosition))
+      ? Number(rawPosition)
       : index,
     content: {
       ...(definition?.defaults
@@ -41,7 +46,9 @@ export function normalizeBlock(block, index = 0) {
         : {}),
       ...(block?.content && typeof block.content === "object"
         ? deepClone(block.content)
-        : {}),
+        : block?.jsonContent && typeof block.jsonContent === "object"
+          ? deepClone(block.jsonContent)
+          : {}),
     },
     settings:
       block?.settings && typeof block.settings === "object"
