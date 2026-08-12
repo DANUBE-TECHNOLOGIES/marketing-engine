@@ -45,6 +45,10 @@ function typeSignature(items = []) {
   return ordered(items).map(blockTypeOf).filter(Boolean);
 }
 
+function familySignature(items = []) {
+  return typeSignature(items).map(contentFamily);
+}
+
 function sameArray(left, right) {
   return left.length === right.length && left.every((value, index) => value === right[index]);
 }
@@ -55,9 +59,12 @@ function stableJson(value) {
   return JSON.stringify(value);
 }
 
+// A premium blueprint describes presentation only. Local workflow state (status,
+// version, SEO metadata and content) must not make an otherwise identical page
+// look "non premium" after migration.
 function visualSignature(items = []) {
   return ordered(items).map((item) => ({
-    type: blockTypeOf(item),
+    family: contentFamily(blockTypeOf(item)),
     settings: cloneJson(item?.settings, {}),
     visibleDesktop: item?.visibleDesktop !== false,
     visibleMobile: item?.visibleMobile !== false,
@@ -75,16 +82,18 @@ function classifyPremiumHome({ referenceBlocks = [], targetBlocks = [] } = {}) {
   const targetTypes = typeSignature(targetBlocks);
   if (!targetTypes.length) return { status: "LEGACY_NO_V2", referenceTypes, targetTypes };
 
+  const referenceFamilies = familySignature(referenceBlocks);
+  const targetFamilies = familySignature(targetBlocks);
   const referenceVisual = stableJson(visualSignature(referenceBlocks));
   const targetVisual = stableJson(visualSignature(targetBlocks));
-  if (sameArray(referenceTypes, targetTypes) && referenceVisual === targetVisual) {
+  if (sameArray(referenceFamilies, targetFamilies) && referenceVisual === targetVisual) {
     return { status: "PREMIUM_MATCH", referenceTypes, targetTypes };
   }
 
   const referenceCounts = new Map();
   const targetCounts = new Map();
-  for (const type of referenceTypes.map(contentFamily)) referenceCounts.set(type, (referenceCounts.get(type) || 0) + 1);
-  for (const type of targetTypes.map(contentFamily)) targetCounts.set(type, (targetCounts.get(type) || 0) + 1);
+  for (const type of referenceFamilies) referenceCounts.set(type, (referenceCounts.get(type) || 0) + 1);
+  for (const type of targetFamilies) targetCounts.set(type, (targetCounts.get(type) || 0) + 1);
   const extraTypes = [];
   for (const [type, count] of targetCounts) {
     const extra = count - (referenceCounts.get(type) || 0);
@@ -148,4 +157,4 @@ function buildPremiumHomePlan({ referenceBlocks = [], targetBlocks = [], targetS
   return { ready: true, reason: "READY", missingTypes: [], blocks: planned, classification };
 }
 
-module.exports = { blockTypeOf, contentFamily, typeSignature, classifyPremiumHome, isLegacyHomeCandidate, buildPremiumHomePlan };
+module.exports = { blockTypeOf, contentFamily, typeSignature, visualSignature, classifyPremiumHome, isLegacyHomeCandidate, buildPremiumHomePlan };
