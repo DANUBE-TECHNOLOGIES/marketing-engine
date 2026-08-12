@@ -1,6 +1,6 @@
 "use strict";
 
-const TEXT_FIELDS = ["html", "text", "subtitle", "description", "title", "eyebrow"];
+const TEXT_FIELDS = ["html", "text", "subtitle", "introduction"];
 const MIN_AUDIT_WORDS = 12;
 
 function cleanText(value) {
@@ -87,11 +87,11 @@ function buildLocalRewriteProposal({ block, localEvidence, insight = null }) {
   const content = block.content && typeof block.content === "object" ? block.content : {};
   const field = pickField(content);
   if (!field) {
-    return { version: "1.1", eligible: false, reason: "NO_EDITABLE_EDITORIAL_FIELD", blockId: block.id || null };
+    return { version: "1.2", eligible: false, reason: "NO_EDITABLE_EDITORIAL_FIELD", blockId: block.id || null };
   }
   const proof = localProofSentences(localEvidence);
   if (!proof.sentences.length) {
-    return { version: "1.1", eligible: false, reason: "NO_VERIFIED_LOCAL_EVIDENCE", blockId: block.id || null };
+    return { version: "1.2", eligible: false, reason: "NO_VERIFIED_LOCAL_EVIDENCE", blockId: block.id || null };
   }
 
   const before = String(content[field] || "");
@@ -103,7 +103,7 @@ function buildLocalRewriteProposal({ block, localEvidence, insight = null }) {
 
   if (wordCount(after) < MIN_AUDIT_WORDS) {
     return {
-      version: "1.1",
+      version: "1.2",
       eligible: false,
       reason: "INSUFFICIENT_VERIFIED_EVIDENCE_FOR_AUDITABLE_REWRITE",
       blockId: block.id || null,
@@ -112,7 +112,7 @@ function buildLocalRewriteProposal({ block, localEvidence, insight = null }) {
   }
 
   return {
-    version: "1.1",
+    version: "1.2",
     eligible: true,
     mode: "proposal-only",
     blockId: block.id || null,
