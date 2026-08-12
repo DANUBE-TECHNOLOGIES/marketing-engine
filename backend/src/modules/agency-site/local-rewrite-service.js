@@ -33,6 +33,56 @@ function buildDraftTarget(persistedPage, draftPage) {
   };
 }
 
+function buildRewriteImpact(currentAudit, projectedAudit, currentInsight, projectedInsight) {
+  const currentBlockSimilarity = Number(currentInsight?.highestSimilarity || 0);
+  const projectedBlockSimilarity = Number(projectedInsight?.highestSimilarity || 0);
+  const currentPageSimilarity = Number(currentAudit?.highestSimilarity || 0);
+  const projectedPageSimilarity = Number(projectedAudit?.highestSimilarity || 0);
+  const currentBlockScore = Number(currentInsight?.score ?? 100);
+  const projectedBlockScore = Number(projectedInsight?.score ?? 100);
+  const currentPageScore = Number(currentAudit?.score ?? 100);
+  const projectedPageScore = Number(projectedAudit?.score ?? 100);
+  const blockSimilarityGain = Number((currentBlockSimilarity - projectedBlockSimilarity).toFixed(3));
+  const pageSimilarityGain = Number((currentPageSimilarity - projectedPageSimilarity).toFixed(3));
+  const blockScoreGain = projectedBlockScore - currentBlockScore;
+  const pageScoreGain = projectedPageScore - currentPageScore;
+  const blockImproved = blockSimilarityGain > 0;
+  const pageDidNotRegress = projectedPageSimilarity <= currentPageSimilarity;
+  const safeToApply = blockImproved && pageDidNotRegress;
+
+  return {
+    version: "1.0",
+    safeToApply,
+    blockImproved,
+    pageDidNotRegress,
+    block: {
+      similarityBefore: currentBlockSimilarity,
+      similarityAfter: projectedBlockSimilarity,
+      similarityGain: blockSimilarityGain,
+      scoreBefore: currentBlockScore,
+      scoreAfter: projectedBlockScore,
+      scoreGain: blockScoreGain,
+    },
+    page: {
+      similarityBefore: currentPageSimilarity,
+      similarityAfter: projectedPageSimilarity,
+      similarityGain: pageSimilarityGain,
+      scoreBefore: currentPageScore,
+      scoreAfter: projectedPageScore,
+      scoreGain: pageScoreGain,
+      readyBefore: Boolean(currentAudit?.ready),
+      readyAfter: Boolean(projectedAudit?.ready),
+      severityBefore: currentAudit?.severity || "ok",
+      severityAfter: projectedAudit?.severity || "ok",
+    },
+    reason: safeToApply
+      ? "MEASURABLE_UNIQUENESS_GAIN"
+      : !blockImproved
+        ? "NO_MEASURABLE_BLOCK_GAIN"
+        : "PAGE_UNIQUENESS_REGRESSION",
+  };
+}
+
 async function loadContext({ prisma, tenantId, agencyId, slug, draftPage }) {
   const repo = new AgencySiteRepository(prisma, tenantId);
   const persistedPage = await repo.findPage(agencyId, slug);
@@ -82,6 +132,7 @@ async function proposeLocalRewrite(args) {
   };
   const projectedAudit = analyzeUniqueness(patchedTarget, context.candidates);
   const projectedInsight = (projectedAudit.blockInsights || []).find((item) => String(item.blockId || "") === blockId) || null;
+  const impact = buildRewriteImpact(context.audit, projectedAudit, insight, projectedInsight);
 
   return {
     ...proposal,
@@ -89,12 +140,15 @@ async function proposeLocalRewrite(args) {
     projectedSimilarity: projectedInsight?.highestSimilarity ?? 0,
     currentScore: insight?.score ?? 100,
     projectedScore: projectedInsight?.score ?? 100,
+    impact,
     projectedAudit: {
       score: projectedAudit.score,
+      ready: projectedAudit.ready,
+      severity: projectedAudit.severity,
       highestSimilarity: projectedAudit.highestSimilarity,
       blockInsight: projectedInsight,
     },
   };
 }
 
-module.exports = { auditDraft, proposeLocalRewrite, buildDraftTarget, normalizeDraftBlock };
+module.exports = { auditDraft, proposeLocalRewrite, buildDraftTarget, normalizeDraftBlock, buildRewriteImpact };
