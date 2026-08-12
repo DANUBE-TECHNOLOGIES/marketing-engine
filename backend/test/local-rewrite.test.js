@@ -10,6 +10,7 @@ const {
   buildDraftTarget,
   normalizeDraftBlock,
   buildRewriteImpact,
+  buildDifferentiationSummary,
 } = require("../src/modules/agency-site/local-rewrite-service");
 
 const evidence = {
@@ -160,4 +161,51 @@ test("une amélioration locale qui dégrade la page est bloquée", () => {
   assert.equal(impact.pageDidNotRegress, false);
   assert.equal(impact.safeToApply, false);
   assert.equal(impact.reason, "PAGE_UNIQUENESS_REGRESSION");
+});
+
+test("une page différenciée sans bloc prioritaire est prête pour revue", () => {
+  const summary = buildDifferentiationSummary(
+    {
+      ready: true,
+      severity: "ok",
+      score: 72,
+      highestSimilarity: 0.28,
+      blockInsights: [{ blockId: "b-1", blockType: "rich_text", blockName: "Présentation", highestSimilarity: 0.24, score: 76 }],
+    },
+    evidence
+  );
+
+  assert.equal(summary.readyForReview, true);
+  assert.equal(summary.status, "ready-for-review");
+  assert.equal(summary.priorityBlockCount, 0);
+  assert.deepEqual(summary.reasons, []);
+});
+
+test("un bloc encore très proche du réseau empêche la sortie de différenciation", () => {
+  const summary = buildDifferentiationSummary(
+    {
+      ready: true,
+      severity: "ok",
+      score: 61,
+      highestSimilarity: 0.39,
+      blockInsights: [{ blockId: "b-2", blockType: "rich_text", blockName: "Pourquoi nous", highestSimilarity: 0.46, score: 54 }],
+    },
+    evidence
+  );
+
+  assert.equal(summary.readyForReview, false);
+  assert.equal(summary.status, "needs-differentiation");
+  assert.equal(summary.priorityBlockCount, 1);
+  assert.equal(summary.priorityBlocks[0].blockId, "b-2");
+  assert.ok(summary.reasons.includes("PRIORITY_BLOCKS_REMAIN"));
+});
+
+test("une page sans preuve locale vérifiée ne peut pas être considérée prête pour revue", () => {
+  const summary = buildDifferentiationSummary(
+    { ready: true, severity: "ok", score: 80, highestSimilarity: 0.15, blockInsights: [] },
+    { evidence: [] }
+  );
+
+  assert.equal(summary.readyForReview, false);
+  assert.ok(summary.reasons.includes("NO_VERIFIED_LOCAL_EVIDENCE"));
 });
