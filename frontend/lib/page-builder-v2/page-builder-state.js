@@ -28,10 +28,7 @@ export function normalizeBlock(block, index = 0) {
       .toLowerCase();
 
   const definition = getBlockDefinition(type);
-  const rawPosition =
-    block?.position ??
-    block?.displayOrder ??
-    index;
+  const rawPosition = block?.position ?? block?.displayOrder ?? index;
 
   return {
     id: String(block?.id || createLocalId()),
@@ -41,9 +38,7 @@ export function normalizeBlock(block, index = 0) {
       ? Number(rawPosition)
       : index,
     content: {
-      ...(definition?.defaults
-        ? deepClone(definition.defaults)
-        : {}),
+      ...(definition?.defaults ? deepClone(definition.defaults) : {}),
       ...(block?.content && typeof block.content === "object"
         ? deepClone(block.content)
         : block?.jsonContent && typeof block.jsonContent === "object"
@@ -58,12 +53,7 @@ export function normalizeBlock(block, index = 0) {
 }
 
 export function normalizePage(page, index = 0) {
-  const blocks =
-    page?.blocks ||
-    page?.sections ||
-    page?.content?.blocks ||
-    [];
-
+  const blocks = page?.blocks || page?.sections || page?.content?.blocks || [];
   const status = String(page?.status || "draft");
   const hasExplicitSlug =
     page &&
@@ -73,67 +63,51 @@ export function normalizePage(page, index = 0) {
 
   return {
     id: String(page?.id || createLocalId("page")),
-    slug: hasExplicitSlug
-      ? String(page.slug)
-      : `page-${index + 1}`,
-    title: String(
-      page?.title ||
-      page?.name ||
-      page?.seoTitle ||
-      `Page ${index + 1}`
-    ),
+    slug: hasExplicitSlug ? String(page.slug) : `page-${index + 1}`,
+    title: String(page?.title || page?.name || page?.seoTitle || `Page ${index + 1}`),
     status,
     published:
       typeof page?.published === "boolean"
         ? page.published
         : status === "published",
     seoTitle: String(page?.seoTitle || page?.title || ""),
-    seoDescription: String(
-      page?.seoDescription ||
-      page?.seoDesc ||
-      ""
-    ),
+    seoDescription: String(page?.seoDescription || page?.seoDesc || ""),
     blocks: Array.isArray(blocks)
       ? blocks
           .map(normalizeBlock)
           .sort((a, b) => a.position - b.position)
-          .map((block, blockIndex) => ({
-            ...block,
-            position: blockIndex,
-          }))
+          .map((block, blockIndex) => ({ ...block, position: blockIndex }))
       : [],
   };
 }
 
+function isHomePage(page) {
+  const slug = String(page?.slug ?? "").trim().toLowerCase();
+  return slug === "" || slug === "home" || String(page?.pageType || "").toLowerCase() === "home";
+}
+
 export function normalizeSite(site) {
-  const pages =
-    site?.pages ||
-    site?.miniSitePages ||
-    site?.data?.pages ||
-    [];
+  const pages = site?.pages || site?.miniSitePages || site?.data?.pages || [];
+  const normalizedPages = Array.isArray(pages) ? pages.map(normalizePage) : [];
+  const homePages = normalizedPages.filter(isHomePage);
+  const otherPages = normalizedPages.filter((page) => !isHomePage(page));
 
   return {
     id: String(site?.id || site?.slug || ""),
     slug: String(site?.slug || site?.id || ""),
     name: String(site?.name || site?.title || "Mini-site"),
     agencyId:
-      site?.agencyId === undefined ||
-      site?.agencyId === null
+      site?.agencyId === undefined || site?.agencyId === null
         ? null
         : String(site.agencyId),
     status: String(site?.status || "draft"),
-    pages: Array.isArray(pages)
-      ? pages.map(normalizePage)
-      : [],
+    pages: [...homePages, ...otherPages],
   };
 }
 
 export function createBlock(type, position) {
   const definition = getBlockDefinition(type);
-
-  if (!definition) {
-    throw new Error(`Type de bloc inconnu : ${type}`);
-  }
+  if (!definition) throw new Error(`Type de bloc inconnu : ${type}`);
 
   return normalizeBlock({
     id: createLocalId(),
@@ -146,19 +120,14 @@ export function createBlock(type, position) {
 }
 
 export function reorderBlocks(blocks) {
-  return blocks.map((block, index) => ({
-    ...block,
-    position: index,
-  }));
+  return blocks.map((block, index) => ({ ...block, position: index }));
 }
 
 export function updateBlockInPage(page, blockId, updater) {
   return {
     ...page,
     blocks: page.blocks.map((block) =>
-      block.id === blockId
-        ? updater(deepClone(block))
-        : block
+      block.id === blockId ? updater(deepClone(block)) : block
     ),
   };
 }
