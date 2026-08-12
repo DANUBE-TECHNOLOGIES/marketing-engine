@@ -19,7 +19,8 @@ function normalizeDraftBlock(block, index) {
 
 function buildDraftTarget(persistedPage, draftPage) {
   if (!draftPage || typeof draftPage !== "object") return persistedPage;
-  const blocks = Array.isArray(draftPage.blocks)
+  const hasDesignerBlocks = Array.isArray(draftPage.blocks);
+  const blocks = hasDesignerBlocks
     ? draftPage.blocks.map(normalizeDraftBlock)
     : persistedPage.blocks;
   return {
@@ -27,6 +28,7 @@ function buildDraftTarget(persistedPage, draftPage) {
     title: draftPage.title ?? persistedPage.title,
     seoTitle: draftPage.seoTitle ?? persistedPage.seoTitle,
     metaDescription: draftPage.seoDescription ?? draftPage.metaDescription ?? persistedPage.metaDescription,
+    sections: hasDesignerBlocks ? [] : persistedPage.sections,
     blocks,
   };
 }
