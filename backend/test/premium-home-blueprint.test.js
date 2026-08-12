@@ -75,6 +75,22 @@ test("cta et contact-cta sont équivalents pour reconnaître un blueprint premiu
   assert.equal(classifyPremiumHome({ referenceBlocks: reference, targetBlocks: migrated }).status, "PREMIUM_MATCH");
 });
 
+test("les égalités de displayOrder ne dépendent pas de l'ordre de retour de la base", () => {
+  const reference = [
+    { blockType: "hero", displayOrder: 0, settings: { source: "mse-14.2" } },
+    { blockType: "hero", displayOrder: 0, settings: { source: "mse-14.2" } },
+    { blockType: "cta", displayOrder: 1, settings: { source: "mse-14.2" } },
+    { blockType: "text", displayOrder: 2, settings: {} },
+  ];
+  const target = [
+    { blockType: "hero", displayOrder: 0, settings: { source: "mse-14.2" }, content: { title: "Local 1" } },
+    { blockType: "cta", displayOrder: 1, settings: { source: "mse-14.2" }, content: { title: "CTA local" } },
+    { blockType: "hero", displayOrder: 0, settings: { source: "mse-14.2" }, content: { title: "Local 2" } },
+    { blockType: "text", displayOrder: 2, settings: {}, content: { text: "Local" } },
+  ];
+  assert.equal(classifyPremiumHome({ referenceBlocks: reference, targetBlocks: target }).status, "PREMIUM_MATCH");
+});
+
 test("une home déjà alignée sur le blueprint premium est laissée intacte", () => {
   const targetBlocks = referenceBlocks.map((block, index) => ({ ...block, content: { title: `Local ${index}` } }));
   const classification = classifyPremiumHome({ referenceBlocks, targetBlocks });
