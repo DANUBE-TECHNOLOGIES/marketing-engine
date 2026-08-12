@@ -2,7 +2,7 @@
 
 const { PrismaClient } = require("@prisma/client");
 const ContentBuilder = require("../src/modules/agency-site/builders/content-builder");
-const { isLegacyHomeCandidate, buildPremiumHomePlan } = require("../src/modules/agency-site/premium-home-blueprint");
+const { classifyPremiumHome, buildPremiumHomePlan } = require("../src/modules/agency-site/premium-home-blueprint");
 
 const prisma = new PrismaClient();
 const builder = new ContentBuilder();
@@ -51,6 +51,15 @@ async function snapshotPage(tx, page, reason) {
   });
 }
 
+function generatedSectionsFor(page, site) {
+  return builder.build(page, site.agency, site).map((section) => ({
+    sectionType: section.sectionType,
+    jsonContent: section.content,
+    displayOrder: section.displayOrder,
+    status: "draft",
+  }));
+}
+
 async function main() {
   const tenant = await prisma.tenant.findUnique({ where: { slug: tenantSlug }, select: { id: true, slug: true } });
   if (!tenant) throw new Error(`Tenant ${tenantSlug} introuvable`);
@@ -79,53 +88,60 @@ async function main() {
   const report = [];
   for (const site of sites) {
     if (site.id === referenceSite.id) {
-      report.push({ agency: site.name, status: "REFERENCE", blocks: referenceHome.blocks.length });
+      report.push({ agency: site.name, status: "REFERENCE", blocks: referenceHome.blocks.length, target: referenceHome.blocks.length });
       continue;
     }
     const page = homeOf(site);
     if (!page) {
-      report.push({ agency: site.name, status: "NO_HOME" });
-      continue;
-    }
-    if (!isLegacyHomeCandidate(page)) {
-      report.push({ agency: site.name, status: "SKIP_ALREADY_V2", blocks: page.blocks.length });
+      report.push({ agency: site.name, status: "NO_HOME", blocks: 0, target: referenceHome.blocks.length });
       continue;
     }
 
-    const generatedSections = builder.build(page, site.agency, site).map((section) => ({
-      sectionType: section.sectionType,
-      jsonContent: section.content,
-      displayOrder: section.displayOrder,
-      status: "draft",
-    }));
+    const classification = classifyPremiumHome({ referenceBlocks: referenceHome.blocks, targetBlocks: page.blocks });
+    if (classification.status === "PREMIUM_MATCH") {
+      report.push({ agency: site.name, status: "PREMIUM_MATCH", blocks: page.blocks.length, target: referenceHome.blocks.length });
+      continue;
+    }
+    if (classification.status === "CUSTOM_V2") {
+      report.push({ agency: site.name, status: "BLOCKED_CUSTOM_V2", blocks: page.blocks.length, target: referenceHome.blocks.length, details: classification.extraTypes.join(",") || "custom" });
+      continue;
+    }
+
     const plan = buildPremiumHomePlan({
       referenceBlocks: referenceHome.blocks,
       targetBlocks: page.blocks,
       targetSections: page.sections,
-      generatedSections,
+      generatedSections: generatedSectionsFor(page, site),
     });
 
     if (!plan.ready) {
-      report.push({ agency: site.name, status: `BLOCKED_${plan.reason}`, missing: plan.missingTypes.join(",") });
+      report.push({ agency: site.name, status: `BLOCKED_${plan.reason}`, blocks: page.blocks.length, target: referenceHome.blocks.length, details: plan.missingTypes.join(",") });
       continue;
     }
 
     if (apply) {
       await prisma.$transaction(async (tx) => {
-        await snapshotPage(tx, page, `Before premium-home upgrade from ${referenceSite.name}`);
+        await snapshotPage(tx, page, `Before premium-home blueprint upgrade from ${referenceSite.name}`);
         await tx.pageBlock.deleteMany({ where: { pageId: page.id } });
         for (const block of plan.blocks) {
           await tx.pageBlock.create({ data: { pageId: page.id, ...block } });
         }
       });
     }
-    report.push({ agency: site.name, status: apply ? "UPGRADED" : "READY_TO_UPGRADE", blocks: plan.blocks.length });
+
+    report.push({
+      agency: site.name,
+      status: apply ? "UPGRADED_TO_PREMIUM" : "READY_TO_PREMIUM_UPGRADE",
+      blocks: page.blocks.length,
+      target: plan.blocks.length,
+      details: classification.status,
+    });
   }
 
   console.table(report);
   const blocked = report.filter((item) => String(item.status).startsWith("BLOCKED_") || item.status === "NO_HOME");
   if (blocked.length) {
-    console.log(`\n${blocked.length} agence(s) nécessitent une correction avant migration.`);
+    console.log(`\n${blocked.length} agence(s) nécessitent une revue avant migration.`);
     process.exitCode = 2;
   }
   if (!apply) console.log("\nAucune donnée modifiée. Relancer avec --apply uniquement après validation du tableau ci-dessus.");
