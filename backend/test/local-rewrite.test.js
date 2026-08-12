@@ -116,5 +116,5 @@ test("le brouillon Designer est normalisé dans le format attendu par l’audit"
   assert.equal(target.metaDescription, "Meta brouillon");
   assert.equal(target.blocks[0].blockType, "rich_text");
   assert.equal(target.blocks[0].id, "b-1");
-  assert.equal(target.sections, persisted.sections);
+  assert.deepEqual(target.sections, []);
 });
