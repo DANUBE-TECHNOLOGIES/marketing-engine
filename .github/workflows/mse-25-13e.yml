@@ -29,8 +29,8 @@ jobs:
       - name: Install backend dependencies
         run: npm ci
 
-      - name: Run MSE-25.13E backend tests
-        run: node --test test/local-rewrite.test.js
+      - name: Run MSE-25.13 backend tests
+        run: node --test test/local-rewrite.test.js test/premium-home-blueprint.test.js
 
   frontend-local-rewrite:
     runs-on: ubuntu-latest
