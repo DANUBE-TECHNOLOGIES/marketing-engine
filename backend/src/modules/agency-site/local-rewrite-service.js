@@ -103,7 +103,10 @@ function buildDifferentiationSummary(audit, localEvidence) {
   if (priorityBlocks.length) reasons.push("PRIORITY_BLOCKS_REMAIN");
   if (!verifiedEvidenceCount) reasons.push("NO_VERIFIED_LOCAL_EVIDENCE");
 
-  const readyForReview = Boolean(audit?.ready) && audit?.severity === "ok" && priorityBlocks.length === 0;
+  const readyForReview = Boolean(audit?.ready)
+    && audit?.severity === "ok"
+    && priorityBlocks.length === 0
+    && verifiedEvidenceCount > 0;
   const status = readyForReview
     ? "ready-for-review"
     : audit?.severity === "blocker"
