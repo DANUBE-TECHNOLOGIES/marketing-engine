@@ -1,14 +1,28 @@
 "use strict";
 
 const TEXT_FIELDS = ["html", "text", "subtitle", "description", "title", "eyebrow"];
+const MIN_AUDIT_WORDS = 12;
 
 function cleanText(value) {
   return String(value || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 }
 
+function escapeHtml(value) {
+  return String(value || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
 function sentence(value) {
   const text = cleanText(value).replace(/[.!?]+$/g, "").trim();
   return text ? `${text}.` : "";
+}
+
+function wordCount(value) {
+  return cleanText(value).split(/\s+/).filter(Boolean).length;
 }
 
 function pickField(content = {}) {
@@ -35,19 +49,19 @@ function localProofSentences(localEvidence) {
   const used = [];
 
   if (city) {
-    sentences.push(`À ${city}, ${agencyName} accueille et conseille les voyageurs localement.`);
+    sentences.push(`L’agence ${agencyName} est située à ${city}.`);
     used.push("CITY");
   }
   if (team.length) {
     const names = team.slice(0, 3).map((member) => member.name).filter(Boolean);
     if (names.length) {
-      sentences.push(`Vous pouvez notamment échanger avec ${names.join(", ")}.`);
+      sentences.push(`L’équipe référencée comprend ${names.join(", ")}.`);
       used.push("TEAM");
     }
   }
   if (address) {
     const locality = [postalCode, city].filter(Boolean).join(" ");
-    sentences.push(`L’agence est implantée au ${address}${locality ? `, ${locality}` : ""}.`);
+    sentences.push(`L’adresse enregistrée est ${address}${locality ? `, ${locality}` : ""}.`);
     used.push("ADDRESS");
     if (postalCode) used.push("POSTAL_CODE");
   }
@@ -56,7 +70,7 @@ function localProofSentences(localEvidence) {
     used.push("REVIEWS");
   }
   if (keywordCities.length > 1) {
-    sentences.push(`Le suivi SEO local couvre déjà ${keywordCities.slice(0, 4).join(", ")}.`);
+    sentences.push(`Les villes présentes dans les mots-clés SEO actifs sont ${keywordCities.slice(0, 4).join(", ")}.`);
     used.push("LOCAL_CITIES");
   }
 
@@ -73,22 +87,32 @@ function buildLocalRewriteProposal({ block, localEvidence, insight = null }) {
   const content = block.content && typeof block.content === "object" ? block.content : {};
   const field = pickField(content);
   if (!field) {
-    return { version: "1.0", eligible: false, reason: "NO_EDITABLE_EDITORIAL_FIELD", blockId: block.id || null };
+    return { version: "1.1", eligible: false, reason: "NO_EDITABLE_EDITORIAL_FIELD", blockId: block.id || null };
   }
   const proof = localProofSentences(localEvidence);
   if (!proof.sentences.length) {
-    return { version: "1.0", eligible: false, reason: "NO_VERIFIED_LOCAL_EVIDENCE", blockId: block.id || null };
+    return { version: "1.1", eligible: false, reason: "NO_VERIFIED_LOCAL_EVIDENCE", blockId: block.id || null };
   }
 
   const before = String(content[field] || "");
   const original = sentence(before);
   const shared = new Set((insight?.sharedSegments || []).map((value) => cleanText(value).toLowerCase()));
-  const keepOriginal = ![...shared].some((segment) => segment && cleanText(before).toLowerCase().includes(segment));
+  const sharedCopyDetected = [...shared].some((segment) => segment && cleanText(before).toLowerCase().includes(segment));
   const localized = proof.sentences.slice(0, 3).join(" ");
-  const after = keepOriginal ? `${original} ${localized}`.trim() : localized;
+  const after = sharedCopyDetected ? localized : `${original} ${localized}`.trim();
+
+  if (wordCount(after) < MIN_AUDIT_WORDS) {
+    return {
+      version: "1.1",
+      eligible: false,
+      reason: "INSUFFICIENT_VERIFIED_EVIDENCE_FOR_AUDITABLE_REWRITE",
+      blockId: block.id || null,
+      evidenceCodes: proof.evidenceCodes,
+    };
+  }
 
   return {
-    version: "1.0",
+    version: "1.1",
     eligible: true,
     mode: "proposal-only",
     blockId: block.id || null,
@@ -96,15 +120,16 @@ function buildLocalRewriteProposal({ block, localEvidence, insight = null }) {
     field,
     before,
     after,
-    content: { ...content, [field]: field === "html" ? `<p>${after}</p>` : after },
+    content: { ...content, [field]: field === "html" ? `<p>${escapeHtml(after)}</p>` : after },
     evidenceCodes: proof.evidenceCodes,
     evidence: (localEvidence?.evidence || []).filter((item) => proof.evidenceCodes.includes(item.code)),
     safeguards: {
       verifiedEvidenceOnly: true,
       persistedAutomatically: false,
       userValidationRequired: true,
+      minimumAuditableWords: MIN_AUDIT_WORDS,
     },
   };
 }
 
-module.exports = { buildLocalRewriteProposal, localProofSentences, pickField };
+module.exports = { buildLocalRewriteProposal, localProofSentences, pickField, wordCount, escapeHtml };
