@@ -27,10 +27,7 @@ export async function fetchPublicBrandLegalRuntime(siteSlug) {
   const normalizedSlug = normalizeSiteSlug(siteSlug);
   if (!normalizedSlug) return null;
 
-  const url =
-    `${getRuntimeOrigin()}` +
-    `/api/public-brand-legal/sites/` +
-    encodeURIComponent(normalizedSlug);
+  const url = `${getRuntimeOrigin()}/api/public-brand-legal/sites/${encodeURIComponent(normalizedSlug)}`;
 
   try {
     const response = await fetch(url, {
@@ -82,6 +79,11 @@ export function runtimeLegalPages(contract) {
   return contract?.runtime?.legal?.pages || {};
 }
 
+export function runtimeLegalValues(contract) {
+  const values = contract?.runtime?.legal?.values;
+  return values && typeof values === "object" && !Array.isArray(values) ? values : {};
+}
+
 export function runtimeMetadata(contract) {
   return contract?.runtime?.metadata || {};
 }
@@ -102,11 +104,19 @@ export function mergePublicMetadata(baseMetadata, contract) {
 export function resolveLegalPageHtml(pageSlug, contract) {
   const normalized = String(pageSlug || "").trim().toLowerCase();
   const pages = runtimeLegalPages(contract);
-  if (normalized === "mentions-legales") return pages.legalNotice || null;
-  if (normalized === "confidentialite") return pages.privacyPolicy || null;
-  if (normalized === "cookies" || normalized === "politique-de-cookies") return pages.cookiePolicy || null;
-  if (normalized === "cgv" || normalized === "conditions-generales") return pages.terms || null;
-  return null;
+  let html = null;
+
+  if (normalized === "mentions-legales") html = pages.legalNotice || null;
+  else if (normalized === "confidentialite") html = pages.privacyPolicy || null;
+  else if (normalized === "cookies" || normalized === "politique-de-cookies") html = pages.cookiePolicy || null;
+  else if (normalized === "cgv" || normalized === "conditions-generales") html = pages.terms || null;
+
+  if (!html) return null;
+
+  return {
+    html,
+    legalProfile: runtimeLegalValues(contract),
+  };
 }
 
 export { getTenantSlug, getRuntimeOrigin };
