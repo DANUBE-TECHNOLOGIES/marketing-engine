@@ -83,6 +83,47 @@ function buildRewriteImpact(currentAudit, projectedAudit, currentInsight, projec
   };
 }
 
+function buildDifferentiationSummary(audit, localEvidence) {
+  const blockInsights = Array.isArray(audit?.blockInsights) ? audit.blockInsights : [];
+  const priorityBlocks = blockInsights
+    .filter((item) => Number(item.highestSimilarity || 0) >= 0.4)
+    .slice(0, 5)
+    .map((item) => ({
+      blockId: item.blockId || null,
+      blockType: item.blockType || null,
+      blockName: item.blockName || item.blockType || "Bloc",
+      similarity: Number(item.highestSimilarity || 0),
+      score: Number(item.score ?? 100),
+    }));
+  const verifiedEvidenceCount = Array.isArray(localEvidence?.evidence) ? localEvidence.evidence.length : 0;
+  const reasons = [];
+
+  if (audit?.severity === "blocker") reasons.push("NETWORK_SIMILARITY_BLOCKER");
+  else if (audit?.severity === "warning") reasons.push("NETWORK_SIMILARITY_WARNING");
+  if (priorityBlocks.length) reasons.push("PRIORITY_BLOCKS_REMAIN");
+  if (!verifiedEvidenceCount) reasons.push("NO_VERIFIED_LOCAL_EVIDENCE");
+
+  const readyForReview = Boolean(audit?.ready) && audit?.severity === "ok" && priorityBlocks.length === 0;
+  const status = readyForReview
+    ? "ready-for-review"
+    : audit?.severity === "blocker"
+      ? "action-required"
+      : "needs-differentiation";
+
+  return {
+    version: "1.0",
+    status,
+    readyForReview,
+    pageScore: Number(audit?.score ?? 0),
+    highestSimilarity: Number(audit?.highestSimilarity || 0),
+    severity: audit?.severity || "ok",
+    verifiedEvidenceCount,
+    priorityBlockCount: priorityBlocks.length,
+    priorityBlocks,
+    reasons,
+  };
+}
+
 async function loadContext({ prisma, tenantId, agencyId, slug, draftPage }) {
   const repo = new AgencySiteRepository(prisma, tenantId);
   const persistedPage = await repo.findPage(agencyId, slug);
@@ -101,7 +142,12 @@ async function loadContext({ prisma, tenantId, agencyId, slug, draftPage }) {
 
 async function auditDraft(args) {
   const context = await loadContext(args);
-  return { ...context.audit, localEvidence: context.localEvidence, draft: Boolean(args.draftPage) };
+  return {
+    ...context.audit,
+    localEvidence: context.localEvidence,
+    differentiation: buildDifferentiationSummary(context.audit, context.localEvidence),
+    draft: Boolean(args.draftPage),
+  };
 }
 
 async function proposeLocalRewrite(args) {
@@ -121,7 +167,12 @@ async function proposeLocalRewrite(args) {
     insight,
   });
   if (!proposal.eligible) {
-    return { ...proposal, currentAudit: context.audit, localEvidence: context.localEvidence };
+    return {
+      ...proposal,
+      currentAudit: context.audit,
+      localEvidence: context.localEvidence,
+      differentiation: buildDifferentiationSummary(context.audit, context.localEvidence),
+    };
   }
 
   const patchedTarget = {
@@ -141,14 +192,23 @@ async function proposeLocalRewrite(args) {
     currentScore: insight?.score ?? 100,
     projectedScore: projectedInsight?.score ?? 100,
     impact,
+    differentiation: buildDifferentiationSummary(context.audit, context.localEvidence),
     projectedAudit: {
       score: projectedAudit.score,
       ready: projectedAudit.ready,
       severity: projectedAudit.severity,
       highestSimilarity: projectedAudit.highestSimilarity,
       blockInsight: projectedInsight,
+      differentiation: buildDifferentiationSummary(projectedAudit, context.localEvidence),
     },
   };
 }
 
-module.exports = { auditDraft, proposeLocalRewrite, buildDraftTarget, normalizeDraftBlock, buildRewriteImpact };
+module.exports = {
+  auditDraft,
+  proposeLocalRewrite,
+  buildDraftTarget,
+  normalizeDraftBlock,
+  buildRewriteImpact,
+  buildDifferentiationSummary,
+};
