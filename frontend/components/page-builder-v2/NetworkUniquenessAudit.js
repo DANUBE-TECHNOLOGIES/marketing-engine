@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { fetchPageUniqueness, fetchSite } from "../../lib/page-builder-v2/page-builder-api";
+import { fetchDraftUniqueness, proposeLocalRewrite } from "../../lib/page-builder-v2/local-rewrite-api";
 
 function scoreTone(score) {
   if (score >= 70) return { label: "Bon niveau", color: "#166534", background: "#dcfce7", border: "#86efac" };
@@ -52,11 +53,52 @@ function LocalEvidence({ evidence }) {
   );
 }
 
-export default function NetworkUniquenessAudit({ siteId, pageSlug, selectedBlockId = "", refreshKey = "", compact = false }) {
+function RewriteAssistant({ insight, proposal, loading, error, onPropose, onApply }) {
+  if (!insight) return null;
+  return (
+    <div data-local-rewrite-assistant="true" style={{ marginTop: 9, padding: 9, borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff" }}>
+      <div style={{ fontSize: 10.5, fontWeight: 900, color: "#334155" }}>Assistance à la réécriture locale</div>
+      <div style={{ marginTop: 4, fontSize: 10, lineHeight: 1.4, color: "#64748b" }}>La proposition utilise uniquement les preuves locales vérifiées. Rien n’est remplacé sans votre validation.</div>
+      {!proposal ? (
+        <button type="button" disabled={loading} onClick={onPropose} style={{ marginTop: 8, border: "1px solid #94a3b8", borderRadius: 7, background: "#f8fafc", padding: "6px 8px", cursor: loading ? "default" : "pointer", fontSize: 10.5, fontWeight: 900, color: "#334155" }}>
+          {loading ? "Préparation…" : "Proposer une version locale"}
+        </button>
+      ) : proposal.eligible ? (
+        <div style={{ marginTop: 8, display: "grid", gap: 7 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", fontSize: 10, fontWeight: 900 }}>
+            <span style={{ color: "#991b1b" }}>{percent(proposal.currentSimilarity)} avant</span>
+            <span style={{ color: "#166534" }}>→ {percent(proposal.projectedSimilarity)} projeté</span>
+          </div>
+          <div style={{ padding: 8, borderRadius: 7, background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+            <div style={{ fontSize: 9.5, fontWeight: 900, color: "#64748b", textTransform: "uppercase" }}>Proposition · {proposal.field}</div>
+            <div style={{ marginTop: 5, fontSize: 10.5, lineHeight: 1.45, color: "#0f172a" }}>{String(proposal.after || "").replace(/<[^>]*>/g, " ")}</div>
+          </div>
+          {proposal.evidence?.length ? <div style={{ fontSize: 9.5, lineHeight: 1.4, color: "#64748b" }}>Preuves utilisées : {proposal.evidence.map((item) => item.label).join(", ")}.</div> : null}
+          <button type="button" onClick={() => onApply?.(proposal)} style={{ border: "1px solid #166534", borderRadius: 7, background: "#dcfce7", color: "#166534", padding: "7px 9px", cursor: "pointer", fontSize: 10.5, fontWeight: 900 }}>Appliquer volontairement au bloc</button>
+        </div>
+      ) : (
+        <div style={{ marginTop: 7, fontSize: 10.5, color: "#92400e" }}>Aucune proposition sûre n’est disponible pour ce bloc ({proposal.reason}).</div>
+      )}
+      {error ? <div style={{ marginTop: 6, fontSize: 10, color: "#991b1b" }}>{error}</div> : null}
+    </div>
+  );
+}
+
+export default function NetworkUniquenessAudit({ siteId, pageSlug, selectedBlockId = "", refreshKey = "", compact = false, site = null, draftPage = null, onApplyRewrite = null }) {
   const [audit, setAudit] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [expanded, setExpanded] = useState(!compact);
+  const [resolvedSite, setResolvedSite] = useState(site);
+  const [proposal, setProposal] = useState(null);
+  const [rewriteLoading, setRewriteLoading] = useState(false);
+  const [rewriteError, setRewriteError] = useState("");
+  const siteRef = useRef(site);
+  const draftPageRef = useRef(draftPage);
+
+  useEffect(() => { siteRef.current = site; }, [site]);
+  useEffect(() => { draftPageRef.current = draftPage; }, [draftPage]);
+  useEffect(() => { setProposal(null); setRewriteError(""); }, [selectedBlockId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -64,11 +106,13 @@ export default function NetworkUniquenessAudit({ siteId, pageSlug, selectedBlock
       if (!siteId || !pageSlug) { setAudit(null); return; }
       setLoading(true); setError("");
       try {
-        const site = await fetchSite(siteId);
-        const page = site.pages.find((item) => String(item.slug || "") === String(pageSlug || ""));
-        if (!page) throw new Error(`Page /${pageSlug} introuvable dans le mini-site.`);
-        const result = await fetchPageUniqueness(site, page);
-        if (!cancelled) setAudit(result);
+        const currentSite = siteRef.current || await fetchSite(siteId);
+        const persistedPage = currentSite.pages.find((item) => String(item.slug || "") === String(pageSlug || ""));
+        if (!persistedPage) throw new Error(`Page /${pageSlug} introuvable dans le mini-site.`);
+        const currentDraft = draftPageRef.current;
+        const auditPage = currentDraft && String(currentDraft.slug || "") === String(pageSlug || "") ? currentDraft : persistedPage;
+        const result = currentDraft ? await fetchDraftUniqueness(currentSite, auditPage) : await fetchPageUniqueness(currentSite, persistedPage);
+        if (!cancelled) { setResolvedSite(currentSite); setAudit(result); setProposal(null); }
       } catch (loadError) {
         if (!cancelled) { setAudit(null); setError(loadError?.message || "Audit d’unicité indisponible."); }
       } finally { if (!cancelled) setLoading(false); }
@@ -78,6 +122,17 @@ export default function NetworkUniquenessAudit({ siteId, pageSlug, selectedBlock
 
   const flagged = useMemo(() => Array.isArray(audit?.blockInsights) ? audit.blockInsights : [], [audit]);
   const selectedInsight = useMemo(() => flagged.find((block) => String(block.blockId || "") === String(selectedBlockId || "")) || null, [flagged, selectedBlockId]);
+
+  async function requestRewrite() {
+    const currentSite = siteRef.current || resolvedSite;
+    const currentPage = draftPageRef.current;
+    if (!currentSite || !currentPage || !selectedBlockId) return;
+    setRewriteLoading(true); setRewriteError(""); setProposal(null);
+    try { setProposal(await proposeLocalRewrite(currentSite, currentPage, selectedBlockId)); }
+    catch (rewriteFailure) { setRewriteError(rewriteFailure?.message || "Proposition locale indisponible."); }
+    finally { setRewriteLoading(false); }
+  }
+
   if (!siteId || !pageSlug) return null;
   const tone = scoreTone(Number(audit?.score || 0));
 
@@ -90,8 +145,8 @@ export default function NetworkUniquenessAudit({ siteId, pageSlug, selectedBlock
       {error ? <div style={{ marginTop: 9, fontSize: 11, color: "#991b1b" }}>{error}</div> : null}
       {audit ? <>
         <div style={{ marginTop: 8, fontSize: 12, fontWeight: 800, color: tone.color }}>{tone.label}</div>
-        <div style={{ marginTop: 4, fontSize: 11, lineHeight: 1.45, color: "#475569" }}>Similarité inter-agences max. {percent(audit.highestSimilarity)} · {audit.metrics?.blocksFlagged || 0} bloc(s) à différencier</div>
-        {selectedBlockId ? <div style={{ marginTop: 10 }} data-selected-block-uniqueness="true"><div style={{ marginBottom: 6, fontSize: 10.5, fontWeight: 900, color: "#475569", textTransform: "uppercase", letterSpacing: ".04em" }}>Bloc sélectionné</div>{selectedInsight ? <BlockAuditCard block={selectedInsight} focused /> : <div style={{ padding: 8, borderRadius: 8, background: "#f0fdf4", color: "#166534", fontSize: 10.5, lineHeight: 1.4, fontWeight: 700 }}>Aucun signal de duplication inter-agences notable pour ce bloc.</div>}</div> : null}
+        <div style={{ marginTop: 4, fontSize: 11, lineHeight: 1.45, color: "#475569" }}>Similarité inter-agences max. {percent(audit.highestSimilarity)} · {audit.metrics?.blocksFlagged || 0} bloc(s) à différencier{audit.draft ? " · brouillon courant" : ""}</div>
+        {selectedBlockId ? <div style={{ marginTop: 10 }} data-selected-block-uniqueness="true"><div style={{ marginBottom: 6, fontSize: 10.5, fontWeight: 900, color: "#475569", textTransform: "uppercase", letterSpacing: ".04em" }}>Bloc sélectionné</div>{selectedInsight ? <><BlockAuditCard block={selectedInsight} focused /><RewriteAssistant insight={selectedInsight} proposal={proposal} loading={rewriteLoading} error={rewriteError} onPropose={requestRewrite} onApply={onApplyRewrite} /></> : <div style={{ padding: 8, borderRadius: 8, background: "#f0fdf4", color: "#166534", fontSize: 10.5, lineHeight: 1.4, fontWeight: 700 }}>Aucun signal de duplication inter-agences notable pour ce bloc.</div>}</div> : null}
         <LocalEvidence evidence={audit.localEvidence} />
         {!compact && flagged.length ? <><button type="button" onClick={() => setExpanded((value) => !value)} style={{ marginTop: 10, border: "1px solid #cbd5e1", borderRadius: 8, background: "#f8fafc", color: "#334155", padding: "6px 9px", fontSize: 11, fontWeight: 800, cursor: "pointer" }}>{expanded ? "Masquer les autres blocs" : `Afficher les ${flagged.length} bloc(s)`}</button>{expanded ? <div style={{ marginTop: 10, display: "grid", gap: 8 }}>{flagged.filter((block) => block.blockId !== selectedBlockId).slice(0, 8).map((block) => <BlockAuditCard key={block.blockId || `${block.blockType}-${block.displayOrder}`} block={block} />)}</div> : null}</> : null}
         {audit.internalRepetition?.length ? <details style={{ marginTop: 10, fontSize: 10.5, color: "#64748b" }}><summary style={{ cursor: "pointer", fontWeight: 700 }}>{audit.internalRepetition.length} répétition(s) interne(s), hors score réseau</summary><div style={{ marginTop: 5, lineHeight: 1.45 }}>Elles appartiennent au même mini-site et ne sont pas traitées comme une duplication entre agences.</div></details> : null}
