@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import styles from "./WebsiteBuilderLauncher.module.css";
 
 function statusLabel(site) {
   if (site?.status === "published") return "Publié";
@@ -68,9 +69,9 @@ export default function WebsiteBuilderLauncher() {
   }, [query, sites]);
 
   return (
-    <main className="wb-launcher">
-      <section className="wb-launcher-hero">
-        <p className="wb-launcher-kicker">Website Builder</p>
+    <main className={styles.root}>
+      <section className={styles.hero}>
+        <p className={styles.kicker}>Website Builder</p>
         <h1>Designer V2</h1>
         <p>
           Sélectionnez une agence pour ouvrir son mini-site dans le Designer V2,
@@ -78,8 +79,8 @@ export default function WebsiteBuilderLauncher() {
         </p>
       </section>
 
-      <section className="wb-launcher-panel" aria-label="Mini-sites disponibles">
-        <div className="wb-launcher-toolbar">
+      <section className={styles.panel} aria-label="Mini-sites disponibles">
+        <div className={styles.toolbar}>
           <div>
             <strong>{sites.length} mini-site{sites.length > 1 ? "s" : ""}</strong>
             <span> — choisissez l’agence à modifier</span>
@@ -93,22 +94,22 @@ export default function WebsiteBuilderLauncher() {
           />
         </div>
 
-        {loading ? <p className="wb-launcher-state">Chargement des mini-sites…</p> : null}
-        {error ? <p className="wb-launcher-state wb-launcher-error">{error}</p> : null}
+        {loading ? <p className={styles.state}>Chargement des mini-sites…</p> : null}
+        {error ? <p className={`${styles.state} ${styles.error}`}>{error}</p> : null}
 
         {!loading && !error ? (
-          <div className="wb-launcher-grid">
+          <div className={styles.grid}>
             {filteredSites.map((site) => (
-              <article className="wb-launcher-card" key={site.id}>
-                <div className="wb-launcher-card-copy">
-                  <p className="wb-launcher-city">{site?.agency?.city || "Agence"}</p>
+              <article className={styles.card} key={site.id}>
+                <div>
+                  <p className={styles.city}>{site?.agency?.city || "Agence"}</p>
                   <h2>{site.name}</h2>
-                  <div className="wb-launcher-badges">
+                  <div className={styles.badges}>
                     <span>{statusLabel(site)}</span>
                     <span>{homeState(site)}</span>
                   </div>
                 </div>
-                <Link className="wb-launcher-open" href={`/website-builder/editor/${encodeURIComponent(site.id)}`}>
+                <Link className={styles.open} href={`/website-builder/editor/${encodeURIComponent(site.id)}`}>
                   Ouvrir le Designer V2
                 </Link>
               </article>
@@ -117,7 +118,7 @@ export default function WebsiteBuilderLauncher() {
         ) : null}
 
         {!loading && !error && filteredSites.length === 0 ? (
-          <p className="wb-launcher-state">Aucun mini-site ne correspond à cette recherche.</p>
+          <p className={styles.state}>Aucun mini-site ne correspond à cette recherche.</p>
         ) : null}
       </section>
     </main>
