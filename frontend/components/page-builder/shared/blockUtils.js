@@ -11,6 +11,7 @@ export function getSectionType(section) {
 
   return String(
     content.__builderType ||
+      section?.blockType ||
       section?.sectionType ||
       section?.type ||
       section?.key ||
