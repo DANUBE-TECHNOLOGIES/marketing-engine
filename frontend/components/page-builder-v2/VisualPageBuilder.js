@@ -10,6 +10,7 @@ import {
 
 import styles from "./VisualPageBuilder.module.css";
 import PreviewCanvas from "./PreviewCanvas";
+import NetworkUniquenessAudit from "./NetworkUniquenessAudit";
 
 import {
   BLOCK_CATALOG,
@@ -1685,6 +1686,16 @@ export default function VisualPageBuilder({ siteId }) {
               }))
             }
           />
+
+          {activePage ? (
+            <NetworkUniquenessAudit
+              siteId={site.id}
+              pageSlug={activePage.slug}
+              selectedBlockId={selectedBlockId || ""}
+              refreshKey={activePage.updatedAt || ""}
+              compact
+            />
+          ) : null}
         </aside>
       </div>
 
