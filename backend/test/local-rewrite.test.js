@@ -12,6 +12,7 @@ const {
   buildRewriteImpact,
   buildDifferentiationSummary,
 } = require("../src/modules/agency-site/local-rewrite-service");
+const { pageSlugCandidates } = require("../src/modules/agency-site/page-slug");
 
 const evidence = {
   agencyName: "Mondescale Gien",
@@ -208,4 +209,10 @@ test("une page sans preuve locale vérifiée ne peut pas être considérée prê
 
   assert.equal(summary.readyForReview, false);
   assert.ok(summary.reasons.includes("NO_VERIFIED_LOCAL_EVIDENCE"));
+});
+
+test("Website Builder résout home vers le slug moderne puis le slug racine historique", () => {
+  assert.deepEqual(pageSlugCandidates("home"), ["home", ""]);
+  assert.deepEqual(pageSlugCandidates(""), ["home", ""]);
+  assert.deepEqual(pageSlugCandidates("services"), ["services"]);
 });
