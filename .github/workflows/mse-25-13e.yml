@@ -52,4 +52,4 @@ jobs:
         run: npm ci
 
       - name: Lint MSE-25.13 frontend files
-        run: npx eslint app/api/website-builder/agencies/'[agencyId]'/pages/'[pageSlug]'/uniqueness/route.js components/page-builder-v2/NetworkUniquenessAudit.js lib/page-builder-v2/local-rewrite-api.js components/public-site/renderers/registry.js
+        run: npx eslint app/api/website-builder/agencies/'[agencyId]'/pages/'[pageSlug]'/uniqueness/route.js components/page-builder-v2/NetworkUniquenessAudit.js lib/page-builder-v2/local-rewrite-api.js components/public-site/renderers/registry.js components/website-builder/WebsiteBuilderLauncher.js app/website-builder/page.js
