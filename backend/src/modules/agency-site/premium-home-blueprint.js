@@ -21,8 +21,16 @@ function contentOf(item) {
   return null;
 }
 
+// displayOrder is historically non-unique (Bois-Colombes itself has tied orders).
+// Never let database return/insertion order decide whether two visual blueprints match.
 function ordered(items = []) {
-  return [...(Array.isArray(items) ? items : [])].sort((a, b) => Number(a.displayOrder || 0) - Number(b.displayOrder || 0));
+  return [...(Array.isArray(items) ? items : [])].sort((a, b) => {
+    const orderDiff = Number(a?.displayOrder || 0) - Number(b?.displayOrder || 0);
+    if (orderDiff) return orderDiff;
+    const familyDiff = contentFamily(blockTypeOf(a)).localeCompare(contentFamily(blockTypeOf(b)));
+    if (familyDiff) return familyDiff;
+    return blockTypeOf(a).localeCompare(blockTypeOf(b));
+  });
 }
 
 function queueByType(items = []) {
@@ -59,12 +67,10 @@ function stableJson(value) {
   return JSON.stringify(value);
 }
 
-// A premium blueprint describes presentation only. Local workflow state (status,
-// version, SEO metadata and content) must not make an otherwise identical page
-// look "non premium" after migration.
 function visualSignature(items = []) {
   return ordered(items).map((item) => ({
     family: contentFamily(blockTypeOf(item)),
+    displayOrder: Number(item?.displayOrder || 0),
     settings: cloneJson(item?.settings, {}),
     visibleDesktop: item?.visibleDesktop !== false,
     visibleMobile: item?.visibleMobile !== false,
@@ -114,12 +120,8 @@ function buildPremiumHomePlan({ referenceBlocks = [], targetBlocks = [], targetS
   if (!reference.length) return { ready: false, reason: "REFERENCE_HAS_NO_V2_BLOCKS", missingTypes: [], blocks: [] };
 
   const classification = classifyPremiumHome({ referenceBlocks, targetBlocks });
-  if (classification.status === "PREMIUM_MATCH") {
-    return { ready: false, reason: "PREMIUM_MATCH", missingTypes: [], blocks: [], classification };
-  }
-  if (classification.status === "CUSTOM_V2") {
-    return { ready: false, reason: "CUSTOM_V2", missingTypes: [], blocks: [], classification };
-  }
+  if (classification.status === "PREMIUM_MATCH") return { ready: false, reason: "PREMIUM_MATCH", missingTypes: [], blocks: [], classification };
+  if (classification.status === "CUSTOM_V2") return { ready: false, reason: "CUSTOM_V2", missingTypes: [], blocks: [], classification };
 
   const targetByType = queueByType(targetBlocks);
   const legacyByType = queueByType(targetSections);
@@ -142,7 +144,7 @@ function buildPremiumHomePlan({ referenceBlocks = [], targetBlocks = [], targetS
       content: cloneJson(localContent),
       settings: cloneJson(referenceBlock.settings, {}),
       seo: cloneJson(localSource?.seo, {}),
-      displayOrder: Number(referenceBlock.displayOrder || planned.length),
+      displayOrder: Number(referenceBlock.displayOrder || 0),
       status: localSource?.status || "draft",
       visibleDesktop: referenceBlock.visibleDesktop !== false,
       visibleMobile: referenceBlock.visibleMobile !== false,
@@ -150,10 +152,7 @@ function buildPremiumHomePlan({ referenceBlocks = [], targetBlocks = [], targetS
     });
   }
 
-  if (missingTypes.length) {
-    return { ready: false, reason: "LOCAL_CONTENT_MISSING", missingTypes: [...new Set(missingTypes)], blocks: planned, classification };
-  }
-
+  if (missingTypes.length) return { ready: false, reason: "LOCAL_CONTENT_MISSING", missingTypes: [...new Set(missingTypes)], blocks: planned, classification };
   return { ready: true, reason: "READY", missingTypes: [], blocks: planned, classification };
 }
 
