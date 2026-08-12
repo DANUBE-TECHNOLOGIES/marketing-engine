@@ -135,15 +135,9 @@ export default function NetworkUniquenessAudit({ siteId, pageSlug, selectedBlock
   const [resolvedPage, setResolvedPage] = useState(null);
   const [proposal, setProposal] = useState(null);
   const [rewriteLoading, setRewriteLoading] = useState(false);
-  const [rewriteError, setRewriteError] = useState("");
+  const [rewriteError, setRewriteError] = useState(null);
   const [applied, setApplied] = useState(false);
   const [selfRefreshKey, setSelfRefreshKey] = useState(0);
-
-  useEffect(() => {
-    setProposal(null);
-    setRewriteError("");
-    setApplied(false);
-  }, [selectedBlockId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -173,16 +167,20 @@ export default function NetworkUniquenessAudit({ siteId, pageSlug, selectedBlock
 
   const flagged = useMemo(() => Array.isArray(audit?.blockInsights) ? audit.blockInsights : [], [audit]);
   const selectedInsight = useMemo(() => flagged.find((block) => String(block.blockId || "") === String(selectedBlockId || "")) || null, [flagged, selectedBlockId]);
+  const visibleProposal = proposal && String(proposal.blockId || "") === String(selectedBlockId || "") ? proposal : null;
+  const visibleRewriteError = rewriteError && String(rewriteError.blockId || "") === String(selectedBlockId || "") ? rewriteError.message : "";
+  const visibleApplied = Boolean(visibleProposal && applied);
 
   async function requestRewrite() {
     if (!resolvedSite || !resolvedPage || !selectedBlockId) return;
-    setRewriteLoading(true); setRewriteError(""); setProposal(null); setApplied(false);
+    const requestedBlockId = String(selectedBlockId);
+    setRewriteLoading(true); setRewriteError(null); setProposal(null); setApplied(false);
     try {
       await sleep(850);
       const currentPage = readLocalDraft(resolvedSite.id, resolvedPage.id)?.page || resolvedPage;
-      setProposal(await proposeLocalRewrite(resolvedSite, currentPage, selectedBlockId));
+      setProposal(await proposeLocalRewrite(resolvedSite, currentPage, requestedBlockId));
     } catch (rewriteFailure) {
-      setRewriteError(rewriteFailure?.message || "Proposition locale indisponible.");
+      setRewriteError({ blockId: requestedBlockId, message: rewriteFailure?.message || "Proposition locale indisponible." });
     } finally {
       setRewriteLoading(false);
     }
@@ -191,11 +189,11 @@ export default function NetworkUniquenessAudit({ siteId, pageSlug, selectedBlock
   function applyRewrite(nextProposal) {
     const changed = applyThroughExistingEditor(nextProposal);
     if (!changed) {
-      setRewriteError("Le champ éditorial correspondant n’a pas pu être retrouvé dans le Designer. Aucune modification n’a été appliquée.");
+      setRewriteError({ blockId: String(nextProposal?.blockId || selectedBlockId || ""), message: "Le champ éditorial correspondant n’a pas pu être retrouvé dans le Designer. Aucune modification n’a été appliquée." });
       return;
     }
     setApplied(true);
-    setRewriteError("");
+    setRewriteError(null);
     setTimeout(() => setSelfRefreshKey((value) => value + 1), 950);
   }
 
@@ -212,7 +210,7 @@ export default function NetworkUniquenessAudit({ siteId, pageSlug, selectedBlock
       {audit ? <>
         <div style={{ marginTop: 8, fontSize: 12, fontWeight: 800, color: tone.color }}>{tone.label}</div>
         <div style={{ marginTop: 4, fontSize: 11, lineHeight: 1.45, color: "#475569" }}>Similarité inter-agences max. {percent(audit.highestSimilarity)} · {audit.metrics?.blocksFlagged || 0} bloc(s) à différencier{audit.draft ? " · brouillon courant" : ""}</div>
-        {selectedBlockId ? <div style={{ marginTop: 10 }} data-selected-block-uniqueness="true"><div style={{ marginBottom: 6, fontSize: 10.5, fontWeight: 900, color: "#475569", textTransform: "uppercase", letterSpacing: ".04em" }}>Bloc sélectionné</div>{selectedInsight ? <><BlockAuditCard block={selectedInsight} focused /><RewriteAssistant insight={selectedInsight} proposal={proposal} loading={rewriteLoading} error={rewriteError} applied={applied} onPropose={requestRewrite} onApply={applyRewrite} /></> : <div style={{ padding: 8, borderRadius: 8, background: "#f0fdf4", color: "#166534", fontSize: 10.5, lineHeight: 1.4, fontWeight: 700 }}>Aucun signal de duplication inter-agences notable pour ce bloc.</div>}</div> : null}
+        {selectedBlockId ? <div style={{ marginTop: 10 }} data-selected-block-uniqueness="true"><div style={{ marginBottom: 6, fontSize: 10.5, fontWeight: 900, color: "#475569", textTransform: "uppercase", letterSpacing: ".04em" }}>Bloc sélectionné</div>{selectedInsight ? <><BlockAuditCard block={selectedInsight} focused /><RewriteAssistant insight={selectedInsight} proposal={visibleProposal} loading={rewriteLoading} error={visibleRewriteError} applied={visibleApplied} onPropose={requestRewrite} onApply={applyRewrite} /></> : <div style={{ padding: 8, borderRadius: 8, background: "#f0fdf4", color: "#166534", fontSize: 10.5, lineHeight: 1.4, fontWeight: 700 }}>Aucun signal de duplication inter-agences notable pour ce bloc.</div>}</div> : null}
         <LocalEvidence evidence={audit.localEvidence} />
         {!compact && flagged.length ? <><button type="button" onClick={() => setExpanded((value) => !value)} style={{ marginTop: 10, border: "1px solid #cbd5e1", borderRadius: 8, background: "#f8fafc", color: "#334155", padding: "6px 9px", fontSize: 11, fontWeight: 800, cursor: "pointer" }}>{expanded ? "Masquer les autres blocs" : `Afficher les ${flagged.length} bloc(s)`}</button>{expanded ? <div style={{ marginTop: 10, display: "grid", gap: 8 }}>{flagged.filter((block) => block.blockId !== selectedBlockId).slice(0, 8).map((block) => <BlockAuditCard key={block.blockId || `${block.blockType}-${block.displayOrder}`} block={block} />)}</div> : null}</> : null}
         {audit.internalRepetition?.length ? <details style={{ marginTop: 10, fontSize: 10.5, color: "#64748b" }}><summary style={{ cursor: "pointer", fontWeight: 700 }}>{audit.internalRepetition.length} répétition(s) interne(s), hors score réseau</summary><div style={{ marginTop: 5, lineHeight: 1.45 }}>Elles appartiennent au même mini-site et ne sont pas traitées comme une duplication entre agences.</div></details> : null}
