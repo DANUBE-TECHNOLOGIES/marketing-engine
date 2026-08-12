@@ -9,6 +9,7 @@ const {
 const {
   buildDraftTarget,
   normalizeDraftBlock,
+  buildRewriteImpact,
 } = require("../src/modules/agency-site/local-rewrite-service");
 
 const evidence = {
@@ -117,4 +118,46 @@ test("le brouillon Designer est normalisé dans le format attendu par l’audit"
   assert.equal(target.blocks[0].blockType, "rich_text");
   assert.equal(target.blocks[0].id, "b-1");
   assert.deepEqual(target.sections, []);
+});
+
+test("un gain bloc mesurable sans régression page est autorisé", () => {
+  const impact = buildRewriteImpact(
+    { highestSimilarity: 0.62, score: 38, ready: false, severity: "warning" },
+    { highestSimilarity: 0.51, score: 49, ready: true, severity: "ok" },
+    { highestSimilarity: 0.48, score: 52 },
+    { highestSimilarity: 0.21, score: 79 }
+  );
+
+  assert.equal(impact.safeToApply, true);
+  assert.equal(impact.reason, "MEASURABLE_UNIQUENESS_GAIN");
+  assert.equal(impact.block.similarityGain, 0.27);
+  assert.equal(impact.page.similarityGain, 0.11);
+  assert.equal(impact.page.readyBefore, false);
+  assert.equal(impact.page.readyAfter, true);
+});
+
+test("une proposition sans gain bloc est bloquée", () => {
+  const impact = buildRewriteImpact(
+    { highestSimilarity: 0.48, score: 52, ready: true, severity: "ok" },
+    { highestSimilarity: 0.48, score: 52, ready: true, severity: "ok" },
+    { highestSimilarity: 0.31, score: 69 },
+    { highestSimilarity: 0.31, score: 69 }
+  );
+
+  assert.equal(impact.safeToApply, false);
+  assert.equal(impact.reason, "NO_MEASURABLE_BLOCK_GAIN");
+});
+
+test("une amélioration locale qui dégrade la page est bloquée", () => {
+  const impact = buildRewriteImpact(
+    { highestSimilarity: 0.40, score: 60, ready: true, severity: "ok" },
+    { highestSimilarity: 0.57, score: 43, ready: false, severity: "warning" },
+    { highestSimilarity: 0.52, score: 48 },
+    { highestSimilarity: 0.20, score: 80 }
+  );
+
+  assert.equal(impact.blockImproved, true);
+  assert.equal(impact.pageDidNotRegress, false);
+  assert.equal(impact.safeToApply, false);
+  assert.equal(impact.reason, "PAGE_UNIQUENESS_REGRESSION");
 });
