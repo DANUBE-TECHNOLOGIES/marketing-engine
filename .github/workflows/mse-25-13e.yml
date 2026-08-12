@@ -51,5 +51,5 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
-      - name: Lint MSE-25.13E frontend files
-        run: npx eslint app/api/website-builder/agencies/'[agencyId]'/pages/'[pageSlug]'/uniqueness/route.js components/page-builder-v2/NetworkUniquenessAudit.js lib/page-builder-v2/local-rewrite-api.js
+      - name: Lint MSE-25.13 frontend files
+        run: npx eslint app/api/website-builder/agencies/'[agencyId]'/pages/'[pageSlug]'/uniqueness/route.js components/page-builder-v2/NetworkUniquenessAudit.js lib/page-builder-v2/local-rewrite-api.js components/public-site/renderers/registry.js
