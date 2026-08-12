@@ -1,12 +1,12 @@
-import WebsiteBuilderClient from "../../components/website-builder/WebsiteBuilderClient";
+import WebsiteBuilderLauncher from "../../components/website-builder/WebsiteBuilderLauncher";
 import "./website-builder.css";
 
 export const metadata = {
-  title: "Website Builder | Mondescale Local Engine",
+  title: "Website Builder V2 | Mondescale Local Engine",
   description:
-    "Constructeur de pages pour les mini-sites des agences Mondescale",
+    "Designer V2 des mini-sites des agences Mondescale",
 };
 
 export default function WebsiteBuilderPage() {
-  return <WebsiteBuilderClient />;
+  return <WebsiteBuilderLauncher />;
 }
