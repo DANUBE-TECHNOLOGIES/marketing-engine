@@ -1,34 +1,41 @@
-/* MSE-25.9 — Give the public agency brand a little more visual presence without overpowering header actions. */
+/* MSE-25.12 — Slightly stronger agency-brand presence while preserving header balance. */
 .public-site-header-logo-wrap {
-  width: clamp(210px, 23vw, 350px);
-  height: 88px;
+  width: clamp(245px, 25vw, 390px);
+  height: 100px;
 }
 
 .public-site-header__brand-logo,
 .public-site-header-logo-wrap .public-brand-logo {
-  max-height: 86px !important;
+  display: block;
+  width: auto !important;
+  max-width: 100% !important;
+  height: auto !important;
+  max-height: 96px !important;
+  object-fit: contain;
+  object-position: left center;
 }
 
 @media (max-width: 1050px) {
   .public-site-header-logo-wrap {
-    width: clamp(185px, 27vw, 270px);
-    height: 74px;
+    width: clamp(205px, 29vw, 300px);
+    height: 82px;
   }
 
   .public-site-header__brand-logo,
   .public-site-header-logo-wrap .public-brand-logo {
-    max-height: 72px !important;
+    max-height: 80px !important;
   }
 }
 
 @media (max-width: 760px) {
   .public-site-header-logo-wrap {
-    width: min(52vw, 210px);
-    height: 60px;
+    width: min(62vw, 230px);
+    height: 66px;
   }
 
   .public-site-header__brand-logo,
   .public-site-header-logo-wrap .public-brand-logo {
-    max-height: 58px !important;
+    max-height: 64px !important;
+    object-position: center;
   }
 }
