@@ -97,6 +97,8 @@ function LocalEvidence({ evidence }) {
 
 function RewriteAssistant({ insight, proposal, loading, error, applied, onPropose, onApply }) {
   if (!insight) return null;
+  const impact = proposal?.impact || null;
+  const safeToApply = impact ? impact.safeToApply === true : false;
   return (
     <div data-local-rewrite-assistant="true" style={{ marginTop: 9, padding: 9, borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff" }}>
       <div style={{ fontSize: 10.5, fontWeight: 900, color: "#334155" }}>Assistance à la réécriture locale</div>
@@ -109,14 +111,20 @@ function RewriteAssistant({ insight, proposal, loading, error, applied, onPropos
         <div style={{ marginTop: 8, display: "grid", gap: 7 }}>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", fontSize: 10, fontWeight: 900 }}>
             <span style={{ color: "#991b1b" }}>{percent(proposal.currentSimilarity)} avant</span>
-            <span style={{ color: "#166534" }}>→ {percent(proposal.projectedSimilarity)} projeté</span>
+            <span style={{ color: safeToApply ? "#166534" : "#92400e" }}>→ {percent(proposal.projectedSimilarity)} projeté</span>
           </div>
+          {impact ? (
+            <div style={{ padding: 7, borderRadius: 7, background: safeToApply ? "#f0fdf4" : "#fff7ed", border: `1px solid ${safeToApply ? "#bbf7d0" : "#fed7aa"}`, fontSize: 9.8, lineHeight: 1.45, color: safeToApply ? "#166534" : "#9a3412" }}>
+              <strong>{safeToApply ? "Gain mesuré" : "Application bloquée"}</strong> · bloc {impact.block?.scoreBefore ?? "—"} → {impact.block?.scoreAfter ?? "—"}/100 · page {impact.page?.scoreBefore ?? "—"} → {impact.page?.scoreAfter ?? "—"}/100.
+              {!safeToApply ? <span> La proposition n’améliore pas suffisamment l’unicité sans dégrader la page.</span> : null}
+            </div>
+          ) : null}
           <div style={{ padding: 8, borderRadius: 7, background: "#f8fafc", border: "1px solid #e2e8f0" }}>
             <div style={{ fontSize: 9.5, fontWeight: 900, color: "#64748b", textTransform: "uppercase" }}>Proposition · {fieldLabel(proposal.field)}</div>
             <div style={{ marginTop: 5, fontSize: 10.5, lineHeight: 1.45, color: "#0f172a" }}>{String(proposal.after || "").replace(/<[^>]*>/g, " ")}</div>
           </div>
           {proposal.evidence?.length ? <div style={{ fontSize: 9.5, lineHeight: 1.4, color: "#64748b" }}>Preuves utilisées : {proposal.evidence.map((item) => item.label).join(", ")}.</div> : null}
-          <button type="button" disabled={applied} onClick={() => onApply(proposal)} style={{ border: "1px solid #166534", borderRadius: 7, background: applied ? "#f0fdf4" : "#dcfce7", color: "#166534", padding: "7px 9px", cursor: applied ? "default" : "pointer", fontSize: 10.5, fontWeight: 900 }}>{applied ? "Appliqué au brouillon · audit relancé" : "Appliquer volontairement au bloc"}</button>
+          <button type="button" disabled={applied || !safeToApply} onClick={() => onApply(proposal)} style={{ border: `1px solid ${safeToApply ? "#166534" : "#cbd5e1"}`, borderRadius: 7, background: applied ? "#f0fdf4" : safeToApply ? "#dcfce7" : "#f8fafc", color: safeToApply ? "#166534" : "#94a3b8", padding: "7px 9px", cursor: applied || !safeToApply ? "default" : "pointer", fontSize: 10.5, fontWeight: 900 }}>{applied ? "Appliqué au brouillon · audit relancé" : safeToApply ? "Appliquer volontairement au bloc" : "Gain insuffisant · application désactivée"}</button>
         </div>
       ) : (
         <div style={{ marginTop: 7, fontSize: 10.5, color: "#92400e" }}>Aucune proposition sûre n’est disponible pour ce bloc ({proposal.reason}).</div>
@@ -187,6 +195,10 @@ export default function NetworkUniquenessAudit({ siteId, pageSlug, selectedBlock
   }
 
   function applyRewrite(nextProposal) {
+    if (nextProposal?.impact?.safeToApply !== true) {
+      setRewriteError({ blockId: String(nextProposal?.blockId || selectedBlockId || ""), message: "Application refusée : aucun gain d’unicité mesurable et sûr n’a été démontré." });
+      return;
+    }
     const changed = applyThroughExistingEditor(nextProposal);
     if (!changed) {
       setRewriteError({ blockId: String(nextProposal?.blockId || selectedBlockId || ""), message: "Le champ éditorial correspondant n’a pas pu être retrouvé dans le Designer. Aucune modification n’a été appliquée." });
