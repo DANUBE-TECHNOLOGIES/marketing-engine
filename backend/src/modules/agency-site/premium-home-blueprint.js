@@ -9,6 +9,12 @@ function blockTypeOf(item) {
   return String(item?.blockType || item?.sectionType || item?.jsonContent?.__builderType || "").replace(/--\d+$/, "").trim().toLowerCase();
 }
 
+function contentFamily(type) {
+  const normalized = String(type || "").trim().toLowerCase();
+  if (normalized === "cta" || normalized === "contact-cta") return "contact-cta";
+  return normalized;
+}
+
 function contentOf(item) {
   if (item?.content && typeof item.content === "object") return item.content;
   if (item?.jsonContent && typeof item.jsonContent === "object") return item.jsonContent;
@@ -22,7 +28,7 @@ function ordered(items = []) {
 function queueByType(items = []) {
   const queues = new Map();
   for (const item of ordered(items)) {
-    const type = blockTypeOf(item);
+    const type = contentFamily(blockTypeOf(item));
     if (!type) continue;
     if (!queues.has(type)) queues.set(type, []);
     queues.get(type).push(item);
@@ -31,7 +37,7 @@ function queueByType(items = []) {
 }
 
 function shift(queueMap, type) {
-  const queue = queueMap.get(type) || [];
+  const queue = queueMap.get(contentFamily(type)) || [];
   return queue.shift() || null;
 }
 
@@ -77,8 +83,8 @@ function classifyPremiumHome({ referenceBlocks = [], targetBlocks = [] } = {}) {
 
   const referenceCounts = new Map();
   const targetCounts = new Map();
-  for (const type of referenceTypes) referenceCounts.set(type, (referenceCounts.get(type) || 0) + 1);
-  for (const type of targetTypes) targetCounts.set(type, (targetCounts.get(type) || 0) + 1);
+  for (const type of referenceTypes.map(contentFamily)) referenceCounts.set(type, (referenceCounts.get(type) || 0) + 1);
+  for (const type of targetTypes.map(contentFamily)) targetCounts.set(type, (targetCounts.get(type) || 0) + 1);
   const extraTypes = [];
   for (const [type, count] of targetCounts) {
     const extra = count - (referenceCounts.get(type) || 0);
@@ -142,4 +148,4 @@ function buildPremiumHomePlan({ referenceBlocks = [], targetBlocks = [], targetS
   return { ready: true, reason: "READY", missingTypes: [], blocks: planned, classification };
 }
 
-module.exports = { blockTypeOf, typeSignature, classifyPremiumHome, isLegacyHomeCandidate, buildPremiumHomePlan };
+module.exports = { blockTypeOf, contentFamily, typeSignature, classifyPremiumHome, isLegacyHomeCandidate, buildPremiumHomePlan };
