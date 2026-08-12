@@ -1,0 +1,40 @@
+const BACKEND_URL =
+  process.env.BACKEND_INTERNAL_URL ||
+  "http://backend:4000";
+
+const TENANT_SLUG =
+  process.env.NEXT_PUBLIC_TENANT_SLUG ||
+  "mondescale";
+
+export async function GET(_request, context) {
+  const { agencyId, pageSlug } = await context.params;
+  const normalizedSlug =
+    pageSlug === "home"
+      ? "home"
+      : encodeURIComponent(pageSlug);
+
+  const response = await fetch(
+    `${BACKEND_URL}/agencies/${encodeURIComponent(
+      agencyId
+    )}/site/pages/${normalizedSlug}/uniqueness`,
+    {
+      method: "GET",
+      headers: {
+        accept: "application/json",
+        "x-tenant-slug": TENANT_SLUG,
+      },
+      cache: "no-store",
+    }
+  );
+
+  const body = await response.arrayBuffer();
+
+  return new Response(body, {
+    status: response.status,
+    headers: {
+      "content-type":
+        response.headers.get("content-type") ||
+        "application/json",
+    },
+  });
+}
