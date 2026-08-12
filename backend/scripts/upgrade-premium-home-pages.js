@@ -1,10 +1,12 @@
 "use strict";
 
 const { PrismaClient } = require("@prisma/client");
+const SiteBuilder = require("../src/modules/agency-site/builders/site-builder");
 const ContentBuilder = require("../src/modules/agency-site/builders/content-builder");
 const { classifyPremiumHome, buildPremiumHomePlan } = require("../src/modules/agency-site/premium-home-blueprint");
 
 const prisma = new PrismaClient();
+const siteBuilder = new SiteBuilder();
 const builder = new ContentBuilder();
 
 function argValue(name, fallback) {
@@ -20,6 +22,13 @@ const referenceNeedle = argValue("reference", "Bois-Colombes");
 function homeOf(site) {
   const pages = Array.isArray(site?.pages) ? site.pages : [];
   return pages.find((page) => page.slug === "home") || pages.find((page) => page.slug === "") || null;
+}
+
+function homeDefinitionFor(site) {
+  const definition = siteBuilder.build(site.agency, site.slug);
+  return (definition.pages || []).find((page) => String(page.key || "").toLowerCase() === "home")
+    || (definition.pages || []).find((page) => String(page.slug || "") === "")
+    || null;
 }
 
 async function nextVersion(pageId, tx = prisma) {
@@ -60,6 +69,26 @@ function generatedSectionsFor(page, site) {
   }));
 }
 
+function pageCreateData(siteId, page) {
+  return {
+    siteId,
+    parentId: null,
+    title: page.title,
+    slug: page.slug,
+    path: page.path,
+    pageType: page.pageType,
+    menuTitle: page.menuTitle,
+    menuLocation: page.menu,
+    displayOrder: page.order,
+    seoTitle: page.seoTitle,
+    metaDescription: page.metaDescription,
+    h1: page.h1,
+    schemaType: page.schemaType,
+    status: "draft",
+    published: false,
+  };
+}
+
 async function main() {
   const tenant = await prisma.tenant.findUnique({ where: { slug: tenantSlug }, select: { id: true, slug: true } });
   if (!tenant) throw new Error(`Tenant ${tenantSlug} introuvable`);
@@ -91,9 +120,30 @@ async function main() {
       report.push({ agency: site.name, status: "REFERENCE", blocks: referenceHome.blocks.length, target: referenceHome.blocks.length });
       continue;
     }
-    const page = homeOf(site);
+
+    let page = homeOf(site);
     if (!page) {
-      report.push({ agency: site.name, status: "NO_HOME", blocks: 0, target: referenceHome.blocks.length });
+      const homeDefinition = homeDefinitionFor(site);
+      if (!homeDefinition) {
+        report.push({ agency: site.name, status: "BLOCKED_HOME_DEFINITION_MISSING", blocks: 0, target: referenceHome.blocks.length });
+        continue;
+      }
+      const generatedSections = generatedSectionsFor(homeDefinition, site);
+      const plan = buildPremiumHomePlan({ referenceBlocks: referenceHome.blocks, targetBlocks: [], targetSections: [], generatedSections });
+      if (!plan.ready) {
+        report.push({ agency: site.name, status: `BLOCKED_${plan.reason}`, blocks: 0, target: referenceHome.blocks.length, details: plan.missingTypes.join(",") });
+        continue;
+      }
+      if (apply) {
+        await prisma.$transaction(async (tx) => {
+          const created = await tx.agencySitePage.create({ data: pageCreateData(site.id, homeDefinition) });
+          for (const section of generatedSections) {
+            await tx.agencySiteSection.create({ data: { pageId: created.id, sectionType: section.sectionType, jsonContent: section.jsonContent, displayOrder: section.displayOrder, status: section.status } });
+          }
+          for (const block of plan.blocks) await tx.pageBlock.create({ data: { pageId: created.id, ...block } });
+        });
+      }
+      report.push({ agency: site.name, status: apply ? "CREATED_PREMIUM_HOME" : "READY_TO_CREATE_PREMIUM_HOME", blocks: 0, target: plan.blocks.length, details: "NO_HOME" });
       continue;
     }
 
@@ -123,23 +173,15 @@ async function main() {
       await prisma.$transaction(async (tx) => {
         await snapshotPage(tx, page, `Before premium-home blueprint upgrade from ${referenceSite.name}`);
         await tx.pageBlock.deleteMany({ where: { pageId: page.id } });
-        for (const block of plan.blocks) {
-          await tx.pageBlock.create({ data: { pageId: page.id, ...block } });
-        }
+        for (const block of plan.blocks) await tx.pageBlock.create({ data: { pageId: page.id, ...block } });
       });
     }
 
-    report.push({
-      agency: site.name,
-      status: apply ? "UPGRADED_TO_PREMIUM" : "READY_TO_PREMIUM_UPGRADE",
-      blocks: page.blocks.length,
-      target: plan.blocks.length,
-      details: classification.status,
-    });
+    report.push({ agency: site.name, status: apply ? "UPGRADED_TO_PREMIUM" : "READY_TO_PREMIUM_UPGRADE", blocks: page.blocks.length, target: plan.blocks.length, details: classification.status });
   }
 
   console.table(report);
-  const blocked = report.filter((item) => String(item.status).startsWith("BLOCKED_") || item.status === "NO_HOME");
+  const blocked = report.filter((item) => String(item.status).startsWith("BLOCKED_"));
   if (blocked.length) {
     console.log(`\n${blocked.length} agence(s) nécessitent une revue avant migration.`);
     process.exitCode = 2;
