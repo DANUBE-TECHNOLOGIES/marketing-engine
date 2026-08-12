@@ -48,8 +48,11 @@ function LegalCard({ icon, title, children }) {
 }
 
 export default function LegalRuntimeDocument({ title, html, legalProfile }) {
-  const paragraphs = legalRuntimeParagraphs(html);
-  const profile = legalProfile && typeof legalProfile === "object" ? legalProfile : {};
+  const documentPayload = html && typeof html === "object" && !Array.isArray(html) ? html : null;
+  const documentHtml = documentPayload ? documentPayload.html : html;
+  const profileSource = documentPayload?.legalProfile || legalProfile;
+  const paragraphs = legalRuntimeParagraphs(documentHtml);
+  const profile = profileSource && typeof profileSource === "object" ? profileSource : {};
   const legalName = value(profile.legalName);
   const office = value(profile.registeredOffice);
   const capital = value(profile.shareCapital);
@@ -62,7 +65,7 @@ export default function LegalRuntimeDocument({ title, html, legalProfile }) {
   const structured = [legalName, office, capital, registration, vat, director, host, privacyEmail].some(Boolean);
 
   return (
-    <section className="public-site-legal-document" data-legal-source="runtime">
+    <section className="public-site-legal-document" data-legal-source="runtime" data-legal-layout={structured ? "structured" : "legacy"}>
       <div className="public-site-container">
         <header className="public-site-legal-heading">
           <h1>{title}</h1>
