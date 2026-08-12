@@ -13,6 +13,13 @@ module.exports = ({ prisma }) => {
     draftPage: req.body?.page || null,
     blockId: req.body?.blockId || null,
   });
+  const publicPagePayload = (page) => {
+    if (!page || typeof page !== "object") return page;
+    if (Array.isArray(page.blocks) && page.blocks.length) {
+      return { ...page, sections: page.blocks };
+    }
+    return page;
+  };
 
   router.get("/agency-sites", async (req, res, next) => {
     try { res.json(await serviceFor(req).listSites()); } catch (e) { next(e); }
@@ -71,10 +78,10 @@ module.exports = ({ prisma }) => {
     try { res.json(await serviceFor(req).publicSite(req.params.siteSlug)); } catch (e) { next(e); }
   });
   router.get("/public/agency-sites/:siteSlug/pages/home", async (req, res, next) => {
-    try { res.json(await serviceFor(req).publicPage(req.params.siteSlug, "home")); } catch (e) { next(e); }
+    try { res.json(publicPagePayload(await serviceFor(req).publicPage(req.params.siteSlug, "home"))); } catch (e) { next(e); }
   });
   router.get("/public/agency-sites/:siteSlug/pages/:slug", async (req, res, next) => {
-    try { res.json(await serviceFor(req).publicPage(req.params.siteSlug, req.params.slug)); } catch (e) { next(e); }
+    try { res.json(publicPagePayload(await serviceFor(req).publicPage(req.params.siteSlug, req.params.slug))); } catch (e) { next(e); }
   });
   router.get("/agencies/:id/site/sitemap.xml", async (req, res, next) => {
     try { res.type("application/xml").send(await serviceFor(req).sitemap(req.params.id, req.query.origin)); } catch (e) { next(e); }
