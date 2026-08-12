@@ -63,6 +63,18 @@ test("cta premium peut réutiliser le contenu local contact-cta sans invention",
   assert.deepEqual(plan.blocks[1].settings, { variant: "premium-dark" });
 });
 
+test("cta et contact-cta sont équivalents pour reconnaître un blueprint premium déjà appliqué", () => {
+  const reference = [
+    { blockType: "hero", displayOrder: 0, settings: { variant: "premium" }, visibleDesktop: true, visibleMobile: true },
+    { blockType: "cta", displayOrder: 10, settings: { variant: "premium-dark" }, visibleDesktop: true, visibleMobile: true },
+  ];
+  const migrated = [
+    { blockType: "hero", displayOrder: 0, settings: { variant: "premium" }, content: { title: "Agence locale" }, status: "draft", version: 7 },
+    { blockType: "contact-cta", displayOrder: 10, settings: { variant: "premium-dark" }, content: { title: "Votre projet" }, status: "published", version: 3 },
+  ];
+  assert.equal(classifyPremiumHome({ referenceBlocks: reference, targetBlocks: migrated }).status, "PREMIUM_MATCH");
+});
+
 test("une home déjà alignée sur le blueprint premium est laissée intacte", () => {
   const targetBlocks = referenceBlocks.map((block, index) => ({ ...block, content: { title: `Local ${index}` } }));
   const classification = classifyPremiumHome({ referenceBlocks, targetBlocks });
