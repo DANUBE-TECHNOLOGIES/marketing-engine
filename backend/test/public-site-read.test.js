@@ -12,6 +12,10 @@ const {
   publishedLike,
   normalizeBlock,
   normalizePage,
+  destinationSlugFromItem,
+  collectDestinationSlugs,
+  enrichDestinationItem,
+  enrichPagesWithDestinations,
 } = require(
   "../src/modules/public-site-read"
 );
@@ -228,6 +232,104 @@ test(
 
     assert.equal(result.published, false);
     assert.equal(result.blocks.length, 0);
+  }
+);
+
+test(
+  "extrait le slug Travel Core depuis les liens de destination",
+  () => {
+    assert.equal(destinationSlugFromItem({ href: "/destinations/ile-maurice" }), "ile-maurice");
+    assert.equal(destinationSlugFromItem({ slug: "seychelles" }), "seychelles");
+  }
+);
+
+test(
+  "collecte les destinations utilisées par les blocs V2",
+  () => {
+    const slugs = collectDestinationSlugs([
+      {
+        blocks: [
+          {
+            type: "destination-grid",
+            content: {
+              items: [
+                { href: "/destinations/ile-maurice" },
+                { href: "/destinations/maldives" },
+              ],
+            },
+          },
+        ],
+      },
+    ]);
+
+    assert.deepEqual(slugs.sort(), ["ile-maurice", "maldives"]);
+  }
+);
+
+test(
+  "enrichit une destination V2 avec Travel Core sans écraser les données locales",
+  () => {
+    const result = enrichDestinationItem(
+      {
+        href: "/destinations/ile-maurice",
+        title: "Île Maurice",
+      },
+      {
+        id: "destination-1",
+        slug: "ile-maurice",
+        name: "Île Maurice",
+        tagline: "Lagons et douceur de vivre",
+        summary: "Résumé Travel Core",
+        heroImageUrl: "https://images.example.test/maurice.jpg",
+      }
+    );
+
+    assert.equal(result.title, "Île Maurice");
+    assert.equal(result.slug, "ile-maurice");
+    assert.equal(result.image, "https://images.example.test/maurice.jpg");
+    assert.equal(result.description, "Lagons et douceur de vivre");
+    assert.equal(result.travelCoreId, "destination-1");
+  }
+);
+
+test(
+  "enrichit uniquement les destinations connues et conserve les destinations absentes",
+  () => {
+    const pages = enrichPagesWithDestinations(
+      [
+        {
+          id: "home",
+          blocks: [
+            {
+              id: "destinations",
+              type: "destination-grid",
+              content: {
+                title: "Nos idées de destinations",
+                items: [
+                  { href: "/destinations/ile-maurice", title: "Île Maurice" },
+                  { href: "/destinations/canaries", title: "Canaries" },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+      [
+        {
+          id: "destination-1",
+          slug: "ile-maurice",
+          name: "Île Maurice",
+          tagline: "Lagons et douceur de vivre",
+          heroImageUrl: "https://images.example.test/maurice.jpg",
+        },
+      ]
+    );
+
+    const items = pages[0].blocks[0].content.items;
+    assert.equal(items[0].image, "https://images.example.test/maurice.jpg");
+    assert.equal(items[0].travelCoreId, "destination-1");
+    assert.deepEqual(items[1], { href: "/destinations/canaries", title: "Canaries" });
+    assert.equal(pages[0].blocks[0].content.__dataSource, "travel-core");
   }
 );
 
