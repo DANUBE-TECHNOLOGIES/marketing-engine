@@ -8,6 +8,9 @@ const {
 const { hydratePublicDynamicBlocks } = require("./dynamic-block-hydrator");
 const { hydratePreviewPage } = require("./preview-hydrator");
 const {
+  hydrateDestinationMediaAssets,
+} = require("./destination-media-hydrator");
+const {
   contentTargetsAgency,
 } = require("../ai-content/editorial-targeting");
 
@@ -242,11 +245,18 @@ async function hydrateContract({ database, contract }) {
     tenantId,
     pages: hydratedPages,
   });
+  const destinationMediaPages =
+    await hydrateDestinationMediaAssets({
+      prisma: database,
+      tenantId,
+      pages: destinationEnrichedPages,
+    });
+
   const pages = await filterAgencyInspirations({
     database,
     tenantId,
     agencyId,
-    pages: destinationEnrichedPages,
+    pages: destinationMediaPages,
   });
 
   return {

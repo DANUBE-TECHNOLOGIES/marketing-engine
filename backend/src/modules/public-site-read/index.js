@@ -8,6 +8,10 @@ const {
   publishedLike,
   normalizeBlock,
   normalizePage,
+  destinationSlugFromItem,
+  collectDestinationSlugs,
+  enrichDestinationItem,
+  enrichPagesWithDestinations,
 } = require("./service");
 
 const {
@@ -23,4 +27,8 @@ module.exports = {
   publishedLike,
   normalizeBlock,
   normalizePage,
+  destinationSlugFromItem,
+  collectDestinationSlugs,
+  enrichDestinationItem,
+  enrichPagesWithDestinations,
 };

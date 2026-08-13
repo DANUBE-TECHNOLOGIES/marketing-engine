@@ -11,6 +11,7 @@ import {
 import styles from "./VisualPageBuilder.module.css";
 import PreviewCanvas from "./PreviewCanvas";
 import MediaPicker from "./MediaPicker";
+import DestinationGridMediaEditor from "./DestinationGridMediaEditor";
 import NetworkUniquenessAudit from "./NetworkUniquenessAudit";
 
 import {
@@ -102,6 +103,84 @@ function BlockPreview({ block, mediaAssetsById = {} }) {
                 {content.primaryCta.label}
               </button>
             ) : null}
+          </div>
+        </section>
+      );
+
+    case "destination-grid":
+      return (
+        <section className={styles.contentPreview}>
+          <h2>
+            {content.title ||
+              "Nos idées de destinations"}
+          </h2>
+
+          {content.subtitle ? (
+            <p>{content.subtitle}</p>
+          ) : null}
+
+          <div className={styles.cardGrid}>
+            {(content.items || []).map(
+              (item, index) => {
+                const asset =
+                  item.imageAssetId
+                    ? mediaAssetsById[
+                        item.imageAssetId
+                      ] || null
+                    : null;
+
+                const itemImage =
+                  item.imageUrl ||
+                  item.image ||
+                  asset?.url ||
+                  "";
+
+                return (
+                  <article
+                    key={
+                      item.id ||
+                      item.slug ||
+                      item.title ||
+                      index
+                    }
+                  >
+                    <div
+                      className={
+                        styles.cardImage
+                      }
+                      style={
+                        itemImage
+                          ? {
+                              backgroundImage:
+                                `linear-gradient(rgba(8,31,52,.10),rgba(8,31,52,.55)),url("${itemImage}")`,
+                              backgroundSize:
+                                "cover",
+                              backgroundPosition:
+                                "center",
+                            }
+                          : undefined
+                      }
+                    >
+                      {!itemImage
+                        ? "Destination"
+                        : null}
+                    </div>
+
+                    <h3>
+                      {item.title ||
+                        item.name ||
+                        "Destination"}
+                    </h3>
+
+                    {item.description ? (
+                      <p>
+                        {item.description}
+                      </p>
+                    ) : null}
+                  </article>
+                );
+              }
+            )}
           </div>
         </section>
       );
@@ -779,6 +858,21 @@ function BlockProperties({
             />
           ) : null}
         </>
+      ) : null}
+
+      {block.type === "destination-grid" ? (
+        <DestinationGridMediaEditor
+          items={
+            Array.isArray(content.items)
+              ? content.items
+              : []
+          }
+          assets={mediaAssets}
+          loading={mediaLoading}
+          onChange={(items) =>
+            set("items", items)
+          }
+        />
       ) : null}
 
       {block.type === "faq" ? (
