@@ -267,6 +267,8 @@ export function FeaturesEditor({
 export function GalleryEditor({
   images,
   onChange,
+  assets = [],
+  loading = false,
 }) {
   return (
     <ListEditor
@@ -274,57 +276,90 @@ export function GalleryEditor({
       onChange={onChange}
       addLabel="Ajouter une image"
       createItem={() => ({
+        imageAssetId: "",
         url: "",
         alt: "",
         caption: "",
       })}
     >
-      {({ item, update }) => (
-        <>
-          {item.url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              className={styles.editorThumbnail}
-              src={item.url}
-              alt={item.alt || ""}
+      {({ item, update }) => {
+        const selectedAsset =
+          item.imageAssetId
+            ? assets.find((asset) => asset.id === item.imageAssetId) || null
+            : null;
+
+        const previewUrl = item.url || selectedAsset?.url || "";
+
+        return (
+          <>
+            {previewUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                className={styles.editorThumbnail}
+                src={previewUrl}
+                alt={item.alt || ""}
+              />
+            ) : null}
+
+            <MediaPicker
+              assets={assets}
+              loading={loading}
+              selectedAssetId={item.imageAssetId || ""}
+              onSelect={(asset) =>
+                update({
+                  ...item,
+                  imageAssetId: asset.id,
+                  url: null,
+                  alt: item.alt || asset.altText || "",
+                })
+              }
+              onClear={() =>
+                update({
+                  ...item,
+                  imageAssetId: "",
+                })
+              }
             />
-          ) : null}
 
-          <Field
-            label="URL de l’image"
-            value={item.url}
-            onChange={(url) =>
-              update({
-                ...item,
-                url,
-              })
-            }
-          />
+            <details>
+              <summary>URL d’image héritée</summary>
+              <Field
+                label="URL de l’image"
+                value={item.url}
+                onChange={(url) =>
+                  update({
+                    ...item,
+                    url,
+                  })
+                }
+              />
+            </details>
 
-          <Field
-            label="Texte alternatif"
-            value={item.alt}
-            onChange={(alt) =>
-              update({
-                ...item,
-                alt,
-              })
-            }
-          />
+            <Field
+              label="Texte alternatif"
+              value={item.alt}
+              onChange={(alt) =>
+                update({
+                  ...item,
+                  alt,
+                })
+              }
+            />
 
-          <Field
-            label="Légende"
-            value={item.caption}
-            multiline
-            onChange={(caption) =>
-              update({
-                ...item,
-                caption,
-              })
-            }
-          />
-        </>
-      )}
+            <Field
+              label="Légende"
+              value={item.caption}
+              multiline
+              onChange={(caption) =>
+                update({
+                  ...item,
+                  caption,
+                })
+              }
+            />
+          </>
+        );
+      }}
     </ListEditor>
   );
 }

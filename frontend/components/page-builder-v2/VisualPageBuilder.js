@@ -311,14 +311,21 @@ function BlockPreview({ block, mediaAssetsById = {} }) {
           <h2>{content.title || "Galerie"}</h2>
           <div className={styles.galleryGrid}>
             {(content.images || []).length ? (
-              content.images.map((image, index) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  key={`${image.url}-${index}`}
-                  src={image.url}
-                  alt={image.alt || ""}
-                />
-              ))
+              content.images.map((image, index) => {
+                const asset = image.imageAssetId
+                  ? mediaAssetsById[image.imageAssetId] || null
+                  : null;
+                const imageUrl = image.url || asset?.url || "";
+
+                return imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    key={image.id || image.imageAssetId || image.url || index}
+                    src={imageUrl}
+                    alt={image.alt || ""}
+                  />
+                ) : null;
+              })
             ) : (
               <>
                 <span>Image 1</span>
@@ -937,6 +944,8 @@ function BlockProperties({
       {block.type === "gallery" ? (
         <GalleryEditor
           images={content.images}
+          assets={mediaAssets}
+          loading={mediaLoading}
           onChange={(images) => set("images", images)}
         />
       ) : null}

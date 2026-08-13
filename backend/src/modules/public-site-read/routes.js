@@ -17,6 +17,9 @@ const {
   hydrateImageTextMediaAssets,
 } = require("./image-text-media-hydrator");
 const {
+  hydrateGalleryMediaAssets,
+} = require("./gallery-media-hydrator");
+const {
   contentTargetsAgency,
 } = require("../ai-content/editorial-targeting");
 
@@ -272,11 +275,18 @@ async function hydrateContract({ database, contract }) {
       pages: teamMediaPages,
     });
 
+  const galleryMediaPages =
+    await hydrateGalleryMediaAssets({
+      prisma: database,
+      tenantId,
+      pages: imageTextMediaPages,
+    });
+
   const pages = await filterAgencyInspirations({
     database,
     tenantId,
     agencyId,
-    pages: imageTextMediaPages,
+    pages: galleryMediaPages,
   });
 
   return {
@@ -296,7 +306,7 @@ function createPublicSiteReadRouter({ prisma } = {}) {
     response.json({
       ok: true,
       capability: "public-site-read",
-      version: "1.8",
+      version: "1.9",
       contentSource: "website-designer-v2-blocks",
       fallbackContentSource: "agency-site-sections",
       dynamicHydration: "single-pipeline",

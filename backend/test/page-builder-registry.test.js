@@ -223,3 +223,28 @@ test("image_text conserve imageAssetId Asset Engine sans URL héritée", () => {
   assert.equal(blocks[0].content.imageAssetId, assetId);
   assert.equal(blocks[0].content.imageUrl, null);
 });
+
+
+test("gallery conserve imageAssetId Asset Engine", () => {
+  const registry = new BlockRegistry();
+  const assetId = "asset-gallery-regression-test";
+  const blocks = registry.validatePage([{
+    id: "gallery-asset-test",
+    type: "gallery",
+    status: "draft",
+    position: 0,
+    content: {
+      title: "Galerie locale",
+      images: [{
+        imageAssetId: assetId,
+        url: null,
+        alt: "Photo locale",
+        caption: "Notre agence",
+      }],
+      columns: 3,
+    },
+    settings: {},
+  }]);
+  assert.equal(blocks[0].content.images[0].imageAssetId, assetId);
+  assert.equal(blocks[0].content.images[0].url, null);
+});
