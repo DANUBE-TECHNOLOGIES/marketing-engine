@@ -96,6 +96,96 @@ function normalizePublicPage(page) {
   };
 }
 
+function asObject(value) {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value
+    : {};
+}
+
+function heroAssetReferences(pages = []) {
+  const references = [];
+  const seen = new Set();
+
+  for (const page of pages) {
+    for (const block of page?.blocks || []) {
+      const type = String(block?.blockType || block?.type || "").trim().toLowerCase();
+      if (type !== "hero") continue;
+
+      const content = asObject(block.content);
+      const reference = String(content.imageAssetId || "").trim();
+      if (!reference || seen.has(reference)) continue;
+
+      seen.add(reference);
+      references.push(reference);
+    }
+  }
+
+  return references;
+}
+
+async function loadPublishedHeroAssets({ prisma, tenantId, references = [] }) {
+  if (!prisma?.asset || !tenantId || !references.length) return [];
+
+  return prisma.asset.findMany({
+    where: {
+      tenantId,
+      id: { in: references },
+      type: "MEDIA_IMAGE",
+      status: "published",
+      deletedAt: null,
+    },
+    select: {
+      id: true,
+      title: true,
+      payload: true,
+      metadata: true,
+      currentVersion: true,
+      publishedAt: true,
+    },
+  });
+}
+
+function hydrateHeroMediaAssets(pages = [], assets = []) {
+  if (!assets.length) return pages;
+
+  const byId = new Map(assets.map((asset) => [String(asset.id), asset]));
+
+  return pages.map((page) => ({
+    ...page,
+    blocks: (page.blocks || []).map((block) => {
+      const type = String(block?.blockType || block?.type || "").trim().toLowerCase();
+      if (type !== "hero") return block;
+
+      const content = asObject(block.content);
+      const imageAssetId = String(content.imageAssetId || "").trim();
+      if (!imageAssetId) return block;
+
+      const asset = byId.get(imageAssetId);
+      if (!asset) return block;
+
+      const payload = asObject(asset.payload);
+      const url = String(payload.url || "").trim();
+      if (!url) return block;
+
+      return {
+        ...block,
+        content: {
+          ...content,
+          imageAssetId,
+          imageUrl: url,
+          imageAlt:
+            String(payload.altText || "").trim() ||
+            String(content.imageAlt || "").trim() ||
+            asset.title ||
+            "",
+          __mediaSource: "asset-engine",
+          __mediaVersion: asset.currentVersion ?? null,
+        },
+      };
+    }),
+  }));
+}
+
 class SectionAwarePublicSiteReadService extends PublicSiteReadService {
   buildSelect() {
     const select = super.buildSelect();
@@ -168,27 +258,35 @@ class SectionAwarePublicSiteReadService extends PublicSiteReadService {
       throw error;
     }
 
-    const pages = Array.isArray(site.pages)
+    const normalizedPages = Array.isArray(site.pages)
       ? site.pages.map(normalizePublicPage)
       : [];
 
-    const visiblePages = pages.filter((page) => page.published);
+    const visiblePages = normalizedPages.filter((page) => page.published);
+
+    const mediaReferences = heroAssetReferences(visiblePages);
+    const heroAssets = await loadPublishedHeroAssets({
+      prisma: this.prisma,
+      tenantId: normalizedTenantId,
+      references: mediaReferences,
+    });
+    const hydratedPages = hydrateHeroMediaAssets(visiblePages, heroAssets);
 
     const homePage =
-      visiblePages.find(
+      hydratedPages.find(
         (page) =>
           page.slug === "" ||
           ["accueil", "home"].includes(
             String(page.slug || "").toLowerCase()
           )
       ) ||
-      visiblePages[0] ||
+      hydratedPages[0] ||
       null;
 
     const canonicalBasePath = `/agence/${site.slug}`;
 
     return {
-      version: "1.3",
+      version: "1.4",
       site: {
         id: site.id,
         agencyId: site.agencyId,
@@ -203,8 +301,8 @@ class SectionAwarePublicSiteReadService extends PublicSiteReadService {
         agency: site.agency ?? null,
       },
       agency: site.agency ?? null,
-      pages: visiblePages,
-      navigation: visiblePages.map((page) => ({
+      pages: hydratedPages,
+      navigation: hydratedPages.map((page) => ({
         id: page.id,
         slug: page.slug,
         title: page.title,
@@ -225,4 +323,7 @@ module.exports = {
   normalizeDesignerSection,
   normalizeV2Block,
   normalizePublicPage,
+  heroAssetReferences,
+  loadPublishedHeroAssets,
+  hydrateHeroMediaAssets,
 };
