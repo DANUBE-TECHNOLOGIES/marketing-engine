@@ -73,6 +73,7 @@ const BLOCK_DEFINITIONS = Object.freeze([
     defaults: {
       title: "",
       text: "",
+      imageAssetId: "",
       imageUrl: "",
       imageAlt: "",
       imagePosition: "left",
@@ -81,7 +82,8 @@ const BLOCK_DEFINITIONS = Object.freeze([
     fields: {
       title: { type: "string", maxLength: 140 },
       text: { type: "string", required: true, maxLength: 5000 },
-      imageUrl: { type: "url", required: true },
+      imageAssetId: { type: "string", maxLength: 200 },
+      imageUrl: { type: "url", nullable: true },
       imageAlt: { type: "string", maxLength: 180 },
       imagePosition: {
         type: "enum",
