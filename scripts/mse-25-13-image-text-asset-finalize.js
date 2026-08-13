@@ -115,7 +115,10 @@ function main() {
 
   run("node", ["--check", "backend/src/modules/public-site-read/routes.js"]);
   run("node", ["--check", "backend/src/modules/public-site-read/image-text-media-hydrator.js"]);
-  run("node", ["--test", "backend/test/page-builder-registry.test.js"]);
+  run("node", ["--test",
+    "backend/test/page-builder-registry.test.js",
+    "backend/test/image-text-media-hydrator.test.js",
+  ]);
 
   run("git", ["add",
     "frontend/components/page-builder-v2/VisualPageBuilder.js",
