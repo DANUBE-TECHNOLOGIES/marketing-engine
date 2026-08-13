@@ -115,6 +115,75 @@ test(
 );
 
 test(
+  "une page publiée expose ses blocs V2 même si leur statut technique est draft",
+  () => {
+    const result = normalizePage({
+      id: "home",
+      slug: "home",
+      title: "Accueil",
+      status: "published",
+      published: true,
+      blocks: [
+        {
+          id: "hero-1",
+          blockType: "hero",
+          status: "draft",
+          displayOrder: 0,
+          content: {
+            title: "Agence de voyages",
+          },
+        },
+        {
+          id: "cta-1",
+          blockType: "cta",
+          status: "draft",
+          displayOrder: 1,
+          content: {
+            title: "Construisons votre voyage",
+          },
+        },
+      ],
+    });
+
+    assert.equal(result.published, true);
+    assert.equal(result.blocks.length, 2);
+    assert.deepEqual(
+      result.blocks.map((block) => block.type),
+      ["hero", "cta"]
+    );
+    assert.deepEqual(
+      result.blocks.map((block) => block.status),
+      ["draft", "draft"]
+    );
+  }
+);
+
+test(
+  "une page non publiée ne rend pas publics ses blocs draft via le normalizer",
+  () => {
+    const result = normalizePage({
+      id: "draft-page",
+      slug: "brouillon",
+      title: "Brouillon",
+      status: "draft",
+      published: false,
+      blocks: [
+        {
+          id: "hero-draft",
+          blockType: "hero",
+          status: "draft",
+          displayOrder: 0,
+          content: {},
+        },
+      ],
+    });
+
+    assert.equal(result.published, false);
+    assert.equal(result.blocks.length, 0);
+  }
+);
+
+test(
   "le contrat public utilise le chemin canonique /agence et reconnaît l'accueil au slug vide",
   async () => {
     const prisma = {
@@ -194,8 +263,17 @@ test(
                 displayOrder:
                   0,
 
-                blocks:
-                  [],
+                blocks: [
+                  {
+                    id: "hero-home",
+                    blockType: "hero",
+                    status: "draft",
+                    displayOrder: 0,
+                    content: {
+                      title: "Mondescale Ozoir",
+                    },
+                  },
+                ],
               },
               {
                 id:
@@ -239,6 +317,9 @@ test(
       result.homePage.id,
       "home"
     );
+
+    assert.equal(result.homePage.blocks.length, 1);
+    assert.equal(result.homePage.blocks[0].type, "hero");
 
     assert.equal(
       result.site.basePath,
