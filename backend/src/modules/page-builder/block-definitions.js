@@ -154,7 +154,8 @@ const BLOCK_DEFINITIONS = Object.freeze([
         item: {
           type: "object",
           fields: {
-            url: { type: "url", required: true },
+            imageAssetId: { type: "string", maxLength: 200 },
+            url: { type: "url", nullable: true },
             alt: { type: "string", required: true, maxLength: 180 },
             caption: { type: "string", maxLength: 300 },
           },
