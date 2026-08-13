@@ -23,6 +23,11 @@ export default function ImageTextV2Renderer({
   site,
 }) {
   const content = getSectionContent(section);
+  const imageUrl = String(
+    content.imageUrl ||
+    content.image ||
+    ""
+  ).trim();
   const imagePosition =
     content.imagePosition === "right"
       ? "right"
@@ -52,10 +57,10 @@ export default function ImageTextV2Renderer({
           className="public-site-image-text-media"
           style={{ order: mediaOrder }}
         >
-          {content.imageUrl ? (
+          {imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={content.imageUrl}
+              src={imageUrl}
               alt={imageAltText(section, content, site)}
               loading="lazy"
               decoding="async"
