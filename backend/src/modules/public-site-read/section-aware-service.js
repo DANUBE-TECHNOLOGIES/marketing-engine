@@ -44,13 +44,19 @@ function normalizeV2Block(block) {
 }
 
 function normalizePublicPage(page) {
+  const pagePublished = publishedLike(page);
+
+  /*
+   * Designer V2 publie la page comme unité éditoriale. Des blocs V2
+   * historiques conservent encore status="draft" alors que leur page est
+   * explicitement publiée. Les filtrer individuellement rendrait la page
+   * publique vide. Une page publiée expose donc tous ses blocs V2 ; le statut
+   * technique du bloc reste conservé mais ne pilote plus sa publication.
+   */
   const v2Blocks = Array.isArray(page.blocks)
-    ? page.blocks
-        .filter((block) => {
-          if (!block?.status) return true;
-          return publishedLike(block);
-        })
-        .map(normalizeV2Block)
+    ? (pagePublished ? page.blocks : page.blocks.filter(publishedLike)).map(
+        normalizeV2Block
+      )
     : [];
 
   const legacySections = Array.isArray(page.sections)
@@ -63,8 +69,8 @@ function normalizePublicPage(page) {
    * Website Designer V2 persiste dans PageBlock, qui porte le contrat
    * riche (settings, SEO, visibilité, version). AgencySiteSection reste
    * le fallback historique pour les pages n'ayant pas encore été sauvées
-   * avec V2. Dès qu'au moins un bloc V2 publié existe, il devient la source
-   * publique de vérité de la page.
+   * avec V2. Dès qu'au moins un bloc V2 existe sur une page publiée, il
+   * devient la source publique de vérité de la page.
    */
   const blocks = v2Blocks.length
     ? v2Blocks
@@ -75,7 +81,7 @@ function normalizePublicPage(page) {
     slug: page.slug,
     title: page.title ?? "",
     status: page.status ?? null,
-    published: publishedLike(page),
+    published: pagePublished,
     publishedAt: page.publishedAt ?? null,
     displayOrder: page.displayOrder ?? 0,
     seoTitle: page.seoTitle ?? null,
