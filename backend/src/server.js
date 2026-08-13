@@ -6503,6 +6503,25 @@ res.status(500)
  */
 
 /*
+ * Asset Engine — médias publics.
+ */
+app.use(
+  "/media/assets",
+  express.static(
+    path.resolve(
+      process.env.ASSET_MEDIA_STORAGE_ROOT ||
+      "/app/storage/asset-media"
+    ),
+    {
+      fallthrough: false,
+      immutable: true,
+      maxAge: "30d",
+      index: false,
+    }
+  )
+);
+
+/*
  * Brand Studio V2 — médiathèque et upload.
  */
 app.use(

@@ -83,3 +83,5 @@ backend/storage/site-publication-history/*.jsonl
 # Logs / dumps
 
 # OS
+
+backend/storage/asset-media/
