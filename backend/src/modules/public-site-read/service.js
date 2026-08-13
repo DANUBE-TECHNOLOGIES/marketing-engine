@@ -191,6 +191,7 @@ class PublicSiteReadService {
   buildSelect() {
     const siteFields = fieldsFor("AgencySite");
     const pageFields = fieldsFor("AgencySitePage");
+    const agencyFields = fieldsFor("Agency");
     const blockModelName = Prisma.dmmf.datamodel.models.some((model) => model.name === "AgencySitePageBlock")
       ? "AgencySitePageBlock"
       : "PageBlock";
@@ -224,6 +225,32 @@ class PublicSiteReadService {
       };
     }
 
+    const agencySelect = {
+      id: true,
+      ...pickFields(agencyFields, [
+        "name",
+        "tenantId",
+        "city",
+        "address",
+        "postalCode",
+        "region",
+        "phone",
+        "email",
+        "description",
+        "latitude",
+        "longitude",
+        "website",
+        "googleBusinessUrl",
+        "googleMapsUrl",
+        "facebookUrl",
+        "instagramUrl",
+        "linkedinUrl",
+        "imageUrl",
+        "logoUrl",
+        "targetCities",
+      ]),
+    };
+
     const siteSelect = {
       id: true,
       agencyId: true,
@@ -231,18 +258,10 @@ class PublicSiteReadService {
       ...pickFields(siteFields, [
         "tenantId", "name", "basePath", "status", "published", "isPublished",
         "publishedAt", "theme", "generatedAt", "createdAt", "updatedAt",
+        "heroImageUrl", "logoUrl", "targetCities", "metadata",
       ]),
       agency: {
-        select: {
-          id: true,
-          name: true,
-          tenantId: true,
-          city: true,
-          address: true,
-          postalCode: true,
-          phone: true,
-          email: true,
-        },
+        select: agencySelect,
       },
     };
 
@@ -312,7 +331,7 @@ class PublicSiteReadService {
     const canonicalBasePath = `/agence/${site.slug}`;
 
     return {
-      version: "1.0",
+      version: "1.1",
       site: {
         id: site.id,
         agencyId: site.agencyId,
@@ -324,6 +343,10 @@ class PublicSiteReadService {
         published: publishedLike(site),
         publishedAt: site.publishedAt ?? null,
         theme: site.theme ?? {},
+        heroImageUrl: site.heroImageUrl ?? null,
+        logoUrl: site.logoUrl ?? null,
+        targetCities: site.targetCities ?? site.agency?.targetCities ?? [],
+        metadata: site.metadata ?? {},
         agency: site.agency ?? null,
       },
       agency: site.agency ?? null,
