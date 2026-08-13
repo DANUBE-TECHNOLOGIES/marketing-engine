@@ -30,7 +30,7 @@ jobs:
         run: npm ci
 
       - name: Run MSE-25.13 backend tests
-        run: node --test test/local-rewrite.test.js test/premium-home-blueprint.test.js
+        run: node --test test/local-rewrite.test.js test/premium-home-blueprint.test.js test/public-site-read.test.js
 
   frontend-local-rewrite:
     runs-on: ubuntu-latest
