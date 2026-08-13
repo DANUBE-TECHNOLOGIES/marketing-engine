@@ -77,7 +77,28 @@ function siteFromContract(payload) {
 }
 
 function pageFromContract(payload) {
-  return payload?.page || payload?.currentPage || payload?.requestedPage || payload;
+  const page = payload?.page || payload?.currentPage || payload?.requestedPage || payload;
+
+  if (!page || typeof page !== "object") return page;
+
+  const blocks = Array.isArray(page.blocks) ? page.blocks : [];
+
+  /*
+   * Blocks V2 are the canonical rendering source. Legacy `sections` may
+   * legitimately exist as an empty array on migrated pages; because [] is
+   * truthy in JavaScript it used to mask non-empty `blocks` in the public
+   * renderer. Whenever V2 blocks exist, expose them as sections as well so
+   * all public consumers render the same persisted page as Designer V2.
+   */
+  if (blocks.length) {
+    return {
+      ...page,
+      sections: blocks,
+      contentBlocks: blocks,
+    };
+  }
+
+  return page;
 }
 
 export const publicSiteApi = {
