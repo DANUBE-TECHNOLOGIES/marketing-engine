@@ -126,13 +126,8 @@ export async function generateMetadata({ params }) {
       page,
       pageSlug,
     });
-    const title =
-      page.seoTitle ||
-      localSeo.title;
-    const description =
-      page.metaDescription ||
-      page.seoDescription ||
-      localSeo.description;
+    const title = localSeo.title;
+    const description = localSeo.description;
     const legalPage = isLegalPage(pageSlug, page);
     const images = metadataImages(localSeo.image);
 
@@ -230,11 +225,6 @@ export default async function AgencySitePage({ params }) {
     page,
     pageSlug,
   });
-  const pageTitle = page.seoTitle || localSeo.title;
-  const pageDescription =
-    page.metaDescription ||
-    page.seoDescription ||
-    localSeo.description;
   const breadcrumbItems = [
     {
       name: "Accueil",
@@ -258,8 +248,8 @@ export default async function AgencySitePage({ params }) {
     site,
     page,
     url: currentUrl,
-    title: pageTitle,
-    description: pageDescription,
+    title: localSeo.title,
+    description: localSeo.description,
   });
   let legalRuntimeHtml = null;
 
