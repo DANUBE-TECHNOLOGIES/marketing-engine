@@ -15,6 +15,7 @@ const BLOCK_DEFINITIONS = Object.freeze([
       eyebrow: "",
       title: "Découvrez votre prochaine destination",
       subtitle: "",
+      imageAssetId: "",
       imageUrl: "",
       imageAlt: "",
       primaryCta: {
@@ -28,6 +29,7 @@ const BLOCK_DEFINITIONS = Object.freeze([
       eyebrow: { type: "string", maxLength: 80 },
       title: { type: "string", required: true, maxLength: 120 },
       subtitle: { type: "string", maxLength: 500 },
+      imageAssetId: { type: "string", maxLength: 200 },
       imageUrl: { type: "url", nullable: true },
       imageAlt: { type: "string", maxLength: 180 },
       primaryCta: { type: "cta", nullable: true },

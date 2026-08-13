@@ -229,3 +229,38 @@ test("health expose la capacité page builder", () => {
   assert.ok(health.categories.includes("seo"));
   assert.ok(health.singletonTypes.includes("hero"));
 });
+
+test("hero conserve imageAssetId Asset Engine", () => {
+  const registry = new BlockRegistry();
+
+  const assetId = "asset-hero-regression-test";
+
+  const blocks = registry.validatePage([
+    {
+      id: "hero-asset-test",
+      type: "hero",
+      status: "draft",
+      position: 0,
+      content: {
+        eyebrow: "",
+        title: "Hero Asset Engine",
+        subtitle: "",
+        imageAssetId: assetId,
+        imageUrl: null,
+        imageAlt: "Illustration Hero",
+        primaryCta: {
+          label: "Demander un devis",
+          href: "#contact",
+        },
+        secondaryCta: null,
+        alignment: "left",
+      },
+      settings: {},
+    },
+  ]);
+
+  assert.equal(
+    blocks[0].content.imageAssetId,
+    assetId
+  );
+});
