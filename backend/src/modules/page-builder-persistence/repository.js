@@ -6,75 +6,39 @@ class PageBuilderPersistenceRepository {
     this.tenantId = tenantId;
   }
 
-  pageWhere(agencyId, slug) {
-    return {
-      slug,
-      site: {
-        is: {
-          agencyId: Number(agencyId),
-          tenantId: this.tenantId,
-        },
-      },
-    };
-  }
+  async findPage(agencyId, slug) {
+    const normalizedAgencyId = Number(agencyId);
+    if (!Number.isInteger(normalizedAgencyId)) return null;
 
-  findPage(agencyId, slug) {
-    return this.prisma.agencySitePage.findFirst({
-      where: this.pageWhere(agencyId, slug),
-      include: {
-        site: true,
-        blocks: {
-          orderBy: {
-            displayOrder: "asc",
-          },
-        },
-      },
-    });
-  }
-
-  findPageById(pageId) {
     return this.prisma.agencySitePage.findFirst({
       where: {
-        id: pageId,
+        slug,
         site: {
           tenantId: this.tenantId,
+          agencyId: normalizedAgencyId,
         },
       },
       include: {
         site: true,
         blocks: {
-          orderBy: {
-            displayOrder: "asc",
-          },
+          orderBy: { displayOrder: "asc" },
         },
       },
     });
-  }
-
-  async nextVersion(tx, pageId) {
-    const aggregate =
-      await tx.agencySitePageVersion.aggregate({
-        where: { pageId },
-        _max: {
-          version: true,
-        },
-      });
-
-    return (aggregate._max.version || 0) + 1;
   }
 
   serializePage(page) {
     return {
-      page: {
-        id: page.id,
-        title: page.title,
-        slug: page.slug,
-        status: page.status,
-        seoTitle: page.seoTitle,
-        metaDescription: page.metaDescription,
-        published: page.published,
-      },
-
+      id: page.id,
+      title: page.title,
+      slug: page.slug,
+      status: page.status,
+      seoTitle: page.seoTitle || "",
+      seoDescription: page.metaDescription || "",
+      metaDescription: page.metaDescription || "",
+      published: page.published === true,
+      updatedAt: page.updatedAt,
+      version: page.version || null,
       blocks: (page.blocks || []).map((block) => ({
         id: block.id,
         type: block.blockType,
@@ -93,9 +57,7 @@ class PageBuilderPersistenceRepository {
   async replacePageBlocks(page, input, metadata = {}) {
     return this.prisma.$transaction(async (tx) => {
       await tx.agencySitePage.update({
-        where: {
-          id: page.id,
-        },
+        where: { id: page.id },
         data: {
           title: input.page.title,
           slug: input.page.slug,
@@ -106,23 +68,12 @@ class PageBuilderPersistenceRepository {
         },
       });
 
-      /*
-       * Le Designer V2 porte l'intention de publication de la page.
-       * Le renderer public exige également que l'AgencySite soit publié.
-       * Dès qu'une page est publiée, on ouvre donc le site au contrat
-       * public. Une page repassée en brouillon ne dépublie pas le site :
-       * les autres pages publiées doivent rester accessibles.
-       */
       if (input.page.published === true) {
         await tx.agencySite.updateMany({
           where: {
             id: page.siteId,
-            ...(this.tenantId
-              ? { tenantId: this.tenantId }
-              : {}),
-            status: {
-              not: "published",
-            },
+            ...(this.tenantId ? { tenantId: this.tenantId } : {}),
+            status: { not: "published" },
           },
           data: {
             status: "published",
@@ -132,9 +83,7 @@ class PageBuilderPersistenceRepository {
       }
 
       await tx.pageBlock.deleteMany({
-        where: {
-          pageId: page.id,
-        },
+        where: { pageId: page.id },
       });
 
       if (input.blocks.length) {
@@ -146,36 +95,28 @@ class PageBuilderPersistenceRepository {
             content: block.content,
             settings: block.settings || {},
             seo: block.seo || {},
-            displayOrder: index,
+            displayOrder: Number.isFinite(Number(block.position))
+              ? Number(block.position)
+              : index,
             status: block.status,
-            visibleDesktop:
-              block.visibleDesktop !== false,
-            visibleMobile:
-              block.visibleMobile !== false,
+            visibleDesktop: block.visibleDesktop !== false,
+            visibleMobile: block.visibleMobile !== false,
             version: 1,
           })),
         });
       }
 
-      const saved =
-        await tx.agencySitePage.findUnique({
-          where: {
-            id: page.id,
+      const saved = await tx.agencySitePage.findUnique({
+        where: { id: page.id },
+        include: {
+          site: true,
+          blocks: {
+            orderBy: { displayOrder: "asc" },
           },
-          include: {
-            site: true,
-            blocks: {
-              orderBy: {
-                displayOrder: "asc",
-              },
-            },
-          },
-        });
+        },
+      });
 
-      const version = await this.nextVersion(
-        tx,
-        page.id
-      );
+      const version = await this.nextVersion(tx, page.id);
 
       await tx.agencySitePageVersion.create({
         data: {
@@ -204,9 +145,7 @@ class PageBuilderPersistenceRepository {
           },
         },
       },
-      orderBy: {
-        version: "desc",
-      },
+      orderBy: { version: "desc" },
       select: {
         id: true,
         version: true,
@@ -230,94 +169,39 @@ class PageBuilderPersistenceRepository {
       },
     });
   }
-  async findHomePage(
-    agencyId
-  ) {
-    const normalizedAgencyId =
-      Number(agencyId);
 
-    if (
-      !Number.isInteger(
-        normalizedAgencyId
-      )
-    ) {
-      return null;
-    }
+  async findHomePage(agencyId) {
+    const normalizedAgencyId = Number(agencyId);
+    if (!Number.isInteger(normalizedAgencyId)) return null;
 
-    const siteFilter = {
-      agencyId:
-        normalizedAgencyId,
-    };
-
-    if (this.tenantId) {
-      siteFilter.tenantId =
-        this.tenantId;
-    }
-
-    /*
-     * L’accueil est identifié par sa position fonctionnelle.
-     * Le slug vide reste le format canonique, mais displayOrder=0
-     * permet de retrouver les données même si une ancienne fonction
-     * transforme involontairement "" en "accueil".
-     */
-    const page =
-      await this.prisma
-        .agencySitePage
-        .findFirst({
-          where: {
-            site: {
-              is:
-                siteFilter,
-            },
-
-            displayOrder:
-              0,
-          },
-
-          include: {
-            site: true,
-            blocks: {
-              orderBy: {
-                displayOrder:
-                  "asc",
-              },
-            },
-          },
-        });
-
-    if (page) {
-      return page;
-    }
-
-    /*
-     * Secours pour les anciennes bases sans ordre correctement
-     * initialisé : recherche stricte du slug vide.
-     */
-    return this.prisma
-      .agencySitePage
-      .findFirst({
-        where: {
-          site: {
-            is:
-              siteFilter,
-          },
-
-          slug:
-            "",
+    return this.prisma.agencySitePage.findFirst({
+      where: {
+        site: {
+          tenantId: this.tenantId,
+          agencyId: normalizedAgencyId,
         },
-
-        include: {
-          site: true,
-          blocks: {
-            orderBy: {
-              displayOrder:
-                "asc",
-            },
-          },
+        OR: [{ slug: "home" }, { slug: "" }],
+      },
+      orderBy: [{ slug: "desc" }, { createdAt: "asc" }],
+      include: {
+        site: true,
+        blocks: {
+          orderBy: { displayOrder: "asc" },
         },
-      });
+      },
+    });
   }
 
+  async nextVersion(tx, pageId) {
+    const aggregate = await tx.agencySitePageVersion.aggregate({
+      where: { pageId },
+      _max: { version: true },
+    });
+
+    return Number(aggregate?._max?.version || 0) + 1;
+  }
 }
 
-module.exports = PageBuilderPersistenceRepository;
+module.exports = {
+  PageBuilderPersistenceRepository,
+};
