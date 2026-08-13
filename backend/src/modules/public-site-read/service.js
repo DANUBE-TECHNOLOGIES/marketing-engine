@@ -86,6 +86,102 @@ function normalizePage(page) {
   };
 }
 
+function destinationSlugFromItem(item) {
+  if (!item || typeof item !== "object") return null;
+  if (item.slug) return String(item.slug).trim().toLowerCase();
+
+  const href = String(item.href || item.url || "").trim();
+  if (!href) return null;
+
+  const match = href.match(/(?:^|\/)destinations?\/([^/?#]+)/i);
+  return match?.[1] ? decodeURIComponent(match[1]).trim().toLowerCase() : null;
+}
+
+function isDestinationBlock(block) {
+  return [
+    "destination-grid",
+    "destinations",
+    "destinations-highlight",
+    "destination-recommendations",
+  ].includes(String(block?.type || block?.blockType || "").toLowerCase());
+}
+
+function collectDestinationSlugs(pages) {
+  const slugs = new Set();
+
+  for (const page of pages || []) {
+    for (const block of page.blocks || []) {
+      if (!isDestinationBlock(block)) continue;
+      const items = Array.isArray(block.content?.items) ? block.content.items : [];
+      for (const item of items) {
+        const slug = destinationSlugFromItem(item);
+        if (slug) slugs.add(slug);
+      }
+    }
+  }
+
+  return [...slugs];
+}
+
+function destinationImageFromItem(item) {
+  if (!item || typeof item !== "object") return null;
+  const candidates = [
+    item.image,
+    item.imageUrl,
+    item.backgroundImage,
+    item.coverImage,
+    item.heroImage,
+    item.thumbnail,
+    item.photo,
+    item.media?.url,
+    item.image?.url,
+  ];
+  return candidates.find((value) => typeof value === "string" && value.trim()) || null;
+}
+
+function enrichDestinationItem(item, destination) {
+  if (!destination) return item;
+
+  const existingImage = destinationImageFromItem(item);
+  const image = existingImage || destination.heroImageUrl || null;
+
+  return {
+    ...item,
+    slug: item.slug || destination.slug,
+    title: item.title || item.name || destination.name,
+    name: item.name || destination.name,
+    description: item.description || destination.tagline || destination.summary || null,
+    ...(image ? { image } : {}),
+    travelCoreId: item.travelCoreId || destination.id,
+  };
+}
+
+function enrichPagesWithDestinations(pages, destinations) {
+  const bySlug = new Map(
+    (destinations || []).map((destination) => [String(destination.slug || "").toLowerCase(), destination])
+  );
+
+  return (pages || []).map((page) => ({
+    ...page,
+    blocks: (page.blocks || []).map((block) => {
+      if (!isDestinationBlock(block)) return block;
+      const items = Array.isArray(block.content?.items) ? block.content.items : [];
+
+      return {
+        ...block,
+        content: {
+          ...(block.content || {}),
+          items: items.map((item) => {
+            const slug = destinationSlugFromItem(item);
+            return enrichDestinationItem(item, slug ? bySlug.get(slug) : null);
+          }),
+          __dataSource: "travel-core",
+        },
+      };
+    }),
+  }));
+}
+
 class PublicSiteReadService {
   constructor({ prisma } = {}) {
     if (!prisma) throw new Error("Le client Prisma est obligatoire.");
@@ -160,6 +256,29 @@ class PublicSiteReadService {
     return siteSelect;
   }
 
+  async enrichDestinations(pages, tenantId) {
+    const slugs = collectDestinationSlugs(pages);
+    if (!slugs.length || !this.prisma.destination?.findMany) return pages;
+
+    const destinations = await this.prisma.destination.findMany({
+      where: {
+        ...(tenantId ? { tenantId } : {}),
+        slug: { in: slugs },
+      },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        status: true,
+        tagline: true,
+        summary: true,
+        heroImageUrl: true,
+      },
+    });
+
+    return enrichPagesWithDestinations(pages, destinations);
+  }
+
   async bySlug(siteSlug) {
     const slug = normalizeSlug(siteSlug);
     const site = await this.prisma.agencySite.findFirst({
@@ -184,7 +303,9 @@ class PublicSiteReadService {
     }
 
     const pages = Array.isArray(site.pages) ? site.pages.map(normalizePage) : [];
-    const visiblePages = pages.filter((page) => page.published);
+    const visiblePagesRaw = pages.filter((page) => page.published);
+    const tenantId = site.tenantId ?? site.agency?.tenantId ?? null;
+    const visiblePages = await this.enrichDestinations(visiblePagesRaw, tenantId);
     const homePage = visiblePages.find((page) =>
       page.slug === "" || ["accueil", "home"].includes(String(page.slug || "").toLowerCase())
     ) || visiblePages[0] || null;
@@ -195,7 +316,7 @@ class PublicSiteReadService {
       site: {
         id: site.id,
         agencyId: site.agencyId,
-        tenantId: site.tenantId ?? site.agency?.tenantId ?? null,
+        tenantId,
         slug: site.slug,
         name: site.name ?? site.agency?.name ?? "",
         basePath: canonicalBasePath,
@@ -229,4 +350,8 @@ module.exports = {
   normalizeBlock,
   publicBlocks,
   normalizePage,
+  destinationSlugFromItem,
+  collectDestinationSlugs,
+  enrichDestinationItem,
+  enrichPagesWithDestinations,
 };
