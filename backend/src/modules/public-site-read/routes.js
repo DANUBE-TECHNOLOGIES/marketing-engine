@@ -38,6 +38,98 @@ function inspirationIds(pages = []) {
   return [...ids];
 }
 
+function destinationSlugFromItem(item) {
+  if (!item || typeof item !== "object") return null;
+  if (item.slug) return String(item.slug).trim().toLowerCase();
+
+  const href = String(item.href || item.url || "").trim();
+  if (!href) return null;
+
+  const match = href.match(/(?:^|\/)destinations?\/([^/?#]+)/i);
+  return match?.[1] ? decodeURIComponent(match[1]).trim().toLowerCase() : null;
+}
+
+function isCanonicalDestinationBlock(block) {
+  return [
+    "destination-grid",
+    "destinations",
+    "destinations-highlight",
+    "destination-recommendations",
+  ].includes(blockType(block));
+}
+
+async function enrichCanonicalDestinationBlocks({ database, tenantId, pages }) {
+  const slugs = new Set();
+
+  for (const page of pages || []) {
+    for (const block of page?.blocks || []) {
+      if (!isCanonicalDestinationBlock(block)) continue;
+      const content = block?.content && typeof block.content === "object" ? block.content : {};
+      for (const item of Array.isArray(content.items) ? content.items : []) {
+        const slug = destinationSlugFromItem(item);
+        if (slug) slugs.add(slug);
+      }
+    }
+  }
+
+  if (!tenantId || !slugs.size || !database?.destination?.findMany) return pages;
+
+  const destinations = await database.destination.findMany({
+    where: {
+      tenantId: String(tenantId),
+      status: "published",
+      slug: { in: [...slugs] },
+    },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      country: true,
+      region: true,
+      tagline: true,
+      summary: true,
+      heroImageUrl: true,
+    },
+  });
+
+  const bySlug = new Map(destinations.map((destination) => [String(destination.slug).toLowerCase(), destination]));
+
+  return (pages || []).map((page) => ({
+    ...page,
+    blocks: (page.blocks || []).map((block) => {
+      if (!isCanonicalDestinationBlock(block)) return block;
+      const content = block?.content && typeof block.content === "object" ? block.content : {};
+      const items = Array.isArray(content.items) ? content.items : [];
+
+      return {
+        ...block,
+        content: {
+          ...content,
+          __dataSource: "travel-core",
+          items: items.map((item) => {
+            const slug = destinationSlugFromItem(item);
+            const destination = slug ? bySlug.get(slug) : null;
+            if (!destination) return item;
+
+            return {
+              ...item,
+              slug: item.slug || destination.slug,
+              name: item.name || destination.name,
+              title: item.title || destination.name,
+              eyebrow: item.eyebrow || destination.country || destination.region || null,
+              description: item.description || destination.summary || destination.tagline || null,
+              ...(item.image || destination.heroImageUrl
+                ? { image: item.image || destination.heroImageUrl }
+                : {}),
+              travelCoreId: item.travelCoreId || destination.id,
+            };
+          }),
+        },
+      };
+    }),
+  }));
+}
+
 function sendPublicSiteError(response, error) {
   const statusCode = Number(error?.statusCode || error?.status || 500);
 
@@ -145,11 +237,16 @@ async function hydrateContract({ database, contract }) {
     // publication est pilotée au niveau de la page. Ne pas les refiltrer ici.
     includeUnpublishedBlocks: true,
   });
+  const destinationEnrichedPages = await enrichCanonicalDestinationBlocks({
+    database,
+    tenantId,
+    pages: hydratedPages,
+  });
   const pages = await filterAgencyInspirations({
     database,
     tenantId,
     agencyId,
-    pages: hydratedPages,
+    pages: destinationEnrichedPages,
   });
 
   return {
@@ -214,6 +311,9 @@ function createPublicSiteReadRouter({ prisma } = {}) {
 module.exports = {
   createPublicSiteReadRouter,
   hydrateContract,
+  enrichCanonicalDestinationBlocks,
+  destinationSlugFromItem,
+  isCanonicalDestinationBlock,
   replacePageReference,
   filterAgencyInspirations,
   inspirationIds,
