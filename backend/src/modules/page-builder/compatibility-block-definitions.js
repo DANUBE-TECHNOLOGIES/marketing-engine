@@ -409,6 +409,18 @@ const COMPATIBILITY_BLOCK_DEFINITIONS =
               "type": "string",
               "maxLength": 1000,
               "required": true
+            },
+            "imageAssetId": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "imageUrl": {
+              "type": "url",
+              "nullable": true
+            },
+            "imageAlt": {
+              "type": "string",
+              "maxLength": 180
             }
           }
         },

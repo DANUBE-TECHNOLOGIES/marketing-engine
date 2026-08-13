@@ -264,3 +264,53 @@ test("hero conserve imageAssetId Asset Engine", () => {
     assetId
   );
 });
+
+test("team conserve imageAssetId Asset Engine", () => {
+  const registry = new BlockRegistry();
+
+  const assetId =
+    "asset-team-regression-test";
+
+  const blocks = registry.validatePage([
+    {
+      id: "team-asset-test",
+      type: "team",
+      status: "draft",
+      position: 0,
+      content: {
+        title: "Une équipe à votre écoute",
+        members: [
+          {
+            name: "Céline",
+            role: "Conseillère voyage",
+            description:
+              "Conseillère de l'agence Mondescale Bois-Colombes.",
+            imageAssetId: assetId,
+            imageUrl: null,
+            imageAlt:
+              "Céline, conseillère voyage à Bois-Colombes"
+          }
+        ]
+      },
+      settings: {}
+    }
+  ]);
+
+  const member =
+    blocks[0].content.members[0];
+
+  assert.equal(
+    member.imageAssetId,
+    assetId
+  );
+
+  assert.equal(
+    member.imageUrl,
+    null
+  );
+
+  assert.equal(
+    member.imageAlt,
+    "Céline, conseillère voyage à Bois-Colombes"
+  );
+});
