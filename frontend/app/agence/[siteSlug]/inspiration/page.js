@@ -5,8 +5,12 @@ import JsonLd from "../../../../components/JsonLd";
 import { publicSiteApi } from "../../../../lib/public-site-api";
 import {
   buildBreadcrumbSchema,
+  buildLocalWebPageSchema,
   buildTravelAgencySchema,
 } from "../../../../lib/seo/json-ld";
+import {
+  buildLocalPageSeo,
+} from "../../../../lib/seo/local-page-seo";
 
 const PUBLIC_ORIGIN = String(
   process.env.NEXT_PUBLIC_SITE_ORIGIN ||
@@ -33,32 +37,53 @@ function formatPublishedDate(value) {
   };
 }
 
+function inspirationSeo(site) {
+  return buildLocalPageSeo({
+    site,
+    page: {
+      slug: "inspiration",
+      title: "Inspirations voyage",
+    },
+    pageSlug: "inspiration",
+  });
+}
+
 export async function generateMetadata({ params }) {
   const { siteSlug } = await params;
 
   try {
     const site = await publicSiteApi.getSite(siteSlug);
-    const city = site?.agency?.city || null;
-    const title = city
-      ? `Inspirations voyage depuis ${city} | ${site.name}`
-      : `Inspirations voyage | ${site.name}`;
-    const description = city
-      ? `Découvrez les idées de voyages et conseils de ${site.name}, votre agence de voyages à ${city}.`
-      : `Découvrez les idées de voyages et conseils de ${site.name}.`;
+    const seo = inspirationSeo(site);
     const canonical = `${PUBLIC_ORIGIN}${canonicalPath(siteSlug)}`;
 
     return {
-      title,
-      description,
+      title: seo.title,
+      description: seo.description,
       alternates: { canonical },
-      robots: { index: true, follow: true },
+      robots: {
+        index: true,
+        follow: true,
+        googleBot: {
+          index: true,
+          follow: true,
+          "max-image-preview": "large",
+          "max-snippet": -1,
+        },
+      },
       openGraph: {
-        title,
-        description,
+        title: seo.title,
+        description: seo.description,
         url: canonical,
         type: "website",
         locale: "fr_FR",
         siteName: site.name,
+        images: seo.image ? [{ url: seo.image }] : undefined,
+      },
+      twitter: {
+        card: seo.image ? "summary_large_image" : "summary",
+        title: seo.title,
+        description: seo.description,
+        images: seo.image ? [seo.image] : undefined,
       },
     };
   } catch (error) {
@@ -91,15 +116,27 @@ export default async function InspirationIndexPage({ params }) {
   const canonical = `${PUBLIC_ORIGIN}${canonicalPath(siteSlug)}`;
   const homePath = `/agence/${encodeURIComponent(siteSlug)}`;
   const contactPath = `${homePath}/contact`;
+  const seo = inspirationSeo(site);
   const breadcrumb = buildBreadcrumbSchema([
     { name: "Accueil", path: site.basePath },
     { name: "Inspirations voyage", path: canonical },
   ]);
+  const webPage = buildLocalWebPageSchema({
+    site,
+    page: {
+      slug: "inspiration",
+      title: "Inspirations voyage",
+    },
+    url: canonical,
+    title: seo.title,
+    description: seo.description,
+  });
 
   return (
     <>
       <JsonLd data={buildTravelAgencySchema(site)} />
       <JsonLd data={breadcrumb} />
+      <JsonLd data={webPage} />
 
       <section className="public-site-section">
         <div className="public-site-container public-site-prose">
@@ -126,14 +163,14 @@ export default async function InspirationIndexPage({ params }) {
                 const slug = String(item?.slug || "").trim();
                 if (!slug) return null;
 
-                const seo = item?.seo && typeof item.seo === "object" ? item.seo : {};
+                const itemSeo = item?.seo && typeof item.seo === "object" ? item.seo : {};
                 const body = item?.body && typeof item.body === "object" ? item.body : {};
                 const image =
                   body.imageUrl ||
                   body.heroImage ||
                   body.hero?.imageUrl ||
-                  seo.openGraph?.image ||
-                  seo.openGraph?.imageUrl ||
+                  itemSeo.openGraph?.image ||
+                  itemSeo.openGraph?.imageUrl ||
                   null;
                 const title = String(item.title || "Cette inspiration").trim();
                 const published = formatPublishedDate(
@@ -187,4 +224,4 @@ export default async function InspirationIndexPage({ params }) {
   );
 }
 
-export { canonicalPath, formatPublishedDate };
+export { canonicalPath, formatPublishedDate, inspirationSeo };
