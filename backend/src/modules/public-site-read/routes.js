@@ -139,6 +139,11 @@ async function hydrateContract({ database, contract }) {
     tenantId,
     agencyId,
     pages: contract?.pages || [],
+    // Les pages de ce contrat ont déjà été filtrées comme publiques par
+    // SectionAwarePublicSiteReadService. Les blocs V2 historiques peuvent
+    // encore porter status="draft" sans être des brouillons autonomes : leur
+    // publication est pilotée au niveau de la page. Ne pas les refiltrer ici.
+    includeUnpublishedBlocks: true,
   });
   const pages = await filterAgencyInspirations({
     database,
