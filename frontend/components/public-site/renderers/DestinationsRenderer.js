@@ -7,19 +7,40 @@ import {
 } from "./helpers";
 
 function destinationHref(site, item) {
+  if (item?.href) return item.href;
+  if (item?.url) return item.url;
   if (!site?.slug || !item?.slug) return null;
   return `/agence/${encodeURIComponent(site.slug)}/destination/${encodeURIComponent(item.slug)}`;
 }
 
+function destinationImage(item) {
+  if (!item || typeof item !== "object") return null;
+
+  const candidates = [
+    item.image,
+    item.imageUrl,
+    item.backgroundImage,
+    item.coverImage,
+    item.heroImage,
+    item.thumbnail,
+    item.photo,
+    item.media?.url,
+    item.image?.url,
+  ];
+
+  return candidates.find((value) => typeof value === "string" && value.trim()) || null;
+}
+
 function DestinationCard({ item, site }) {
   const href = destinationHref(site, item);
+  const image = destinationImage(item);
   const card = (
     <article
       className="public-site-destination-card"
       style={
-        item.image
+        image
           ? {
-              backgroundImage: `linear-gradient(rgba(8,31,52,.12),rgba(8,31,52,.78)),url("${item.image}")`,
+              backgroundImage: `linear-gradient(rgba(8,31,52,.12),rgba(8,31,52,.78)),url("${image}")`,
             }
           : undefined
       }
