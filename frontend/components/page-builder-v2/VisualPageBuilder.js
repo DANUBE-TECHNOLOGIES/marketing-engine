@@ -651,7 +651,7 @@ function BlockProperties({
       ) : null}
 
       {"imageUrl" in content ? (
-        block.type === "hero" ? (
+        ["hero", "image_text"].includes(block.type) ? (
           <>
             <MediaPicker
               assets={mediaAssets}
@@ -661,6 +661,7 @@ function BlockProperties({
                 onContentChange({
                   ...content,
                   imageAssetId: asset.id,
+                  imageUrl: null,
                   imageAlt:
                     content.imageAlt ||
                     asset.altText ||
