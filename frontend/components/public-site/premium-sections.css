@@ -194,10 +194,13 @@
 }
 
 .public-site-team-portrait {
-  aspect-ratio: 4 / 3;
+  width: clamp(190px, 72%, 250px);
+  aspect-ratio: 1 / 1;
   display: grid;
   place-items: center;
+  margin: 26px auto 0;
   overflow: hidden;
+  border-radius: 50%;
   background:
     radial-gradient(circle at 80% 15%, color-mix(in srgb, var(--public-accent) 18%, transparent), transparent 34%),
     linear-gradient(135deg, color-mix(in srgb, var(--public-primary) 12%, #fff), #f7fafc);
@@ -206,7 +209,9 @@
 .public-site-team-portrait img {
   width: 100%;
   height: 100%;
+  display: block;
   object-fit: cover;
+  object-position: center center;
 }
 
 .public-site-team-portrait span {
@@ -222,7 +227,7 @@
 }
 
 .public-site-team-copy {
-  padding: 24px;
+  padding: 22px 26px 28px;
 }
 
 .public-site-team-copy h3 {
@@ -301,6 +306,11 @@
   .public-site-editorial-grid,
   .public-site-team-grid {
     grid-template-columns: 1fr;
+  }
+
+  .public-site-team-portrait {
+    width: min(210px, 68vw);
+    margin-top: 22px;
   }
 
   .public-site-destination-card {
