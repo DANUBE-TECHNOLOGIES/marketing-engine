@@ -81,6 +81,26 @@ export function proxy(request) {
     return NextResponse.next();
   }
 
+
+  /*
+   * agences.mondescale.com est exclusivement le domaine public
+   * des mini-sites.
+   *
+   * Toute route inconnue sur ce hostname doit répondre 404
+   * sans jamais déclencher la Basic Auth du Local Engine.
+   */
+  if (requestHostname(request) === PUBLIC_SITE_HOST) {
+    return new NextResponse(
+      "Not Found",
+      {
+        status: 404,
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      }
+    );
+  }
+
   const authorization =
     request.headers.get("authorization");
 

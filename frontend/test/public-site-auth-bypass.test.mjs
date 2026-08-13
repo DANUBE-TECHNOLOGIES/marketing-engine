@@ -33,3 +33,40 @@ test("non-public Local Engine routes remain behind Basic Auth", () => {
   assert.match(proxy, /WWW-Authenticate/);
   assert.match(proxy, /status: 401/);
 });
+
+test("public agences hostname never falls through to Basic Auth", () => {
+  assert.match(
+    proxy,
+    /requestHostname\(request\) === PUBLIC_SITE_HOST/
+  );
+
+  assert.match(
+    proxy,
+    /status:\s*404/
+  );
+
+  const publicHostGuard =
+    proxy.indexOf(
+      "requestHostname(request) === PUBLIC_SITE_HOST"
+    );
+
+  const basicAuth =
+    proxy.indexOf(
+      "const authorization"
+    );
+
+  assert.ok(
+    publicHostGuard >= 0,
+    "public hostname guard must exist"
+  );
+
+  assert.ok(
+    basicAuth >= 0,
+    "Basic Auth block must exist"
+  );
+
+  assert.ok(
+    publicHostGuard < basicAuth,
+    "public hostname guard must run before Basic Auth"
+  );
+});
