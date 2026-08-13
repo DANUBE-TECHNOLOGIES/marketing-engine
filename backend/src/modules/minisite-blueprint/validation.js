@@ -205,9 +205,19 @@ function validateAgencyContext(
                     member.description
                   ),
 
+                imageAssetId:
+                  cleanText(
+                    member.imageAssetId
+                  ),
+
                 imageUrl:
                   cleanText(
                     member.imageUrl
+                  ),
+
+                imageAlt:
+                  cleanText(
+                    member.imageAlt
                   ),
               })
             )

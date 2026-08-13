@@ -11,6 +11,9 @@ const {
   hydrateDestinationMediaAssets,
 } = require("./destination-media-hydrator");
 const {
+  hydrateTeamMediaAssets,
+} = require("./team-media-hydrator");
+const {
   contentTargetsAgency,
 } = require("../ai-content/editorial-targeting");
 
@@ -252,11 +255,18 @@ async function hydrateContract({ database, contract }) {
       pages: destinationEnrichedPages,
     });
 
+  const teamMediaPages =
+    await hydrateTeamMediaAssets({
+      prisma: database,
+      tenantId,
+      pages: destinationMediaPages,
+    });
+
   const pages = await filterAgencyInspirations({
     database,
     tenantId,
     agencyId,
-    pages: destinationMediaPages,
+    pages: teamMediaPages,
   });
 
   return {

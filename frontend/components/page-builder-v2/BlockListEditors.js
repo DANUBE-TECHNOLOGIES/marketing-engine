@@ -1,6 +1,7 @@
 "use client";
 
 import styles from "./VisualPageBuilder.module.css";
+import MediaPicker from "./MediaPicker";
 
 function moveItem(items, index, direction) {
   const target = index + direction;
@@ -391,6 +392,8 @@ export function TestimonialsEditor({
 export function TeamEditor({
   members,
   onChange,
+  assets = [],
+  loading = false,
 }) {
   return (
     <ListEditor
@@ -401,64 +404,127 @@ export function TeamEditor({
         id: `team-${Date.now()}`,
         name: "",
         role: "Conseiller voyage",
+        imageAssetId: "",
         imageUrl: "",
         imageAlt: "",
         bio: "",
       })}
     >
-      {({ item, update }) => (
-        <>
-          {item.imageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              className={styles.editorThumbnail}
-              src={item.imageUrl}
-              alt={item.imageAlt || item.name || "Membre de l'équipe"}
+      {({ item, update }) => {
+        const selectedAsset =
+          item.imageAssetId
+            ? assets.find(
+                (asset) =>
+                  asset.id === item.imageAssetId
+              ) || null
+            : null;
+
+        const previewUrl =
+          item.imageUrl ||
+          selectedAsset?.url ||
+          "";
+
+        return (
+          <>
+            {previewUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                className={styles.editorThumbnail}
+                src={previewUrl}
+                alt={
+                  item.imageAlt ||
+                  item.name ||
+                  "Membre de l'équipe"
+                }
+              />
+            ) : null}
+
+            <Field
+              label="Nom"
+              value={item.name}
+              onChange={(name) =>
+                update({ ...item, name })
+              }
             />
-          ) : null}
 
-          <Field
-            label="Nom"
-            value={item.name}
-            onChange={(name) =>
-              update({ ...item, name })
-            }
-          />
+            <Field
+              label="Fonction"
+              value={item.role}
+              onChange={(role) =>
+                update({ ...item, role })
+              }
+            />
 
-          <Field
-            label="Fonction"
-            value={item.role}
-            onChange={(role) =>
-              update({ ...item, role })
-            }
-          />
+            <MediaPicker
+              assets={assets}
+              loading={loading}
+              selectedAssetId={
+                item.imageAssetId || ""
+              }
+              onSelect={(asset) =>
+                update({
+                  ...item,
+                  imageAssetId: asset.id,
+                  imageAlt:
+                    item.imageAlt ||
+                    asset.altText ||
+                    (item.name
+                      ? `Portrait de ${item.name}`
+                      : ""),
+                })
+              }
+              onClear={() => {
+                const {
+                  imageAssetId: _imageAssetId,
+                  imageUrl: _imageUrl,
+                  __mediaSource: _mediaSource,
+                  __mediaVersion: _mediaVersion,
+                  ...rest
+                } = item;
 
-          <Field
-            label="URL de la photo"
-            value={item.imageUrl}
-            onChange={(imageUrl) =>
-              update({ ...item, imageUrl })
-            }
-          />
+                update(rest);
+              }}
+            />
 
-          <Field
-            label="Texte alternatif de la photo"
-            value={item.imageAlt}
-            onChange={(imageAlt) =>
-              update({ ...item, imageAlt })
-            }
-          />
+            <Field
+              label="Texte alternatif de la photo"
+              value={item.imageAlt}
+              onChange={(imageAlt) =>
+                update({
+                  ...item,
+                  imageAlt,
+                })
+              }
+            />
 
-          <Field
-            label="Présentation"
-            value={item.bio}
-            multiline
-            onChange={(bio) =>
-              update({ ...item, bio })
-            }
-          />
-        </>
-      )}
+            <details>
+              <summary>
+                URL de photo héritée
+              </summary>
+
+              <Field
+                label="URL de la photo"
+                value={item.imageUrl}
+                onChange={(imageUrl) =>
+                  update({
+                    ...item,
+                    imageUrl,
+                  })
+                }
+              />
+            </details>
+
+            <Field
+              label="Présentation"
+              value={item.bio}
+              multiline
+              onChange={(bio) =>
+                update({ ...item, bio })
+              }
+            />
+          </>
+        );
+      }}
     </ListEditor>
   );
 }

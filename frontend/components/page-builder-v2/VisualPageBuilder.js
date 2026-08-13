@@ -241,15 +241,59 @@ function BlockPreview({ block, mediaAssetsById = {} }) {
           {content.text ? <p>{content.text}</p> : null}
           <div className={styles.cardGrid}>
             {(content.members || []).length ? (
-              content.members.slice(0, 4).map((member, index) => (
-                <article key={member.id || `${member.name}-${index}`}>
-                  <div className={styles.cardImage}>
-                    {member.imageUrl ? "Photo" : "Équipe"}
-                  </div>
-                  <h3>{member.name || "Membre de l’équipe"}</h3>
-                  <p>{member.role || "Conseiller voyage"}</p>
-                </article>
-              ))
+              content.members.slice(0, 4).map((member, index) => {
+                const asset =
+                  member.imageAssetId
+                    ? mediaAssetsById[
+                        member.imageAssetId
+                      ] || null
+                    : null;
+
+                const memberImage =
+                  member.imageUrl ||
+                  member.image ||
+                  asset?.url ||
+                  "";
+
+                return (
+                  <article
+                    key={
+                      member.id ||
+                      `${member.name}-${index}`
+                    }
+                  >
+                    <div
+                      className={styles.cardImage}
+                      style={
+                        memberImage
+                          ? {
+                              backgroundImage:
+                                `url("${memberImage}")`,
+                              backgroundSize:
+                                "cover",
+                              backgroundPosition:
+                                "center",
+                            }
+                          : undefined
+                      }
+                    >
+                      {!memberImage
+                        ? "Équipe"
+                        : null}
+                    </div>
+
+                    <h3>
+                      {member.name ||
+                        "Membre de l’équipe"}
+                    </h3>
+
+                    <p>
+                      {member.role ||
+                        "Conseiller voyage"}
+                    </p>
+                  </article>
+                );
+              })
             ) : (
               <article>
                 <div className={styles.cardImage}>Équipe</div>
@@ -899,6 +943,8 @@ function BlockProperties({
       {block.type === "team" ? (
         <TeamEditor
           members={content.members}
+          assets={mediaAssets}
+          loading={mediaLoading}
           onChange={(members) => set("members", members)}
         />
       ) : null}
