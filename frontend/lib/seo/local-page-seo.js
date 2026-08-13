@@ -67,11 +67,16 @@ function pageKind(pageSlug, page) {
   const title = clean(page?.title).toLocaleLowerCase("fr-FR");
 
   if (!slug || ["home", "accueil", "index"].includes(slug)) return "home";
+  if (["agence", "notre-agence"].includes(slug)) return "agency";
+  if (["equipe", "team", "notre-equipe"].includes(slug)) return "team";
   if (slug === "services" || /service/.test(title)) return "services";
   if (["destinations", "destination"].includes(slug) || /destination/.test(title)) return "destinations";
   if (["inspirations", "inspiration", "idees-voyage"].includes(slug) || /inspiration|idée.*voyage/.test(title)) return "inspirations";
   if (["offres", "offers", "promotions"].includes(slug) || /offre|promotion/.test(title)) return "offers";
-  if (["contact", "agence", "nous-contacter"].includes(slug) || /contact|agence/.test(title)) return "contact";
+  if (["avis", "reviews", "avis-clients"].includes(slug) || /avis client/.test(title)) return "reviews";
+  if (["engagements", "commitments"].includes(slug) || /engagement/.test(title)) return "commitments";
+  if (["partenaires", "partners"].includes(slug) || /partenaire/.test(title)) return "partners";
+  if (["contact", "nous-contacter"].includes(slug) || /contact/.test(title)) return "contact";
   return "generic";
 }
 
@@ -132,6 +137,10 @@ function titleForKind({ kind, city, brand, pageTitle }) {
   switch (kind) {
     case "home":
       return `Agence de voyages à ${city} | ${brand}`;
+    case "agency":
+      return `Votre agence de voyages à ${city} | ${brand}`;
+    case "team":
+      return `Équipe de votre agence de voyages à ${city} | ${brand}`;
     case "services":
       return `Services de voyage à ${city} | ${brand}`;
     case "destinations":
@@ -140,6 +149,12 @@ function titleForKind({ kind, city, brand, pageTitle }) {
       return `Idées voyage & inspirations à ${city} | ${brand}`;
     case "offers":
       return `Offres de voyages à ${city} | ${brand}`;
+    case "reviews":
+      return `Avis clients de votre agence à ${city} | ${brand}`;
+    case "commitments":
+      return `Nos engagements voyage à ${city} | ${brand}`;
+    case "partners":
+      return `Partenaires voyage de votre agence à ${city} | ${brand}`;
     case "contact":
       return `Agence de voyages à ${city} : contact | ${brand}`;
     default:
@@ -157,6 +172,12 @@ function descriptionForKind({ kind, site, page }) {
   let lead;
 
   switch (kind) {
+    case "agency":
+      lead = `Découvrez ${brand}${where}, votre agence de voyages locale : équipe, expertise et accompagnement personnalisé pour construire votre projet.`;
+      break;
+    case "team":
+      lead = `Rencontrez l’équipe ${brand}${where} : des conseillers voyage à votre écoute pour préparer séjours, circuits, croisières et sur mesure.`;
+      break;
     case "services":
       lead = `${brand}, agence de voyages${where} : conseil personnalisé, séjours, circuits, croisières et voyages sur mesure selon votre projet.`;
       break;
@@ -168,6 +189,15 @@ function descriptionForKind({ kind, site, page }) {
       break;
     case "offers":
       lead = `Découvrez les offres de voyages sélectionnées par ${brand}${where} et bénéficiez des conseils de votre agence pour choisir le séjour adapté.`;
+      break;
+    case "reviews":
+      lead = `Consultez les avis clients de ${brand}${where} et découvrez l’expérience des voyageurs accompagnés par notre équipe pour leurs projets.`;
+      break;
+    case "commitments":
+      lead = `Découvrez les engagements de ${brand}${where} : écoute, conseil, expertise et accompagnement avant, pendant et après votre voyage.`;
+      break;
+    case "partners":
+      lead = `Découvrez les partenaires voyage sélectionnés par ${brand}${where} pour construire des séjours, circuits et expériences adaptés à vos envies.`;
       break;
     case "contact":
       lead = `Contactez ${brand}${where} pour préparer votre voyage : conseils personnalisés, devis, séjours, circuits, croisières et sur mesure.`;
