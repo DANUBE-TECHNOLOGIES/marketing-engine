@@ -16,6 +16,12 @@ const {
   "../src/modules/public-site-read"
 );
 
+const {
+  normalizePublicPage,
+} = require(
+  "../src/modules/public-site-read/section-aware-service"
+);
+
 test(
   "normalise un slug",
   () => {
@@ -154,6 +160,48 @@ test(
     assert.deepEqual(
       result.blocks.map((block) => block.status),
       ["draft", "draft"]
+    );
+  }
+);
+
+test(
+  "le service section-aware conserve les blocs V2 draft d'une page publiée",
+  () => {
+    const result = normalizePublicPage({
+      id: "home-section-aware",
+      slug: "",
+      title: "Accueil",
+      status: "published",
+      published: true,
+      blocks: [
+        {
+          id: "hero-section-aware",
+          blockType: "hero",
+          status: "draft",
+          displayOrder: 0,
+          content: {
+            title: "Agence de voyages",
+          },
+        },
+        {
+          id: "cta-section-aware",
+          blockType: "cta",
+          status: "draft",
+          displayOrder: 1,
+          content: {
+            title: "Construisons votre voyage",
+          },
+        },
+      ],
+      sections: [],
+    });
+
+    assert.equal(result.published, true);
+    assert.equal(result.contentSource, "website-designer-v2-blocks");
+    assert.equal(result.blocks.length, 2);
+    assert.deepEqual(
+      result.blocks.map((block) => block.type),
+      ["hero", "cta"]
     );
   }
 );
