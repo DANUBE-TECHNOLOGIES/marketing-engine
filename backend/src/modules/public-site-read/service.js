@@ -48,25 +48,41 @@ function normalizeBlock(block) {
   };
 }
 
-function publicBlocks(blocks) {
-  return Array.isArray(blocks)
-    ? blocks.filter(publishedLike).map(normalizeBlock)
-    : [];
+function publicBlocks(blocks, { pagePublished = false } = {}) {
+  if (!Array.isArray(blocks)) return [];
+
+  /*
+   * Le contrat V2 publie la page comme unité éditoriale. Plusieurs blocs
+   * historiques portent encore status="draft" alors qu'ils appartiennent à
+   * une page explicitement publiée. Les filtrer individuellement rend la
+   * page publique vide alors que le Designer affiche bien ses blocs.
+   *
+   * Une page non publiée reste totalement exclue par bySlug(); pour une page
+   * publiée, on expose donc tous ses blocs visibles et on conserve leur statut
+   * technique sans lui donner un rôle de publication autonome.
+   */
+  const source = pagePublished
+    ? blocks
+    : blocks.filter(publishedLike);
+
+  return source.map(normalizeBlock);
 }
 
 function normalizePage(page) {
+  const published = publishedLike(page);
+
   return {
     id: page.id,
     slug: page.slug,
     title: page.title ?? "",
     status: page.status ?? null,
-    published: publishedLike(page),
+    published,
     publishedAt: page.publishedAt ?? null,
     displayOrder: page.displayOrder ?? 0,
     seoTitle: page.seoTitle ?? null,
     metaDescription: page.metaDescription ?? null,
     path: page.path ?? null,
-    blocks: publicBlocks(page.blocks),
+    blocks: publicBlocks(page.blocks, { pagePublished: published }),
   };
 }
 
