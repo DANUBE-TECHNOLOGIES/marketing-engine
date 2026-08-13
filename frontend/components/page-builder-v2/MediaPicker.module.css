@@ -1,0 +1,160 @@
+.picker {
+  margin: 14px 0;
+  padding: 14px;
+  border: 1px solid #dfe4eb;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.heading > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.heading strong {
+  font-size: 13px;
+  color: #1d2a3d;
+}
+
+.heading small {
+  font-size: 11px;
+  color: #7d8999;
+}
+
+.clearButton {
+  border: 0;
+  border-radius: 8px;
+  padding: 7px 10px;
+  background: #fff0f0;
+  color: #a32828;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.selectedPreview {
+  margin: 0 0 12px;
+  overflow: hidden;
+  border: 1px solid #dce3eb;
+  border-radius: 10px;
+  background: white;
+}
+
+.selectedPreview img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+.selectedPreview figcaption {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px;
+}
+
+.selectedPreview strong {
+  font-size: 12px;
+}
+
+.selectedPreview span {
+  font-size: 11px;
+  line-height: 1.4;
+  color: #748195;
+}
+
+.search {
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 9px 10px;
+  border: 1px solid #d8e0e9;
+  border-radius: 9px;
+  background: white;
+  color: #1d2a3d;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  max-height: 330px;
+  overflow: auto;
+}
+
+.card,
+.activeCard {
+  position: relative;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #dce3eb;
+  border-radius: 9px;
+  background: white;
+  text-align: left;
+  cursor: pointer;
+}
+
+.activeCard {
+  border: 2px solid #1469d4;
+}
+
+.card img,
+.activeCard img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+
+.card span,
+.activeCard span {
+  display: block;
+  padding: 7px 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 700;
+  color: #26334a;
+}
+
+.activeCard i {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 4px 6px;
+  border-radius: 999px;
+  background: #1469d4;
+  color: white;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.state,
+.missingSelection {
+  padding: 12px;
+  border-radius: 9px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.state {
+  background: white;
+  color: #7a8798;
+  text-align: center;
+}
+
+.missingSelection {
+  margin-bottom: 10px;
+  background: #fff5dc;
+  color: #7a5a13;
+}
