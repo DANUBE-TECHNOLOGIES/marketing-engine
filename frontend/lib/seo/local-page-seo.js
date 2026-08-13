@@ -101,6 +101,29 @@ function areaPhrase(site) {
   return ` Nous accompagnons aussi les voyageurs de ${first} et ${last}.`;
 }
 
+function containsLocalSignal(value, site) {
+  const text = clean(value).toLocaleLowerCase("fr-FR");
+  if (!text) return false;
+
+  const locations = [
+    localCity(site),
+    ...targetCities(site),
+  ].filter(Boolean);
+
+  if (!locations.length) return true;
+
+  return locations.some((city) =>
+    text.includes(city.toLocaleLowerCase("fr-FR"))
+  );
+}
+
+function preferLocalOverride(value, site, fallback) {
+  const candidate = clean(value);
+  return candidate && containsLocalSignal(candidate, site)
+    ? candidate
+    : fallback;
+}
+
 function titleForKind({ kind, city, brand, pageTitle }) {
   if (!city) {
     return pageTitle ? `${pageTitle} | ${brand}` : brand;
@@ -198,13 +221,19 @@ export function buildLocalPageSeo({ site, page, pageSlug }) {
   const city = localCity(site);
   const brand = brandLabel(site);
   const pageTitle = clean(page?.title);
+  const generatedTitle = titleForKind({ kind, city, brand, pageTitle });
+  const generatedDescription = descriptionForKind({ kind, site, page });
 
   return {
     kind,
     city,
     brand,
-    title: titleForKind({ kind, city, brand, pageTitle }),
-    description: descriptionForKind({ kind, site, page }),
+    title: preferLocalOverride(page?.seoTitle, site, generatedTitle),
+    description: preferLocalOverride(
+      page?.metaDescription || page?.seoDescription,
+      site,
+      generatedDescription
+    ),
     image: extractPageImage(page, site),
     targetCities: targetCities(site),
   };
@@ -214,9 +243,11 @@ export {
   MAX_DESCRIPTION_LENGTH,
   areaPhrase,
   brandLabel,
+  containsLocalSignal,
   extractPageImage,
   localCity,
   pageKind,
+  preferLocalOverride,
   targetCities,
   truncateSentence,
 };
