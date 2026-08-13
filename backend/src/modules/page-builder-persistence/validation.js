@@ -60,6 +60,11 @@ function normalizeSlug(value) {
     .replace(/^-+|-+$/g, "");
 }
 
+function normalizePosition(value, fallback) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
+}
+
 function validatePagePayload(body = {}) {
   const pageInput = body.page || body;
   const registry = new BlockRegistry();
@@ -84,12 +89,12 @@ function validatePagePayload(body = {}) {
     pageInput.blocks ||
     [];
 
-  const blocks = registry.validatePage(
-    rawBlocks.map((block, index) => ({
-      ...block,
-      position: index,
-    }))
-  );
+  const normalizedInputs = rawBlocks.map((block, index) => ({
+    ...block,
+    position: normalizePosition(block?.position ?? block?.displayOrder, index),
+  }));
+
+  const blocks = registry.validatePage(normalizedInputs);
 
   return {
     page: {
@@ -125,9 +130,13 @@ function validatePagePayload(body = {}) {
         pageInput.published === true,
     },
 
-    blocks: blocks.map((block) => ({
+    blocks: blocks.map((block, index) => ({
       type: block.type,
       status: block.status,
+      position: normalizePosition(
+        block.position ?? normalizedInputs[index]?.position,
+        index
+      ),
       content: block.content,
       settings: block.settings || {},
       seo:
