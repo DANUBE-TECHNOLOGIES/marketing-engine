@@ -76,7 +76,6 @@ export function normalizePage(page, index = 0) {
       ? blocks
           .map(normalizeBlock)
           .sort((a, b) => a.position - b.position)
-          .map((block, blockIndex) => ({ ...block, position: blockIndex }))
       : [],
   };
 }
@@ -119,6 +118,9 @@ export function createBlock(type, position) {
   });
 }
 
+// Explicit structural edits (move/add/delete/duplicate) call this helper.
+// Passive load/save paths must never call it, otherwise persisted displayOrder
+// values are silently rewritten.
 export function reorderBlocks(blocks) {
   return blocks.map((block, index) => ({ ...block, position: index }));
 }
@@ -148,11 +150,11 @@ export function serializePage(page) {
           : page.published === true,
     seoTitle: page.seoTitle,
     seoDescription: page.seoDescription,
-    blocks: reorderBlocks(page.blocks).map((block) => ({
+    blocks: page.blocks.map((block) => ({
       id: block.id,
       type: block.type,
       status: block.status,
-      position: block.position,
+      position: Number.isFinite(Number(block.position)) ? Number(block.position) : 0,
       content: deepClone(block.content),
       settings: deepClone(block.settings || {}),
     })),
