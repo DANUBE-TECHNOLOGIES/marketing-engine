@@ -54,14 +54,36 @@ function servedAreas(site, agency) {
     site?.metadata?.targetCities ||
     agency?.targetCities ||
     [];
+  const primaryCity = String(agency?.city || site?.city || "").trim();
+  const result = [];
+  const seen = new Set();
 
-  if (!Array.isArray(values)) return values;
+  function append(value) {
+    const name = String(
+      typeof value === "string"
+        ? value
+        : value?.name || value?.city || ""
+    ).trim();
 
-  return values.map((value) =>
-    typeof value === "string"
-      ? { "@type": "City", name: value }
-      : value
-  );
+    if (!name) return;
+
+    const key = name.toLocaleLowerCase("fr-FR");
+    if (seen.has(key)) return;
+
+    seen.add(key);
+    result.push({
+      "@type": "City",
+      name,
+    });
+  }
+
+  append(primaryCity);
+
+  if (Array.isArray(values)) {
+    values.forEach(append);
+  }
+
+  return result;
 }
 
 function internationalPhone(value) {
@@ -127,6 +149,13 @@ export function buildTravelAgencySchema(site) {
   const agency = site?.agency || site;
   const latitude = agency?.latitude ?? site?.latitude;
   const longitude = agency?.longitude ?? site?.longitude;
+  const phone = internationalPhone(agency.phone || site.phone);
+  const email = agency.email || site.email;
+  const logo = agency.logoUrl || site.logoUrl;
+  const image =
+    agency.imageUrl ||
+    logo ||
+    site.heroImageUrl;
   const hasMap =
     agency.googleMapsUrl ||
     buildGoogleMapsSearchUrl({
@@ -142,13 +171,10 @@ export function buildTravelAgencySchema(site) {
     "@id": `${absoluteUrl(site.basePath)}#travel-agency`,
     name: site.name || agency.name,
     url: absoluteUrl(site.basePath),
-    telephone: internationalPhone(agency.phone || site.phone),
-    email: agency.email || site.email,
-    image:
-      agency.imageUrl ||
-      agency.logoUrl ||
-      site.logoUrl ||
-      site.heroImageUrl,
+    telephone: phone,
+    email,
+    logo,
+    image,
     description: agency.description || site.description,
     address: {
       "@type": "PostalAddress",
@@ -169,6 +195,16 @@ export function buildTravelAgencySchema(site) {
     hasMap,
     areaServed: servedAreas(site, agency),
     openingHoursSpecification: openingHoursSpecification(site?.hours),
+    contactPoint:
+      phone || email
+        ? {
+            "@type": "ContactPoint",
+            telephone: phone,
+            email,
+            contactType: "customer service",
+            availableLanguage: ["fr"],
+          }
+        : undefined,
     sameAs: [
       agency.website,
       agency.googleBusinessUrl,
@@ -177,6 +213,43 @@ export function buildTravelAgencySchema(site) {
       agency.instagramUrl,
       agency.linkedinUrl,
     ].filter(Boolean),
+  });
+}
+
+export function buildLocalWebPageSchema({
+  site,
+  page,
+  url,
+  title,
+  description,
+}) {
+  const pageUrl = absoluteUrl(url);
+  const agencyId = `${absoluteUrl(site.basePath)}#travel-agency`;
+
+  return compactJsonLd({
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "@id": `${pageUrl}#webpage`,
+    url: pageUrl,
+    name: title || page?.title,
+    description,
+    inLanguage: "fr-FR",
+    isPartOf: {
+      "@type": "WebSite",
+      "@id": `${absoluteUrl("/")}#website`,
+      url: absoluteUrl("/"),
+      name: "Mondescale Voyages",
+    },
+    about: {
+      "@type": "TravelAgency",
+      "@id": agencyId,
+      name: site.name || site?.agency?.name,
+      url: absoluteUrl(site.basePath),
+    },
+    mainEntity: {
+      "@type": "TravelAgency",
+      "@id": agencyId,
+    },
   });
 }
 
@@ -265,3 +338,9 @@ export function buildDestinationSchema(data) {
       : undefined,
   });
 }
+
+export {
+  internationalPhone,
+  openingHoursSpecification,
+  servedAreas,
+};
