@@ -10,6 +10,7 @@ import {
 
 import styles from "./VisualPageBuilder.module.css";
 import PreviewCanvas from "./PreviewCanvas";
+import MediaPicker from "./MediaPicker";
 import NetworkUniquenessAudit from "./NetworkUniquenessAudit";
 
 import {
@@ -30,6 +31,10 @@ import {
   fetchSite,
   savePage,
 } from "../../lib/page-builder-v2/page-builder-api";
+
+import {
+  fetchPublishedMediaImages,
+} from "../../lib/page-builder-v2/media-library-api";
 
 import {
   readLocalDraft,
@@ -55,8 +60,12 @@ function stripHtml(value) {
     .trim();
 }
 
-function BlockPreview({ block }) {
+function BlockPreview({ block, mediaAssetsById = {} }) {
   const content = block.content || {};
+  const mediaAsset = content.imageAssetId
+    ? mediaAssetsById[content.imageAssetId] || null
+    : null;
+  const previewUrl = content.imageUrl || mediaAsset?.url || "";
 
   switch (block.type) {
     case "hero":
@@ -64,10 +73,10 @@ function BlockPreview({ block }) {
         <section
           className={styles.heroPreview}
           style={
-            content.imageUrl
+            previewUrl
               ? {
                   backgroundImage:
-                    `linear-gradient(90deg, rgba(10,20,35,.74), rgba(10,20,35,.25)), url("${content.imageUrl}")`,
+                    `linear-gradient(90deg, rgba(10,20,35,.74), rgba(10,20,35,.25)), url("${previewUrl}")`,
                 }
               : undefined
           }
@@ -112,10 +121,10 @@ function BlockPreview({ block }) {
       return (
         <section className={styles.imageTextPreview}>
           <div className={styles.previewImage}>
-            {content.imageUrl ? (
+            {previewUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={content.imageUrl}
+                src={previewUrl}
                 alt={content.imageAlt || ""}
               />
             ) : (
@@ -406,6 +415,8 @@ function BlockProperties({
   block,
   onContentChange,
   onStatusChange,
+  mediaAssets = [],
+  mediaLoading = false,
 }) {
   if (!block) {
     return (
@@ -517,19 +528,58 @@ function BlockProperties({
       ) : null}
 
       {"imageUrl" in content ? (
-        <>
-          <TextInput
-            label="URL de l’image"
-            value={content.imageUrl}
-            onChange={(value) => set("imageUrl", value)}
-          />
+        block.type === "hero" ? (
+          <>
+            <MediaPicker
+              assets={mediaAssets}
+              loading={mediaLoading}
+              selectedAssetId={content.imageAssetId || ""}
+              onSelect={(asset) =>
+                onContentChange({
+                  ...content,
+                  imageAssetId: asset.id,
+                  imageAlt:
+                    content.imageAlt ||
+                    asset.altText ||
+                    "",
+                })
+              }
+              onClear={() => {
+                const { imageAssetId: _removed, ...rest } = content;
+                onContentChange(rest);
+              }}
+            />
 
-          <TextInput
-            label="Texte alternatif"
-            value={content.imageAlt}
-            onChange={(value) => set("imageAlt", value)}
-          />
-        </>
+            <TextInput
+              label="Texte alternatif"
+              value={content.imageAlt}
+              onChange={(value) => set("imageAlt", value)}
+            />
+
+            <details>
+              <summary>URL d’image héritée</summary>
+              <TextInput
+                label="URL de l’image"
+                value={content.imageUrl}
+                onChange={(value) => set("imageUrl", value)}
+              />
+            </details>
+          </>
+        ) : (
+          <>
+            <TextInput
+              label="URL de l’image"
+              value={content.imageUrl}
+              onChange={(value) => set("imageUrl", value)}
+            />
+
+            <TextInput
+              label="Texte alternatif"
+              value={content.imageAlt}
+              onChange={(value) => set("imageAlt", value)}
+            />
+          </>
+        )
       ) : null}
 
       {"alignment" in content ? (
@@ -815,6 +865,8 @@ export default function VisualPageBuilder({ siteId }) {
   const [loading, setLoading] = useState(true);
   const [loadingPage, setLoadingPage] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [mediaAssets, setMediaAssets] = useState([]);
+  const [mediaLoading, setMediaLoading] = useState(true);
 
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -855,6 +907,41 @@ export default function VisualPageBuilder({ siteId }) {
       ) || null,
     [activePage, selectedBlockId]
   );
+
+  const mediaAssetsById = useMemo(
+    () =>
+      Object.fromEntries(
+        mediaAssets.map((asset) => [asset.id, asset])
+      ),
+    [mediaAssets]
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadMedia() {
+      setMediaLoading(true);
+      try {
+        const items = await fetchPublishedMediaImages();
+        if (!cancelled) setMediaAssets(items);
+      } catch (mediaError) {
+        if (!cancelled) {
+          setError((current) =>
+            current ||
+            mediaError?.message ||
+            "Impossible de charger la médiathèque."
+          );
+        }
+      } finally {
+        if (!cancelled) setMediaLoading(false);
+      }
+    }
+
+    loadMedia();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const pushHistory = useCallback((currentSite) => {
     if (!currentSite) return;
@@ -1652,7 +1739,10 @@ export default function VisualPageBuilder({ siteId }) {
                             </div>
                           ) : null}
 
-                          <BlockPreview block={block} />
+                          <BlockPreview
+                            block={block}
+                            mediaAssetsById={mediaAssetsById}
+                          />
                         </article>
                       )
                     )
@@ -1673,6 +1763,8 @@ export default function VisualPageBuilder({ siteId }) {
 
           <BlockProperties
             block={selectedBlock}
+            mediaAssets={mediaAssets}
+            mediaLoading={mediaLoading}
             onContentChange={(content) =>
               updateSelectedBlock((block) => ({
                 ...block,
