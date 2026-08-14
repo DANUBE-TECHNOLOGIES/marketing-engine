@@ -154,7 +154,7 @@ function headingForKind({ kind, city, pageTitle }) {
     case "inspirations":
       return `Inspirations voyage depuis ${city}`;
     case "offers":
-      return `Offres de voyages au départ de ${city}`;
+      return `Offres de voyages à ${city}`;
     case "reviews":
       return `Avis clients de votre agence de voyages à ${city}`;
     case "commitments":
