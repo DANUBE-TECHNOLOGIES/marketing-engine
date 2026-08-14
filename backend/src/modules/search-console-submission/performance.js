@@ -30,12 +30,42 @@ function normalizeRows(rows, dimensions) {
   })) : [];
 }
 
+function pageFilter(pagePrefix) {
+  const prefix = String(pagePrefix || "").trim();
+  if (!prefix) return {};
+  return {
+    dimensionFilterGroups: [{
+      groupType: "and",
+      filters: [{ dimension: "page", operator: "contains", expression: prefix }],
+    }],
+  };
+}
+
+function aggregateFromRows(rows) {
+  const first = Array.isArray(rows) ? rows[0] : null;
+  return {
+    clicks: Number(first?.clicks || 0),
+    impressions: Number(first?.impressions || 0),
+    ctr: Number(first?.ctr || 0),
+    position: Number(first?.position || 0),
+  };
+}
+
 class SearchConsolePerformanceService {
   constructor({ provider } = {}) {
     this.provider = provider;
   }
 
-  async query({ siteUrl, days = 28, dimensions = ["query"], rowLimit = 50 } = {}) {
+  async request(endpoint, payload) {
+    const response = await this.provider.googleRequest(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    return response.json();
+  }
+
+  async query({ siteUrl, pagePrefix, days = 28, dimensions = ["query"], rowLimit = 50 } = {}) {
     const target = String(siteUrl || "").trim();
     if (!target) {
       const error = new Error("La propriété Search Console est obligatoire.");
@@ -49,38 +79,44 @@ class SearchConsolePerformanceService {
       error.statusCode = 503;
       throw error;
     }
+
     await this.provider.assertSiteAccess(target);
     const safeDays = clampDays(days);
     const safeDimensions = dimensions.filter((item) => ["query", "page", "date", "device", "country"].includes(item));
     const finalDimensions = safeDimensions.length ? safeDimensions : ["query"];
     const range = dateRange(safeDays);
+    const filters = pageFilter(pagePrefix);
     const endpoint = `${SEARCH_CONSOLE_API_ROOT}/sites/${encodeURIComponent(target)}/searchAnalytics/query`;
-    const response = await this.provider.googleRequest(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...range, dimensions: finalDimensions, rowLimit: Math.min(1000, Math.max(1, Number(rowLimit || 50))) }),
-    });
-    const body = await response.json();
-    const rows = normalizeRows(body?.rows, finalDimensions);
-    const totals = rows.reduce((acc, row) => {
-      acc.clicks += row.clicks;
-      acc.impressions += row.impressions;
-      return acc;
-    }, { clicks: 0, impressions: 0 });
+
+    const [aggregateBody, detailBody] = await Promise.all([
+      this.request(endpoint, { ...range, ...filters, rowLimit: 1 }),
+      this.request(endpoint, {
+        ...range,
+        ...filters,
+        dimensions: finalDimensions,
+        rowLimit: Math.min(1000, Math.max(1, Number(rowLimit || 50))),
+      }),
+    ]);
+
     return {
       siteUrl: target,
+      pagePrefix: String(pagePrefix || "").trim() || null,
       ...range,
       days: safeDays,
       dimensions: finalDimensions,
-      rowCount: rows.length,
-      totals: {
-        ...totals,
-        ctr: totals.impressions ? totals.clicks / totals.impressions : 0,
-      },
-      rows,
-      note: "Search Console peut omettre certaines requêtes anonymisées et ne garantit pas toutes les lignes de détail.",
+      rowCount: Array.isArray(detailBody?.rows) ? detailBody.rows.length : 0,
+      totals: aggregateFromRows(aggregateBody?.rows),
+      rows: normalizeRows(detailBody?.rows, finalDimensions),
+      note: "Les agrégats sont interrogés séparément des lignes détaillées. Search Console peut omettre certaines requêtes anonymisées et ne garantit pas toutes les lignes de détail.",
     };
   }
 }
 
-module.exports = { SearchConsolePerformanceService, clampDays, dateRange, normalizeRows };
+module.exports = {
+  SearchConsolePerformanceService,
+  aggregateFromRows,
+  clampDays,
+  dateRange,
+  normalizeRows,
+  pageFilter,
+};
