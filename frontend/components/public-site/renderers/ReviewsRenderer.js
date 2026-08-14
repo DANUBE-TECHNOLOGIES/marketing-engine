@@ -103,10 +103,11 @@ function defaultReviewsIntro(site, total) {
     : "Découvrez les retours publiés sur Google par les voyageurs accompagnés par notre agence.";
 }
 
-function siteHref(site, slug) {
+function siteHref(site, slug = "") {
   const root = String(site?.basePath || `/agence/${encodeURIComponent(site?.slug || "")}`)
     .replace(/\/$/, "");
-  return `${root}/${slug}`;
+  const normalized = String(slug || "").trim().replace(/^\/+|\/+$/g, "");
+  return normalized ? `${root}/${normalized}` : root;
 }
 
 export default async function ReviewsRenderer({
@@ -311,7 +312,7 @@ export default async function ReviewsRenderer({
         ) : null}
 
         <div className="public-site-related-links" aria-label="Découvrir votre agence">
-          <Link href={siteHref(site, "equipe")}>Rencontrer notre équipe</Link>
+          <Link href={siteHref(site)}>Découvrir votre agence</Link>
           <Link href={siteHref(site, "services")}>Découvrir nos services voyage</Link>
           <Link href={siteHref(site, "contact")}>Contacter votre agence</Link>
         </div>
