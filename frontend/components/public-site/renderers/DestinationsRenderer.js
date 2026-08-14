@@ -19,6 +19,10 @@ function siteRoot(site) {
     .replace(/\/$/, "");
 }
 
+function localCity(site) {
+  return String(site?.agency?.city || site?.city || "").trim();
+}
+
 function destinationHref(site, item) {
   if (item?.href) return item.href;
   if (item?.url) return item.url;
@@ -55,14 +59,14 @@ function destinationImageAlt(item) {
 }
 
 function defaultDestinationsTitle(site) {
-  const city = String(site?.agency?.city || site?.city || "").trim();
+  const city = localCity(site);
   return city
     ? `Idées de voyages depuis ${city}`
     : "Nos destinations du moment";
 }
 
 function defaultDestinationsIntro(site) {
-  const city = String(site?.agency?.city || site?.city || "").trim();
+  const city = localCity(site);
   const nearby = resolvedTargetCities(site, { limit: 3 });
 
   if (!city) {
@@ -80,6 +84,7 @@ function DestinationCard({ item, site }) {
   const href = destinationHref(site, item);
   const image = destinationImage(item);
   const title = item.title || item.name || "Destination";
+  const city = localCity(site);
   const card = (
     <article className="public-site-destination-card" data-has-image={image ? "true" : "false"}>
       {image ? (
@@ -122,7 +127,7 @@ function DestinationCard({ item, site }) {
   return href ? (
     <Link
       href={href}
-      aria-label={`Découvrir nos voyages vers ${title}`}
+      aria-label={city ? `Découvrir ${title} avec notre agence de voyages à ${city}` : `Découvrir nos voyages vers ${title}`}
       style={{ color: "inherit", textDecoration: "none" }}
     >
       {card}
@@ -144,6 +149,7 @@ export default function DestinationsRenderer({ section, site }) {
   const items = getItems(section, dynamicSource ? ["destinations", "items"] : ["items"]);
   const introduction = content.text || content.description || defaultDestinationsIntro(site);
   const root = siteRoot(site);
+  const city = localCity(site);
 
   if (!items.length && content.showWhenEmpty !== true) {
     return null;
@@ -163,10 +169,19 @@ export default function DestinationsRenderer({ section, site }) {
           </div>
         ) : null}
 
-        <div className="public-site-related-links" aria-label="Conseils pour choisir votre voyage">
-          <Link href={`${root}/inspiration`}>Conseils et idées pour préparer votre voyage</Link>
-          <Link href={`${root}/services`}>Services de votre agence de voyages</Link>
-          <Link href={`${root}/contact`}>Demander conseil à votre agence</Link>
+        <div
+          className="public-site-related-links"
+          aria-label={city ? `Conseils voyage de notre agence à ${city}` : "Conseils pour choisir votre voyage"}
+        >
+          <Link href={`${root}/inspiration`}>
+            {city ? `Conseils et inspirations voyage depuis ${city}` : "Conseils et idées pour préparer votre voyage"}
+          </Link>
+          <Link href={`${root}/services`}>
+            {city ? `Services de notre agence de voyages à ${city}` : "Services de votre agence de voyages"}
+          </Link>
+          <Link href={`${root}/contact`}>
+            {city ? `Demander conseil à notre agence de ${city}` : "Demander conseil à votre agence"}
+          </Link>
         </div>
       </div>
     </section>
@@ -180,5 +195,6 @@ export {
   destinationImage,
   destinationImageAlt,
   joinCities,
+  localCity,
   siteRoot,
 };
