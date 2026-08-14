@@ -33,29 +33,34 @@ export default function SearchConsoleStatusClient() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
-  const load = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const [historyPayload, propertyPayload] = await Promise.all([
-        indexationApi.history({ status: "succeeded", limit: 100 }),
-        indexationApi.properties(),
-      ]);
-      setHistory(historyPayload || { runs: [] });
-      setProperties(propertyPayload || { properties: [] });
-      const owner = asArray(propertyPayload?.properties).find(
-        (property) => property.eligibleForSitemapSubmission === true
-      );
-      if (owner?.siteUrl) setSiteUrl((current) => current || owner.siteUrl);
-    } catch (loadError) {
-      setError(loadError.message || "Impossible de charger les sitemaps soumis.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    load();
+    let cancelled = false;
+
+    Promise.all([
+      indexationApi.history({ status: "succeeded", limit: 100 }),
+      indexationApi.properties(),
+    ])
+      .then(([historyPayload, propertyPayload]) => {
+        if (cancelled) return;
+        setHistory(historyPayload || { runs: [] });
+        setProperties(propertyPayload || { properties: [] });
+        const owner = asArray(propertyPayload?.properties).find(
+          (property) => property.eligibleForSitemapSubmission === true
+        );
+        if (owner?.siteUrl) setSiteUrl(owner.siteUrl);
+      })
+      .catch((loadError) => {
+        if (!cancelled) {
+          setError(loadError.message || "Impossible de charger les sitemaps soumis.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const submittedRuns = useMemo(() => {
