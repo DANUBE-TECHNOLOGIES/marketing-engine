@@ -10,6 +10,21 @@ const PUBLIC_ORIGIN = String(
   "https://agences.mondescale.com"
 ).replace(/\/+$/g, "");
 
+const MAX_DESCRIPTION_LENGTH = 165;
+
+function truncateDescription(value) {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  if (text.length <= MAX_DESCRIPTION_LENGTH) return text;
+
+  const slice = text.slice(0, MAX_DESCRIPTION_LENGTH + 1);
+  const lastSpace = slice.lastIndexOf(" ");
+  const short = (lastSpace > 120 ? slice.slice(0, lastSpace) : slice.slice(0, MAX_DESCRIPTION_LENGTH))
+    .replace(/[\s,;:.-]+$/g, "")
+    .trim();
+
+  return `${short}.`;
+}
+
 function destinationCanonical(data) {
   const path = String(data?.canonicalPath || "").trim();
   if (!path) return null;
@@ -30,13 +45,12 @@ function localDestinationDescription(data) {
   const d = data.destination;
   const city = data.site?.agency?.city || null;
   const agency = data.site?.name || data.site?.agency?.name || "Mondescale Voyages";
-  const base = String(d.seoDescription || d.summary || "").trim();
+  const base = String(d.seoDescription || d.summary || "").replace(/\s+/g, " ").trim();
   const local = city
     ? `Préparez votre voyage à ${d.name} avec ${agency}, votre agence de voyages à ${city}.`
     : `Préparez votre voyage à ${d.name} avec ${agency}.`;
 
-  if (!base) return local;
-  return `${local} ${base}`.slice(0, 300).trim();
+  return truncateDescription(base ? `${local} ${base}` : local);
 }
 
 async function loadDestination(params) {
@@ -76,13 +90,27 @@ export async function generateMetadata({ params }) {
     robots: {
       index: true,
       follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+      },
     },
     openGraph: {
       title,
       description,
       url: canonical || undefined,
       type: "article",
-      images: d.heroImageUrl ? [d.heroImageUrl] : [],
+      locale: "fr_FR",
+      siteName: data.site?.name || "Mondescale Voyages",
+      images: d.heroImageUrl ? [{ url: d.heroImageUrl, alt: `Voyage à ${d.name}` }] : [],
+    },
+    twitter: {
+      card: d.heroImageUrl ? "summary_large_image" : "summary",
+      title,
+      description,
+      images: d.heroImageUrl ? [d.heroImageUrl] : undefined,
     },
   };
 }
@@ -96,4 +124,5 @@ export {
   destinationCanonical,
   localDestinationTitle,
   localDestinationDescription,
+  truncateDescription,
 };
