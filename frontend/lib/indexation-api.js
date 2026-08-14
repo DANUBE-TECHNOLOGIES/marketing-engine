@@ -19,18 +19,10 @@ async function parseResponse(response) {
 
 async function read(resource, params = {}) {
   const search = new URLSearchParams({ resource });
-
   for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined && value !== null && value !== "") {
-      search.set(key, String(value));
-    }
+    if (value !== undefined && value !== null && value !== "") search.set(key, String(value));
   }
-
-  return parseResponse(
-    await fetch(`${API_ROOT}?${search.toString()}`, {
-      cache: "no-store",
-    })
-  );
+  return parseResponse(await fetch(`${API_ROOT}?${search.toString()}`, { cache: "no-store" }));
 }
 
 async function action(operation, payload = {}, runId = null) {
@@ -49,18 +41,11 @@ export const indexationApi = Object.freeze({
   history: (params = {}) => read("history", params),
   properties: () => read("properties"),
   status: ({ siteSlug, siteUrl }) => read("status", { siteSlug, siteUrl }),
-  performance: ({ siteUrl, days = 28, dimensions = "query", rowLimit = 50 }) =>
-    read("performance", { siteUrl, days, dimensions, rowLimit }),
-  preflight: ({ siteSlug, siteUrl }) =>
-    action("preflight", { siteSlug, siteUrl }),
+  performance: ({ siteUrl, pagePrefix, days = 28, dimensions = "query", rowLimit = 50 }) =>
+    read("performance", { siteUrl, pagePrefix, days, dimensions, rowLimit }),
+  preflight: ({ siteSlug, siteUrl }) => action("preflight", { siteSlug, siteUrl }),
   prepare: ({ siteSlug, siteUrl, sitemapUrl, requestedBy }) =>
-    action("prepare", {
-      siteSlug,
-      siteUrl,
-      sitemapUrl,
-      requestedBy: requestedBy || null,
-    }),
-  approve: ({ runId, approvedBy }) =>
-    action("approve", { approvedBy }, runId),
+    action("prepare", { siteSlug, siteUrl, sitemapUrl, requestedBy: requestedBy || null }),
+  approve: ({ runId, approvedBy }) => action("approve", { approvedBy }, runId),
   submit: ({ runId }) => action("submit", {}, runId),
 });
