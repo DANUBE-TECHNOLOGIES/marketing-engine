@@ -45,12 +45,36 @@ function sectionText(section) {
   );
 }
 
+function localCity(site) {
+  return String(site?.agency?.city || site?.city || "").trim();
+}
+
+function localAreas(site) {
+  const primary = localCity(site).toLocaleLowerCase("fr-FR");
+  const values = site?.targetCities || site?.metadata?.targetCities || site?.agency?.targetCities || [];
+  if (!Array.isArray(values)) return [];
+
+  const seen = new Set();
+  return values
+    .map((value) => String(typeof value === "string" ? value : value?.name || value?.city || "").trim())
+    .filter((value) => {
+      if (!value) return false;
+      const key = value.toLocaleLowerCase("fr-FR");
+      if (key === primary || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 4);
+}
+
 export default function InspirationArticle({ content, site }) {
   const body = asObject(content?.body);
   const sections = articleSections(content);
   const faq = articleFaq(content);
   const image = articleImage(content);
   const homeHref = `/agence/${encodeURIComponent(site.slug)}`;
+  const city = localCity(site);
+  const nearby = localAreas(site);
 
   return (
     <article className="public-site-section">
@@ -63,6 +87,13 @@ export default function InspirationArticle({ content, site }) {
 
         {content.excerpt ? (
           <p className="public-site-section-intro">{content.excerpt}</p>
+        ) : null}
+
+        {city ? (
+          <p>
+            Cette inspiration est sélectionnée par votre agence Mondescale à {city} pour vous aider à préparer un voyage adapté à vos envies.
+            {nearby.length ? ` Notre équipe accompagne également les voyageurs de ${nearby.join(", ")}.` : ""}
+          </p>
         ) : null}
 
         {image ? (
@@ -94,6 +125,18 @@ export default function InspirationArticle({ content, site }) {
             </div>
           </section>
         ) : null}
+
+        <nav className="public-site-related-links" aria-label="Continuer la préparation de votre voyage">
+          <Link href={`${homeHref}/destinations`}>
+            Découvrir les destinations depuis {city || "votre agence"}
+          </Link>
+          <Link href={`${homeHref}/services`}>
+            Voir les services de votre agence
+          </Link>
+          <Link href={`${homeHref}/inspiration`}>
+            Toutes les inspirations voyage
+          </Link>
+        </nav>
 
         <div className="public-site-hero-actions">
           <Link className="public-site-button" href={`${homeHref}/contact`}>
