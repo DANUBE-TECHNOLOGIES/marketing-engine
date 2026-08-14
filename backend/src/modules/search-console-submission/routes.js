@@ -5,6 +5,7 @@ const { tenantIdForRequest } = require("../minisite-structured-data/routes");
 const { SEARCH_CONSOLE_OWNER_PERMISSION } = require("./provider");
 const { runSearchConsolePreflight } = require("./preflight");
 const { SearchConsoleSubmissionService } = require("./service");
+const { SearchConsoleObservabilityService } = require("./observability");
 
 function sendError(response, error) {
   response.status(Number(error?.statusCode || error?.status || 500)).json({
@@ -17,6 +18,11 @@ function sendError(response, error) {
 function routes({ prisma, service, provider } = {}) {
   const router = express.Router();
   const submissionService = service || new SearchConsoleSubmissionService({ prisma, provider });
+  const observabilityService = new SearchConsoleObservabilityService({
+    prisma,
+    structuredDataService: submissionService.structuredDataService,
+    provider: submissionService.provider,
+  });
 
   router.get("/search-console-submissions/health", (_request, response) => {
     const activeProvider = submissionService.provider;
@@ -31,6 +37,7 @@ function routes({ prisma, service, provider } = {}) {
       requiredPermissionLevel: SEARCH_CONSOLE_OWNER_PERMISSION,
       explicitApprovalRequired: true,
       autoSubmit: false,
+      readOnlySitemapObservability: true,
     });
   });
 
@@ -58,6 +65,19 @@ function routes({ prisma, service, provider } = {}) {
     try {
       const tenantId = await tenantIdForRequest(prisma, request);
       response.json(await submissionService.candidates({ tenantId }));
+    } catch (error) {
+      sendError(response, error);
+    }
+  });
+
+  router.get("/search-console-submissions/sites/:siteSlug/status", async (request, response) => {
+    try {
+      const tenantId = await tenantIdForRequest(prisma, request);
+      response.json(await observabilityService.sitemapStatus({
+        tenantId,
+        siteSlug: request.params.siteSlug,
+        siteUrl: request.query?.siteUrl,
+      }));
     } catch (error) {
       sendError(response, error);
     }
