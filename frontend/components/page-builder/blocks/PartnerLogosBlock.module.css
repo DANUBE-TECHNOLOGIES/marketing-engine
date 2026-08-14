@@ -28,6 +28,7 @@
   border-radius: 16px;
   background: #ffffff;
   box-shadow: 0 8px 24px rgba(19, 36, 58, 0.045);
+  overflow: hidden;
   transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
 }
 
@@ -42,6 +43,15 @@
   width: 100%;
   height: 72px;
   object-fit: contain;
+}
+
+.sprite {
+  display: block;
+  width: 180px;
+  height: 72px;
+  flex: 0 0 auto;
+  background-repeat: no-repeat;
+  background-size: 1260px 72px;
 }
 
 @media (max-width: 1000px) {
@@ -63,6 +73,10 @@
   .logo img {
     height: 60px;
   }
+
+  .sprite {
+    transform: scale(0.84);
+  }
 }
 
 @media (max-width: 420px) {
@@ -77,5 +91,9 @@
 
   .logo img {
     height: 52px;
+  }
+
+  .sprite {
+    transform: scale(0.72);
   }
 }
