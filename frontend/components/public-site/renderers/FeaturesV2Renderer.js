@@ -31,13 +31,17 @@ function siteRoot(site) {
     .replace(/\/$/, "");
 }
 
+function localCity(site) {
+  return String(site?.agency?.city || site?.city || "").trim();
+}
+
 function defaultFeaturesTitle(site) {
-  const city = String(site?.agency?.city || site?.city || "").trim();
+  const city = localCity(site);
   return city ? `Nos services voyage à ${city}` : "Nos services voyage";
 }
 
 function defaultFeaturesIntroduction(site) {
-  const city = String(site?.agency?.city || site?.city || "").trim();
+  const city = localCity(site);
   const nearby = resolvedTargetCities(site, { limit: 3 });
 
   if (!city) {
@@ -67,6 +71,7 @@ export default function FeaturesV2Renderer({
   const columns = normalizeColumns(content.columns);
   const minimum = minimumCardWidth(columns);
   const root = siteRoot(site);
+  const city = localCity(site);
 
   return (
     <section className="public-site-section public-site-features">
@@ -115,10 +120,19 @@ export default function FeaturesV2Renderer({
           </div>
         ) : null}
 
-        <div className="public-site-related-links" aria-label="Préparer votre voyage avec l’agence">
-          <Link href={`${root}/destinations`}>Explorer nos destinations</Link>
-          <Link href={`${root}/inspiration`}>Lire nos conseils voyage</Link>
-          <Link href={`${root}/contact`}>Demander un conseil personnalisé</Link>
+        <div
+          className="public-site-related-links"
+          aria-label={city ? `Poursuivre votre projet avec l’agence de ${city}` : "Préparer votre voyage avec l’agence"}
+        >
+          <Link href={`${root}/destinations`}>
+            {city ? `Destinations conseillées par notre agence à ${city}` : "Explorer nos destinations"}
+          </Link>
+          <Link href={`${root}/inspiration`}>
+            {city ? `Conseils voyage de notre équipe à ${city}` : "Lire nos conseils voyage"}
+          </Link>
+          <Link href={`${root}/contact`}>
+            {city ? `Demander conseil à notre agence de voyages à ${city}` : "Demander un conseil personnalisé"}
+          </Link>
         </div>
       </div>
     </section>
@@ -129,5 +143,6 @@ export {
   defaultFeaturesIntroduction,
   defaultFeaturesTitle,
   joinCities,
+  localCity,
   siteRoot,
 };
