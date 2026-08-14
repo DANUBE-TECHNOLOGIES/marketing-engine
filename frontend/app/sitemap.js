@@ -66,6 +66,12 @@ function normalizePath(
 
   pathname =
     pathname.replace(
+      /^(\/agence\/[^/]+)\/(?:home|accueil|index)$/i,
+      "$1"
+    );
+
+  pathname =
+    pathname.replace(
       /^(\/agence\/[^/]+)\/inspirations$/i,
       "$1/inspiration"
     );
@@ -244,3 +250,8 @@ export default async function sitemap() {
       )
   );
 }
+
+export {
+  canonicalUrl,
+  normalizePath,
+};
