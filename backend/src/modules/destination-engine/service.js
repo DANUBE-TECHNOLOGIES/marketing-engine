@@ -1,5 +1,8 @@
 const DestinationRepository = require('./repository');
 const PublicDestinationRepository = require('./public-repository');
+const {
+  PublicDestinationExposureResolver,
+} = require('../public-site-read/destination-exposure');
 
 function sitePublished(site) {
   if (!site) return false;
@@ -30,6 +33,7 @@ class DestinationService {
   constructor(prisma) {
     this.repo = new DestinationRepository(prisma);
     this.publicRepo = new PublicDestinationRepository(prisma);
+    this.exposureResolver = new PublicDestinationExposureResolver(prisma);
   }
 
   list(tenantId, publishedOnly = false) {
@@ -75,6 +79,21 @@ class DestinationService {
       const e = new Error(`Destination ${destinationSlug} introuvable`);
       e.statusCode = 404;
       e.code = 'PUBLIC_DESTINATION_NOT_FOUND';
+      throw e;
+    }
+
+    const exposed = await this.exposureResolver.exposes(
+      siteSlug,
+      destination.slug,
+      normalizedTenantId
+    );
+
+    if (!exposed) {
+      const e = new Error(
+        `Destination ${destination.slug} non exposée par le mini-site ${siteSlug}`
+      );
+      e.statusCode = 404;
+      e.code = 'PUBLIC_DESTINATION_NOT_EXPOSED';
       throw e;
     }
 
