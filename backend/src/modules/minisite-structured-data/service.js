@@ -18,6 +18,10 @@ const {
 const {
   attachIndexationReadiness,
 } = require("./indexation-readiness");
+const {
+  entriesForSite,
+  renderSitemapXml,
+} = require("./sitemap-xml");
 const { MiniSiteStructuredDataRepository } = require("./repository");
 
 function normalizePublicOrigin(value) {
@@ -70,9 +74,10 @@ class MiniSiteStructuredDataService {
       contentQualityIndexability: "critically-thin-nonfunctional-pages-excluded",
       crawlabilityAudit: "discovery-source-and-orphan-detection",
       indexationReadiness: "per-site-safe-to-submit-report",
+      xmlSitemap: "network-and-site-candidate-rendering",
       publicOrigin: this.publicOrigin,
       schemas: ["TravelAgency", "LocalBusiness", "WebSite", "WebPage", "BreadcrumbList", "FAQPage"],
-      operations: ["previewNetwork", "previewSitemap", "previewSite"],
+      operations: ["previewNetwork", "previewSitemap", "previewSite", "networkSitemapXml", "siteSitemapCandidate"],
     };
   }
 
@@ -127,6 +132,39 @@ class MiniSiteStructuredDataService {
     const crawlableSitemap = auditSitemapCrawlability(qualityIndexableSitemap);
 
     return attachIndexationReadiness(crawlableSitemap);
+  }
+
+  async networkSitemapXml({ tenantId } = {}) {
+    const sitemap = await this.previewSitemap({ tenantId });
+    return {
+      sitemap,
+      xml: renderSitemapXml(sitemap.entries || []),
+    };
+  }
+
+  async siteSitemapCandidate({ siteSlug, tenantId } = {}) {
+    const slug = String(siteSlug || "").trim();
+    const sitemap = await this.previewSitemap({ tenantId });
+    const readiness = (sitemap?.indexationReadiness?.sites || []).find(
+      (item) => String(item?.siteSlug || "").trim() === slug
+    );
+
+    if (!readiness) {
+      const error = new Error(`Mini-site publié introuvable pour l’indexation : ${slug}`);
+      error.code = "MINISITE_INDEXATION_SITE_NOT_FOUND";
+      error.status = 404;
+      throw error;
+    }
+
+    const entries = entriesForSite(sitemap, slug);
+    return {
+      siteSlug: slug,
+      readyToSubmit: readiness.readyToSubmit === true,
+      readiness,
+      entryCount: entries.length,
+      entries,
+      xml: readiness.readyToSubmit === true ? renderSitemapXml(entries) : null,
+    };
   }
 
   async previewNetwork({ tenantId } = {}) {
