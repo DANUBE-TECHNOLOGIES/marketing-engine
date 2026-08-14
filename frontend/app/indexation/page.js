@@ -13,6 +13,7 @@ export default function IndexationPage() {
   return (
     <>
       <div className="indexation-page-tools">
+        <a href="/indexation/status">Suivre les sitemaps</a>
         <a href="/indexation/rollout">Préparer une vague d’indexation contrôlée</a>
       </div>
       <IndexationCockpitClient />
