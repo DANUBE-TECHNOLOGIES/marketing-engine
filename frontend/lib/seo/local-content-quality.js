@@ -2,6 +2,7 @@ import { resolvedTargetCities } from "./local-area-config";
 
 const THIN_PAGE_MIN_WORDS = 140;
 const STRONG_PAGE_MIN_WORDS = 260;
+const STRONG_PAGE_MIN_LOCAL_SIGNALS = 1;
 
 function clean(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
@@ -64,24 +65,32 @@ export function assessLocalContentQuality({ site, page }) {
   const text = pageText(page);
   const words = wordCount(text);
   const mentions = localMentions(text, site);
+  const primaryCity = clean(site?.agency?.city || site?.city);
   const hasPrimaryCity = Boolean(
-    clean(site?.agency?.city || site?.city) && mentions.length
+    primaryCity && mentions.some((city) => city.toLocaleLowerCase("fr-FR") === primaryCity.toLocaleLowerCase("fr-FR"))
   );
+  const localSignalCount = mentions.length;
   const thin = words < THIN_PAGE_MIN_WORDS;
-  const strong = words >= STRONG_PAGE_MIN_WORDS;
+  const hasEditorialDepth = words >= STRONG_PAGE_MIN_WORDS;
+  const hasLocalDepth = hasPrimaryCity && localSignalCount >= STRONG_PAGE_MIN_LOCAL_SIGNALS;
+  const strong = hasEditorialDepth && hasLocalDepth;
 
   return {
     words,
     thin,
     strong,
+    hasEditorialDepth,
+    hasLocalDepth,
     hasPrimaryCity,
+    localSignalCount,
     localMentions: mentions,
-    needsLocalContext: !hasPrimaryCity,
+    needsLocalContext: !hasLocalDepth,
     needsEditorialDepth: thin,
   };
 }
 
 export {
+  STRONG_PAGE_MIN_LOCAL_SIGNALS,
   STRONG_PAGE_MIN_WORDS,
   THIN_PAGE_MIN_WORDS,
   collectText,
