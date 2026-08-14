@@ -1,5 +1,6 @@
 import {
   notFound,
+  permanentRedirect,
 } from "next/navigation";
 
 import {
@@ -44,8 +45,22 @@ const LEGAL_PAGE_SLUGS = new Set([
   "privacy",
 ]);
 
+const PAGE_ALIASES = Object.freeze({
+  inspirations: "inspiration",
+});
+
 function normalizePageSlug(value) {
   return String(value || "").trim().toLowerCase();
+}
+
+function canonicalPageSlug(value) {
+  const slug = normalizePageSlug(value);
+  return PAGE_ALIASES[slug] || slug;
+}
+
+function isAliasPage(value) {
+  const slug = normalizePageSlug(value);
+  return Boolean(PAGE_ALIASES[slug]);
 }
 
 function isHomePage(pageSlug) {
@@ -68,7 +83,7 @@ function isLegalPage(pageSlug, page) {
 
 function canonicalPath({ siteSlug, pageSlug }) {
   const root = `/agence/${siteSlug}`;
-  const slug = normalizePageSlug(pageSlug);
+  const slug = canonicalPageSlug(pageSlug);
 
   if (isHomePage(slug)) {
     return root;
@@ -108,6 +123,21 @@ export async function generateMetadata({ params }) {
   }
 
   const pageSlug = resolved.pageSlug?.[0] || "";
+
+  if (isAliasPage(pageSlug)) {
+    return {
+      alternates: {
+        canonical: canonicalUrl({
+          siteSlug: resolved.siteSlug,
+          pageSlug,
+        }),
+      },
+      robots: {
+        index: false,
+        follow: true,
+      },
+    };
+  }
 
   try {
     const [site, page, runtime] = await Promise.all([
@@ -190,6 +220,15 @@ export default async function AgencySitePage({ params }) {
   }
 
   const pageSlug = resolved.pageSlug?.[0] || "";
+
+  if (isAliasPage(pageSlug)) {
+    permanentRedirect(
+      canonicalPath({
+        siteSlug: resolved.siteSlug,
+        pageSlug,
+      })
+    );
+  }
 
   let site;
   let page;
@@ -293,8 +332,11 @@ export default async function AgencySitePage({ params }) {
 }
 
 export {
+  PAGE_ALIASES,
+  canonicalPageSlug,
   canonicalPath,
   canonicalUrl,
+  isAliasPage,
   isHomePage,
   isLegalPage,
   isServicesPage,
