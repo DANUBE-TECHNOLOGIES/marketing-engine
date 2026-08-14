@@ -17,7 +17,7 @@ function normalizePartner(item) {
 
 function PartnerMark({ partner }) {
   if (Number.isInteger(partner.spriteIndex) && partner.sprite) {
-    const x = partner.spriteIndex * 300;
+    const x = partner.spriteIndex * 180;
     return (
       <span
         className={styles.sprite}
