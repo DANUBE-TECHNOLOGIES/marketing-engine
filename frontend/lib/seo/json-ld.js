@@ -139,6 +139,10 @@ export function extractPublishedServices(page) {
   return services.slice(0, 12);
 }
 
+function uniqueUrls(values) {
+  return [...new Set(values.filter(Boolean).map((value) => String(value).trim()).filter(Boolean))];
+}
+
 export function buildTravelAgencySchema(site) {
   const agency = site?.agency || site;
   const latitude = agency?.latitude ?? site?.latitude;
@@ -158,6 +162,14 @@ export function buildTravelAgencySchema(site) {
       postalCode: agency.postalCode || site.postalCode,
       city: agency.city || site.city,
     });
+  const sameAs = uniqueUrls([
+    agency.website,
+    agency.googleBusinessUrl,
+    agency.googleMapsUrl,
+    agency.facebookUrl,
+    agency.instagramUrl,
+    agency.linkedinUrl,
+  ]);
 
   return compactJsonLd({
     "@context": "https://schema.org",
@@ -167,8 +179,8 @@ export function buildTravelAgencySchema(site) {
     url: absoluteUrl(site.basePath),
     telephone: phone,
     email,
-    logo,
-    image,
+    logo: logo ? absoluteUrl(logo) : undefined,
+    image: image ? absoluteUrl(image) : undefined,
     description: agency.description || site.description,
     address: {
       "@type": "PostalAddress",
@@ -188,7 +200,7 @@ export function buildTravelAgencySchema(site) {
         : undefined,
     hasMap,
     areaServed: servedAreas(site, agency),
-    openingHoursSpecification: openingHoursSpecification(site?.hours),
+    openingHoursSpecification: openingHoursSpecification(site?.hours || agency?.hours),
     contactPoint:
       phone || email
         ? {
@@ -199,14 +211,7 @@ export function buildTravelAgencySchema(site) {
             availableLanguage: ["fr"],
           }
         : undefined,
-    sameAs: [
-      agency.website,
-      agency.googleBusinessUrl,
-      agency.googleMapsUrl,
-      agency.facebookUrl,
-      agency.instagramUrl,
-      agency.linkedinUrl,
-    ].filter(Boolean),
+    sameAs,
   });
 }
 
@@ -216,9 +221,11 @@ export function buildLocalWebPageSchema({
   url,
   title,
   description,
+  image,
 }) {
   const pageUrl = absoluteUrl(url);
   const agencyId = `${absoluteUrl(site.basePath)}#travel-agency`;
+  const pageImage = image ? absoluteUrl(image) : undefined;
 
   return compactJsonLd({
     "@context": "https://schema.org",
@@ -228,6 +235,12 @@ export function buildLocalWebPageSchema({
     name: title || page?.title,
     description,
     inLanguage: "fr-FR",
+    primaryImageOfPage: pageImage
+      ? {
+          "@type": "ImageObject",
+          url: pageImage,
+        }
+      : undefined,
     isPartOf: {
       "@type": "WebSite",
       "@id": `${absoluteUrl("/")}#website`,
@@ -305,7 +318,7 @@ export function buildDestinationSchema(data) {
       destination.summary ||
       destination.tagline,
     url: absoluteUrl(data.canonicalPath),
-    image: destination.heroImageUrl,
+    image: destination.heroImageUrl ? absoluteUrl(destination.heroImageUrl) : undefined,
     touristType: destination.audiences,
     geo:
       destination.latitude != null &&
@@ -337,4 +350,5 @@ export {
   internationalPhone,
   openingHoursSpecification,
   servedAreas,
+  uniqueUrls,
 };
