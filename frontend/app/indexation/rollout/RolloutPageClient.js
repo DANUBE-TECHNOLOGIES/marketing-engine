@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { indexationApi } from "../../../lib/indexation-api";
 import IndexationRolloutPlanner from "../IndexationRolloutPlanner";
@@ -125,7 +126,7 @@ export default function RolloutPageClient() {
             Préparez une vague d’agences sans pouvoir approuver ni soumettre en masse. Les opérations Google restent individuelles dans le cockpit principal.
           </p>
         </div>
-        <a className="indexation-nav-link" href="/indexation">Retour au cockpit</a>
+        <Link className="indexation-nav-link" href="/indexation">Retour au cockpit</Link>
       </header>
 
       <section className="indexation-controls">
