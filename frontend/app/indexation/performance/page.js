@@ -1,4 +1,5 @@
 import "../indexation.css";
+import "./performance.css";
 import SearchPerformanceClient from "./SearchPerformanceClient";
 
 export const metadata = {
