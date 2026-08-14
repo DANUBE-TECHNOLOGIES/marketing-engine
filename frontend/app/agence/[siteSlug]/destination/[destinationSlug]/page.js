@@ -31,24 +31,29 @@ function destinationCanonical(data) {
   return /^https?:\/\//i.test(path) ? path : `${PUBLIC_ORIGIN}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
+function destinationBrand(data) {
+  const name = String(data?.site?.name || data?.site?.agency?.name || "").trim();
+  return /mondescale/i.test(name) ? "Mondescale" : name || "Mondescale";
+}
+
 function localDestinationTitle(data) {
   const d = data.destination;
   const city = data.site?.agency?.city || null;
-  const agency = data.site?.name || data.site?.agency?.name || "Mondescale Voyages";
+  const brand = destinationBrand(data);
 
   return city
-    ? `Voyage à ${d.name} depuis ${city} | ${agency}`
-    : `Voyage à ${d.name} | ${agency}`;
+    ? `Voyage à ${d.name} depuis ${city} | ${brand}`
+    : `Voyage à ${d.name} | ${brand}`;
 }
 
 function localDestinationDescription(data) {
   const d = data.destination;
   const city = data.site?.agency?.city || null;
-  const agency = data.site?.name || data.site?.agency?.name || "Mondescale Voyages";
+  const brand = destinationBrand(data);
   const base = String(d.seoDescription || d.summary || "").replace(/\s+/g, " ").trim();
   const local = city
-    ? `Préparez votre voyage à ${d.name} avec ${agency}, votre agence de voyages à ${city}.`
-    : `Préparez votre voyage à ${d.name} avec ${agency}.`;
+    ? `${brand} ${city} vous accompagne pour votre voyage à ${d.name} : conseils, itinéraire et devis personnalisé.`
+    : `${brand} vous accompagne pour votre voyage à ${d.name} : conseils, itinéraire et devis personnalisé.`;
 
   return truncateDescription(base ? `${local} ${base}` : local);
 }
@@ -121,6 +126,7 @@ export default async function Page({ params }) {
 }
 
 export {
+  destinationBrand,
   destinationCanonical,
   localDestinationTitle,
   localDestinationDescription,
