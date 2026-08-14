@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import {
   getSectionContent,
   getSectionTitle,
@@ -99,6 +101,12 @@ function defaultReviewsIntro(site, total) {
   return city
     ? `Découvrez les retours publiés sur Google par les voyageurs accompagnés par notre agence de ${city}.`
     : "Découvrez les retours publiés sur Google par les voyageurs accompagnés par notre agence.";
+}
+
+function siteHref(site, slug) {
+  const root = String(site?.basePath || `/agence/${encodeURIComponent(site?.slug || "")}`)
+    .replace(/\/$/, "");
+  return `${root}/${slug}`;
 }
 
 export default async function ReviewsRenderer({
@@ -301,6 +309,12 @@ export default async function ReviewsRenderer({
             </a>
           </div>
         ) : null}
+
+        <div className="public-site-related-links" aria-label="Découvrir votre agence">
+          <Link href={siteHref(site, "equipe")}>Rencontrer notre équipe</Link>
+          <Link href={siteHref(site, "services")}>Découvrir nos services voyage</Link>
+          <Link href={siteHref(site, "contact")}>Contacter votre agence</Link>
+        </div>
       </div>
     </section>
   );
@@ -310,4 +324,5 @@ export {
   defaultReviewsIntro,
   defaultReviewsTitle,
   latestPublishedAt,
+  siteHref,
 };
