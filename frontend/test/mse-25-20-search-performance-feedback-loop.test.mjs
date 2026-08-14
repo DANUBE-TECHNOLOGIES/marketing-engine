@@ -37,9 +37,7 @@ test("MSE-25.20 exposes metrics, period deltas and SEO opportunities", () => {
   assert.match(client, /position moyenne/);
   assert.match(client, /vs période précédente/);
   assert.match(client, /Opportunités SEO prioritaires/);
-  assert.match(client, /row\.impressions >= 20/);
-  assert.match(client, /row\.position >= 4/);
-  assert.match(client, /row\.position <= 20/);
+  assert.match(client, /performance\?\.opportunities/);
   assert.match(client, /Principales requêtes/);
   assert.match(client, /Pages les plus visibles/);
 });
