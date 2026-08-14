@@ -95,6 +95,7 @@ function routes({ prisma, service, provider } = {}) {
         .filter(Boolean);
       response.json(await performanceService.query({
         siteUrl: request.query?.siteUrl,
+        pagePrefix: request.query?.pagePrefix,
         days: request.query?.days,
         dimensions,
         rowLimit: request.query?.rowLimit,
