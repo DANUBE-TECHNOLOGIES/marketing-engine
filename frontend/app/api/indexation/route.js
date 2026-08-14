@@ -74,10 +74,27 @@ function statusPath(url) {
   return `${backendUrl.pathname}${backendUrl.search}`;
 }
 
+function performancePath(url) {
+  const siteUrl = String(url.searchParams.get("siteUrl") || "").trim();
+  if (!siteUrl) return null;
+  const backendUrl = new URL("/search-console-submissions/performance", BACKEND_URL);
+  backendUrl.searchParams.set("siteUrl", siteUrl);
+  for (const key of ["days", "dimensions", "rowLimit"]) {
+    const value = url.searchParams.get(key);
+    if (value) backendUrl.searchParams.set(key, value);
+  }
+  return `${backendUrl.pathname}${backendUrl.search}`;
+}
+
 export async function GET(request) {
   const url = new URL(request.url);
   const resource = url.searchParams.get("resource") || "candidates";
-  const path = resource === "status" ? statusPath(url) : READ_RESOURCES[resource];
+  const path =
+    resource === "status"
+      ? statusPath(url)
+      : resource === "performance"
+        ? performancePath(url)
+        : READ_RESOURCES[resource];
 
   if (!path) {
     return jsonError("Ressource cockpit inconnue ou incomplète.", 400, { resource });
