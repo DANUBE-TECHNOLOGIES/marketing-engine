@@ -2,6 +2,21 @@
 
 const SEARCH_CONSOLE_SCOPE = "https://www.googleapis.com/auth/webmasters";
 
+function googleAuthLibraryStatus(loader = require) {
+  try {
+    const library = loader("google-auth-library");
+    return {
+      available: typeof library?.GoogleAuth === "function",
+      reason: typeof library?.GoogleAuth === "function" ? null : "google-auth-constructor-missing",
+    };
+  } catch (_error) {
+    return {
+      available: false,
+      reason: "google-auth-library-missing",
+    };
+  }
+}
+
 function resolveGoogleAuthConstructor(explicitConstructor) {
   if (explicitConstructor) return explicitConstructor;
   try {
@@ -46,5 +61,6 @@ function createGoogleAccessTokenProvider({ GoogleAuth, credentials, keyFile, sco
 module.exports = {
   SEARCH_CONSOLE_SCOPE,
   createGoogleAccessTokenProvider,
+  googleAuthLibraryStatus,
   resolveGoogleAuthConstructor,
 };
