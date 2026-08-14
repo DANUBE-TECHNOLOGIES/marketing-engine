@@ -101,6 +101,44 @@ function sectionContent(section) {
   ) || {};
 }
 
+function schemaImage(page, site) {
+  const direct = [
+    page?.openGraphImageUrl,
+    page?.ogImageUrl,
+    page?.heroImageUrl,
+  ].find((value) => typeof value === "string" && value.trim());
+
+  if (direct) return absoluteUrl(direct);
+
+  const entries = Array.isArray(page?.blocks)
+    ? page.blocks
+    : Array.isArray(page?.sections)
+      ? page.sections
+      : [];
+
+  for (const entry of entries) {
+    const content = sectionContent(entry);
+    const candidate = [
+      content.imageUrl,
+      content.image,
+      content.heroImageUrl,
+      content.backgroundImage,
+    ].find((value) => typeof value === "string" && value.trim());
+
+    if (candidate) return absoluteUrl(candidate);
+  }
+
+  const agency = site?.agency || {};
+  const fallback = [
+    site?.heroImageUrl,
+    agency?.imageUrl,
+    agency?.logoUrl,
+    site?.logoUrl,
+  ].find((value) => typeof value === "string" && value.trim());
+
+  return fallback ? absoluteUrl(fallback) : undefined;
+}
+
 export function extractPublishedServices(page) {
   const entries = Array.isArray(page?.blocks)
     ? page.blocks
@@ -225,7 +263,7 @@ export function buildLocalWebPageSchema({
 }) {
   const pageUrl = absoluteUrl(url);
   const agencyId = `${absoluteUrl(site.basePath)}#travel-agency`;
-  const pageImage = image ? absoluteUrl(image) : undefined;
+  const pageImage = image ? absoluteUrl(image) : schemaImage(page, site);
 
   return compactJsonLd({
     "@context": "https://schema.org",
@@ -349,6 +387,7 @@ export function buildDestinationSchema(data) {
 export {
   internationalPhone,
   openingHoursSpecification,
+  schemaImage,
   servedAreas,
   uniqueUrls,
 };
