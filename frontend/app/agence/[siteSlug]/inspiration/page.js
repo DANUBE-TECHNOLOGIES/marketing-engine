@@ -75,6 +75,13 @@ export async function generateMetadata({ params }) {
 
   try {
     const site = await publicSiteApi.getSite(siteSlug);
+    const agencyId = site?.agencyId || site?.agency?.id || null;
+    const items = await publicSiteApi.getInspirations({
+      limit: 1,
+      channel: "article",
+      agencyId,
+    });
+    const hasPublicInspirations = items.length > 0;
     const seo = inspirationSeo(site);
     const canonical = `${PUBLIC_ORIGIN}${canonicalPath(siteSlug)}`;
 
@@ -83,10 +90,10 @@ export async function generateMetadata({ params }) {
       description: seo.description,
       alternates: { canonical },
       robots: {
-        index: true,
+        index: hasPublicInspirations,
         follow: true,
         googleBot: {
-          index: true,
+          index: hasPublicInspirations,
           follow: true,
           "max-image-preview": "large",
           "max-snippet": -1,
