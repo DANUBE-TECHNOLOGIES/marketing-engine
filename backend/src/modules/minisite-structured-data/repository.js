@@ -122,10 +122,9 @@ class MiniSiteStructuredDataRepository {
         publishedAt: true,
         updatedAt: true,
       },
-      orderBy: [
-        { updatedAt: "desc" },
-        { name: "asc" },
-      ],
+      orderBy: {
+        name: "asc",
+      },
     });
   }
 
