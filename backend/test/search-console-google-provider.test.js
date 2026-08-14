@@ -8,7 +8,7 @@ const {
   SEARCH_CONSOLE_API_ROOT,
 } = require("../src/modules/search-console-submission/provider");
 
-test("google provider verifies property access before submitting sitemap", async () => {
+test("google provider verifies owner permission before submitting sitemap", async () => {
   const calls = [];
   const provider = new GoogleSearchConsoleProvider({
     accessTokenProvider: async () => "token-123",
@@ -42,6 +42,7 @@ test("google provider verifies property access before submitting sitemap", async
   assert.equal(calls[1].options.method, "PUT");
   assert.equal(calls[1].options.headers.Authorization, "Bearer token-123");
   assert.equal(result.provider, "google-search-console");
+  assert.equal(result.permissionLevel, "siteOwner");
   assert.equal(result.httpStatus, 204);
 });
 
@@ -51,7 +52,7 @@ test("google provider refuses a Search Console property that is not accessible",
     fetchImpl: async () => ({
       ok: true,
       status: 200,
-      async json() { return { siteEntry: [{ siteUrl: "sc-domain:other.example.test" }] }; },
+      async json() { return { siteEntry: [{ siteUrl: "sc-domain:other.example.test", permissionLevel: "siteOwner" }] }; },
     }),
   });
 
@@ -61,6 +62,29 @@ test("google provider refuses a Search Console property that is not accessible",
       sitemapUrl: "https://agences.example.test/sitemap.xml",
     }),
     (error) => error.code === "SEARCH_CONSOLE_SITE_NOT_ACCESSIBLE" && error.statusCode === 403
+  );
+});
+
+test("google provider refuses non-owner permissions for sitemap submission", async () => {
+  const provider = new GoogleSearchConsoleProvider({
+    accessTokenProvider: async () => "token-123",
+    fetchImpl: async () => ({
+      ok: true,
+      status: 200,
+      async json() {
+        return { siteEntry: [{ siteUrl: "sc-domain:agences.example.test", permissionLevel: "siteFullUser" }] };
+      },
+    }),
+  });
+
+  await assert.rejects(
+    provider.submitSitemap({
+      siteUrl: "sc-domain:agences.example.test",
+      sitemapUrl: "https://agences.example.test/sitemap.xml",
+    }),
+    (error) => error.code === "SEARCH_CONSOLE_OWNER_PERMISSION_REQUIRED"
+      && error.statusCode === 403
+      && error.details?.permissionLevel === "siteFullUser"
   );
 });
 
