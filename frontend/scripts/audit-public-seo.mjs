@@ -12,6 +12,7 @@ const origin = String(
 ).replace(/\/+$/, "");
 const limit = Math.max(1, Number(args.get("limit") || 500));
 const strict = args.get("strict") === true || args.get("strict") === "true";
+const minimumWords = Math.max(40, Number(args.get("minimum-words") || 120));
 
 function decodeEntities(value) {
   return String(value || "")
@@ -115,24 +116,18 @@ function schemaNodes(value) {
   return nodes;
 }
 
-function hasSchemaType(documents, expected) {
-  return documents
-    .flatMap(schemaNodes)
-    .some((node) => {
-      const type = node?.["@type"];
-      const values = Array.isArray(type) ? type : [type];
-      return values.filter(Boolean).includes(expected);
-    });
-}
-
-function webPageSchema(documents) {
+function schemaOfType(documents, expected) {
   return documents
     .flatMap(schemaNodes)
     .find((node) => {
       const type = node?.["@type"];
       const values = Array.isArray(type) ? type : [type];
-      return values.includes("WebPage");
+      return values.filter(Boolean).includes(expected);
     }) || null;
+}
+
+function hasSchemaType(documents, expected) {
+  return Boolean(schemaOfType(documents, expected));
 }
 
 function siteSlugFromUrl(url) {
@@ -143,10 +138,80 @@ function siteSlugFromUrl(url) {
   }
 }
 
+function pageKindFromUrl(url) {
+  try {
+    const parts = new URL(url).pathname.split("/").filter(Boolean).slice(2);
+    if (!parts.length) return "home";
+    if (parts[0] === "destination") return "destination-detail";
+    if (parts[0] === "inspiration" && parts.length > 1) return "inspiration-detail";
+    return parts[0];
+  } catch {
+    return "unknown";
+  }
+}
+
+function normalizeLocalText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("fr-FR");
+}
+
+function containsCity(value, city) {
+  if (!city) return true;
+  return normalizeLocalText(value).includes(normalizeLocalText(city));
+}
+
+function visibleMainText(html) {
+  const source = String(html || "")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<header[\s\S]*?<\/header>/gi, " ")
+    .replace(/<footer[\s\S]*?<\/footer>/gi, " ")
+    .replace(/<nav[\s\S]*?<\/nav>/gi, " ");
+  const main = source.match(/<main[^>]*>([\s\S]*?)<\/main>/i)?.[1] || source;
+  return stripTags(main);
+}
+
+function wordCount(value) {
+  return String(value || "")
+    .split(/\s+/)
+    .map((word) => word.trim())
+    .filter((word) => word.length > 1).length;
+}
+
+function agencyLocality(agency) {
+  return String(
+    agency?.address?.addressLocality ||
+    agency?.addressLocality ||
+    ""
+  ).trim();
+}
+
+function agencyHasNap(agency) {
+  return Boolean(
+    agency &&
+    agency.name &&
+    agency.telephone &&
+    agency?.address?.streetAddress &&
+    agency?.address?.postalCode &&
+    agency?.address?.addressLocality
+  );
+}
+
+function localSignalRequired(kind) {
+  return ![
+    "destination-detail",
+    "inspiration-detail",
+    "mentions-legales",
+    "confidentialite",
+  ].includes(kind);
+}
+
 async function fetchText(url) {
   const response = await fetch(url, {
     headers: {
-      "user-agent": "Mondescale-SEO-Audit/2.0",
+      "user-agent": "Mondescale-SEO-Audit/3.0",
     },
     redirect: "follow",
   });
@@ -168,10 +233,13 @@ for (const url of urls) {
     const html = await fetchText(url);
     const schemas = jsonLdDocuments(html);
     const h1s = allMatches(html, /<h1[^>]*>([\s\S]*?)<\/h1>/gi);
-    const webPage = webPageSchema(schemas);
+    const webPage = schemaOfType(schemas, "WebPage");
+    const agency = schemaOfType(schemas, "TravelAgency");
+    const text = visibleMainText(html);
     const row = {
       url,
       siteSlug: siteSlugFromUrl(url),
+      pageKind: pageKindFromUrl(url),
       title: firstMatch(html, /<title[^>]*>([\s\S]*?)<\/title>/i),
       description: metaContent(html, "description"),
       canonical: canonicalHref(html),
@@ -181,10 +249,13 @@ for (const url of urls) {
       ogTitle: metaContent(html, "og:title", "property"),
       ogDescription: metaContent(html, "og:description", "property"),
       ogImage: metaContent(html, "og:image", "property"),
-      hasTravelAgency: hasSchemaType(schemas, "TravelAgency"),
+      hasTravelAgency: Boolean(agency),
       hasWebPage: Boolean(webPage),
       hasBreadcrumb: hasSchemaType(schemas, "BreadcrumbList"),
       hasPrimaryImage: Boolean(webPage?.primaryImageOfPage?.url),
+      city: agencyLocality(agency),
+      hasNap: agencyHasNap(agency),
+      wordCount: wordCount(text),
     };
     rows.push(row);
   } catch (error) {
@@ -205,6 +276,7 @@ for (const row of rows) {
   if (row.h1Count > 1) warnings.push(`${row.url}: ${row.h1Count} H1 détectés`);
   if (/noindex/i.test(row.robots)) critical.push(`${row.url}: noindex présent dans le sitemap`);
   if (!row.hasTravelAgency) warnings.push(`${row.url}: JSON-LD TravelAgency absent`);
+  if (row.hasTravelAgency && !row.hasNap) warnings.push(`${row.url}: NAP structuré incomplet`);
   if (!row.hasBreadcrumb) warnings.push(`${row.url}: JSON-LD BreadcrumbList absent`);
   if (!row.hasWebPage && !row.url.includes("/destination/")) {
     warnings.push(`${row.url}: JSON-LD WebPage absent`);
@@ -220,6 +292,12 @@ for (const row of rows) {
   if (row.title && row.title.length < 25) warnings.push(`${row.url}: title court (${row.title.length})`);
   if (row.description.length > 165) warnings.push(`${row.url}: description longue (${row.description.length})`);
   if (row.description && row.description.length < 80) warnings.push(`${row.url}: description courte (${row.description.length})`);
+  if (row.wordCount < minimumWords) warnings.push(`${row.url}: contenu visible léger (${row.wordCount} mots)`);
+
+  if (row.city && localSignalRequired(row.pageKind)) {
+    if (!containsCity(row.title, row.city)) warnings.push(`${row.url}: ville principale absente du title (${row.city})`);
+    if (!containsCity(row.h1, row.city)) warnings.push(`${row.url}: ville principale absente du H1 (${row.city})`);
+  }
 }
 
 for (const group of duplicateGroups(rows, "title")) {
@@ -231,21 +309,38 @@ for (const group of duplicateGroups(rows, "description")) {
 
 const bySite = new Map();
 for (const row of rows) {
-  if (!bySite.has(row.siteSlug)) bySite.set(row.siteSlug, 0);
-  bySite.set(row.siteSlug, bySite.get(row.siteSlug) + 1);
+  if (!bySite.has(row.siteSlug)) {
+    bySite.set(row.siteSlug, { pages: 0, words: 0, thin: 0 });
+  }
+  const stats = bySite.get(row.siteSlug);
+  stats.pages += 1;
+  stats.words += row.wordCount;
+  if (row.wordCount < minimumWords) stats.thin += 1;
 }
 
 console.log(`SEO audit public: ${rows.length}/${urls.length} pages analysées.`);
 console.log(`Origine: ${origin}`);
 console.log(`Mini-sites détectés: ${bySite.size}`);
+console.log(`Seuil contenu léger: ${minimumWords} mots`);
 console.log(`Erreurs HTTP: ${errors.length}`);
 console.log(`Problèmes critiques: ${critical.length}`);
 console.log(`Avertissements: ${warnings.length}`);
 
 if (bySite.size) {
   console.log("\nCOUVERTURE PAR MINI-SITE");
-  for (const [siteSlug, count] of [...bySite.entries()].sort()) {
-    console.log(`- ${siteSlug}: ${count} URL(s)`);
+  for (const [siteSlug, stats] of [...bySite.entries()].sort()) {
+    const average = stats.pages ? Math.round(stats.words / stats.pages) : 0;
+    console.log(`- ${siteSlug}: ${stats.pages} URL(s), ${average} mots/page en moyenne, ${stats.thin} page(s) légères`);
+  }
+}
+
+const thinPages = rows
+  .filter((row) => row.wordCount < minimumWords)
+  .sort((a, b) => a.wordCount - b.wordCount);
+if (thinPages.length) {
+  console.log("\nPAGES A ENRICHIR EN PRIORITE");
+  for (const row of thinPages.slice(0, 30)) {
+    console.log(`- ${row.wordCount} mots · ${row.url}`);
   }
 }
 
