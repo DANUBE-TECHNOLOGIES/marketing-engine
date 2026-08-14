@@ -49,6 +49,8 @@ export const indexationApi = Object.freeze({
   history: (params = {}) => read("history", params),
   properties: () => read("properties"),
   status: ({ siteSlug, siteUrl }) => read("status", { siteSlug, siteUrl }),
+  performance: ({ siteUrl, days = 28, dimensions = "query", rowLimit = 50 }) =>
+    read("performance", { siteUrl, days, dimensions, rowLimit }),
   preflight: ({ siteSlug, siteUrl }) =>
     action("preflight", { siteSlug, siteUrl }),
   prepare: ({ siteSlug, siteUrl, sitemapUrl, requestedBy }) =>
