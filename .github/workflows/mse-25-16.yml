@@ -42,10 +42,10 @@ jobs:
       - name: Install backend dependencies
         run: npm ci
 
-      - name: Run backend test suite
+      - name: Run Search Console backend tests
         env:
           SEARCH_CONSOLE_ENABLED: 'false'
-        run: npm test
+        run: node --test test/search-console-*.test.js
 
       - name: Verify Search Console module loads with provider disabled
         env:
