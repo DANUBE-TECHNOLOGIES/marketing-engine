@@ -13,6 +13,10 @@ const {
   createGoogleAccessTokenProvider,
   resolveGoogleAuthConstructor,
 } = require("./auth");
+const {
+  createConfiguredSearchConsoleProvider,
+  enabled,
+} = require("./config");
 
 module.exports = {
   routes,
@@ -23,6 +27,8 @@ module.exports = {
   SEARCH_CONSOLE_SCOPE,
   createGoogleAccessTokenProvider,
   resolveGoogleAuthConstructor,
+  createConfiguredSearchConsoleProvider,
+  enabled,
   validateSearchConsoleSubmissionTarget,
   ACTION_TYPE,
   MODE,
