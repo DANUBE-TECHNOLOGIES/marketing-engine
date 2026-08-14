@@ -1,6 +1,7 @@
 "use strict";
 
 const SEARCH_CONSOLE_API_ROOT = "https://www.googleapis.com/webmasters/v3";
+const SEARCH_CONSOLE_OWNER_PERMISSION = "siteOwner";
 
 class DisabledSearchConsoleProvider {
   constructor() {
@@ -19,6 +20,10 @@ class DisabledSearchConsoleProvider {
   }
 
   async assertSiteAccess() {
+    return this.listSites();
+  }
+
+  async assertSiteOwner() {
     return this.listSites();
   }
 
@@ -107,15 +112,33 @@ class GoogleSearchConsoleProvider {
     return property;
   }
 
+  async assertSiteOwner(siteUrl) {
+    const property = await this.assertSiteAccess(siteUrl);
+    const permissionLevel = String(property?.permissionLevel || "").trim();
+    if (permissionLevel !== SEARCH_CONSOLE_OWNER_PERMISSION) {
+      const error = new Error(`La propriété Search Console doit être accessible avec les droits propriétaire : ${siteUrl}`);
+      error.code = "SEARCH_CONSOLE_OWNER_PERMISSION_REQUIRED";
+      error.statusCode = 403;
+      error.details = {
+        siteUrl: String(siteUrl || "").trim(),
+        permissionLevel: permissionLevel || null,
+        requiredPermissionLevel: SEARCH_CONSOLE_OWNER_PERMISSION,
+      };
+      throw error;
+    }
+    return property;
+  }
+
   async submitSitemap({ siteUrl, sitemapUrl } = {}) {
     const target = validateSearchConsoleSubmissionTarget({ siteUrl, sitemapUrl });
-    await this.assertSiteAccess(target.siteUrl);
+    const property = await this.assertSiteOwner(target.siteUrl);
     const endpoint = `${SEARCH_CONSOLE_API_ROOT}/sites/${encodeURIComponent(target.siteUrl)}/sitemaps/${encodeURIComponent(target.sitemapUrl)}`;
     const response = await this.googleRequest(endpoint, { method: "PUT" });
     return {
       provider: this.name,
       siteUrl: target.siteUrl,
       sitemapUrl: target.sitemapUrl,
+      permissionLevel: property.permissionLevel,
       submittedAt: new Date().toISOString(),
       httpStatus: Number(response.status || 200),
     };
@@ -145,6 +168,7 @@ function validateSearchConsoleSubmissionTarget({ siteUrl, sitemapUrl } = {}) {
 
 module.exports = {
   SEARCH_CONSOLE_API_ROOT,
+  SEARCH_CONSOLE_OWNER_PERMISSION,
   DisabledSearchConsoleProvider,
   GoogleSearchConsoleProvider,
   validateSearchConsoleSubmissionTarget,
