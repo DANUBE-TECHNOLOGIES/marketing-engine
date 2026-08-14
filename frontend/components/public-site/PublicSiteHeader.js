@@ -3,6 +3,13 @@ import Link from "next/link";
 import { getShowcaseUrl } from "../../lib/showcase-url";
 import PublicBrandLogo from "./PublicBrandLogo";
 
+const NAVIGATION_ALIASES = Object.freeze({
+  home: "",
+  accueil: "",
+  index: "",
+  inspirations: "inspiration",
+});
+
 function normalizeNavigation(site) {
   if (Array.isArray(site.navigation)) {
     return site.navigation;
@@ -27,22 +34,44 @@ function normalizePageSlug(value) {
   return String(value || "").trim().toLowerCase();
 }
 
-function pageHref(siteSlug, page) {
-  const slug = normalizePageSlug(
-    page.slug !== undefined
-      ? page.slug
-      : extractSlug(page.path)
-  );
+function canonicalNavigationSlug(value) {
+  const slug = normalizePageSlug(value);
+  return Object.prototype.hasOwnProperty.call(NAVIGATION_ALIASES, slug)
+    ? NAVIGATION_ALIASES[slug]
+    : slug;
+}
 
-  if (
-    !slug ||
-    ["home", "accueil", "index"].includes(slug) ||
-    page.title === "Accueil"
-  ) {
+function pageSlug(page) {
+  return canonicalNavigationSlug(
+    page?.slug !== undefined
+      ? page.slug
+      : extractSlug(page?.path)
+  );
+}
+
+function pageHref(siteSlug, page) {
+  const slug = pageSlug(page);
+
+  if (!slug || page?.title === "Accueil") {
     return `/agence/${siteSlug}`;
   }
 
   return `/agence/${siteSlug}/${slug}`;
+}
+
+function uniquePublishedNavigation(site) {
+  const seen = new Set();
+
+  return normalizeNavigation(site).filter((page) => {
+    if (!page?.title) return false;
+    if (["Mentions légales", "Confidentialité"].includes(page.title)) return false;
+
+    const slug = pageSlug(page);
+    const key = slug || "__home__";
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function telephoneHref(phone) {
@@ -69,13 +98,7 @@ export default function PublicSiteHeader({
     resolvedPublicBrand?.assets ||
     {};
 
-  const pages = normalizeNavigation(site).filter(
-    (page) =>
-      page.title &&
-      page.title !== "Mentions légales" &&
-      page.title !== "Confidentialité"
-  );
-
+  const pages = uniquePublishedNavigation(site);
   const agency = site.agency || {};
   const showcaseUrl = getShowcaseUrl(site);
 
@@ -189,9 +212,13 @@ export default function PublicSiteHeader({
 }
 
 export {
+  NAVIGATION_ALIASES,
+  canonicalNavigationSlug,
   extractSlug,
   normalizeNavigation,
   normalizePageSlug,
   pageHref,
+  pageSlug,
   telephoneHref,
+  uniquePublishedNavigation,
 };
