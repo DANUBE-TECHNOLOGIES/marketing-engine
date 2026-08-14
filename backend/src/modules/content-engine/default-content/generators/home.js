@@ -100,6 +100,14 @@ const HOME_TEMPLATE = {
     },
   },
 
+  partners: {
+    title:
+      "Les plus grands voyagistes, un seul conseiller",
+
+    text:
+      "Nous comparons les offres de partenaires reconnus pour construire le voyage qui correspond vraiment à vos envies.",
+  },
+
   contact: {
     title:
       "Un projet de voyage ?",
@@ -206,10 +214,21 @@ function homeSections(
 
     {
       sectionType:
-        "contact-cta",
+        "partner-logos",
 
       displayOrder:
         60,
+
+      content:
+        rendered.value.partners,
+    },
+
+    {
+      sectionType:
+        "contact-cta",
+
+      displayOrder:
+        70,
 
       content:
         rendered.value.contact,
