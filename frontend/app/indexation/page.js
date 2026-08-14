@@ -1,3 +1,4 @@
+import Link from "next/link";
 import "./indexation.css";
 import IndexationCockpitClient from "./IndexationCockpitClient";
 
@@ -10,9 +11,9 @@ export default function IndexationPage() {
   return (
     <>
       <div className="indexation-page-tools">
-        <a href="/indexation/performance">Performance Search Console</a>
-        <a href="/indexation/status">Suivre les sitemaps</a>
-        <a href="/indexation/rollout">Préparer une vague d’indexation contrôlée</a>
+        <Link href="/indexation/performance">Performance Search Console</Link>
+        <Link href="/indexation/status">Suivre les sitemaps</Link>
+        <Link href="/indexation/rollout">Préparer une vague d’indexation contrôlée</Link>
       </div>
       <IndexationCockpitClient />
     </>
