@@ -50,8 +50,8 @@ function openingHoursSpecification(hours) {
 }
 
 function servedAreas(site, agency) {
-  const values = resolvedTargetCities(site, { limit: 8 });
   const primaryCity = String(agency?.city || site?.city || "").trim();
+  const values = resolvedTargetCities(site, { limit: 12 });
   const result = [];
   const seen = new Set();
 
