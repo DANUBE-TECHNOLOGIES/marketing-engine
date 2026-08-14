@@ -5,10 +5,18 @@ import {
   getSectionContent,
   getSectionTitle,
 } from "./helpers";
+import { resolvedTargetCities } from "../../../lib/seo/local-area-config";
 
 function siteRoot(site) {
   return String(site?.basePath || `/agence/${encodeURIComponent(site?.slug || "")}`)
     .replace(/\/$/, "");
+}
+
+function joinCities(values) {
+  if (!values.length) return "";
+  if (values.length === 1) return values[0];
+  if (values.length === 2) return `${values[0]} et ${values[1]}`;
+  return `${values.slice(0, -1).join(", ")} et ${values[values.length - 1]}`;
 }
 
 function inspirationHref(site, item) {
@@ -32,16 +40,19 @@ function inspirationImageAlt(item) {
   return `Inspiration voyage : ${inspirationTitle(item)}`;
 }
 
-export default function InspirationsRenderer({
-  section,
-  site,
-}) {
+function localIntroduction(site) {
+  const city = String(site?.agency?.city || site?.city || "").trim();
+  if (!city) return "";
+  const nearby = resolvedTargetCities(site, { limit: 3 });
+  const area = nearby.length
+    ? ` Ces contenus s’adressent aussi aux voyageurs de ${joinCities(nearby)} accompagnés par notre équipe.`
+    : "";
+  return `Préparez votre prochain voyage avec les conseils, idées de destinations et sélections de votre agence de voyages à ${city}.${area}`;
+}
+
+export default function InspirationsRenderer({ section, site }) {
   const content = getSectionContent(section);
-  const items = getItems(section, [
-    "items",
-    "articles",
-    "inspirations",
-  ]);
+  const items = getItems(section, ["items", "articles", "inspirations"]);
   const root = siteRoot(site);
   const city = String(site?.agency?.city || site?.city || "").trim();
 
@@ -52,9 +63,7 @@ export default function InspirationsRenderer({
   return (
     <section className="public-site-section public-site-inspirations">
       <div className="public-site-container">
-        <p className="public-site-section-kicker">
-          Conseils voyageurs
-        </p>
+        <p className="public-site-section-kicker">Conseils voyageurs</p>
 
         <h2>
           {getSectionTitle(
@@ -66,9 +75,7 @@ export default function InspirationsRenderer({
         {content.text ? (
           <p>{content.text}</p>
         ) : city ? (
-          <p className="public-site-section-intro">
-            Préparez votre prochain voyage avec les conseils, idées de destinations et sélections de votre agence de voyages à {city}.
-          </p>
+          <p className="public-site-section-intro">{localIntroduction(site)}</p>
         ) : null}
 
         {items.length ? (
@@ -78,10 +85,7 @@ export default function InspirationsRenderer({
               const title = inspirationTitle(item);
               const image = inspirationImage(item);
               const card = (
-                <article
-                  className="public-site-editorial-card"
-                  key={item.id || item.slug || index}
-                >
+                <article className="public-site-editorial-card" key={item.id || item.slug || index}>
                   {image ? (
                     <div className="public-site-editorial-image">
                       <img
@@ -107,7 +111,7 @@ export default function InspirationsRenderer({
                   href={href}
                   key={item.id || item.slug || index}
                   className="public-site-editorial-link"
-                  aria-label={`Lire l'inspiration ${title}`}
+                  aria-label={city ? `Lire ${title}, conseil de notre agence de voyages à ${city}` : `Lire l'inspiration ${title}`}
                 >
                   {card}
                 </Link>
@@ -116,10 +120,19 @@ export default function InspirationsRenderer({
           </div>
         ) : null}
 
-        <nav className="public-site-related-links" aria-label="Explorer les conseils et services de l'agence">
-          <Link href={`${root}/destinations`}>Découvrir les destinations proposées par votre agence</Link>
-          <Link href={`${root}/services`}>Voir les services de votre agence de voyages</Link>
-          <Link href={`${root}/contact`}>{city ? `Contacter votre agence de voyages à ${city}` : "Contacter votre agence de voyages"}</Link>
+        <nav
+          className="public-site-related-links"
+          aria-label={city ? `Explorer les conseils et services de notre agence à ${city}` : "Explorer les conseils et services de l'agence"}
+        >
+          <Link href={`${root}/destinations`}>
+            {city ? `Destinations conseillées par notre agence à ${city}` : "Découvrir les destinations proposées par votre agence"}
+          </Link>
+          <Link href={`${root}/services`}>
+            {city ? `Services de notre agence de voyages à ${city}` : "Voir les services de votre agence de voyages"}
+          </Link>
+          <Link href={`${root}/contact`}>
+            {city ? `Contacter notre agence de voyages à ${city}` : "Contacter votre agence de voyages"}
+          </Link>
         </nav>
       </div>
     </section>
@@ -131,5 +144,7 @@ export {
   inspirationImage,
   inspirationImageAlt,
   inspirationTitle,
+  joinCities,
+  localIntroduction,
   siteRoot,
 };
