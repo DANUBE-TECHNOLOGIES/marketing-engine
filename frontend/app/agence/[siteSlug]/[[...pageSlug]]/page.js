@@ -8,6 +8,7 @@ import {
 
 import LegalJourneyCta from "../../../../components/public-site/LegalJourneyCta";
 import LegalRuntimeDocument from "../../../../components/public-site/LegalRuntimeDocument";
+import LocalSeoAreaLinks from "../../../../components/public-site/LocalSeoAreaLinks";
 import PublicSiteSections from "../../../../components/public-site/PublicSiteSections";
 
 import JsonLd from "../../../../components/JsonLd";
@@ -277,6 +278,10 @@ export default async function AgencySitePage({ params }) {
             page={page}
           />
         )}
+
+        {!legalPage && isHomePage(pageSlug) ? (
+          <LocalSeoAreaLinks site={site} />
+        ) : null}
 
         {legalPage ? <LegalJourneyCta site={site} /> : null}
       </div>
