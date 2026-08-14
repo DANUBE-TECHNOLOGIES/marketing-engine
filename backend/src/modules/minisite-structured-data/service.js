@@ -6,6 +6,9 @@ const {
   isPublishedPage,
   isPublishedSite,
 } = require("./sitemap");
+const {
+  applyInspirationIndexabilityContract,
+} = require("./inspiration-indexability");
 const { MiniSiteStructuredDataRepository } = require("./repository");
 
 function normalizePublicOrigin(value) {
@@ -54,6 +57,7 @@ class MiniSiteStructuredDataService {
       publicGraphPublishedOnly: true,
       destinationSitemap: "localized-per-published-agency-site",
       editorialSitemap: "canonical-agency-only",
+      inspirationIndexSitemap: "only-when-public-content-targets-agency",
       publicOrigin: this.publicOrigin,
       schemas: ["TravelAgency", "LocalBusiness", "WebSite", "WebPage", "BreadcrumbList", "FAQPage"],
       operations: ["previewNetwork", "previewSitemap", "previewSite"],
@@ -92,12 +96,14 @@ class MiniSiteStructuredDataService {
       this.repository.listPublishedDestinations(tenantId),
     ]);
 
-    return buildPublicSitemap({
+    const sitemap = buildPublicSitemap({
       sites,
       inspirations,
       destinations,
       publicOrigin: this.publicOrigin,
     });
+
+    return applyInspirationIndexabilityContract(sitemap, sites, inspirations);
   }
 
   async previewNetwork({ tenantId } = {}) {
