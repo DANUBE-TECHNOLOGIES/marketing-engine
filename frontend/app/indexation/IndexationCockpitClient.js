@@ -305,6 +305,7 @@ export default function IndexationCockpitClient() {
           const blockers = asArray(site.blockers || site.readiness?.blockers);
           const warnings = asArray(site.warnings || site.readiness?.warnings);
           const preflightOk = preflights[site.siteSlug]?.ready === true;
+          const canStartFreshCycle = site.readyToSubmit === true && (!run || run.status === "failed");
 
           return (
             <article className="indexation-card" key={site.siteSlug}>
@@ -342,12 +343,18 @@ export default function IndexationCockpitClient() {
                 </div>
               ) : null}
 
+              {run?.status === "failed" ? (
+                <div className="indexation-message indexation-error">
+                  Le run précédent a échoué. Un nouveau préflight est obligatoire avant de créer une nouvelle soumission.
+                </div>
+              ) : null}
+
               {preflightOk ? (
                 <div className="preflight-ok">Préflight validé · sitemap public et propriété propriétaire vérifiés.</div>
               ) : null}
 
               <div className="indexation-actions">
-                {site.readyToSubmit === true && !run ? (
+                {canStartFreshCycle ? (
                   <>
                     <button
                       type="button"
@@ -355,14 +362,14 @@ export default function IndexationCockpitClient() {
                       onClick={() => preflight(site)}
                       disabled={busy[`${site.siteSlug}:preflight`]}
                     >
-                      {busy[`${site.siteSlug}:preflight`] ? "Vérification…" : "Lancer le préflight"}
+                      {busy[`${site.siteSlug}:preflight`] ? "Vérification…" : run?.status === "failed" ? "Relancer le préflight" : "Lancer le préflight"}
                     </button>
                     <button
                       type="button"
                       onClick={() => prepare(site)}
                       disabled={!preflightOk || busy[`${site.siteSlug}:prepare`]}
                     >
-                      Préparer la soumission
+                      Préparer une nouvelle soumission
                     </button>
                   </>
                 ) : null}
