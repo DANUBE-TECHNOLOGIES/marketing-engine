@@ -74,5 +74,17 @@ jobs:
       - name: Run indexation contract tests
         run: npm run test:indexation
 
-      - name: Lint Search Console and indexation surfaces
-        run: npx eslint "app/agence/[siteSlug]/sitemap.xml/route.js" "app/api/indexation/route.js" "app/indexation/**/*.js" "lib/indexation-api.js"
+      - name: Lint sitemap and indexation API
+        run: npx eslint "app/agence/[siteSlug]/sitemap.xml/route.js" "app/api/indexation/route.js" "lib/indexation-api.js"
+
+      - name: Lint indexation cockpit
+        run: npx eslint "app/indexation/IndexationCockpitClient.js" "app/indexation/IndexationRolloutPlanner.js" "app/indexation/page.js"
+
+      - name: Lint indexation rollout
+        run: npx eslint "app/indexation/rollout/**/*.js"
+
+      - name: Lint indexation status
+        run: npx eslint "app/indexation/status/**/*.js"
+
+      - name: Lint indexation performance
+        run: npx eslint "app/indexation/performance/**/*.js"
