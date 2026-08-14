@@ -7,7 +7,10 @@ const page = await readFile(
   "utf8"
 );
 
-test("plural inspirations route redirects to the canonical editorial index", () => {
+test("duplicate public aliases redirect to canonical routes", () => {
+  assert.match(page, /home:\s*""/);
+  assert.match(page, /accueil:\s*""/);
+  assert.match(page, /index:\s*""/);
   assert.match(page, /inspirations:\s*"inspiration"/);
   assert.match(page, /permanentRedirect/);
   assert.match(page, /canonicalPageSlug/);
@@ -18,4 +21,5 @@ test("alias metadata is noindex and points to the canonical URL", () => {
   assert.match(page, /if \(isAliasPage\(pageSlug\)\)/);
   assert.match(page, /index:\s*false/);
   assert.match(page, /canonicalUrl/);
+  assert.match(page, /hasOwnProperty\.call\(PAGE_ALIASES/);
 });
