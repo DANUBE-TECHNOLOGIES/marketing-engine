@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { indexationApi } from "../../../lib/indexation-api";
 
@@ -77,7 +78,7 @@ export default function SearchPerformanceClient() {
           <h1>Performance organique des mini-sites</h1>
           <p>Mesurez ce que Google génère réellement après indexation : clics, impressions, CTR, position et principales requêtes ou pages.</p>
         </div>
-        <a className="indexation-nav-link" href="/indexation">Retour au cockpit</a>
+        <Link className="indexation-nav-link" href="/indexation">Retour au cockpit</Link>
       </header>
 
       <section className="indexation-controls performance-controls">
