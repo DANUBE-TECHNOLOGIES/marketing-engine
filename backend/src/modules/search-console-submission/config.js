@@ -1,14 +1,34 @@
 "use strict";
 
-const { createGoogleAccessTokenProvider } = require("./auth");
+const {
+  createGoogleAccessTokenProvider,
+  googleAuthLibraryStatus,
+} = require("./auth");
 const { DisabledSearchConsoleProvider, GoogleSearchConsoleProvider } = require("./provider");
 
 function enabled(value) {
   return ["1", "true", "yes", "on"].includes(String(value || "").trim().toLowerCase());
 }
 
-function createConfiguredSearchConsoleProvider({ env = process.env, GoogleAuth, fetchImpl } = {}) {
-  if (!enabled(env.SEARCH_CONSOLE_ENABLED)) return new DisabledSearchConsoleProvider();
+function disabledProvider(reason, requestedEnabled = false) {
+  const provider = new DisabledSearchConsoleProvider();
+  provider.disabledReason = reason;
+  provider.requestedEnabled = requestedEnabled;
+  provider.credentialMode = null;
+  return provider;
+}
+
+function createConfiguredSearchConsoleProvider({ env = process.env, GoogleAuth, fetchImpl, moduleLoader } = {}) {
+  if (!enabled(env.SEARCH_CONSOLE_ENABLED)) {
+    return disabledProvider("feature-disabled", false);
+  }
+
+  if (!GoogleAuth) {
+    const dependency = googleAuthLibraryStatus(moduleLoader || require);
+    if (!dependency.available) {
+      return disabledProvider(dependency.reason || "google-auth-library-missing", true);
+    }
+  }
 
   const credentialsPath = String(env.GOOGLE_APPLICATION_CREDENTIALS || "").trim() || undefined;
   const accessTokenProvider = createGoogleAccessTokenProvider({
@@ -16,10 +36,15 @@ function createConfiguredSearchConsoleProvider({ env = process.env, GoogleAuth, 
     keyFile: credentialsPath,
   });
 
-  return new GoogleSearchConsoleProvider({ accessTokenProvider, fetchImpl });
+  const provider = new GoogleSearchConsoleProvider({ accessTokenProvider, fetchImpl });
+  provider.requestedEnabled = true;
+  provider.disabledReason = null;
+  provider.credentialMode = credentialsPath ? "key-file" : "application-default-credentials";
+  return provider;
 }
 
 module.exports = {
   createConfiguredSearchConsoleProvider,
+  disabledProvider,
   enabled,
 };
