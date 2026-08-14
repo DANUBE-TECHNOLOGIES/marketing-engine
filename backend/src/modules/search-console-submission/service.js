@@ -10,6 +10,17 @@ const {
 const ACTION_TYPE = "search-console-sitemap-submit";
 const MODE = "search-console-manual";
 
+function normalizeOrigin(value) {
+  return String(value || "").trim().replace(/\/+$/g, "");
+}
+
+function siteSitemapPublicUrl(publicOrigin, siteSlug) {
+  const origin = normalizeOrigin(publicOrigin);
+  const slug = String(siteSlug || "").trim();
+  if (!origin || !slug) return null;
+  return `${origin}/agence/${encodeURIComponent(slug)}/sitemap.xml`;
+}
+
 class SearchConsoleSubmissionService {
   constructor({ prisma, structuredDataService, provider } = {}) {
     if (!prisma) throw new Error("Prisma est requis");
@@ -23,7 +34,23 @@ class SearchConsoleSubmissionService {
   }
 
   async prepare({ tenantId, siteSlug, siteUrl, sitemapUrl, requestedBy } = {}) {
-    const target = validateSearchConsoleSubmissionTarget({ siteUrl, sitemapUrl });
+    const expectedSitemapUrl = siteSitemapPublicUrl(this.structuredDataService.publicOrigin, siteSlug);
+    const suppliedSitemapUrl = String(sitemapUrl || "").trim();
+    if (suppliedSitemapUrl && suppliedSitemapUrl !== expectedSitemapUrl) {
+      const error = new Error("L’URL du sitemap doit correspondre au sitemap public généré par Local Engine.");
+      error.code = "SEARCH_CONSOLE_SITEMAP_URL_MISMATCH";
+      error.statusCode = 409;
+      error.details = {
+        suppliedSitemapUrl,
+        expectedSitemapUrl,
+      };
+      throw error;
+    }
+
+    const target = validateSearchConsoleSubmissionTarget({
+      siteUrl,
+      sitemapUrl: expectedSitemapUrl,
+    });
     const candidate = await this.structuredDataService.siteSitemapCandidate({ tenantId, siteSlug });
 
     if (!candidate.readyToSubmit) {
@@ -44,6 +71,7 @@ class SearchConsoleSubmissionService {
         provider: "google-search-console",
         requiresExplicitApproval: true,
         autoSubmit: false,
+        sitemapUrlBoundToGeneratedPublicRoute: true,
       },
       sourcePlan: {
         siteSlug,
@@ -165,4 +193,10 @@ class SearchConsoleSubmissionService {
   }
 }
 
-module.exports = { SearchConsoleSubmissionService, ACTION_TYPE, MODE };
+module.exports = {
+  SearchConsoleSubmissionService,
+  ACTION_TYPE,
+  MODE,
+  normalizeOrigin,
+  siteSitemapPublicUrl,
+};
