@@ -1,4 +1,5 @@
 import { absoluteUrl } from "./site-url";
+import { resolvedTargetCities } from "./local-area-config";
 import {
   buildGoogleMapsSearchUrl,
 } from "../public-agency-location";
@@ -49,11 +50,7 @@ function openingHoursSpecification(hours) {
 }
 
 function servedAreas(site, agency) {
-  const values =
-    site?.targetCities ||
-    site?.metadata?.targetCities ||
-    agency?.targetCities ||
-    [];
+  const values = resolvedTargetCities(site, { limit: 8 });
   const primaryCity = String(agency?.city || site?.city || "").trim();
   const result = [];
   const seen = new Set();
@@ -78,10 +75,7 @@ function servedAreas(site, agency) {
   }
 
   append(primaryCity);
-
-  if (Array.isArray(values)) {
-    values.forEach(append);
-  }
+  values.forEach(append);
 
   return result;
 }
