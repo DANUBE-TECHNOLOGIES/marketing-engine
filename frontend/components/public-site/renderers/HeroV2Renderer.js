@@ -21,28 +21,75 @@ function normalizeAlignment(value) {
     : "left";
 }
 
+function siteCity(site) {
+  return String(site?.agency?.city || site?.city || "").trim();
+}
+
 function defaultHeroTitle(site) {
-  const city = String(site?.agency?.city || site?.city || "").trim();
+  const city = siteCity(site);
   return city
     ? `Votre agence de voyages à ${city}`
     : site?.name || "Votre agence de voyages";
 }
 
 function defaultHeroEyebrow(site) {
-  const city = String(site?.agency?.city || site?.city || "").trim();
+  const city = siteCity(site);
   return city ? `Agence de voyages · ${city}` : "Agence de voyages";
+}
+
+function pageSlug(page) {
+  return String(page?.slug || "").trim().toLowerCase();
+}
+
+function genericHeroTitle(value, site) {
+  const title = String(value || "").replace(/\s+/g, " ").trim();
+  if (!title) return true;
+
+  const siteName = String(site?.name || "").replace(/\s+/g, " ").trim();
+  if (siteName && title.toLocaleLowerCase("fr-FR") === siteName.toLocaleLowerCase("fr-FR")) {
+    return true;
+  }
+
+  return /^(accueil|bienvenue|notre agence|votre agence|agence de voyages?)$/i.test(title);
+}
+
+function intentHeroTitle({ page, site }) {
+  const city = siteCity(site);
+  if (!city) return null;
+
+  const slug = pageSlug(page);
+
+  if (!slug || ["home", "accueil", "index"].includes(slug)) {
+    return `Agence de voyages à ${city}`;
+  }
+  if (slug === "services") return `Services de votre agence de voyages à ${city}`;
+  if (["destinations", "destination"].includes(slug)) return `Destinations et voyages depuis ${city}`;
+  if (["inspiration", "inspirations"].includes(slug)) return `Inspirations voyage depuis ${city}`;
+  if (["equipe", "team", "notre-equipe"].includes(slug)) return `Votre équipe de conseillers voyage à ${city}`;
+  if (["contact", "nous-contacter"].includes(slug)) return `Contacter votre agence de voyages à ${city}`;
+  if (["avis", "reviews", "avis-clients"].includes(slug)) return `Avis clients de votre agence de voyages à ${city}`;
+
+  return null;
+}
+
+function resolvedHeroTitle({ content, section, site, page }) {
+  const configured = content.title || content.heading || section.title || "";
+  const localIntent = intentHeroTitle({ page, site });
+
+  if (localIntent && genericHeroTitle(configured, site)) {
+    return localIntent;
+  }
+
+  return configured || localIntent || defaultHeroTitle(site);
 }
 
 export default function HeroV2Renderer({
   section,
   site,
+  page,
 }) {
   const content = getSectionContent(section);
-  const title =
-    content.title ||
-    content.heading ||
-    section.title ||
-    defaultHeroTitle(site);
+  const title = resolvedHeroTitle({ content, section, site, page });
   const subtitle =
     content.subtitle ||
     content.text ||
@@ -197,4 +244,7 @@ export default function HeroV2Renderer({
 export {
   defaultHeroEyebrow,
   defaultHeroTitle,
+  genericHeroTitle,
+  intentHeroTitle,
+  resolvedHeroTitle,
 };
