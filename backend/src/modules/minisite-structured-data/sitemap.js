@@ -12,8 +12,29 @@ const {
 
 const NOINDEX_SLUGS = new Set([
   "mentions-legales",
+  "mentions_legales",
   "confidentialite",
+  "politique-de-confidentialite",
+  "privacy",
 ]);
+
+const PAGE_ALIASES = new Map([
+  ["home", ""],
+  ["accueil", ""],
+  ["index", ""],
+  ["inspirations", "inspiration"],
+]);
+
+const MANAGED_PAGE_SLUGS = new Set([
+  "inspiration",
+]);
+
+function canonicalPageSlug(value) {
+  const slug = normalizeSlug(value);
+  return PAGE_ALIASES.has(slug)
+    ? PAGE_ALIASES.get(slug)
+    : slug;
+}
 
 function isPublishedSite(site) {
   return Boolean(site && (site.status === "published" || site.publishedAt));
@@ -27,7 +48,7 @@ function isPublishedPage(page) {
 }
 
 function shouldIndexPage(page) {
-  const slug = normalizeSlug(page?.slug);
+  const slug = canonicalPageSlug(page?.slug);
   if (NOINDEX_SLUGS.has(slug)) return false;
   return isPublishedPage(page);
 }
@@ -40,7 +61,7 @@ function normalizeDate(value) {
 }
 
 function pagePriority(slug) {
-  const normalized = normalizeSlug(slug);
+  const normalized = canonicalPageSlug(slug);
   if (!normalized) return 1;
   if (["agence", "services", "destinations", "contact"].includes(normalized)) return 0.8;
   if (["equipe", "inspiration", "engagements", "partenaires", "avis"].includes(normalized)) return 0.6;
@@ -48,7 +69,7 @@ function pagePriority(slug) {
 }
 
 function pageChangeFrequency(slug) {
-  const normalized = normalizeSlug(slug);
+  const normalized = canonicalPageSlug(slug);
   if (!normalized) return "weekly";
   if (["destinations", "inspiration", "avis"].includes(normalized)) return "weekly";
   return "monthly";
@@ -93,7 +114,7 @@ function buildPublicSitemap({ sites, inspirations, destinations, publicOrigin } 
     }
 
     const publishedPages = (site.pages || []).filter(shouldIndexPage);
-    const homePage = publishedPages.find((page) => normalizeSlug(page.slug) === "");
+    const homePage = publishedPages.find((page) => canonicalPageSlug(page.slug) === "");
 
     entries.push({
       url: siteUrl(publicOrigin, site.slug),
@@ -117,8 +138,9 @@ function buildPublicSitemap({ sites, inspirations, destinations, publicOrigin } 
     });
 
     for (const page of site.pages || []) {
-      const slug = normalizeSlug(page.slug);
-      if (!slug) continue;
+      const rawSlug = normalizeSlug(page.slug);
+      const slug = canonicalPageSlug(rawSlug);
+      if (!rawSlug) continue;
 
       if (!shouldIndexPage(page)) {
         excluded.push({
@@ -126,8 +148,32 @@ function buildPublicSitemap({ sites, inspirations, destinations, publicOrigin } 
           siteId: site.id,
           siteSlug: site.slug,
           pageId: page.id,
-          pageSlug: slug,
+          pageSlug: rawSlug,
           reason: NOINDEX_SLUGS.has(slug) ? "noindex-page" : "page-not-published",
+        });
+        continue;
+      }
+
+      if (!slug) {
+        excluded.push({
+          type: "page",
+          siteId: site.id,
+          siteSlug: site.slug,
+          pageId: page.id,
+          pageSlug: rawSlug,
+          reason: "canonical-home-alias",
+        });
+        continue;
+      }
+
+      if (MANAGED_PAGE_SLUGS.has(slug)) {
+        excluded.push({
+          type: "page",
+          siteId: site.id,
+          siteSlug: site.slug,
+          pageId: page.id,
+          pageSlug: rawSlug,
+          reason: "canonical-route-managed",
         });
         continue;
       }
@@ -236,8 +282,11 @@ function buildPublicSitemap({ sites, inspirations, destinations, publicOrigin } 
 }
 
 module.exports = {
+  MANAGED_PAGE_SLUGS,
   NOINDEX_SLUGS,
+  PAGE_ALIASES,
   buildPublicSitemap,
+  canonicalPageSlug,
   destinationUrl,
   inspirationIndexUrl,
   inspirationUrl,
