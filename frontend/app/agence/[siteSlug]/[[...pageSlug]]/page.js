@@ -25,6 +25,7 @@ import {
   buildServiceCatalogSchema,
   buildTravelAgencySchema,
 } from "../../../../lib/seo/json-ld";
+import { buildPageFaqSchema } from "../../../../lib/seo/page-faq-schema";
 
 import {
   buildLocalPageSeo,
@@ -245,6 +246,7 @@ export default async function AgencySitePage({ params }) {
   const serviceCatalog = servicesPage
     ? buildServiceCatalogSchema(site, page)
     : null;
+  const faqSchema = legalPage ? null : buildPageFaqSchema(page);
   const webPageSchema = buildLocalWebPageSchema({
     site,
     page,
@@ -265,6 +267,7 @@ export default async function AgencySitePage({ params }) {
       <JsonLd data={buildBreadcrumbSchema(breadcrumbItems)} />
       <JsonLd data={webPageSchema} />
       {serviceCatalog ? <JsonLd data={serviceCatalog} /> : null}
+      {faqSchema ? <JsonLd data={faqSchema} /> : null}
 
       <div data-public-page-kind={legalPage ? "legal" : "content"}>
         {legalPage && legalRuntimeHtml ? (
