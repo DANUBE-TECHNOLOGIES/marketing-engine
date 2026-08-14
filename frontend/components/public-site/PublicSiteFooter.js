@@ -32,6 +32,11 @@ function publishedNavigationSlugs(site) {
   );
 }
 
+function localAnchor(label, city) {
+  const locality = String(city || "").trim();
+  return locality ? `${label} à ${locality}` : label;
+}
+
 export default function PublicSiteFooter({ site }) {
   const agency = site.agency || {};
   const basePath = `/agence/${site.slug}`;
@@ -40,6 +45,7 @@ export default function PublicSiteFooter({ site }) {
   const hasDestinationsPage = navigationSlugs.has("destinations");
   const hasReviewsPage = navigationSlugs.has("avis");
   const hasContactPage = navigationSlugs.has("contact");
+  const city = agency.city || site.city;
 
   return (
     <footer className="public-site-footer">
@@ -52,8 +58,9 @@ export default function PublicSiteFooter({ site }) {
           <div>
             <strong>{site.name}</strong>
             <p>
-              Votre agence vous accompagne dans la création de voyages uniques,
-              adaptés à vos envies.
+              {city
+                ? `Votre agence de voyages à ${city} vous accompagne dans la création de voyages uniques, adaptés à vos envies.`
+                : "Votre agence vous accompagne dans la création de voyages uniques, adaptés à vos envies."}
             </p>
           </div>
         </div>
@@ -87,17 +94,27 @@ export default function PublicSiteFooter({ site }) {
 
           <div className="public-site-footer-links">
             {hasServicesPage ? (
-              <Link href={`${basePath}/services`}>Nos services</Link>
+              <Link href={`${basePath}/services`}>
+                {localAnchor("Services de votre agence de voyages", city)}
+              </Link>
             ) : null}
             {hasDestinationsPage ? (
-              <Link href={`${basePath}/destinations`}>Destinations</Link>
+              <Link href={`${basePath}/destinations`}>
+                {localAnchor("Destinations conseillées par notre agence", city)}
+              </Link>
             ) : null}
-            <Link href={`${basePath}/inspiration`}>Inspirations voyage</Link>
+            <Link href={`${basePath}/inspiration`}>
+              {localAnchor("Inspirations et conseils voyage", city)}
+            </Link>
             {hasReviewsPage ? (
-              <Link href={`${basePath}/avis`}>Avis clients</Link>
+              <Link href={`${basePath}/avis`}>
+                {localAnchor("Avis clients de notre agence", city)}
+              </Link>
             ) : null}
             {hasContactPage ? (
-              <Link href={`${basePath}/contact`}>Nous contacter</Link>
+              <Link href={`${basePath}/contact`}>
+                {localAnchor("Contacter notre agence de voyages", city)}
+              </Link>
             ) : null}
           </div>
         </div>
@@ -125,6 +142,7 @@ export default function PublicSiteFooter({ site }) {
 export {
   FOOTER_ALIASES,
   canonicalFooterSlug,
+  localAnchor,
   publishedNavigationSlugs,
   telephoneHref,
 };
