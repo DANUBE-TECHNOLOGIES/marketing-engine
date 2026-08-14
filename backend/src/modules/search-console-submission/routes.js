@@ -54,6 +54,28 @@ function routes({ prisma, service, provider } = {}) {
     }
   });
 
+  router.get("/search-console-submissions/candidates", async (request, response) => {
+    try {
+      const tenantId = await tenantIdForRequest(prisma, request);
+      response.json(await submissionService.candidates({ tenantId }));
+    } catch (error) {
+      sendError(response, error);
+    }
+  });
+
+  router.get("/search-console-submissions", async (request, response) => {
+    try {
+      const tenantId = await tenantIdForRequest(prisma, request);
+      response.json(await submissionService.list({
+        tenantId,
+        status: request.query?.status,
+        limit: request.query?.limit,
+      }));
+    } catch (error) {
+      sendError(response, error);
+    }
+  });
+
   router.post("/search-console-submissions/preflight", async (request, response) => {
     try {
       const tenantId = await tenantIdForRequest(prisma, request);
