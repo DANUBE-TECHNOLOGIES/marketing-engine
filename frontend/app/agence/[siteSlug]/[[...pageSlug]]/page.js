@@ -86,6 +86,25 @@ function isLegalPage(pageSlug, page) {
   return title.includes("mentions légales") || title.includes("confidentialité");
 }
 
+function pageSections(page) {
+  if (Array.isArray(page?.sections)) return page.sections;
+  if (Array.isArray(page?.blocks)) return page.blocks;
+  return [];
+}
+
+function pageHasHero(page) {
+  return pageSections(page).some((section) => {
+    const type = String(
+      section?.type ||
+      section?.blockType ||
+      section?.kind ||
+      ""
+    ).trim().toLowerCase();
+
+    return type === "hero" || type.includes("hero-") || type.includes("-hero");
+  });
+}
+
 function canonicalPath({ siteSlug, pageSlug }) {
   const root = `/agence/${siteSlug}`;
   const slug = canonicalPageSlug(pageSlug);
@@ -298,6 +317,7 @@ export default async function AgencySitePage({ params }) {
     title: localSeo.title,
     description: localSeo.description,
   });
+  const needsFallbackHeading = !legalPage && !pageHasHero(page);
   let legalRuntimeHtml = null;
 
   if (legalPage) {
@@ -320,10 +340,20 @@ export default async function AgencySitePage({ params }) {
             html={legalRuntimeHtml}
           />
         ) : (
-          <PublicSiteSections
-            site={site}
-            page={page}
-          />
+          <>
+            {needsFallbackHeading ? (
+              <section className="public-site-section public-site-page-heading">
+                <div className="public-site-container public-site-prose">
+                  <p className="public-site-eyebrow">{site.name}</p>
+                  <h1>{localSeo.heading}</h1>
+                </div>
+              </section>
+            ) : null}
+            <PublicSiteSections
+              site={site}
+              page={page}
+            />
+          </>
         )}
 
         {!legalPage && isHomePage(pageSlug) ? (
@@ -345,4 +375,6 @@ export {
   isHomePage,
   isLegalPage,
   isServicesPage,
+  pageHasHero,
+  pageSections,
 };
