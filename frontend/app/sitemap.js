@@ -64,6 +64,12 @@ function normalizePath(
       "/"
     );
 
+  pathname =
+    pathname.replace(
+      /^(\/agence\/[^/]+)\/inspirations$/i,
+      "$1/inspiration"
+    );
+
   if (
     pathname.length >
       1 &&
