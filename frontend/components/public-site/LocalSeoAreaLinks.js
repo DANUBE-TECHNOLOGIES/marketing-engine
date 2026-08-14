@@ -1,31 +1,12 @@
 import Link from "next/link";
+import { resolvedTargetCities } from "../../lib/seo/local-area-config";
 
 function clean(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
 }
 
 function targetCities(site) {
-  const agency = site?.agency || {};
-  const primaryCity = clean(agency.city || site?.city).toLocaleLowerCase("fr-FR");
-  const values = site?.targetCities || site?.metadata?.targetCities || agency?.targetCities || [];
-
-  if (!Array.isArray(values)) return [];
-
-  const seen = new Set();
-  const result = [];
-
-  for (const value of values) {
-    const city = clean(typeof value === "string" ? value : value?.name || value?.city);
-    if (!city) continue;
-
-    const key = city.toLocaleLowerCase("fr-FR");
-    if (key === primaryCity || seen.has(key)) continue;
-
-    seen.add(key);
-    result.push(city);
-  }
-
-  return result.slice(0, 6);
+  return resolvedTargetCities(site, { limit: 6 });
 }
 
 function joinCities(values) {
@@ -58,6 +39,7 @@ export default function LocalSeoAreaLinks({ site }) {
         <div className="public-site-related-links" aria-label="Découvrir les services de l’agence">
           <Link href={`${root}/services`}>Découvrir nos services voyage</Link>
           <Link href={`${root}/destinations`}>Voir nos idées de destinations</Link>
+          <Link href={`${root}/inspiration`}>Lire nos conseils voyage</Link>
           <Link href={`${root}/contact`}>Contacter l’agence de {city}</Link>
         </div>
       </div>
