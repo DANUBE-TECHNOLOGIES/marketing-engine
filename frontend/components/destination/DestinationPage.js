@@ -5,6 +5,7 @@ import {
   buildDestinationSchema,
   buildTravelAgencySchema,
 } from "../../lib/seo/json-ld";
+import { resolvedTargetCities } from "../../lib/seo/local-area-config";
 import styles from "./DestinationPage.module.css";
 
 function paragraphs(content) {
@@ -12,6 +13,13 @@ function paragraphs(content) {
   if (Array.isArray(content.paragraphs)) return content.paragraphs.filter(Boolean);
   const text = content.text || content.body || content.content || null;
   return text ? [text] : [];
+}
+
+function joinCities(values) {
+  if (!values.length) return "";
+  if (values.length === 1) return values[0];
+  if (values.length === 2) return `${values[0]} et ${values[1]}`;
+  return `${values.slice(0, -1).join(", ")} et ${values[values.length - 1]}`;
 }
 
 function SectionContent({ section }) {
@@ -131,9 +139,13 @@ export default function DestinationPage({ data }) {
   const sections = Array.isArray(d.sections) ? d.sections : [];
   const faqs = Array.isArray(d.faqs) ? d.faqs : [];
   const siteRoot = site.basePath || `/agence/${encodeURIComponent(site.slug)}`;
-  const inspirationsPath = `${siteRoot.replace(/\/$/, "")}/inspiration`;
-  const contactPath = `${siteRoot.replace(/\/$/, "")}/contact`;
+  const root = siteRoot.replace(/\/$/, "");
+  const destinationsPath = `${root}/destinations`;
+  const inspirationsPath = `${root}/inspiration`;
+  const servicesPath = `${root}/services`;
+  const contactPath = `${root}/contact`;
   const city = site?.agency?.city || null;
+  const nearby = resolvedTargetCities(site, { limit: 4 });
   const destinationHeading = city ? `Voyage à ${d.name} depuis ${city}` : `Voyage à ${d.name}`;
 
   const destinationSchema = buildDestinationSchema(data);
@@ -142,6 +154,10 @@ export default function DestinationPage({ data }) {
     {
       name: "Accueil",
       path: siteRoot,
+    },
+    {
+      name: "Destinations",
+      path: destinationsPath,
     },
     {
       name: d.name,
@@ -173,6 +189,8 @@ export default function DestinationPage({ data }) {
         <div className={styles["de-shell"]}>
           <nav aria-label="Fil d’Ariane">
             <Link href={siteRoot}>Accueil de {site.name}</Link>
+            <span aria-hidden="true"> › </span>
+            <Link href={destinationsPath}>Destinations</Link>
             <span aria-hidden="true"> › </span>
             <span>{d.name}</span>
           </nav>
@@ -222,6 +240,12 @@ export default function DestinationPage({ data }) {
                 Votre agence {site.name} à {city} vous accompagne pour préparer un voyage à {d.name}
                 adapté à votre rythme, à vos envies et à votre budget.
               </p>
+              {nearby.length ? (
+                <p>
+                  Nos conseillers accompagnent également les voyageurs de {joinCities(nearby)}
+                  qui souhaitent construire leur séjour à {d.name} avec un interlocuteur local.
+                </p>
+              ) : null}
             </div>
           ) : null}
           {d.summary ? <div className={styles["de-prose"]}><p>{d.summary}</p></div> : null}
@@ -268,6 +292,9 @@ export default function DestinationPage({ data }) {
           <div className={styles["de-actions"]}>
             <Link href={data.quotePath}>
               Demander mon devis personnalisé
+            </Link>
+            <Link href={servicesPath}>
+              Découvrir nos services voyage
             </Link>
             <Link href={inspirationsPath}>
               Voir les conseils et inspirations voyage
