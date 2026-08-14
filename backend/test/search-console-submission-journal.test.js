@@ -7,7 +7,10 @@ const {
   DisabledSearchConsoleProvider,
   validateSearchConsoleSubmissionTarget,
 } = require("../src/modules/search-console-submission/provider");
-const { SearchConsoleSubmissionService } = require("../src/modules/search-console-submission/service");
+const {
+  SearchConsoleSubmissionService,
+  siteSitemapPublicUrl,
+} = require("../src/modules/search-console-submission/service");
 
 function fakePrisma() {
   const state = { runs: [], actions: [], events: [] };
@@ -64,6 +67,7 @@ function fakePrisma() {
 
 function structuredDataService() {
   return {
+    publicOrigin: "https://agences.example.test",
     repository: {
       async findSiteBySlug(slug) { return { id: "site-1", slug }; },
     },
@@ -86,26 +90,50 @@ test("validates explicit Search Console property and HTTPS sitemap URL", () => {
   assert.throws(() => validateSearchConsoleSubmissionTarget({ siteUrl: "x", sitemapUrl: "http://example.test/sitemap.xml" }), /HTTPS/);
 });
 
-test("prepare and approve are journaled before any external submission", async () => {
+test("builds deterministic public sitemap URL for an agency", () => {
+  assert.equal(
+    siteSitemapPublicUrl("https://agences.example.test/", "gien"),
+    "https://agences.example.test/agence/gien/sitemap.xml"
+  );
+});
+
+test("prepare binds the journal to the generated public sitemap URL", async () => {
   const prisma = fakePrisma();
   const service = new SearchConsoleSubmissionService({ prisma, structuredDataService: structuredDataService() });
   const prepared = await service.prepare({
     tenantId: "tenant-1",
     siteSlug: "gien",
     siteUrl: "sc-domain:agences.example.test",
-    sitemapUrl: "https://agences.example.test/gien-sitemap.xml",
     requestedBy: "nicolas",
   });
 
   assert.equal(prepared.status, "awaiting_approval");
   assert.equal(prepared.actions[0].status, "awaiting_approval");
   assert.equal(prepared.actions[0].payload.siteSlug, "gien");
+  assert.equal(prepared.actions[0].payload.sitemapUrl, "https://agences.example.test/agence/gien/sitemap.xml");
   assert.ok(prepared.auditEvents.some((event) => event.eventType === "search-console-submission-prepared"));
 
   const approved = await service.approve({ tenantId: "tenant-1", runId: prepared.id, approvedBy: "nicolas" });
   assert.equal(approved.status, "approved");
   assert.equal(approved.actions[0].status, "approved");
   assert.ok(approved.auditEvents.some((event) => event.eventType === "search-console-submission-approved"));
+});
+
+test("prepare rejects an arbitrary sitemap URL supplied by the caller", async () => {
+  const prisma = fakePrisma();
+  const service = new SearchConsoleSubmissionService({ prisma, structuredDataService: structuredDataService() });
+
+  await assert.rejects(
+    service.prepare({
+      tenantId: "tenant-1",
+      siteSlug: "gien",
+      siteUrl: "sc-domain:agences.example.test",
+      sitemapUrl: "https://evil.example.test/sitemap.xml",
+    }),
+    (error) => error.code === "SEARCH_CONSOLE_SITEMAP_URL_MISMATCH"
+      && error.statusCode === 409
+      && error.details?.expectedSitemapUrl === "https://agences.example.test/agence/gien/sitemap.xml"
+  );
 });
 
 test("disabled provider blocks submit and records the attempt", async () => {
@@ -119,7 +147,6 @@ test("disabled provider blocks submit and records the attempt", async () => {
     tenantId: "tenant-1",
     siteSlug: "gien",
     siteUrl: "sc-domain:agences.example.test",
-    sitemapUrl: "https://agences.example.test/gien-sitemap.xml",
   });
   await service.approve({ tenantId: "tenant-1", runId: prepared.id, approvedBy: "admin" });
 
