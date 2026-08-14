@@ -1,5 +1,7 @@
 "use strict";
 
+const { prioritizeSearchOpportunities } = require("./opportunity-prioritization");
+
 const SEARCH_CONSOLE_API_ROOT = "https://www.googleapis.com/webmasters/v3";
 
 function clampDays(value, fallback = 28) {
@@ -119,6 +121,10 @@ class SearchConsolePerformanceService {
 
     const totals = aggregateFromRows(aggregateBody?.rows);
     const previousTotals = aggregateFromRows(previousAggregateBody?.rows);
+    const rows = normalizeRows(detailBody?.rows, finalDimensions);
+    const opportunities = finalDimensions.length === 1 && finalDimensions[0] === "query"
+      ? prioritizeSearchOpportunities(rows)
+      : [];
 
     return {
       siteUrl: target,
@@ -128,12 +134,13 @@ class SearchConsolePerformanceService {
       previousEndDate: previousRange.endDate,
       days: safeDays,
       dimensions: finalDimensions,
-      rowCount: Array.isArray(detailBody?.rows) ? detailBody.rows.length : 0,
+      rowCount: rows.length,
       totals,
       previousTotals,
       delta: performanceDelta(totals, previousTotals),
-      rows: normalizeRows(detailBody?.rows, finalDimensions),
-      note: "Les agrégats sont interrogés séparément des lignes détaillées et comparés à la période précédente de même durée. Search Console peut omettre certaines requêtes anonymisées et ne garantit pas toutes les lignes de détail.",
+      opportunities,
+      rows,
+      note: "Les agrégats sont interrogés séparément des lignes détaillées et comparés à la période précédente de même durée. Les opportunités sont classées de façon déterministe à partir des impressions, de la position et du potentiel CTR ; aucune modification éditoriale n’est appliquée automatiquement. Search Console peut omettre certaines requêtes anonymisées et ne garantit pas toutes les lignes de détail.",
     };
   }
 }
