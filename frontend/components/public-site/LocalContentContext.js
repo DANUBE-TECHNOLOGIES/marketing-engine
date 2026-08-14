@@ -20,15 +20,19 @@ const COPY = {
   destinations: (city) => ({
     title: `Choisir votre prochaine destination avec votre agence de ${city}`,
     text: "Une destination ne se choisit pas uniquement sur une photo ou un prix. Saisonnalité, durée de vol, rythme du séjour, formalités et type d’hébergement comptent aussi. Nos conseillers vous accompagnent pour identifier les destinations réellement adaptées à votre projet.",
+  }),
   offers: (city) => ({
     title: `Trouver une offre de voyage avec votre agence de ${city}`,
     text: "Nos offres sont une sélection de possibilités disponibles au moment de leur publication. Votre conseiller peut vérifier les disponibilités, comparer les prestations et rechercher d’autres solutions selon vos dates, votre budget et vos préférences.",
+  }),
   reviews: (city) => ({
     title: `Pourquoi confier votre voyage à une agence locale à ${city} ?`,
     text: "Les avis de nos voyageurs reflètent l’importance de l’écoute, du conseil et du suivi. Notre équipe reste votre interlocuteur pour préparer le dossier, répondre à vos questions et vous accompagner avant, pendant et après votre voyage.",
+  }),
   team: (city) => ({
     title: `Votre conseiller voyage de proximité à ${city}`,
     text: "Connaître votre projet permet de proposer autre chose qu’une simple liste de prix. Notre équipe prend le temps d’échanger sur vos attentes afin de construire un voyage adapté et de rester disponible jusqu’à votre retour.",
+  }),
   contact: (city) => ({
     title: `Préparez votre voyage avec notre agence à ${city}`,
     text: "Contactez l’agence pour un conseil, une recherche de séjour ou un projet sur mesure. Plus vous nous précisez vos dates, votre budget, le nombre de voyageurs et vos envies, plus nous pouvons orienter efficacement la recherche.",
@@ -57,11 +61,17 @@ export default function LocalContentContext({ site, kind, quality }) {
             L’agence accompagne également les voyageurs de {joinCities(nearby)} pour leurs projets de vacances et de voyages.
           </p>
         ) : null}
-        <div className="public-site-related-links" aria-label="Poursuivre votre projet de voyage">
-          {kind !== "services" ? <Link href={`${root}/services`}>Nos services voyage</Link> : null}
-          {kind !== "destinations" ? <Link href={`${root}/destinations`}>Nos destinations</Link> : null}
-          <Link href={`${root}/inspiration`}>Conseils et inspirations</Link>
-          {kind !== "contact" ? <Link href={`${root}/contact`}>Contacter l’agence</Link> : null}
+        <div className="public-site-related-links" aria-label={`Poursuivre votre projet avec l’agence de voyages de ${city}`}>
+          {kind !== "services" ? (
+            <Link href={`${root}/services`}>Services de notre agence de voyages à {city}</Link>
+          ) : null}
+          {kind !== "destinations" ? (
+            <Link href={`${root}/destinations`}>Destinations conseillées par notre agence à {city}</Link>
+          ) : null}
+          <Link href={`${root}/inspiration`}>Conseils et inspirations voyage depuis {city}</Link>
+          {kind !== "contact" ? (
+            <Link href={`${root}/contact`}>Contacter notre agence de voyages à {city}</Link>
+          ) : null}
         </div>
       </div>
     </section>
