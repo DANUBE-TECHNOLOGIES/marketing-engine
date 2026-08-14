@@ -20,6 +20,14 @@ function dateRange(days) {
   return { startDate: isoDate(start), endDate: isoDate(end) };
 }
 
+function previousDateRange(range, days) {
+  const end = new Date(`${range.startDate}T00:00:00.000Z`);
+  end.setUTCDate(end.getUTCDate() - 1);
+  const start = new Date(end);
+  start.setUTCDate(start.getUTCDate() - (days - 1));
+  return { startDate: isoDate(start), endDate: isoDate(end) };
+}
+
 function normalizeRows(rows, dimensions) {
   return Array.isArray(rows) ? rows.map((row) => ({
     dimensions: Object.fromEntries(dimensions.map((name, index) => [name, row?.keys?.[index] || null])),
@@ -48,6 +56,15 @@ function aggregateFromRows(rows) {
     impressions: Number(first?.impressions || 0),
     ctr: Number(first?.ctr || 0),
     position: Number(first?.position || 0),
+  };
+}
+
+function performanceDelta(current, previous) {
+  return {
+    clicks: current.clicks - previous.clicks,
+    impressions: current.impressions - previous.impressions,
+    ctr: current.ctr - previous.ctr,
+    position: previous.position && current.position ? previous.position - current.position : 0,
   };
 }
 
@@ -85,11 +102,13 @@ class SearchConsolePerformanceService {
     const safeDimensions = dimensions.filter((item) => ["query", "page", "date", "device", "country"].includes(item));
     const finalDimensions = safeDimensions.length ? safeDimensions : ["query"];
     const range = dateRange(safeDays);
+    const previousRange = previousDateRange(range, safeDays);
     const filters = pageFilter(pagePrefix);
     const endpoint = `${SEARCH_CONSOLE_API_ROOT}/sites/${encodeURIComponent(target)}/searchAnalytics/query`;
 
-    const [aggregateBody, detailBody] = await Promise.all([
+    const [aggregateBody, previousAggregateBody, detailBody] = await Promise.all([
       this.request(endpoint, { ...range, ...filters, rowLimit: 1 }),
+      this.request(endpoint, { ...previousRange, ...filters, rowLimit: 1 }),
       this.request(endpoint, {
         ...range,
         ...filters,
@@ -98,16 +117,23 @@ class SearchConsolePerformanceService {
       }),
     ]);
 
+    const totals = aggregateFromRows(aggregateBody?.rows);
+    const previousTotals = aggregateFromRows(previousAggregateBody?.rows);
+
     return {
       siteUrl: target,
       pagePrefix: String(pagePrefix || "").trim() || null,
       ...range,
+      previousStartDate: previousRange.startDate,
+      previousEndDate: previousRange.endDate,
       days: safeDays,
       dimensions: finalDimensions,
       rowCount: Array.isArray(detailBody?.rows) ? detailBody.rows.length : 0,
-      totals: aggregateFromRows(aggregateBody?.rows),
+      totals,
+      previousTotals,
+      delta: performanceDelta(totals, previousTotals),
       rows: normalizeRows(detailBody?.rows, finalDimensions),
-      note: "Les agrégats sont interrogés séparément des lignes détaillées. Search Console peut omettre certaines requêtes anonymisées et ne garantit pas toutes les lignes de détail.",
+      note: "Les agrégats sont interrogés séparément des lignes détaillées et comparés à la période précédente de même durée. Search Console peut omettre certaines requêtes anonymisées et ne garantit pas toutes les lignes de détail.",
     };
   }
 }
@@ -119,4 +145,6 @@ module.exports = {
   dateRange,
   normalizeRows,
   pageFilter,
+  performanceDelta,
+  previousDateRange,
 };
