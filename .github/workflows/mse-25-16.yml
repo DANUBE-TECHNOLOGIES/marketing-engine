@@ -1,0 +1,70 @@
+name: MSE-25.16 Search Console checks
+
+on:
+  push:
+    branches:
+      - feature/mse-25-16-search-console-submission-journal
+  pull_request:
+    paths:
+      - 'backend/src/modules/search-console-submission/**'
+      - 'backend/src/modules/minisite-structured-data/**'
+      - 'backend/scripts/search-console-readiness-check.js'
+      - 'backend/test/search-console-*.test.js'
+      - 'frontend/app/agence/[siteSlug]/sitemap.xml/route.js'
+      - '.github/workflows/mse-25-16.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend-search-console:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        run: npm ci
+
+      - name: Run backend test suite
+        env:
+          SEARCH_CONSOLE_ENABLED: 'false'
+        run: npm test
+
+      - name: Verify Search Console module loads with provider disabled
+        env:
+          SEARCH_CONSOLE_ENABLED: 'false'
+        run: node -e "const m=require('./src/modules/search-console-submission'); const p=m.createConfiguredSearchConsoleProvider(); if(p.name!=='disabled') process.exit(1); console.log('Search Console provider safely disabled')"
+
+  frontend-sitemap-route:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Lint public sitemap route
+        run: npx eslint "app/agence/[siteSlug]/sitemap.xml/route.js"
