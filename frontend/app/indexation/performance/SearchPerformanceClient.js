@@ -29,8 +29,8 @@ export default function SearchPerformanceClient() {
         setProperties(propertyPayload || { properties: [] });
         const firstSite = asArray(candidatePayload?.sites)[0];
         if (firstSite?.siteSlug) setSiteSlug(firstSite.siteSlug);
-        const owner = asArray(propertyPayload?.properties).find((property) => property.eligibleForSitemapSubmission === true);
-        if (owner?.siteUrl) setSiteUrl(owner.siteUrl);
+        const firstProperty = asArray(propertyPayload?.properties)[0];
+        if (firstProperty?.siteUrl) setSiteUrl(firstProperty.siteUrl);
       })
       .catch((loadError) => setError(loadError.message || "Impossible de charger Search Console."))
       .finally(() => setLoading(false));
@@ -63,7 +63,7 @@ export default function SearchPerformanceClient() {
     }
   };
 
-  const propertiesOwner = asArray(properties?.properties).filter((property) => property.eligibleForSitemapSubmission === true);
+  const availableProperties = asArray(properties?.properties);
   const rows = asArray(performance?.rows);
   const opportunities = dimension === "query"
     ? rows.filter((row) => row.impressions >= 20 && row.position >= 4 && row.position <= 20).sort((a, b) => b.impressions - a.impressions).slice(0, 8)
@@ -81,7 +81,7 @@ export default function SearchPerformanceClient() {
       </header>
 
       <section className="indexation-controls performance-controls">
-        <label><span>Propriété Search Console</span><select value={siteUrl} onChange={(event) => setSiteUrl(event.target.value)}><option value="">Choisir</option>{propertiesOwner.map((property) => <option key={property.siteUrl} value={property.siteUrl}>{property.siteUrl}</option>)}</select></label>
+        <label><span>Propriété Search Console</span><select value={siteUrl} onChange={(event) => setSiteUrl(event.target.value)}><option value="">Choisir</option>{availableProperties.map((property) => <option key={property.siteUrl} value={property.siteUrl}>{property.siteUrl}{property.permissionLevel ? ` · ${property.permissionLevel}` : ""}</option>)}</select></label>
         <label><span>Mini-site</span><select value={siteSlug} onChange={(event) => { setSiteSlug(event.target.value); setPerformance(null); }}><option value="">Choisir</option>{asArray(candidates?.sites).map((site) => <option key={site.siteSlug} value={site.siteSlug}>{site.siteName || site.agencyName || site.siteSlug}</option>)}</select></label>
         <label><span>Période</span><select value={days} onChange={(event) => setDays(event.target.value)}><option value="7">7 jours</option><option value="28">28 jours</option><option value="90">90 jours</option></select></label>
         <label><span>Détail</span><select value={dimension} onChange={(event) => setDimension(event.target.value)}><option value="query">Requêtes</option><option value="page">Pages</option></select></label>
