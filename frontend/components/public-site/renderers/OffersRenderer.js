@@ -7,6 +7,20 @@ import {
   resolvePublicCtaHref,
 } from "./ctaLinks";
 
+function defaultOffersTitle(site) {
+  const city = String(site?.agency?.city || site?.city || "").trim();
+  return city
+    ? `Offres de voyages de votre agence à ${city}`
+    : "Les offres de voyages à ne pas manquer";
+}
+
+function defaultOffersIntro(site) {
+  const city = String(site?.agency?.city || site?.city || "").trim();
+  return city
+    ? `Découvrez les offres sélectionnées par votre agence de voyages à ${city} et échangez avec un conseiller pour choisir le séjour adapté à votre projet.`
+    : "Découvrez les offres sélectionnées par votre agence et échangez avec un conseiller pour choisir le séjour adapté à votre projet.";
+}
+
 export default function OffersRenderer({
   section,
   site,
@@ -16,6 +30,7 @@ export default function OffersRenderer({
     "items",
     "offers",
   ]);
+  const introduction = content.text || content.introduction || content.description || defaultOffersIntro(site);
 
   return (
     <section className="public-site-section public-site-offers">
@@ -27,12 +42,12 @@ export default function OffersRenderer({
         <h2>
           {getSectionTitle(
             section,
-            "Les offres à ne pas manquer"
+            defaultOffersTitle(site)
           )}
         </h2>
 
-        {content.text || content.introduction ? (
-          <p>{content.text || content.introduction}</p>
+        {introduction ? (
+          <p className="public-site-section-intro">{introduction}</p>
         ) : null}
 
         <div className="public-site-offer-grid">
@@ -110,3 +125,8 @@ export default function OffersRenderer({
     </section>
   );
 }
+
+export {
+  defaultOffersIntro,
+  defaultOffersTitle,
+};
