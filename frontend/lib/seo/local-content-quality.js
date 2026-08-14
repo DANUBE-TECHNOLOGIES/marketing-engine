@@ -1,8 +1,26 @@
 import { resolvedTargetCities } from "./local-area-config";
 
+const CRITICAL_PAGE_MIN_WORDS = 60;
 const THIN_PAGE_MIN_WORDS = 140;
 const STRONG_PAGE_MIN_WORDS = 260;
 const STRONG_PAGE_MIN_LOCAL_SIGNALS = 1;
+
+const FUNCTIONAL_BLOCK_SIGNALS = Object.freeze([
+  "agency",
+  "appointment",
+  "contact",
+  "destination",
+  "faq",
+  "feature",
+  "gallery",
+  "hours",
+  "map",
+  "offer",
+  "review",
+  "service",
+  "team",
+  "testimonial",
+]);
 
 function clean(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
@@ -37,13 +55,27 @@ function wordCount(value) {
   return text ? text.split(/\s+/).filter(Boolean).length : 0;
 }
 
-function pageText(page) {
-  const sections = Array.isArray(page?.sections)
+function pageSections(page) {
+  return Array.isArray(page?.sections)
     ? page.sections
     : Array.isArray(page?.blocks)
       ? page.blocks
       : [];
-  return collectText(sections).join(" ");
+}
+
+function pageText(page) {
+  return collectText(pageSections(page)).join(" ");
+}
+
+function blockType(block) {
+  return clean(block?.blockType || block?.type || block?.kind).toLowerCase();
+}
+
+function hasFunctionalBlock(page) {
+  return pageSections(page).some((block) => {
+    const type = blockType(block);
+    return Boolean(type) && FUNCTIONAL_BLOCK_SIGNALS.some((signal) => type.includes(signal));
+  });
 }
 
 function localSignals(site) {
@@ -70,6 +102,8 @@ export function assessLocalContentQuality({ site, page }) {
     primaryCity && mentions.some((city) => city.toLocaleLowerCase("fr-FR") === primaryCity.toLocaleLowerCase("fr-FR"))
   );
   const localSignalCount = mentions.length;
+  const functional = hasFunctionalBlock(page);
+  const criticallyThin = words < CRITICAL_PAGE_MIN_WORDS && !functional;
   const thin = words < THIN_PAGE_MIN_WORDS;
   const hasEditorialDepth = words >= STRONG_PAGE_MIN_WORDS;
   const hasLocalDepth = hasPrimaryCity && localSignalCount >= STRONG_PAGE_MIN_LOCAL_SIGNALS;
@@ -77,8 +111,10 @@ export function assessLocalContentQuality({ site, page }) {
 
   return {
     words,
+    criticallyThin,
     thin,
     strong,
+    functional,
     hasEditorialDepth,
     hasLocalDepth,
     hasPrimaryCity,
@@ -90,12 +126,17 @@ export function assessLocalContentQuality({ site, page }) {
 }
 
 export {
+  CRITICAL_PAGE_MIN_WORDS,
+  FUNCTIONAL_BLOCK_SIGNALS,
   STRONG_PAGE_MIN_LOCAL_SIGNALS,
   STRONG_PAGE_MIN_WORDS,
   THIN_PAGE_MIN_WORDS,
+  blockType,
   collectText,
+  hasFunctionalBlock,
   localMentions,
   localSignals,
+  pageSections,
   pageText,
   wordCount,
 };
