@@ -4,6 +4,10 @@ function siteSlug(value) {
   return String(value || "").trim();
 }
 
+function isIndexationCandidateExclusion(entry) {
+  return entry?.reason === "critically-thin-content";
+}
+
 function uniqueSiteSlugs(sitemap) {
   const slugs = new Set();
   for (const entry of sitemap?.entries || []) {
@@ -11,6 +15,7 @@ function uniqueSiteSlugs(sitemap) {
     if (slug) slugs.add(slug);
   }
   for (const entry of sitemap?.excluded || []) {
+    if (!isIndexationCandidateExclusion(entry)) continue;
     const slug = siteSlug(entry?.siteSlug);
     if (slug) slugs.add(slug);
   }
@@ -72,6 +77,7 @@ function attachIndexationReadiness(sitemap) {
 
 module.exports = {
   attachIndexationReadiness,
+  isIndexationCandidateExclusion,
   siteIndexationReadiness,
   uniqueSiteSlugs,
 };
