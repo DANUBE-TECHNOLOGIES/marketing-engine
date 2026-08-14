@@ -29,6 +29,9 @@ export const PUBLIC_RENDERER_REGISTRY = {
   services: FeaturesV2Renderer,
   "services-grid": FeaturesV2Renderer,
   "services-highlight": FeaturesV2Renderer,
+  cards: FeaturesV2Renderer,
+  engagements: FeaturesV2Renderer,
+  engagement: FeaturesV2Renderer,
   rich_text: RichTextV2Renderer,
   "rich-text": RichTextV2Renderer,
   richtext: RichTextV2Renderer,
@@ -40,7 +43,9 @@ export const PUBLIC_RENDERER_REGISTRY = {
   "image-text": ImageTextV2Renderer,
   gallery: GalleryV2Renderer,
   destinations: DestinationsRenderer,
+  destination: DestinationsRenderer,
   "destination-grid": DestinationsRenderer,
+  "destinations-grid": DestinationsRenderer,
   "destinations-highlight": DestinationsRenderer,
   "destination-recommendations": DestinationsRenderer,
   offers: OffersRenderer,
@@ -57,6 +62,9 @@ export const PUBLIC_RENDERER_REGISTRY = {
   hours: HoursRenderer,
   separator: SeparatorRenderer,
   team: TeamRenderer,
+  equipe: TeamRenderer,
+  "team-grid": TeamRenderer,
+  "equipe-grid": TeamRenderer,
 };
 
 export function getPublicRenderer(type) {
