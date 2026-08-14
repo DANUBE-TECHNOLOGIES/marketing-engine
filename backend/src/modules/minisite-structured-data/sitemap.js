@@ -29,6 +29,13 @@ const MANAGED_PAGE_SLUGS = new Set([
   "inspiration",
 ]);
 
+const DESTINATION_BLOCK_TYPES = new Set([
+  "destination-grid",
+  "destinations",
+  "destinations-highlight",
+  "destination-recommendations",
+]);
+
 function canonicalPageSlug(value) {
   const slug = normalizeSlug(value);
   return PAGE_ALIASES.has(slug)
@@ -90,11 +97,62 @@ function destinationUrl(publicOrigin, siteSlug, destinationSlug) {
   return `${origin}/agence/${encodeURIComponent(siteSlug)}/destination/${encodeURIComponent(destinationSlug)}`;
 }
 
+function blockType(block) {
+  return String(block?.blockType || block?.type || "").trim().toLowerCase();
+}
+
+function destinationSlugFromItem(item) {
+  if (!item || typeof item !== "object") return null;
+  if (item.slug) return normalizeSlug(item.slug);
+
+  const href = String(item.href || item.url || "").trim();
+  if (!href) return null;
+
+  const match = href.match(/(?:^|\/)destinations?\/([^/?#]+)/i);
+  if (!match?.[1]) return null;
+
+  try {
+    return normalizeSlug(decodeURIComponent(match[1]));
+  } catch (_error) {
+    return normalizeSlug(match[1]);
+  }
+}
+
+function siteDestinationSlugs(site) {
+  const slugs = new Set();
+
+  for (const page of site?.pages || []) {
+    if (!isPublishedPage(page)) continue;
+
+    for (const block of page?.blocks || []) {
+      if (!DESTINATION_BLOCK_TYPES.has(blockType(block))) continue;
+      const content = block?.content && typeof block.content === "object"
+        ? block.content
+        : {};
+
+      const collections = [
+        content.items,
+        content.destinations,
+      ];
+
+      for (const collection of collections) {
+        for (const item of Array.isArray(collection) ? collection : []) {
+          const slug = destinationSlugFromItem(item);
+          if (slug) slugs.add(slug);
+        }
+      }
+    }
+  }
+
+  return slugs;
+}
+
 function buildPublicSitemap({ sites, inspirations, destinations, publicOrigin } = {}) {
   const entries = [];
   const excluded = [];
   const publishedSitesByAgency = new Map();
   const publishedSites = [];
+  const destinationSlugsBySite = new Map();
 
   for (const site of sites || []) {
     if (!isPublishedSite(site)) {
@@ -108,6 +166,7 @@ function buildPublicSitemap({ sites, inspirations, destinations, publicOrigin } 
     }
 
     publishedSites.push(site);
+    destinationSlugsBySite.set(String(site.id), siteDestinationSlugs(site));
     const agencyId = site.agency?.id || site.agencyId;
     if (agencyId !== undefined && agencyId !== null) {
       publishedSitesByAgency.set(String(agencyId), site);
@@ -191,7 +250,7 @@ function buildPublicSitemap({ sites, inspirations, destinations, publicOrigin } 
   }
 
   for (const destination of destinations || []) {
-    const slug = String(destination?.slug || "").trim();
+    const slug = normalizeSlug(destination?.slug);
     if (!slug) {
       excluded.push({
         type: "destination",
@@ -201,7 +260,11 @@ function buildPublicSitemap({ sites, inspirations, destinations, publicOrigin } 
       continue;
     }
 
+    let indexed = false;
     for (const site of publishedSites) {
+      const exposedSlugs = destinationSlugsBySite.get(String(site.id)) || new Set();
+      if (!exposedSlugs.has(slug)) continue;
+
       const agencyId = site.agency?.id || site.agencyId;
       entries.push({
         url: destinationUrl(publicOrigin, site.slug, slug),
@@ -214,6 +277,16 @@ function buildPublicSitemap({ sites, inspirations, destinations, publicOrigin } 
         destinationId: destination.id,
         destinationSlug: slug,
         type: "destination",
+      });
+      indexed = true;
+    }
+
+    if (!indexed) {
+      excluded.push({
+        type: "destination",
+        destinationId: destination.id,
+        destinationSlug: slug,
+        reason: "not-exposed-by-published-site",
       });
     }
   }
@@ -282,11 +355,13 @@ function buildPublicSitemap({ sites, inspirations, destinations, publicOrigin } 
 }
 
 module.exports = {
+  DESTINATION_BLOCK_TYPES,
   MANAGED_PAGE_SLUGS,
   NOINDEX_SLUGS,
   PAGE_ALIASES,
   buildPublicSitemap,
   canonicalPageSlug,
+  destinationSlugFromItem,
   destinationUrl,
   inspirationIndexUrl,
   inspirationUrl,
@@ -295,4 +370,5 @@ module.exports = {
   pageChangeFrequency,
   pagePriority,
   shouldIndexPage,
+  siteDestinationSlugs,
 };
