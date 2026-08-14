@@ -34,31 +34,36 @@ export default function RolloutPageClient() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
-  const load = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const [candidatePayload, historyPayload, propertyPayload] = await Promise.all([
-        indexationApi.candidates(),
-        indexationApi.history({ limit: 100 }),
-        indexationApi.properties(),
-      ]);
-      setCandidates(candidatePayload || { sites: [] });
-      setHistory(historyPayload || { runs: [] });
-      setProperties(propertyPayload || { properties: [] });
-      const owner = asArray(propertyPayload?.properties).find(
-        (property) => property.eligibleForSitemapSubmission === true
-      );
-      if (owner?.siteUrl) setSiteUrl((current) => current || owner.siteUrl);
-    } catch (loadError) {
-      setError(loadError.message || "Impossible de charger le déploiement contrôlé.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    load();
+    let cancelled = false;
+
+    Promise.all([
+      indexationApi.candidates(),
+      indexationApi.history({ limit: 100 }),
+      indexationApi.properties(),
+    ])
+      .then(([candidatePayload, historyPayload, propertyPayload]) => {
+        if (cancelled) return;
+        setCandidates(candidatePayload || { sites: [] });
+        setHistory(historyPayload || { runs: [] });
+        setProperties(propertyPayload || { properties: [] });
+        const owner = asArray(propertyPayload?.properties).find(
+          (property) => property.eligibleForSitemapSubmission === true
+        );
+        if (owner?.siteUrl) setSiteUrl(owner.siteUrl);
+      })
+      .catch((loadError) => {
+        if (!cancelled) {
+          setError(loadError.message || "Impossible de charger le déploiement contrôlé.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const latestRuns = useMemo(() => latestRunBySite(history?.runs), [history]);
