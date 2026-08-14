@@ -134,7 +134,18 @@ async function load(siteSlug, contentSlug) {
 export async function generateMetadata({ params }) {
   const { siteSlug, contentSlug } = await params;
   const data = await load(siteSlug, contentSlug);
-  if (!data) return {};
+  if (!data) {
+    return {
+      robots: {
+        index: false,
+        follow: false,
+        googleBot: {
+          index: false,
+          follow: false,
+        },
+      },
+    };
+  }
 
   const seo = data.content?.seo || {};
   const openGraph = seo.openGraph || {};
