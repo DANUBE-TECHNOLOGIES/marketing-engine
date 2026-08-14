@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import {
   getItems,
   getSectionContent,
@@ -6,6 +8,19 @@ import {
 import {
   resolvePublicCtaHref,
 } from "./ctaLinks";
+import { resolvedTargetCities } from "../../../lib/seo/local-area-config";
+
+function joinCities(values) {
+  if (!values.length) return "";
+  if (values.length === 1) return values[0];
+  if (values.length === 2) return `${values[0]} et ${values[1]}`;
+  return `${values.slice(0, -1).join(", ")} et ${values[values.length - 1]}`;
+}
+
+function siteRoot(site) {
+  return String(site?.basePath || `/agence/${encodeURIComponent(site?.slug || "")}`)
+    .replace(/\/$/, "");
+}
 
 function defaultOffersTitle(site) {
   const city = String(site?.agency?.city || site?.city || "").trim();
@@ -16,9 +31,17 @@ function defaultOffersTitle(site) {
 
 function defaultOffersIntro(site) {
   const city = String(site?.agency?.city || site?.city || "").trim();
-  return city
-    ? `Découvrez les offres sélectionnées par votre agence de voyages à ${city} et échangez avec un conseiller pour choisir le séjour adapté à votre projet.`
-    : "Découvrez les offres sélectionnées par votre agence et échangez avec un conseiller pour choisir le séjour adapté à votre projet.";
+  const nearby = resolvedTargetCities(site, { limit: 3 });
+
+  if (!city) {
+    return "Découvrez les offres sélectionnées par votre agence et échangez avec un conseiller pour choisir le séjour adapté à votre projet.";
+  }
+
+  const area = nearby.length
+    ? ` L’agence conseille aussi les voyageurs de ${joinCities(nearby)}.`
+    : "";
+
+  return `Découvrez les offres sélectionnées par votre agence de voyages à ${city} et échangez avec un conseiller pour choisir le séjour adapté à votre projet.${area}`;
 }
 
 export default function OffersRenderer({
@@ -31,6 +54,7 @@ export default function OffersRenderer({
     "offers",
   ]);
   const introduction = content.text || content.introduction || content.description || defaultOffersIntro(site);
+  const root = siteRoot(site);
 
   return (
     <section className="public-site-section public-site-offers">
@@ -121,6 +145,12 @@ export default function OffersRenderer({
             </div>
           )}
         </div>
+
+        <div className="public-site-related-links" aria-label="Autres façons de préparer votre voyage">
+          <Link href={`${root}/destinations`}>Voir nos idées de destinations</Link>
+          <Link href={`${root}/services`}>Découvrir nos services voyage</Link>
+          <Link href={`${root}/contact`}>Parler de votre projet à un conseiller</Link>
+        </div>
       </div>
     </section>
   );
@@ -129,4 +159,6 @@ export default function OffersRenderer({
 export {
   defaultOffersIntro,
   defaultOffersTitle,
+  joinCities,
+  siteRoot,
 };
