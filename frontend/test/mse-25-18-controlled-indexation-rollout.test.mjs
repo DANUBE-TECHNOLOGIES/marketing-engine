@@ -29,7 +29,9 @@ test("MSE-25.18 rollout only orchestrates preflight and prepare", () => {
   assert.match(pageClient, /indexationApi\.prepare/);
   assert.doesNotMatch(pageClient, /indexationApi\.approve/);
   assert.doesNotMatch(pageClient, /indexationApi\.submit/);
-  assert.doesNotMatch(planner, /approve/i);
+  assert.doesNotMatch(planner, /onApprove/);
+  assert.doesNotMatch(planner, /onSubmit/);
+  assert.doesNotMatch(planner, /indexationApi\.approve/);
   assert.doesNotMatch(planner, /indexationApi\.submit/);
 });
 
