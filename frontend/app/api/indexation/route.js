@@ -62,13 +62,25 @@ async function backendRequest(path, options = {}) {
   return payload;
 }
 
+function statusPath(url) {
+  const siteSlug = String(url.searchParams.get("siteSlug") || "").trim();
+  const siteUrl = String(url.searchParams.get("siteUrl") || "").trim();
+  if (!siteSlug || !siteUrl) return null;
+  const backendUrl = new URL(
+    `/search-console-submissions/sites/${encodeURIComponent(siteSlug)}/status`,
+    BACKEND_URL
+  );
+  backendUrl.searchParams.set("siteUrl", siteUrl);
+  return `${backendUrl.pathname}${backendUrl.search}`;
+}
+
 export async function GET(request) {
   const url = new URL(request.url);
   const resource = url.searchParams.get("resource") || "candidates";
-  const path = READ_RESOURCES[resource];
+  const path = resource === "status" ? statusPath(url) : READ_RESOURCES[resource];
 
   if (!path) {
-    return jsonError("Ressource cockpit inconnue.", 400, { resource });
+    return jsonError("Ressource cockpit inconnue ou incomplète.", 400, { resource });
   }
 
   try {
