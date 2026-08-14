@@ -259,3 +259,109 @@ test(
     );
   }
 );
+
+test(
+  "indexe une destination uniquement pour les mini-sites qui l'exposent",
+  () => {
+    const result = buildPublicSitemap({
+      publicOrigin: "https://agences.mondescale.com",
+      sites: [
+        {
+          id: "site-gien",
+          slug: "gien",
+          status: "published",
+          agency: { id: 10 },
+          pages: [
+            {
+              id: "home-gien",
+              slug: "",
+              status: "published",
+              blocks: [
+                {
+                  blockType: "destination-grid",
+                  content: {
+                    items: [
+                      { slug: "sicile" },
+                    ],
+                  },
+                },
+              ],
+            },
+          ],
+        },
+        {
+          id: "site-maurepas",
+          slug: "maurepas",
+          status: "published",
+          agency: { id: 20 },
+          pages: [
+            {
+              id: "home-maurepas",
+              slug: "",
+              status: "published",
+              blocks: [
+                {
+                  blockType: "destinations-highlight",
+                  content: {
+                    destinations: [
+                      { href: "/destination/maldives" },
+                    ],
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      destinations: [
+        {
+          id: "destination-sicile",
+          slug: "sicile",
+        },
+        {
+          id: "destination-maldives",
+          slug: "maldives",
+        },
+        {
+          id: "destination-japon",
+          slug: "japon",
+        },
+      ],
+    });
+
+    const destinationEntries = result.entries.filter(
+      (entry) => entry.type === "destination"
+    );
+
+    assert.deepEqual(
+      destinationEntries.map((entry) => entry.url).sort(),
+      [
+        "https://agences.mondescale.com/agence/gien/destination/sicile",
+        "https://agences.mondescale.com/agence/maurepas/destination/maldives",
+      ]
+    );
+
+    assert.equal(
+      destinationEntries.some((entry) =>
+        entry.url.includes("/agence/gien/destination/maldives")
+      ),
+      false
+    );
+
+    assert.equal(
+      destinationEntries.some((entry) =>
+        entry.url.includes("/agence/maurepas/destination/sicile")
+      ),
+      false
+    );
+
+    assert.ok(
+      result.excluded.some(
+        (entry) =>
+          entry.type === "destination" &&
+          entry.destinationSlug === "japon" &&
+          entry.reason === "not-exposed-by-published-site"
+      )
+    );
+  }
+);
