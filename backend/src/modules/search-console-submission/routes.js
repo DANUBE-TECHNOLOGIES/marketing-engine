@@ -2,6 +2,7 @@
 
 const express = require("express");
 const { tenantIdForRequest } = require("../minisite-structured-data/routes");
+const { SEARCH_CONSOLE_OWNER_PERMISSION } = require("./provider");
 const { SearchConsoleSubmissionService } = require("./service");
 
 function sendError(response, error) {
@@ -17,11 +18,16 @@ function routes({ prisma, service, provider } = {}) {
   const submissionService = service || new SearchConsoleSubmissionService({ prisma, provider });
 
   router.get("/search-console-submissions/health", (_request, response) => {
+    const activeProvider = submissionService.provider;
     response.json({
       ok: true,
       capability: "search-console-submission-journal",
-      provider: submissionService.provider?.name || "unknown",
-      providerConfigured: submissionService.provider?.isConfigured?.() === true,
+      provider: activeProvider?.name || "unknown",
+      providerConfigured: activeProvider?.isConfigured?.() === true,
+      requestedEnabled: activeProvider?.requestedEnabled === true,
+      disabledReason: activeProvider?.disabledReason || null,
+      credentialMode: activeProvider?.credentialMode || null,
+      requiredPermissionLevel: SEARCH_CONSOLE_OWNER_PERMISSION,
       explicitApprovalRequired: true,
       autoSubmit: false,
     });
@@ -34,7 +40,13 @@ function routes({ prisma, service, provider } = {}) {
       response.json({
         provider: submissionService.provider?.name || "unknown",
         count: properties.length,
-        properties,
+        requiredPermissionLevel: SEARCH_CONSOLE_OWNER_PERMISSION,
+        properties: properties.map((property) => ({
+          siteUrl: property?.siteUrl || null,
+          permissionLevel: property?.permissionLevel || null,
+          eligibleForSitemapSubmission:
+            property?.permissionLevel === SEARCH_CONSOLE_OWNER_PERMISSION,
+        })),
       });
     } catch (error) {
       sendError(response, error);
