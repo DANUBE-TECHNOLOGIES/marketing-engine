@@ -18,22 +18,28 @@ test("MSE-25.20 performance page is internal and read-only", () => {
   assert.doesNotMatch(client, /indexationApi\.submit/);
 });
 
-test("MSE-25.20 scopes Search Analytics to the selected minisite", () => {
+test("MSE-25.20 scopes Search Analytics to the selected minisite root and children", () => {
   const client = read("app/indexation/performance/SearchPerformanceClient.js");
   const proxy = read("app/api/indexation/route.js");
   const api = read("lib/indexation-api.js");
   assert.match(client, /pagePrefixFromSitemap/);
+  assert.match(client, /replace\(\/\\\/sitemap/);
   assert.match(client, /pagePrefix:/);
   assert.match(proxy, /pagePrefix/);
   assert.match(api, /pagePrefix/);
 });
 
-test("MSE-25.20 exposes clicks impressions CTR and average position", () => {
+test("MSE-25.20 exposes metrics, period deltas and SEO opportunities", () => {
   const client = read("app/indexation/performance/SearchPerformanceClient.js");
   assert.match(client, /clics Google/);
   assert.match(client, /impressions/);
   assert.match(client, /CTR/);
   assert.match(client, /position moyenne/);
+  assert.match(client, /vs période précédente/);
+  assert.match(client, /Opportunités SEO prioritaires/);
+  assert.match(client, /row\.impressions >= 20/);
+  assert.match(client, /row\.position >= 4/);
+  assert.match(client, /row\.position <= 20/);
   assert.match(client, /Principales requêtes/);
   assert.match(client, /Pages les plus visibles/);
 });
