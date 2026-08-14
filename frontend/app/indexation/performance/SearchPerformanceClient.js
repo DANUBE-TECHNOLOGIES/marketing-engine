@@ -7,6 +7,8 @@ function asArray(value) { return Array.isArray(value) ? value : []; }
 function percent(value) { return `${(Number(value || 0) * 100).toFixed(1)} %`; }
 function number(value, digits = 0) { return Number(value || 0).toLocaleString("fr-FR", { maximumFractionDigits: digits, minimumFractionDigits: digits }); }
 function pagePrefixFromSitemap(url) { return String(url || "").replace(/\/sitemap\.xml(?:\?.*)?$/i, ""); }
+function deltaText(value, formatter = (v) => number(v)) { const n = Number(value || 0); return `${n > 0 ? "+" : ""}${formatter(n)}`; }
+function deltaClass(value) { const n = Number(value || 0); return n > 0 ? "performance-delta-up" : n < 0 ? "performance-delta-down" : "performance-delta-flat"; }
 
 export default function SearchPerformanceClient() {
   const [candidates, setCandidates] = useState({ sites: [] });
@@ -63,6 +65,9 @@ export default function SearchPerformanceClient() {
 
   const propertiesOwner = asArray(properties?.properties).filter((property) => property.eligibleForSitemapSubmission === true);
   const rows = asArray(performance?.rows);
+  const opportunities = dimension === "query"
+    ? rows.filter((row) => row.impressions >= 20 && row.position >= 4 && row.position <= 20).sort((a, b) => b.impressions - a.impressions).slice(0, 8)
+    : [];
 
   return (
     <main className="indexation-shell">
@@ -87,14 +92,16 @@ export default function SearchPerformanceClient() {
 
       {performance ? <>
         <section className="indexation-metrics performance-metrics">
-          <div className="indexation-metric"><strong>{number(performance.totals?.clicks)}</strong><span>clics Google</span></div>
-          <div className="indexation-metric"><strong>{number(performance.totals?.impressions)}</strong><span>impressions</span></div>
-          <div className="indexation-metric"><strong>{percent(performance.totals?.ctr)}</strong><span>CTR</span></div>
-          <div className="indexation-metric"><strong>{number(performance.totals?.position, 1)}</strong><span>position moyenne</span></div>
+          <div className="indexation-metric"><strong>{number(performance.totals?.clicks)}</strong><span>clics Google</span><small className={deltaClass(performance.delta?.clicks)}>{deltaText(performance.delta?.clicks)} vs période précédente</small></div>
+          <div className="indexation-metric"><strong>{number(performance.totals?.impressions)}</strong><span>impressions</span><small className={deltaClass(performance.delta?.impressions)}>{deltaText(performance.delta?.impressions)} vs période précédente</small></div>
+          <div className="indexation-metric"><strong>{percent(performance.totals?.ctr)}</strong><span>CTR</span><small className={deltaClass(performance.delta?.ctr)}>{deltaText(performance.delta?.ctr, percent)} vs période précédente</small></div>
+          <div className="indexation-metric"><strong>{number(performance.totals?.position, 1)}</strong><span>position moyenne</span><small className={deltaClass(performance.delta?.position)}>{deltaText(performance.delta?.position, (v) => number(v, 1))} positions gagnées</small></div>
         </section>
 
+        {opportunities.length ? <section className="indexation-card performance-opportunities"><div className="indexation-card-head"><div><h2>Opportunités SEO prioritaires</h2><p>Requêtes avec au moins 20 impressions et une position moyenne comprise entre 4 et 20.</p></div></div><div className="opportunity-grid">{opportunities.map((row) => <div key={row.dimensions.query} className="opportunity-card"><strong>{row.dimensions.query}</strong><span>{number(row.impressions)} impressions · position {number(row.position, 1)} · CTR {percent(row.ctr)}</span><small>Potentiel : renforcer contenu local, title/meta et maillage interne.</small></div>)}</div></section> : null}
+
         <section className="indexation-card performance-table-card">
-          <div className="indexation-card-head"><div><h2>{dimension === "query" ? "Principales requêtes" : "Pages les plus visibles"}</h2><p>{performance.startDate} → {performance.endDate} · {performance.rowCount} lignes retournées</p></div></div>
+          <div className="indexation-card-head"><div><h2>{dimension === "query" ? "Principales requêtes" : "Pages les plus visibles"}</h2><p>{performance.startDate} → {performance.endDate} · comparaison {performance.previousStartDate} → {performance.previousEndDate} · {performance.rowCount} lignes retournées</p></div></div>
           <div className="performance-table-wrap"><table className="performance-table"><thead><tr><th>{dimension === "query" ? "Requête" : "Page"}</th><th>Clics</th><th>Impressions</th><th>CTR</th><th>Position</th></tr></thead><tbody>{rows.map((row, index) => <tr key={`${row.dimensions?.[dimension] || index}`}><td>{row.dimensions?.[dimension] || "—"}</td><td>{number(row.clicks)}</td><td>{number(row.impressions)}</td><td>{percent(row.ctr)}</td><td>{number(row.position, 1)}</td></tr>)}</tbody></table></div>
           {!rows.length ? <div className="indexation-empty">Aucune donnée Search Console sur cette période.</div> : null}
         </section>
