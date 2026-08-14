@@ -44,6 +44,16 @@ function destinationImage(item) {
   return candidates.find((value) => typeof value === "string" && value.trim()) || null;
 }
 
+function destinationImageAlt(item) {
+  const explicit = String(
+    item?.imageAlt || item?.alt || item?.media?.altText || item?.media?.alt || ""
+  ).trim();
+  if (explicit) return explicit;
+
+  const name = String(item?.title || item?.name || "").trim();
+  return name ? `Voyage ${name}` : "";
+}
+
 function defaultDestinationsTitle(site) {
   const city = String(site?.agency?.city || site?.city || "").trim();
   return city
@@ -69,27 +79,52 @@ function defaultDestinationsIntro(site) {
 function DestinationCard({ item, site }) {
   const href = destinationHref(site, item);
   const image = destinationImage(item);
+  const title = item.title || item.name || "Destination";
   const card = (
-    <article
-      className="public-site-destination-card"
-      style={
-        image
-          ? {
-              backgroundImage: `linear-gradient(rgba(8,31,52,.12),rgba(8,31,52,.78)),url("${image}")`,
-            }
-          : undefined
-      }
-    >
-      <div>
+    <article className="public-site-destination-card" data-has-image={image ? "true" : "false"}>
+      {image ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          className="public-site-destination-card-image"
+          src={image}
+          alt={destinationImageAlt(item)}
+          loading="lazy"
+          decoding="async"
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            zIndex: 0,
+          }}
+        />
+      ) : null}
+      {image ? (
+        <span
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "linear-gradient(rgba(8,31,52,.12),rgba(8,31,52,.78))",
+            zIndex: 1,
+          }}
+        />
+      ) : null}
+      <div style={{ position: "relative", zIndex: 2 }}>
         {item.eyebrow ? <span>{item.eyebrow}</span> : null}
-        <h3>{item.title || item.name || "Destination"}</h3>
+        <h3>{title}</h3>
         {item.description ? <p>{item.description}</p> : null}
       </div>
     </article>
   );
 
   return href ? (
-    <Link href={href} aria-label={`Découvrir ${item.title || item.name || "cette destination"}`} style={{ color: "inherit", textDecoration: "none" }}>
+    <Link
+      href={href}
+      aria-label={`Découvrir nos voyages vers ${title}`}
+      style={{ color: "inherit", textDecoration: "none" }}
+    >
       {card}
     </Link>
   ) : card;
@@ -129,9 +164,9 @@ export default function DestinationsRenderer({ section, site }) {
         ) : null}
 
         <div className="public-site-related-links" aria-label="Conseils pour choisir votre voyage">
-          <Link href={`${root}/inspiration`}>Découvrir nos inspirations voyage</Link>
-          <Link href={`${root}/services`}>Voir comment l’agence vous accompagne</Link>
-          <Link href={`${root}/contact`}>Construire votre voyage avec un conseiller</Link>
+          <Link href={`${root}/inspiration`}>Conseils et idées pour préparer votre voyage</Link>
+          <Link href={`${root}/services`}>Services de votre agence de voyages</Link>
+          <Link href={`${root}/contact`}>Demander conseil à votre agence</Link>
         </div>
       </div>
     </section>
@@ -143,6 +178,7 @@ export {
   defaultDestinationsTitle,
   destinationHref,
   destinationImage,
+  destinationImageAlt,
   joinCities,
   siteRoot,
 };
