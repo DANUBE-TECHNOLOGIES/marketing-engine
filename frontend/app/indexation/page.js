@@ -10,5 +10,12 @@ export const metadata = {
 };
 
 export default function IndexationPage() {
-  return <IndexationCockpitClient />;
+  return (
+    <>
+      <div className="indexation-page-tools">
+        <a href="/indexation/rollout">Préparer une vague d’indexation contrôlée</a>
+      </div>
+      <IndexationCockpitClient />
+    </>
+  );
 }
