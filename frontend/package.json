@@ -11,7 +11,8 @@
     "seo:audit-public:strict": "node scripts/audit-public-seo.mjs --strict=true",
     "seo:recommend-public": "node scripts/recommend-public-seo.mjs",
     "seo:score-public": "node scripts/score-public-seo.mjs",
-    "seo:score-public:json": "node scripts/score-public-seo.mjs --json=true"
+    "seo:score-public:json": "node scripts/score-public-seo.mjs --json=true",
+    "seo:score-public:gate": "node scripts/score-public-seo.mjs --gate=true --minimum-site-score=70"
   },
   "dependencies": {
     "google-auth-library": "10.7.0",
