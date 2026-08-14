@@ -46,6 +46,54 @@ test("google provider verifies owner permission before submitting sitemap", asyn
   assert.equal(result.httpStatus, 204);
 });
 
+test("google provider reads sitemap status without write operation", async () => {
+  const calls = [];
+  const siteUrl = "sc-domain:agences.example.test";
+  const sitemapUrl = "https://agences.example.test/agence/gien/sitemap.xml";
+  const provider = new GoogleSearchConsoleProvider({
+    accessTokenProvider: async () => "token-123",
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      if (url === `${SEARCH_CONSOLE_API_ROOT}/sites`) {
+        return {
+          ok: true,
+          status: 200,
+          async json() {
+            return { siteEntry: [{ siteUrl, permissionLevel: "siteFullUser" }] };
+          },
+        };
+      }
+      return {
+        ok: true,
+        status: 200,
+        async json() {
+          return {
+            path: sitemapUrl,
+            lastSubmitted: "2026-08-14T12:00:00Z",
+            lastDownloaded: "2026-08-14T12:05:00Z",
+            isPending: false,
+            type: "sitemap",
+            warnings: "2",
+            errors: "0",
+            contents: [{ type: "web", submitted: "17", indexed: "999" }],
+          };
+        },
+      };
+    },
+  });
+
+  const result = await provider.getSitemap({ siteUrl, sitemapUrl });
+
+  assert.equal(calls.length, 2);
+  assert.equal(calls[0].options.method, "GET");
+  assert.equal(calls[1].options.method, "GET");
+  assert.equal(result.path, sitemapUrl);
+  assert.equal(result.warnings, 2);
+  assert.equal(result.errors, 0);
+  assert.equal(result.contents[0].submitted, 17);
+  assert.equal(Object.hasOwn(result.contents[0], "indexed"), false);
+});
+
 test("google provider refuses a Search Console property that is not accessible", async () => {
   const provider = new GoogleSearchConsoleProvider({
     accessTokenProvider: async () => "token-123",
