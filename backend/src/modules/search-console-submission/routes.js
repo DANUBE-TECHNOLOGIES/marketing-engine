@@ -6,6 +6,7 @@ const { SEARCH_CONSOLE_OWNER_PERMISSION } = require("./provider");
 const { runSearchConsolePreflight } = require("./preflight");
 const { SearchConsoleSubmissionService } = require("./service");
 const { SearchConsoleObservabilityService } = require("./observability");
+const { SearchConsolePerformanceService } = require("./performance");
 
 function sendError(response, error) {
   response.status(Number(error?.statusCode || error?.status || 500)).json({
@@ -23,6 +24,7 @@ function routes({ prisma, service, provider } = {}) {
     structuredDataService: submissionService.structuredDataService,
     provider: submissionService.provider,
   });
+  const performanceService = new SearchConsolePerformanceService({ provider: submissionService.provider });
 
   router.get("/search-console-submissions/health", (_request, response) => {
     const activeProvider = submissionService.provider;
@@ -38,6 +40,7 @@ function routes({ prisma, service, provider } = {}) {
       explicitApprovalRequired: true,
       autoSubmit: false,
       readOnlySitemapObservability: true,
+      readOnlySearchPerformance: true,
     });
   });
 
@@ -77,6 +80,24 @@ function routes({ prisma, service, provider } = {}) {
         tenantId,
         siteSlug: request.params.siteSlug,
         siteUrl: request.query?.siteUrl,
+      }));
+    } catch (error) {
+      sendError(response, error);
+    }
+  });
+
+  router.get("/search-console-submissions/performance", async (request, response) => {
+    try {
+      await tenantIdForRequest(prisma, request);
+      const dimensions = String(request.query?.dimensions || "query")
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+      response.json(await performanceService.query({
+        siteUrl: request.query?.siteUrl,
+        days: request.query?.days,
+        dimensions,
+        rowLimit: request.query?.rowLimit,
       }));
     } catch (error) {
       sendError(response, error);
