@@ -133,6 +133,8 @@ export default function DestinationPage({ data }) {
   const siteRoot = site.basePath || `/agence/${encodeURIComponent(site.slug)}`;
   const inspirationsPath = `${siteRoot.replace(/\/$/, "")}/inspiration`;
   const contactPath = `${siteRoot.replace(/\/$/, "")}/contact`;
+  const city = site?.agency?.city || null;
+  const destinationHeading = city ? `Voyage à ${d.name} depuis ${city}` : `Voyage à ${d.name}`;
 
   const destinationSchema = buildDestinationSchema(data);
   const agencySchema = buildTravelAgencySchema(site);
@@ -179,7 +181,7 @@ export default function DestinationPage({ data }) {
             {[d.country, d.region, d.type].filter(Boolean).join(" · ")}
           </p>
 
-          <h1>Voyage à {d.name}</h1>
+          <h1>{destinationHeading}</h1>
 
           {d.tagline && <p>{d.tagline}</p>}
 
@@ -214,6 +216,14 @@ export default function DestinationPage({ data }) {
         <div className={styles["de-shell"]}>
           <p className={styles["de-kicker"]}>L’inspiration Mondescale</p>
           <h2>{d.tagline || `Découvrez ${d.name} autrement`}</h2>
+          {city ? (
+            <div className={styles["de-prose"]}>
+              <p>
+                Votre agence {site.name} à {city} vous accompagne pour préparer un voyage à {d.name}
+                adapté à votre rythme, à vos envies et à votre budget.
+              </p>
+            </div>
+          ) : null}
           {d.summary ? <div className={styles["de-prose"]}><p>{d.summary}</p></div> : null}
           {Array.isArray(d.highlights) && d.highlights.length ? (
             <div className={styles["de-pills"]}>
