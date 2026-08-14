@@ -13,29 +13,41 @@ function joinCities(values) {
 }
 
 const COPY = {
-  services: (city) => ({
+  services: ({ city, nearby }) => ({
     title: `Des conseils voyage personnalisés à ${city}`,
-    text: "Notre équipe vous aide à comparer les solutions adaptées à votre projet : séjours, circuits, croisières, autotours et voyages sur mesure. Le conseil en agence permet de construire un voyage cohérent avec vos envies, votre budget et votre façon de voyager.",
+    text: nearby.length
+      ? `Depuis ${city}, notre équipe accompagne aussi les voyageurs de ${joinCities(nearby.slice(0, 2))}. Séjours, circuits, croisières, autotours ou voyages sur mesure : nous comparons les solutions selon vos dates, votre budget et votre façon de voyager.`
+      : `À ${city}, notre équipe vous accompagne pour comparer séjours, circuits, croisières, autotours et voyages sur mesure selon vos dates, votre budget et votre façon de voyager.`,
   }),
-  destinations: (city) => ({
+  destinations: ({ city, nearby }) => ({
     title: `Choisir votre prochaine destination avec votre agence de ${city}`,
-    text: "Une destination ne se choisit pas uniquement sur une photo ou un prix. Saisonnalité, durée de vol, rythme du séjour, formalités et type d’hébergement comptent aussi. Nos conseillers vous accompagnent pour identifier les destinations réellement adaptées à votre projet.",
+    text: nearby.length
+      ? `Pour les voyageurs de ${city} et du secteur de ${joinCities(nearby.slice(0, 2))}, nous comparons les destinations selon la saison, la durée du trajet, le rythme recherché, les formalités et le type d’hébergement. L’objectif est de retenir une destination adaptée au projet, pas seulement une offre attractive.`
+      : `À ${city}, nous comparons les destinations selon la saison, la durée du trajet, le rythme recherché, les formalités et le type d’hébergement afin de retenir une solution réellement adaptée à votre projet.`,
   }),
-  offers: (city) => ({
+  offers: ({ city, nearby }) => ({
     title: `Trouver une offre de voyage avec votre agence de ${city}`,
-    text: "Nos offres sont une sélection de possibilités disponibles au moment de leur publication. Votre conseiller peut vérifier les disponibilités, comparer les prestations et rechercher d’autres solutions selon vos dates, votre budget et vos préférences.",
+    text: nearby.length
+      ? `Notre agence de ${city} recherche pour les voyageurs du secteur, notamment ${joinCities(nearby.slice(0, 2))}, des solutions correspondant à leurs dates et à leur budget. Les offres publiées servent de point de départ : votre conseiller peut contrôler les disponibilités et comparer d’autres possibilités.`
+      : `Notre agence de ${city} vérifie les disponibilités et compare les prestations selon vos dates, votre budget et vos préférences ; les offres publiées constituent un point de départ pour votre recherche.`,
   }),
-  reviews: (city) => ({
+  reviews: ({ city, nearby }) => ({
     title: `Pourquoi confier votre voyage à une agence locale à ${city} ?`,
-    text: "Les avis de nos voyageurs reflètent l’importance de l’écoute, du conseil et du suivi. Notre équipe reste votre interlocuteur pour préparer le dossier, répondre à vos questions et vous accompagner avant, pendant et après votre voyage.",
+    text: nearby.length
+      ? `Les voyageurs de ${city}, ${joinCities(nearby.slice(0, 2))} et des communes voisines peuvent compter sur un interlocuteur de proximité pour préparer leur dossier. Les avis clients témoignent notamment de l’écoute, du conseil et du suivi apportés avant, pendant et après le voyage.`
+      : `À ${city}, les avis de nos voyageurs témoignent de l’importance d’un interlocuteur de proximité pour le conseil, la préparation du dossier et le suivi avant, pendant et après le voyage.`,
   }),
-  team: (city) => ({
+  team: ({ city, nearby }) => ({
     title: `Votre conseiller voyage de proximité à ${city}`,
-    text: "Connaître votre projet permet de proposer autre chose qu’une simple liste de prix. Notre équipe prend le temps d’échanger sur vos attentes afin de construire un voyage adapté et de rester disponible jusqu’à votre retour.",
+    text: nearby.length
+      ? `Notre équipe de ${city} reçoit et accompagne également les voyageurs venant de ${joinCities(nearby.slice(0, 2))}. Chaque projet commence par un échange sur vos attentes afin de construire une proposition adaptée et de conserver un interlocuteur jusqu’à votre retour.`
+      : `Notre équipe de ${city} prend le temps d’échanger sur vos attentes afin de construire une proposition adaptée et de rester votre interlocuteur jusqu’à votre retour.`,
   }),
-  contact: (city) => ({
+  contact: ({ city, nearby }) => ({
     title: `Préparez votre voyage avec notre agence à ${city}`,
-    text: "Contactez l’agence pour un conseil, une recherche de séjour ou un projet sur mesure. Plus vous nous précisez vos dates, votre budget, le nombre de voyageurs et vos envies, plus nous pouvons orienter efficacement la recherche.",
+    text: nearby.length
+      ? `Vous habitez ${city}, ${joinCities(nearby.slice(0, 2))} ou une commune voisine ? Contactez l’agence avec vos dates, votre budget, le nombre de voyageurs et vos premières envies : ces informations nous permettent d’orienter efficacement la recherche.`
+      : `Contactez notre agence de ${city} avec vos dates, votre budget, le nombre de voyageurs et vos premières envies afin que nous puissions orienter efficacement votre recherche.`,
   }),
 };
 
@@ -47,7 +59,7 @@ export default function LocalContentContext({ site, kind, quality }) {
   if (quality?.strong && !quality?.needsLocalContext) return null;
 
   const nearby = resolvedTargetCities(site, { limit: 4 });
-  const copy = builder(city);
+  const copy = builder({ city, nearby });
   const root = clean(site?.basePath) || `/agence/${encodeURIComponent(site?.slug || "")}`;
 
   return (
@@ -56,9 +68,9 @@ export default function LocalContentContext({ site, kind, quality }) {
         <p className="public-site-eyebrow">Conseil local Mondescale</p>
         <h2 id="local-context-title">{copy.title}</h2>
         <p>{copy.text}</p>
-        {nearby.length ? (
+        {nearby.length > 2 ? (
           <p>
-            L’agence accompagne également les voyageurs de {joinCities(nearby)} pour leurs projets de vacances et de voyages.
+            Notre zone de proximité comprend également {joinCities(nearby.slice(2))}.
           </p>
         ) : null}
         <div className="public-site-related-links" aria-label={`Poursuivre votre projet avec l’agence de voyages de ${city}`}>
