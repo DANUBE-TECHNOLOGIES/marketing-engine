@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { indexationApi } from "../../../lib/indexation-api";
 
@@ -99,7 +100,7 @@ export default function SearchConsoleStatusClient() {
             Vérifiez le traitement Google des sitemaps déjà soumis. Cette vue n’expose aucune opération d’approbation, de préparation ou de soumission.
           </p>
         </div>
-        <a className="indexation-nav-link" href="/indexation">Retour au cockpit</a>
+        <Link className="indexation-nav-link" href="/indexation">Retour au cockpit</Link>
       </header>
 
       <section className="indexation-controls">
