@@ -11,6 +11,17 @@ class DisabledSearchConsoleProvider {
     return false;
   }
 
+  async listSites() {
+    const error = new Error("Le provider Google Search Console n’est pas configuré.");
+    error.code = "SEARCH_CONSOLE_PROVIDER_NOT_CONFIGURED";
+    error.statusCode = 503;
+    throw error;
+  }
+
+  async assertSiteAccess() {
+    return this.listSites();
+  }
+
   async submitSitemap() {
     const error = new Error("Le provider Google Search Console n’est pas configuré.");
     error.code = "SEARCH_CONSOLE_PROVIDER_NOT_CONFIGURED";
@@ -30,15 +41,13 @@ class GoogleSearchConsoleProvider {
     return typeof this.accessTokenProvider === "function" && typeof this.fetchImpl === "function";
   }
 
-  async submitSitemap({ siteUrl, sitemapUrl } = {}) {
-    const target = validateSearchConsoleSubmissionTarget({ siteUrl, sitemapUrl });
+  async accessToken() {
     if (!this.isConfigured()) {
       const error = new Error("Le provider Google Search Console n’est pas configuré.");
       error.code = "SEARCH_CONSOLE_PROVIDER_NOT_CONFIGURED";
       error.statusCode = 503;
       throw error;
     }
-
     const accessToken = String(await this.accessTokenProvider() || "").trim();
     if (!accessToken) {
       const error = new Error("Jeton OAuth Search Console indisponible.");
@@ -46,30 +55,63 @@ class GoogleSearchConsoleProvider {
       error.statusCode = 503;
       throw error;
     }
+    return accessToken;
+  }
 
-    const endpoint = `${SEARCH_CONSOLE_API_ROOT}/sites/${encodeURIComponent(target.siteUrl)}/sitemaps/${encodeURIComponent(target.sitemapUrl)}`;
+  async googleRequest(endpoint, options = {}) {
+    const accessToken = await this.accessToken();
     const response = await this.fetchImpl(endpoint, {
-      method: "PUT",
+      ...options,
       headers: {
         Authorization: `Bearer ${accessToken}`,
         Accept: "application/json",
+        ...(options.headers || {}),
       },
     });
 
     if (!response?.ok) {
       let details = null;
-      try {
-        details = await response.json();
-      } catch (_error) {
-        details = null;
-      }
-      const error = new Error(`Search Console a refusé la soumission du sitemap (${response?.status || "inconnu"}).`);
+      try { details = await response.json(); } catch (_error) { details = null; }
+      const error = new Error(`Search Console a refusé la requête (${response?.status || "inconnu"}).`);
       error.code = "SEARCH_CONSOLE_API_ERROR";
       error.statusCode = Number(response?.status || 502);
       error.details = details || {};
       throw error;
     }
+    return response;
+  }
 
+  async listSites() {
+    const response = await this.googleRequest(`${SEARCH_CONSOLE_API_ROOT}/sites`, { method: "GET" });
+    const body = await response.json();
+    return Array.isArray(body?.siteEntry) ? body.siteEntry : [];
+  }
+
+  async assertSiteAccess(siteUrl) {
+    const target = String(siteUrl || "").trim();
+    if (!target) {
+      const error = new Error("La propriété Search Console est obligatoire.");
+      error.code = "SEARCH_CONSOLE_SITE_URL_REQUIRED";
+      error.statusCode = 400;
+      throw error;
+    }
+    const sites = await this.listSites();
+    const property = sites.find((item) => String(item?.siteUrl || "").trim() === target);
+    if (!property) {
+      const error = new Error(`La propriété Search Console n’est pas accessible : ${target}`);
+      error.code = "SEARCH_CONSOLE_SITE_NOT_ACCESSIBLE";
+      error.statusCode = 403;
+      error.details = { siteUrl: target };
+      throw error;
+    }
+    return property;
+  }
+
+  async submitSitemap({ siteUrl, sitemapUrl } = {}) {
+    const target = validateSearchConsoleSubmissionTarget({ siteUrl, sitemapUrl });
+    await this.assertSiteAccess(target.siteUrl);
+    const endpoint = `${SEARCH_CONSOLE_API_ROOT}/sites/${encodeURIComponent(target.siteUrl)}/sitemaps/${encodeURIComponent(target.sitemapUrl)}`;
+    const response = await this.googleRequest(endpoint, { method: "PUT" });
     return {
       provider: this.name,
       siteUrl: target.siteUrl,
