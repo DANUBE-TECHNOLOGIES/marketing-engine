@@ -31,6 +31,20 @@ function destinationImage(item) {
   return candidates.find((value) => typeof value === "string" && value.trim()) || null;
 }
 
+function defaultDestinationsTitle(site) {
+  const city = String(site?.agency?.city || site?.city || "").trim();
+  return city
+    ? `Idées de voyages depuis ${city}`
+    : "Nos destinations du moment";
+}
+
+function defaultDestinationsIntro(site) {
+  const city = String(site?.agency?.city || site?.city || "").trim();
+  return city
+    ? `Découvrez une sélection de destinations et préparez votre prochain départ avec les conseils de votre agence de voyages à ${city}.`
+    : "Découvrez une sélection de destinations et préparez votre prochain départ avec les conseils de votre agence.";
+}
+
 function DestinationCard({ item, site }) {
   const href = destinationHref(site, item);
   const image = destinationImage(item);
@@ -72,6 +86,7 @@ export default function DestinationsRenderer({ section, site }) {
 
   const dynamicSource = ["travel-core", "catalog", "automatic", "auto"].includes(source);
   const items = getItems(section, dynamicSource ? ["destinations", "items"] : ["items"]);
+  const introduction = content.text || content.description || defaultDestinationsIntro(site);
 
   if (!items.length && content.showWhenEmpty !== true) {
     return null;
@@ -81,8 +96,8 @@ export default function DestinationsRenderer({ section, site }) {
     <section className="public-site-section public-site-destinations">
       <div className="public-site-container">
         <p className="public-site-section-kicker">Inspirations</p>
-        <h2>{getSectionTitle(section, "Nos destinations du moment")}</h2>
-        {content.text ? <p>{content.text}</p> : null}
+        <h2>{getSectionTitle(section, defaultDestinationsTitle(site))}</h2>
+        {introduction ? <p className="public-site-section-intro">{introduction}</p> : null}
         {items.length ? (
           <div className="public-site-destination-grid">
             {items.map((item, index) => (
@@ -94,3 +109,10 @@ export default function DestinationsRenderer({ section, site }) {
     </section>
   );
 }
+
+export {
+  defaultDestinationsIntro,
+  defaultDestinationsTitle,
+  destinationHref,
+  destinationImage,
+};
