@@ -100,12 +100,29 @@ test(
 
     assert.equal(
       output.result.created,
-      6
+      7
     );
 
     assert.equal(
       calls.length,
-      6
+      7
+    );
+
+    const partners =
+      calls.find(
+        call =>
+          call.section.sectionType ===
+          "partner-logos"
+      );
+
+    assert.ok(
+      partners,
+      "la Home doit recevoir le bloc partenaires commun"
+    );
+
+    assert.equal(
+      partners.section.displayOrder,
+      60
     );
   }
 );
@@ -181,8 +198,15 @@ test(
     );
 
     assert.equal(
+      calls.includes(
+        "partner-logos"
+      ),
+      true
+    );
+
+    assert.equal(
       output.result.created,
-      5
+      6
     );
 
     assert.equal(
@@ -341,7 +365,7 @@ test(
 
     assert.equal(
       first.result.created,
-      6
+      7
     );
 
     assert.equal(
@@ -351,12 +375,12 @@ test(
 
     assert.equal(
       second.result.preserved,
-      6
+      7
     );
 
     assert.equal(
       createCalls,
-      12
+      14
     );
   }
 );
