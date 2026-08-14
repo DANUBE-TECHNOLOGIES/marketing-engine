@@ -27,6 +27,10 @@ class DisabledSearchConsoleProvider {
     return this.listSites();
   }
 
+  async getSitemap() {
+    return this.listSites();
+  }
+
   async submitSitemap() {
     const error = new Error("Le provider Google Search Console n’est pas configuré.");
     error.code = "SEARCH_CONSOLE_PROVIDER_NOT_CONFIGURED";
@@ -129,6 +133,15 @@ class GoogleSearchConsoleProvider {
     return property;
   }
 
+  async getSitemap({ siteUrl, sitemapUrl } = {}) {
+    const target = validateSearchConsoleSubmissionTarget({ siteUrl, sitemapUrl });
+    await this.assertSiteAccess(target.siteUrl);
+    const endpoint = `${SEARCH_CONSOLE_API_ROOT}/sites/${encodeURIComponent(target.siteUrl)}/sitemaps/${encodeURIComponent(target.sitemapUrl)}`;
+    const response = await this.googleRequest(endpoint, { method: "GET" });
+    const body = await response.json();
+    return normalizeSitemapResource(body);
+  }
+
   async submitSitemap({ siteUrl, sitemapUrl } = {}) {
     const target = validateSearchConsoleSubmissionTarget({ siteUrl, sitemapUrl });
     const property = await this.assertSiteOwner(target.siteUrl);
@@ -143,6 +156,25 @@ class GoogleSearchConsoleProvider {
       httpStatus: Number(response.status || 200),
     };
   }
+}
+
+function normalizeSitemapResource(resource = {}) {
+  return {
+    path: resource?.path || null,
+    lastSubmitted: resource?.lastSubmitted || null,
+    lastDownloaded: resource?.lastDownloaded || null,
+    isPending: resource?.isPending === true,
+    isSitemapsIndex: resource?.isSitemapsIndex === true,
+    type: resource?.type || null,
+    warnings: Number(resource?.warnings || 0),
+    errors: Number(resource?.errors || 0),
+    contents: Array.isArray(resource?.contents)
+      ? resource.contents.map((item) => ({
+          type: item?.type || null,
+          submitted: Number(item?.submitted || 0),
+        }))
+      : [],
+  };
 }
 
 function validateSearchConsoleSubmissionTarget({ siteUrl, sitemapUrl } = {}) {
@@ -171,5 +203,6 @@ module.exports = {
   SEARCH_CONSOLE_OWNER_PERMISSION,
   DisabledSearchConsoleProvider,
   GoogleSearchConsoleProvider,
+  normalizeSitemapResource,
   validateSearchConsoleSubmissionTarget,
 };
