@@ -6,7 +6,7 @@ import { indexationApi } from "../../../lib/indexation-api";
 function asArray(value) { return Array.isArray(value) ? value : []; }
 function percent(value) { return `${(Number(value || 0) * 100).toFixed(1)} %`; }
 function number(value, digits = 0) { return Number(value || 0).toLocaleString("fr-FR", { maximumFractionDigits: digits, minimumFractionDigits: digits }); }
-function pagePrefixFromSitemap(url) { return String(url || "").replace(/sitemap\.xml(?:\?.*)?$/i, ""); }
+function pagePrefixFromSitemap(url) { return String(url || "").replace(/\/sitemap\.xml(?:\?.*)?$/i, ""); }
 
 export default function SearchPerformanceClient() {
   const [candidates, setCandidates] = useState({ sites: [] });
