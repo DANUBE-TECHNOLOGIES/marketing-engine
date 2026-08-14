@@ -15,6 +15,34 @@ function normalizePartner(item) {
   };
 }
 
+function PartnerMark({ partner }) {
+  if (Number.isInteger(partner.spriteIndex) && partner.sprite) {
+    const x = partner.spriteIndex * 300;
+    return (
+      <span
+        className={styles.sprite}
+        role="img"
+        aria-label={partner.alt}
+        style={{
+          backgroundImage: `url(${partner.sprite})`,
+          backgroundPosition: `-${x}px 0px`,
+        }}
+      />
+    );
+  }
+
+  return (
+    <img
+      src={partner.logo}
+      alt={partner.alt}
+      loading="lazy"
+      decoding="async"
+      width="600"
+      height="240"
+    />
+  );
+}
+
 export default function PartnerLogosBlock({ section }) {
   const content = getSectionContent(section);
   const contextual = normalizeItems(content.items)
@@ -42,14 +70,7 @@ export default function PartnerLogosBlock({ section }) {
         <div className={styles.grid} role="list" aria-label="Partenaires voyagistes Mondescale">
           {partners.map((partner) => (
             <div className={styles.logo} role="listitem" key={partner.id} title={partner.name}>
-              <img
-                src={partner.logo}
-                alt={partner.alt}
-                loading="lazy"
-                decoding="async"
-                width="600"
-                height="240"
-              />
+              <PartnerMark partner={partner} />
             </div>
           ))}
         </div>
