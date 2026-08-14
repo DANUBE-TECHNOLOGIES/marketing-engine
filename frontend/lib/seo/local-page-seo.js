@@ -1,3 +1,5 @@
+import { resolvedTargetCities } from "./local-area-config";
+
 const DEFAULT_BRAND = "Mondescale";
 const MAX_DESCRIPTION_LENGTH = 165;
 
@@ -30,36 +32,7 @@ function brandLabel(site) {
 }
 
 function targetCities(site) {
-  const agency = agencyData(site);
-  const primary = localCity(site).toLocaleLowerCase("fr-FR");
-  const values =
-    site?.targetCities ||
-    site?.metadata?.targetCities ||
-    agency?.targetCities ||
-    [];
-
-  if (!Array.isArray(values)) return [];
-
-  const seen = new Set();
-  const result = [];
-
-  for (const value of values) {
-    const city = clean(
-      typeof value === "string"
-        ? value
-        : value?.name || value?.city
-    );
-
-    if (!city) continue;
-
-    const key = city.toLocaleLowerCase("fr-FR");
-    if (key === primary || seen.has(key)) continue;
-
-    seen.add(key);
-    result.push(city);
-  }
-
-  return result.slice(0, 4);
+  return resolvedTargetCities(site, { limit: 4 });
 }
 
 function pageKind(pageSlug, page) {
