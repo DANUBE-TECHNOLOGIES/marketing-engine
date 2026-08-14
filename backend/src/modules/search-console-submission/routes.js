@@ -3,6 +3,7 @@
 const express = require("express");
 const { tenantIdForRequest } = require("../minisite-structured-data/routes");
 const { SEARCH_CONSOLE_OWNER_PERMISSION } = require("./provider");
+const { runSearchConsolePreflight } = require("./preflight");
 const { SearchConsoleSubmissionService } = require("./service");
 
 function sendError(response, error) {
@@ -48,6 +49,21 @@ function routes({ prisma, service, provider } = {}) {
             property?.permissionLevel === SEARCH_CONSOLE_OWNER_PERMISSION,
         })),
       });
+    } catch (error) {
+      sendError(response, error);
+    }
+  });
+
+  router.post("/search-console-submissions/preflight", async (request, response) => {
+    try {
+      const tenantId = await tenantIdForRequest(prisma, request);
+      response.json(await runSearchConsolePreflight({
+        tenantId,
+        siteSlug: request.body?.siteSlug,
+        siteUrl: request.body?.siteUrl,
+        structuredDataService: submissionService.structuredDataService,
+        provider: submissionService.provider,
+      }));
     } catch (error) {
       sendError(response, error);
     }
