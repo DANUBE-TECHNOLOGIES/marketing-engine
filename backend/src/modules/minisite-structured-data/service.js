@@ -10,6 +10,9 @@ const {
   applyInspirationIndexabilityContract,
 } = require("./inspiration-indexability");
 const {
+  applyContentQualityIndexabilityContract,
+} = require("./content-quality-indexability");
+const {
   auditSitemapCrawlability,
 } = require("./crawlability-audit");
 const { MiniSiteStructuredDataRepository } = require("./repository");
@@ -61,6 +64,7 @@ class MiniSiteStructuredDataService {
       destinationSitemap: "localized-per-published-agency-site",
       editorialSitemap: "canonical-agency-only",
       inspirationIndexSitemap: "only-when-public-content-targets-agency",
+      contentQualityIndexability: "critically-thin-nonfunctional-pages-excluded",
       crawlabilityAudit: "discovery-source-and-orphan-detection",
       publicOrigin: this.publicOrigin,
       schemas: ["TravelAgency", "LocalBusiness", "WebSite", "WebPage", "BreadcrumbList", "FAQPage"],
@@ -107,13 +111,17 @@ class MiniSiteStructuredDataService {
       publicOrigin: this.publicOrigin,
     });
 
-    const indexableSitemap = applyInspirationIndexabilityContract(
+    const inspirationIndexableSitemap = applyInspirationIndexabilityContract(
       sitemap,
       sites,
       inspirations
     );
+    const qualityIndexableSitemap = applyContentQualityIndexabilityContract(
+      inspirationIndexableSitemap,
+      sites
+    );
 
-    return auditSitemapCrawlability(indexableSitemap);
+    return auditSitemapCrawlability(qualityIndexableSitemap);
   }
 
   async previewNetwork({ tenantId } = {}) {
