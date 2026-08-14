@@ -1,7 +1,10 @@
+import Link from "next/link";
+
 import {
   getSectionContent,
   getSectionTitle,
 } from "./helpers";
+import { resolvedTargetCities } from "../../../lib/seo/local-area-config";
 
 function normalizeColumns(value) {
   const parsed = Number(value);
@@ -16,6 +19,18 @@ function minimumCardWidth(columns) {
   return 520;
 }
 
+function joinCities(values) {
+  if (!values.length) return "";
+  if (values.length === 1) return values[0];
+  if (values.length === 2) return `${values[0]} et ${values[1]}`;
+  return `${values.slice(0, -1).join(", ")} et ${values[values.length - 1]}`;
+}
+
+function siteRoot(site) {
+  return String(site?.basePath || `/agence/${encodeURIComponent(site?.slug || "")}`)
+    .replace(/\/$/, "");
+}
+
 function defaultFeaturesTitle(site) {
   const city = String(site?.agency?.city || site?.city || "").trim();
   return city ? `Nos services voyage à ${city}` : "Nos services voyage";
@@ -23,9 +38,17 @@ function defaultFeaturesTitle(site) {
 
 function defaultFeaturesIntroduction(site) {
   const city = String(site?.agency?.city || site?.city || "").trim();
-  return city
-    ? `Notre équipe à ${city} vous conseille selon votre projet, votre budget et votre façon de voyager.`
-    : "Notre équipe vous conseille selon votre projet, votre budget et votre façon de voyager.";
+  const nearby = resolvedTargetCities(site, { limit: 3 });
+
+  if (!city) {
+    return "Notre équipe vous conseille selon votre projet, votre budget et votre façon de voyager.";
+  }
+
+  const area = nearby.length
+    ? ` Nous accompagnons également les voyageurs de ${joinCities(nearby)}.`
+    : "";
+
+  return `Notre équipe à ${city} vous conseille selon votre projet, votre budget et votre façon de voyager.${area}`;
 }
 
 export default function FeaturesV2Renderer({
@@ -43,6 +66,7 @@ export default function FeaturesV2Renderer({
     defaultFeaturesIntroduction(site);
   const columns = normalizeColumns(content.columns);
   const minimum = minimumCardWidth(columns);
+  const root = siteRoot(site);
 
   return (
     <section className="public-site-section public-site-features">
@@ -90,6 +114,12 @@ export default function FeaturesV2Renderer({
             ))}
           </div>
         ) : null}
+
+        <div className="public-site-related-links" aria-label="Préparer votre voyage avec l’agence">
+          <Link href={`${root}/destinations`}>Explorer nos destinations</Link>
+          <Link href={`${root}/inspiration`}>Lire nos conseils voyage</Link>
+          <Link href={`${root}/contact`}>Demander un conseil personnalisé</Link>
+        </div>
       </div>
     </section>
   );
@@ -98,4 +128,6 @@ export default function FeaturesV2Renderer({
 export {
   defaultFeaturesIntroduction,
   defaultFeaturesTitle,
+  joinCities,
+  siteRoot,
 };
