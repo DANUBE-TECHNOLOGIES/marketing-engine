@@ -95,6 +95,7 @@ export default function IndexationRolloutPlanner({
       succeeded: results.filter((item) => item.ok).length,
       failed: results.filter((item) => !item.ok).length,
     });
+    setSelected([]);
     setRunning("");
   };
 
