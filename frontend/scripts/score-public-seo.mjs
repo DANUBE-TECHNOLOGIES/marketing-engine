@@ -14,7 +14,9 @@ const origin = String(
 ).replace(/\/+$/, "");
 const limit = Math.max(1, Number(args.get("limit") || 500));
 const minimumWords = Math.max(60, Number(args.get("minimum-words") || 140));
+const minimumSiteScore = Math.min(100, Math.max(0, Number(args.get("minimum-site-score") || 0)));
 const jsonOutput = args.get("json") === true || args.get("json") === "true";
+const gate = args.get("gate") === true || args.get("gate") === "true";
 
 function decodeEntities(value) {
   return String(value || "")
@@ -54,8 +56,7 @@ function metaContent(html, name, attribute = "name") {
 }
 
 function canonicalHref(html) {
-  return metaContent(html, "canonical", "rel") ||
-    firstMatch(html, /<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)["'][^>]*>/i) ||
+  return firstMatch(html, /<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)["'][^>]*>/i) ||
     firstMatch(html, /<link[^>]+href=["']([^"']+)["'][^>]+rel=["']canonical["'][^>]*>/i);
 }
 
@@ -129,7 +130,7 @@ function localSignalRequired(kind) {
 
 async function fetchText(url) {
   const response = await fetch(url, {
-    headers: { "user-agent": "Mondescale-Local-SEO-Score/1.0" },
+    headers: { "user-agent": "Mondescale-Local-SEO-Score/1.1" },
     redirect: "follow",
   });
   if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
@@ -200,12 +201,24 @@ const sites = [...bySite.entries()].map(([site, pages]) => ({
   site,
   ...aggregateLocalSeoSite(pages, { minimumWords }),
 })).sort((a, b) => b.total - a.total);
+const failingSites = minimumSiteScore > 0
+  ? sites.filter((site) => site.total < minimumSiteScore)
+  : [];
 
 if (jsonOutput) {
-  console.log(JSON.stringify({ origin, pages: rows, sites, errors }, null, 2));
+  console.log(JSON.stringify({
+    origin,
+    generatedAt: new Date().toISOString(),
+    minimumSiteScore,
+    pages: rows,
+    sites,
+    failingSites,
+    errors,
+  }, null, 2));
 } else {
   console.log(`Score SEO local Mondescale · ${rows.length}/${urls.length} pages analysées`);
   console.log(`Mini-sites : ${sites.length} · erreurs HTTP : ${errors.length}`);
+  if (minimumSiteScore) console.log(`Seuil mini-site : ${minimumSiteScore}/100 · sous seuil : ${failingSites.length}`);
   console.log("\nCLASSEMENT MINI-SITES");
   for (const item of sites) {
     console.log(`- ${item.total}/100 (${item.grade}) · ${item.site} · ${item.pages} page(s) · tech ${item.dimensions.technical}/30 · local ${item.dimensions.local}/30 · contenu ${item.dimensions.content}/25 · média ${item.dimensions.media}/15`);
@@ -214,13 +227,20 @@ if (jsonOutput) {
   const weakest = rows.slice().sort((a, b) => a.score.total - b.score.total).slice(0, 25);
   if (weakest.length) {
     console.log("\nPAGES PRIORITAIRES");
-    for (const row of weakest) {
-      console.log(`- ${row.score.total}/100 (${row.score.grade}) · ${row.url}`);
-    }
+    for (const row of weakest) console.log(`- ${row.score.total}/100 (${row.score.grade}) · ${row.url}`);
+  }
+
+  if (failingSites.length) {
+    console.log("\nMINI-SITES SOUS LE SEUIL");
+    for (const item of failingSites) console.log(`- ${item.total}/100 · ${item.site}`);
   }
 
   if (errors.length) {
     console.log("\nERREURS HTTP");
     for (const item of errors) console.log(`- ${item.url}: ${item.error}`);
   }
+}
+
+if (gate && (errors.length || failingSites.length)) {
+  process.exitCode = 1;
 }
