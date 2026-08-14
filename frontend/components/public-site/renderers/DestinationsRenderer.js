@@ -5,6 +5,19 @@ import {
   getSectionContent,
   getSectionTitle,
 } from "./helpers";
+import { resolvedTargetCities } from "../../../lib/seo/local-area-config";
+
+function joinCities(values) {
+  if (!values.length) return "";
+  if (values.length === 1) return values[0];
+  if (values.length === 2) return `${values[0]} et ${values[1]}`;
+  return `${values.slice(0, -1).join(", ")} et ${values[values.length - 1]}`;
+}
+
+function siteRoot(site) {
+  return String(site?.basePath || `/agence/${encodeURIComponent(site?.slug || "")}`)
+    .replace(/\/$/, "");
+}
 
 function destinationHref(site, item) {
   if (item?.href) return item.href;
@@ -40,9 +53,17 @@ function defaultDestinationsTitle(site) {
 
 function defaultDestinationsIntro(site) {
   const city = String(site?.agency?.city || site?.city || "").trim();
-  return city
-    ? `Découvrez une sélection de destinations et préparez votre prochain départ avec les conseils de votre agence de voyages à ${city}.`
-    : "Découvrez une sélection de destinations et préparez votre prochain départ avec les conseils de votre agence.";
+  const nearby = resolvedTargetCities(site, { limit: 3 });
+
+  if (!city) {
+    return "Découvrez une sélection de destinations et préparez votre prochain départ avec les conseils de votre agence.";
+  }
+
+  const area = nearby.length
+    ? ` Nous accompagnons aussi les voyageurs de ${joinCities(nearby)}.`
+    : "";
+
+  return `Découvrez une sélection de destinations et préparez votre prochain départ avec les conseils de votre agence de voyages à ${city}.${area}`;
 }
 
 function DestinationCard({ item, site }) {
@@ -87,6 +108,7 @@ export default function DestinationsRenderer({ section, site }) {
   const dynamicSource = ["travel-core", "catalog", "automatic", "auto"].includes(source);
   const items = getItems(section, dynamicSource ? ["destinations", "items"] : ["items"]);
   const introduction = content.text || content.description || defaultDestinationsIntro(site);
+  const root = siteRoot(site);
 
   if (!items.length && content.showWhenEmpty !== true) {
     return null;
@@ -105,6 +127,12 @@ export default function DestinationsRenderer({ section, site }) {
             ))}
           </div>
         ) : null}
+
+        <div className="public-site-related-links" aria-label="Conseils pour choisir votre voyage">
+          <Link href={`${root}/inspiration`}>Découvrir nos inspirations voyage</Link>
+          <Link href={`${root}/services`}>Voir comment l’agence vous accompagne</Link>
+          <Link href={`${root}/contact`}>Construire votre voyage avec un conseiller</Link>
+        </div>
       </div>
     </section>
   );
@@ -115,4 +143,6 @@ export {
   defaultDestinationsTitle,
   destinationHref,
   destinationImage,
+  joinCities,
+  siteRoot,
 };
