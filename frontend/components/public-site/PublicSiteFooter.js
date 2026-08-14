@@ -4,6 +4,20 @@ function telephoneHref(phone) {
   return `tel:${String(phone || "").replace(/\s+/g, "")}`;
 }
 
+const FOOTER_ALIASES = Object.freeze({
+  home: "",
+  accueil: "",
+  index: "",
+  inspirations: "inspiration",
+});
+
+function canonicalFooterSlug(value) {
+  const slug = String(value || "").trim().toLowerCase();
+  return Object.prototype.hasOwnProperty.call(FOOTER_ALIASES, slug)
+    ? FOOTER_ALIASES[slug]
+    : slug;
+}
+
 function publishedNavigationSlugs(site) {
   const navigation = Array.isArray(site?.navigation)
     ? site.navigation
@@ -13,25 +27,18 @@ function publishedNavigationSlugs(site) {
 
   return new Set(
     navigation
-      .map((page) => String(page?.slug || "").trim().toLowerCase())
+      .map((page) => canonicalFooterSlug(page?.slug))
       .filter(Boolean)
   );
-}
-
-function localFooterIntro(site) {
-  const city = String(site?.agency?.city || site?.city || "").trim();
-  return city
-    ? `Votre agence de voyages à ${city} vous accompagne dans la création de voyages adaptés à vos envies.`
-    : "Votre agence vous accompagne dans la création de voyages uniques, adaptés à vos envies.";
 }
 
 export default function PublicSiteFooter({ site }) {
   const agency = site.agency || {};
   const basePath = `/agence/${site.slug}`;
   const navigationSlugs = publishedNavigationSlugs(site);
-  const hasReviewsPage = navigationSlugs.has("avis");
   const hasServicesPage = navigationSlugs.has("services");
   const hasDestinationsPage = navigationSlugs.has("destinations");
+  const hasReviewsPage = navigationSlugs.has("avis");
   const hasContactPage = navigationSlugs.has("contact");
 
   return (
@@ -44,7 +51,10 @@ export default function PublicSiteFooter({ site }) {
 
           <div>
             <strong>{site.name}</strong>
-            <p>{localFooterIntro(site)}</p>
+            <p>
+              Votre agence vous accompagne dans la création de voyages uniques,
+              adaptés à vos envies.
+            </p>
           </div>
         </div>
 
@@ -80,7 +90,7 @@ export default function PublicSiteFooter({ site }) {
               <Link href={`${basePath}/services`}>Nos services</Link>
             ) : null}
             {hasDestinationsPage ? (
-              <Link href={`${basePath}/destinations`}>Nos destinations</Link>
+              <Link href={`${basePath}/destinations`}>Destinations</Link>
             ) : null}
             <Link href={`${basePath}/inspiration`}>Inspirations voyage</Link>
             {hasReviewsPage ? (
@@ -113,7 +123,8 @@ export default function PublicSiteFooter({ site }) {
 }
 
 export {
-  localFooterIntro,
+  FOOTER_ALIASES,
+  canonicalFooterSlug,
   publishedNavigationSlugs,
   telephoneHref,
 };
