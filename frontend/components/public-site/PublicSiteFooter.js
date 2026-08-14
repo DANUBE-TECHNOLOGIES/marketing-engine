@@ -18,11 +18,21 @@ function publishedNavigationSlugs(site) {
   );
 }
 
+function localFooterIntro(site) {
+  const city = String(site?.agency?.city || site?.city || "").trim();
+  return city
+    ? `Votre agence de voyages à ${city} vous accompagne dans la création de voyages adaptés à vos envies.`
+    : "Votre agence vous accompagne dans la création de voyages uniques, adaptés à vos envies.";
+}
+
 export default function PublicSiteFooter({ site }) {
   const agency = site.agency || {};
   const basePath = `/agence/${site.slug}`;
   const navigationSlugs = publishedNavigationSlugs(site);
   const hasReviewsPage = navigationSlugs.has("avis");
+  const hasServicesPage = navigationSlugs.has("services");
+  const hasDestinationsPage = navigationSlugs.has("destinations");
+  const hasContactPage = navigationSlugs.has("contact");
 
   return (
     <footer className="public-site-footer">
@@ -34,10 +44,7 @@ export default function PublicSiteFooter({ site }) {
 
           <div>
             <strong>{site.name}</strong>
-            <p>
-              Votre agence vous accompagne dans la création de voyages uniques,
-              adaptés à vos envies.
-            </p>
+            <p>{localFooterIntro(site)}</p>
           </div>
         </div>
 
@@ -69,12 +76,19 @@ export default function PublicSiteFooter({ site }) {
           <h3>Préparer votre voyage</h3>
 
           <div className="public-site-footer-links">
-            <Link href={`${basePath}/services`}>Nos services</Link>
+            {hasServicesPage ? (
+              <Link href={`${basePath}/services`}>Nos services</Link>
+            ) : null}
+            {hasDestinationsPage ? (
+              <Link href={`${basePath}/destinations`}>Nos destinations</Link>
+            ) : null}
             <Link href={`${basePath}/inspiration`}>Inspirations voyage</Link>
             {hasReviewsPage ? (
               <Link href={`${basePath}/avis`}>Avis clients</Link>
             ) : null}
-            <Link href={`${basePath}/contact`}>Nous contacter</Link>
+            {hasContactPage ? (
+              <Link href={`${basePath}/contact`}>Nous contacter</Link>
+            ) : null}
           </div>
         </div>
 
@@ -99,6 +113,7 @@ export default function PublicSiteFooter({ site }) {
 }
 
 export {
+  localFooterIntro,
   publishedNavigationSlugs,
   telephoneHref,
 };
