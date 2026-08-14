@@ -5,6 +5,10 @@ import {
   getSectionTitle,
 } from "./helpers";
 
+function clean(value) {
+  return String(value || "").replace(/\s+/g, " ").trim();
+}
+
 function initials(value) {
   return String(value || "Équipe")
     .trim()
@@ -15,14 +19,14 @@ function initials(value) {
 }
 
 function localTeamTitle(site) {
-  const city = String(site?.agency?.city || site?.city || "").trim();
+  const city = clean(site?.agency?.city || site?.city);
   return city
     ? `L’équipe de votre agence de voyages à ${city}`
     : "L’équipe de votre agence de voyages";
 }
 
 function localTeamIntro(site) {
-  const city = String(site?.agency?.city || site?.city || "").trim();
+  const city = clean(site?.agency?.city || site?.city);
   return city
     ? `Rencontrez les conseillers de votre agence à ${city}, disponibles pour vous accompagner dans la préparation de vos séjours, circuits, croisières et voyages sur mesure.`
     : "Rencontrez nos conseillers voyage, disponibles pour vous accompagner dans la préparation de vos séjours, circuits, croisières et voyages sur mesure.";
@@ -34,8 +38,13 @@ function siteHref(site, slug) {
   return `${root}/${slug}`;
 }
 
+function memberPresentation(member) {
+  return clean(member.description || member.bio);
+}
+
 export default function TeamRenderer({ section, site }) {
   const content = getSectionContent(section);
+  const city = clean(site?.agency?.city || site?.city);
   const members = [
     ...(Array.isArray(content.members) ? content.members : []),
     ...(Array.isArray(content.items) ? content.items : []),
@@ -65,9 +74,10 @@ export default function TeamRenderer({ section, site }) {
         {uniqueMembers.length ? (
           <div className="public-site-team-grid">
             {uniqueMembers.map((member, index) => {
-              const name = member.name || member.title || "Conseiller voyage";
-              const role = member.role || member.jobTitle || member.subtitle || "Conseiller voyage";
+              const name = clean(member.name || member.title) || "Conseiller voyage";
+              const role = clean(member.role || member.jobTitle || member.subtitle) || "Conseiller voyage";
               const image = member.image || member.imageUrl || member.photo || member.photoUrl || null;
+              const presentation = memberPresentation(member);
 
               return (
                 <article className="public-site-team-card" key={member.id || member.email || name || index}>
@@ -81,10 +91,10 @@ export default function TeamRenderer({ section, site }) {
                   </div>
                   <div className="public-site-team-copy">
                     <h3>{name}</h3>
-                    <p className="public-site-team-role">{role}</p>
-                    {member.description || member.bio ? (
-                      <p>{member.description || member.bio}</p>
-                    ) : null}
+                    <p className="public-site-team-role">
+                      {city ? `${role} à ${city}` : role}
+                    </p>
+                    {presentation ? <p>{presentation}</p> : null}
                   </div>
                 </article>
               );
@@ -92,10 +102,19 @@ export default function TeamRenderer({ section, site }) {
           </div>
         ) : null}
 
-        <div className="public-site-related-links" aria-label="Préparer votre voyage avec notre équipe">
-          <Link href={siteHref(site, "services")}>Découvrir les services de l’agence</Link>
-          <Link href={siteHref(site, "destinations")}>Explorer nos destinations</Link>
-          <Link href={siteHref(site, "contact")}>Contacter un conseiller voyage</Link>
+        <div
+          className="public-site-related-links"
+          aria-label={city ? `Préparer votre voyage avec l’équipe de ${city}` : "Préparer votre voyage avec notre équipe"}
+        >
+          <Link href={siteHref(site, "services")}>
+            {city ? `Services de nos conseillers voyage à ${city}` : "Découvrir les services de l’agence"}
+          </Link>
+          <Link href={siteHref(site, "destinations")}>
+            {city ? `Destinations conseillées par l’équipe de ${city}` : "Explorer nos destinations"}
+          </Link>
+          <Link href={siteHref(site, "contact")}>
+            {city ? `Contacter un conseiller voyage à ${city}` : "Contacter un conseiller voyage"}
+          </Link>
         </div>
       </div>
     </section>
@@ -105,5 +124,6 @@ export default function TeamRenderer({ section, site }) {
 export {
   localTeamIntro,
   localTeamTitle,
+  memberPresentation,
   siteHref,
 };
