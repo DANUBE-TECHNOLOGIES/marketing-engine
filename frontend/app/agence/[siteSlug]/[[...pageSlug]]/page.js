@@ -29,6 +29,7 @@ import {
   buildTravelAgencySchema,
 } from "../../../../lib/seo/json-ld";
 import { buildPageFaqSchema } from "../../../../lib/seo/page-faq-schema";
+import { buildPageSemanticsSchema } from "../../../../lib/seo/page-semantics-schema";
 import { assessLocalContentQuality } from "../../../../lib/seo/local-content-quality";
 import {
   buildLocalPageSeo,
@@ -237,6 +238,7 @@ export default async function AgencySitePage({ params }) {
     description: localSeo.description,
     image: localSeo.image,
   });
+  const pageSemanticsSchema = buildPageSemanticsSchema({ page, url: currentUrl });
   const needsFallbackHeading = !legalPage && !pageHasHero(page);
   let legalRuntimeHtml = null;
   if (legalPage) {
@@ -249,6 +251,7 @@ export default async function AgencySitePage({ params }) {
       <JsonLd data={buildTravelAgencySchema(site)} />
       <JsonLd data={buildBreadcrumbSchema(breadcrumbItems)} />
       <JsonLd data={webPageSchema} />
+      {pageSemanticsSchema ? <JsonLd data={pageSemanticsSchema} /> : null}
       {serviceCatalog ? <JsonLd data={serviceCatalog} /> : null}
       {faqSchema ? <JsonLd data={faqSchema} /> : null}
 
