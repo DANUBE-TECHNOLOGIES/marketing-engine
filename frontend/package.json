@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start -H 0.0.0.0",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seo:audit-public": "node scripts/audit-public-seo.mjs"
   },
   "dependencies": {
     "google-auth-library": "10.7.0",
