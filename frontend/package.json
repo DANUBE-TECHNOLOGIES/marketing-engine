@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start -H 0.0.0.0",
     "lint": "eslint",
+    "test:indexation": "node --test test/mse-25-17-indexation-cockpit.test.mjs",
     "seo:audit-public": "node scripts/audit-public-seo.mjs",
     "seo:audit-public:strict": "node scripts/audit-public-seo.mjs --strict=true",
     "seo:recommend-public": "node scripts/recommend-public-seo.mjs",
