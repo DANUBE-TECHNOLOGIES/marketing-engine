@@ -15,6 +15,9 @@ const {
 const {
   auditSitemapCrawlability,
 } = require("./crawlability-audit");
+const {
+  attachIndexationReadiness,
+} = require("./indexation-readiness");
 const { MiniSiteStructuredDataRepository } = require("./repository");
 
 function normalizePublicOrigin(value) {
@@ -66,6 +69,7 @@ class MiniSiteStructuredDataService {
       inspirationIndexSitemap: "only-when-public-content-targets-agency",
       contentQualityIndexability: "critically-thin-nonfunctional-pages-excluded",
       crawlabilityAudit: "discovery-source-and-orphan-detection",
+      indexationReadiness: "per-site-safe-to-submit-report",
       publicOrigin: this.publicOrigin,
       schemas: ["TravelAgency", "LocalBusiness", "WebSite", "WebPage", "BreadcrumbList", "FAQPage"],
       operations: ["previewNetwork", "previewSitemap", "previewSite"],
@@ -120,8 +124,9 @@ class MiniSiteStructuredDataService {
       inspirationIndexableSitemap,
       sites
     );
+    const crawlableSitemap = auditSitemapCrawlability(qualityIndexableSitemap);
 
-    return auditSitemapCrawlability(qualityIndexableSitemap);
+    return attachIndexationReadiness(crawlableSitemap);
   }
 
   async previewNetwork({ tenantId } = {}) {
