@@ -11,6 +11,22 @@ function inspirationHref(site, item) {
   return `/agence/${encodeURIComponent(site.slug)}/inspiration/${encodeURIComponent(item.slug)}`;
 }
 
+function inspirationTitle(item) {
+  return String(item?.title || item?.name || "Inspiration voyage").trim();
+}
+
+function inspirationImage(item) {
+  return item?.imageUrl || item?.image || item?.media?.url || null;
+}
+
+function inspirationImageAlt(item) {
+  const configured = String(
+    item?.imageAlt || item?.altText || item?.media?.altText || ""
+  ).trim();
+  if (configured) return configured;
+  return `Inspiration voyage : ${inspirationTitle(item)}`;
+}
+
 export default function InspirationsRenderer({
   section,
   site,
@@ -48,23 +64,29 @@ export default function InspirationsRenderer({
           <div className="public-site-editorial-grid">
             {items.map((item, index) => {
               const href = inspirationHref(site, item);
+              const title = inspirationTitle(item);
+              const image = inspirationImage(item);
               const card = (
                 <article
                   className="public-site-editorial-card"
                   key={item.id || item.slug || index}
                 >
-                  {item.image ? (
-                    <div
-                      className="public-site-editorial-image"
-                      style={{ backgroundImage: `url("${item.image}")` }}
-                    />
+                  {image ? (
+                    <div className="public-site-editorial-image">
+                      <img
+                        src={image}
+                        alt={inspirationImageAlt(item)}
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    </div>
                   ) : null}
 
                   <div>
                     {item.category ? <span>{item.category}</span> : null}
-                    <h3>{item.title || "Inspiration voyage"}</h3>
+                    <h3>{title}</h3>
                     {item.description ? <p>{item.description}</p> : null}
-                    {href ? <strong>Découvrir cette inspiration →</strong> : null}
+                    {href ? <strong>{`Lire ${title} →`}</strong> : null}
                   </div>
                 </article>
               );
@@ -74,6 +96,7 @@ export default function InspirationsRenderer({
                   href={href}
                   key={item.id || item.slug || index}
                   className="public-site-editorial-link"
+                  aria-label={`Lire l'inspiration ${title}`}
                 >
                   {card}
                 </Link>
@@ -88,4 +111,7 @@ export default function InspirationsRenderer({
 
 export {
   inspirationHref,
+  inspirationImage,
+  inspirationImageAlt,
+  inspirationTitle,
 };
