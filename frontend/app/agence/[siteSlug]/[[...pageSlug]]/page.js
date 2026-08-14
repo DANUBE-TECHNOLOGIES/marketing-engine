@@ -9,6 +9,7 @@ import {
 
 import LegalJourneyCta from "../../../../components/public-site/LegalJourneyCta";
 import LegalRuntimeDocument from "../../../../components/public-site/LegalRuntimeDocument";
+import LocalContentContext from "../../../../components/public-site/LocalContentContext";
 import LocalSeoAreaLinks from "../../../../components/public-site/LocalSeoAreaLinks";
 import PublicSiteSections from "../../../../components/public-site/PublicSiteSections";
 
@@ -27,7 +28,7 @@ import {
   buildTravelAgencySchema,
 } from "../../../../lib/seo/json-ld";
 import { buildPageFaqSchema } from "../../../../lib/seo/page-faq-schema";
-
+import { assessLocalContentQuality } from "../../../../lib/seo/local-content-quality";
 import {
   buildLocalPageSeo,
 } from "../../../../lib/seo/local-page-seo";
@@ -81,7 +82,6 @@ function isServicesPage(pageSlug, page) {
 function isLegalPage(pageSlug, page) {
   const slug = normalizePageSlug(pageSlug || page?.slug);
   if (LEGAL_PAGE_SLUGS.has(slug)) return true;
-
   const title = String(page?.title || "").trim().toLowerCase();
   return title.includes("mentions légales") || title.includes("confidentialité");
 }
@@ -94,13 +94,9 @@ function pageSections(page) {
 
 function pageHasHero(page) {
   return pageSections(page).some((section) => {
-    const type = String(
-      section?.type ||
-      section?.blockType ||
-      section?.kind ||
-      ""
-    ).trim().toLowerCase();
-
+    const type = String(section?.type || section?.blockType || section?.kind || "")
+      .trim()
+      .toLowerCase();
     return type === "hero" || type.includes("hero-") || type.includes("-hero");
   });
 }
@@ -108,11 +104,7 @@ function pageHasHero(page) {
 function canonicalPath({ siteSlug, pageSlug }) {
   const root = `/agence/${siteSlug}`;
   const slug = canonicalPageSlug(pageSlug);
-
-  if (!slug || isHomePage(slug)) {
-    return root;
-  }
-
+  if (!slug || isHomePage(slug)) return root;
   return `${root}/${slug}`;
 }
 
@@ -122,11 +114,7 @@ function canonicalUrl({ siteSlug, pageSlug }) {
 
 async function loadPage({ siteSlug, pageSlug }) {
   const slug = normalizePageSlug(pageSlug);
-
-  if (isHomePage(slug)) {
-    return publicSiteApi.getHome(siteSlug);
-  }
-
+  if (isHomePage(slug)) return publicSiteApi.getHome(siteSlug);
   return publicSiteApi.getPage(siteSlug, slug);
 }
 
@@ -136,179 +124,95 @@ function metadataImages(image) {
 
 export async function generateMetadata({ params }) {
   const resolved = await params;
-
   if ((resolved.pageSlug?.length || 0) > 1) {
-    return {
-      robots: {
-        index: false,
-        follow: false,
-      },
-    };
+    return { robots: { index: false, follow: false } };
   }
-
   const pageSlug = resolved.pageSlug?.[0] || "";
-
   if (isAliasPage(pageSlug)) {
     return {
-      alternates: {
-        canonical: canonicalUrl({
-          siteSlug: resolved.siteSlug,
-          pageSlug,
-        }),
-      },
-      robots: {
-        index: false,
-        follow: true,
-      },
+      alternates: { canonical: canonicalUrl({ siteSlug: resolved.siteSlug, pageSlug }) },
+      robots: { index: false, follow: true },
     };
   }
-
   try {
     const [site, page, runtime] = await Promise.all([
       publicSiteApi.getSite(resolved.siteSlug),
-      loadPage({
-        siteSlug: resolved.siteSlug,
-        pageSlug,
-      }),
+      loadPage({ siteSlug: resolved.siteSlug, pageSlug }),
       fetchPublicBrandLegalRuntime(resolved.siteSlug),
     ]);
-
-    const canonical = canonicalUrl({
-      siteSlug: resolved.siteSlug,
-      pageSlug,
-    });
-    const localSeo = buildLocalPageSeo({
-      site,
-      page,
-      pageSlug,
-    });
+    const canonical = canonicalUrl({ siteSlug: resolved.siteSlug, pageSlug });
+    const localSeo = buildLocalPageSeo({ site, page, pageSlug });
     const title = localSeo.title;
     const description = localSeo.description;
     const legalPage = isLegalPage(pageSlug, page);
     const images = metadataImages(localSeo.image);
-
-    return mergePublicMetadata(
-      {
-        title,
-        description,
-        alternates: {
-          canonical,
-        },
-        robots: {
+    return mergePublicMetadata({
+      title,
+      description,
+      alternates: { canonical },
+      robots: {
+        index: !legalPage,
+        follow: true,
+        googleBot: {
           index: !legalPage,
           follow: true,
-          googleBot: {
-            index: !legalPage,
-            follow: true,
-            "max-image-preview": "large",
-            "max-snippet": -1,
-          },
-        },
-        openGraph: {
-          title,
-          description,
-          url: canonical,
-          type: "website",
-          locale: "fr_FR",
-          siteName: site.name || "Mondescale Voyages",
-          images,
-        },
-        twitter: {
-          card: localSeo.image ? "summary_large_image" : "summary",
-          title,
-          description,
-          images: localSeo.image ? [localSeo.image] : undefined,
+          "max-image-preview": "large",
+          "max-snippet": -1,
         },
       },
-      runtime
-    );
+      openGraph: {
+        title,
+        description,
+        url: canonical,
+        type: "website",
+        locale: "fr_FR",
+        siteName: site.name || "Mondescale Voyages",
+        images,
+      },
+      twitter: {
+        card: localSeo.image ? "summary_large_image" : "summary",
+        title,
+        description,
+        images: localSeo.image ? [localSeo.image] : undefined,
+      },
+    }, runtime);
   } catch (error) {
-    if (error?.statusCode === 404) {
-      return {
-        robots: {
-          index: false,
-          follow: false,
-        },
-      };
-    }
-
+    if (error?.statusCode === 404) return { robots: { index: false, follow: false } };
     throw error;
   }
 }
 
 export default async function AgencySitePage({ params }) {
   const resolved = await params;
-
-  if ((resolved.pageSlug?.length || 0) > 1) {
-    notFound();
-  }
-
+  if ((resolved.pageSlug?.length || 0) > 1) notFound();
   const pageSlug = resolved.pageSlug?.[0] || "";
-
   if (isAliasPage(pageSlug)) {
-    permanentRedirect(
-      canonicalPath({
-        siteSlug: resolved.siteSlug,
-        pageSlug,
-      })
-    );
+    permanentRedirect(canonicalPath({ siteSlug: resolved.siteSlug, pageSlug }));
   }
 
   let site;
   let page;
-
   try {
     [site, page] = await Promise.all([
       publicSiteApi.getSite(resolved.siteSlug),
-      loadPage({
-        siteSlug: resolved.siteSlug,
-        pageSlug,
-      }),
+      loadPage({ siteSlug: resolved.siteSlug, pageSlug }),
     ]);
   } catch (error) {
-    if (error?.statusCode === 404) {
-      notFound();
-    }
-
+    if (error?.statusCode === 404) notFound();
     throw error;
   }
+  if (!site || !page) notFound();
 
-  if (!site || !page) {
-    notFound();
-  }
-
-  const homeUrl = canonicalUrl({
-    siteSlug: resolved.siteSlug,
-    pageSlug: "",
-  });
-  const currentUrl = canonicalUrl({
-    siteSlug: resolved.siteSlug,
-    pageSlug,
-  });
-  const localSeo = buildLocalPageSeo({
-    site,
-    page,
-    pageSlug,
-  });
-  const breadcrumbItems = [
-    {
-      name: "Accueil",
-      path: homeUrl,
-    },
-  ];
-
-  if (currentUrl !== homeUrl) {
-    breadcrumbItems.push({
-      name: page.title,
-      path: currentUrl,
-    });
-  }
+  const homeUrl = canonicalUrl({ siteSlug: resolved.siteSlug, pageSlug: "" });
+  const currentUrl = canonicalUrl({ siteSlug: resolved.siteSlug, pageSlug });
+  const localSeo = buildLocalPageSeo({ site, page, pageSlug });
+  const quality = assessLocalContentQuality({ site, page });
+  const breadcrumbItems = [{ name: "Accueil", path: homeUrl }];
+  if (currentUrl !== homeUrl) breadcrumbItems.push({ name: page.title, path: currentUrl });
 
   const legalPage = isLegalPage(pageSlug, page);
   const servicesPage = isServicesPage(pageSlug, page);
-  const serviceCatalog = servicesPage
-    ? buildServiceCatalogSchema(site, page)
-    : null;
+  const serviceCatalog = servicesPage ? buildServiceCatalogSchema(site, page) : null;
   const faqSchema = legalPage ? null : buildPageFaqSchema(page);
   const webPageSchema = buildLocalWebPageSchema({
     site,
@@ -319,7 +223,6 @@ export default async function AgencySitePage({ params }) {
   });
   const needsFallbackHeading = !legalPage && !pageHasHero(page);
   let legalRuntimeHtml = null;
-
   if (legalPage) {
     const runtime = await fetchPublicBrandLegalRuntime(resolved.siteSlug);
     legalRuntimeHtml = resolveLegalPageHtml(pageSlug, runtime);
@@ -333,12 +236,12 @@ export default async function AgencySitePage({ params }) {
       {serviceCatalog ? <JsonLd data={serviceCatalog} /> : null}
       {faqSchema ? <JsonLd data={faqSchema} /> : null}
 
-      <div data-public-page-kind={legalPage ? "legal" : "content"}>
+      <div
+        data-public-page-kind={legalPage ? "legal" : "content"}
+        data-content-quality={quality.thin ? "thin" : quality.strong ? "strong" : "standard"}
+      >
         {legalPage && legalRuntimeHtml ? (
-          <LegalRuntimeDocument
-            title={page.title}
-            html={legalRuntimeHtml}
-          />
+          <LegalRuntimeDocument title={page.title} html={legalRuntimeHtml} />
         ) : (
           <>
             {needsFallbackHeading ? (
@@ -349,17 +252,14 @@ export default async function AgencySitePage({ params }) {
                 </div>
               </section>
             ) : null}
-            <PublicSiteSections
-              site={site}
-              page={page}
-            />
+            <PublicSiteSections site={site} page={page} />
           </>
         )}
 
-        {!legalPage && isHomePage(pageSlug) ? (
-          <LocalSeoAreaLinks site={site} />
+        {!legalPage && isHomePage(pageSlug) ? <LocalSeoAreaLinks site={site} /> : null}
+        {!legalPage && !isHomePage(pageSlug) ? (
+          <LocalContentContext site={site} kind={localSeo.kind} quality={quality} />
         ) : null}
-
         {legalPage ? <LegalJourneyCta site={site} /> : null}
       </div>
     </>
