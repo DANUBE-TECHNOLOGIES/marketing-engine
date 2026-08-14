@@ -10,6 +10,7 @@ function number(value, digits = 0) { return Number(value || 0).toLocaleString("f
 function pagePrefixFromSitemap(url) { return String(url || "").replace(/\/sitemap\.xml(?:\?.*)?$/i, ""); }
 function deltaText(value, formatter = (v) => number(v)) { const n = Number(value || 0); return `${n > 0 ? "+" : ""}${formatter(n)}`; }
 function deltaClass(value) { const n = Number(value || 0); return n > 0 ? "performance-delta-up" : n < 0 ? "performance-delta-down" : "performance-delta-flat"; }
+function priorityLabel(priority) { return priority === "high" ? "Priorité haute" : priority === "medium" ? "Priorité moyenne" : "À surveiller"; }
 
 export default function SearchPerformanceClient() {
   const [candidates, setCandidates] = useState({ sites: [] });
@@ -66,26 +67,24 @@ export default function SearchPerformanceClient() {
 
   const availableProperties = asArray(properties?.properties);
   const rows = asArray(performance?.rows);
-  const opportunities = dimension === "query"
-    ? rows.filter((row) => row.impressions >= 20 && row.position >= 4 && row.position <= 20).sort((a, b) => b.impressions - a.impressions).slice(0, 8)
-    : [];
+  const opportunities = dimension === "query" ? asArray(performance?.opportunities).slice(0, 8) : [];
 
   return (
     <main className="indexation-shell">
       <header className="indexation-hero">
         <div>
-          <p className="indexation-eyebrow">MSE-25.20 · Feedback SEO</p>
+          <p className="indexation-eyebrow">MSE-25.21 · Priorisation SEO</p>
           <h1>Performance organique des mini-sites</h1>
-          <p>Mesurez ce que Google génère réellement après indexation : clics, impressions, CTR, position et principales requêtes ou pages.</p>
+          <p>Mesurez ce que Google génère réellement puis priorisez les requêtes à travailler selon leur potentiel, sans modification éditoriale automatique.</p>
         </div>
         <Link className="indexation-nav-link" href="/indexation">Retour au cockpit</Link>
       </header>
 
       <section className="indexation-controls performance-controls">
-        <label><span>Propriété Search Console</span><select value={siteUrl} onChange={(event) => setSiteUrl(event.target.value)}><option value="">Choisir</option>{availableProperties.map((property) => <option key={property.siteUrl} value={property.siteUrl}>{property.siteUrl}{property.permissionLevel ? ` · ${property.permissionLevel}` : ""}</option>)}</select></label>
+        <label><span>Propriété Search Console</span><select value={siteUrl} onChange={(event) => { setSiteUrl(event.target.value); setPerformance(null); }}><option value="">Choisir</option>{availableProperties.map((property) => <option key={property.siteUrl} value={property.siteUrl}>{property.siteUrl}{property.permissionLevel ? ` · ${property.permissionLevel}` : ""}</option>)}</select></label>
         <label><span>Mini-site</span><select value={siteSlug} onChange={(event) => { setSiteSlug(event.target.value); setPerformance(null); }}><option value="">Choisir</option>{asArray(candidates?.sites).map((site) => <option key={site.siteSlug} value={site.siteSlug}>{site.siteName || site.agencyName || site.siteSlug}</option>)}</select></label>
-        <label><span>Période</span><select value={days} onChange={(event) => setDays(event.target.value)}><option value="7">7 jours</option><option value="28">28 jours</option><option value="90">90 jours</option></select></label>
-        <label><span>Détail</span><select value={dimension} onChange={(event) => setDimension(event.target.value)}><option value="query">Requêtes</option><option value="page">Pages</option></select></label>
+        <label><span>Période</span><select value={days} onChange={(event) => { setDays(event.target.value); setPerformance(null); }}><option value="7">7 jours</option><option value="28">28 jours</option><option value="90">90 jours</option></select></label>
+        <label><span>Détail</span><select value={dimension} onChange={(event) => { setDimension(event.target.value); setPerformance(null); }}><option value="query">Requêtes</option><option value="page">Pages</option></select></label>
       </section>
 
       <div className="indexation-actions"><button type="button" onClick={loadPerformance} disabled={loading || busy || !siteUrl || !selectedSite}>{busy ? "Lecture Search Console…" : "Charger les performances"}</button></div>
@@ -99,7 +98,7 @@ export default function SearchPerformanceClient() {
           <div className="indexation-metric"><strong>{number(performance.totals?.position, 1)}</strong><span>position moyenne</span><small className={deltaClass(performance.delta?.position)}>{deltaText(performance.delta?.position, (v) => number(v, 1))} positions gagnées</small></div>
         </section>
 
-        {opportunities.length ? <section className="indexation-card performance-opportunities"><div className="indexation-card-head"><div><h2>Opportunités SEO prioritaires</h2><p>Requêtes avec au moins 20 impressions et une position moyenne comprise entre 4 et 20.</p></div></div><div className="opportunity-grid">{opportunities.map((row) => <div key={row.dimensions.query} className="opportunity-card"><strong>{row.dimensions.query}</strong><span>{number(row.impressions)} impressions · position {number(row.position, 1)} · CTR {percent(row.ctr)}</span><small>Potentiel : renforcer contenu local, title/meta et maillage interne.</small></div>)}</div></section> : null}
+        {opportunities.length ? <section className="indexation-card performance-opportunities"><div className="indexation-card-head"><div><h2>Opportunités SEO priorisées</h2><p>Score sur 100 calculé côté backend à partir des impressions, de la position et du potentiel CTR. Aucune action n’est appliquée automatiquement.</p></div></div><div className="opportunity-grid">{opportunities.map((opportunity) => <div key={opportunity.query} className="opportunity-card"><strong>{opportunity.query}</strong><span>{priorityLabel(opportunity.priority)} · score {number(opportunity.score)}/100</span><span>{number(opportunity.impressions)} impressions · position {number(opportunity.position, 1)} · CTR {percent(opportunity.ctr)}</span><small><b>{opportunity.action?.label || "À analyser"}</b> — {opportunity.action?.rationale || "Analyser le contenu et le maillage de la page cible."}</small></div>)}</div></section> : null}
 
         <section className="indexation-card performance-table-card">
           <div className="indexation-card-head"><div><h2>{dimension === "query" ? "Principales requêtes" : "Pages les plus visibles"}</h2><p>{performance.startDate} → {performance.endDate} · comparaison {performance.previousStartDate} → {performance.previousEndDate} · {performance.rowCount} lignes retournées</p></div></div>
