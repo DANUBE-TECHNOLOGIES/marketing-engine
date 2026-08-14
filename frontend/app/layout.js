@@ -25,12 +25,13 @@ export default function RootLayout({ children }) {
               <a href="/brand-studio" className="hover:underline">Brand Studio</a>
               <a href="/agencies" className="hover:underline">Agences</a>
               <a href="/directories" className="hover:underline">Annuaires</a>
-<a href="/reviews" className="hover:underline">Avis Google</a>
-<a href="/review-requests" className="hover:underline">Demandes avis</a>
+              <a href="/reviews" className="hover:underline">Avis Google</a>
+              <a href="/review-requests" className="hover:underline">Demandes avis</a>
               <a href="/progress" className="hover:underline">Progression</a>
-<a href="/direction" className="hover:underline">Direction</a>
-<a href="/notifications" className="hover:underline">Notifications</a>
-<a href="/google-posts" className="hover:underline">Google Posts</a>
+              <a href="/direction" className="hover:underline">Direction</a>
+              <a href="/notifications" className="hover:underline">Notifications</a>
+              <a href="/google-posts" className="hover:underline">Google Posts</a>
+              <a href="/indexation" className="hover:underline">Indexation</a>
               <a href="/system" className="hover:underline">Système</a>
             </div>
           </div>
