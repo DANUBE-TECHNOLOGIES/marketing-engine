@@ -1,3 +1,4 @@
+import styles from "./PartnerLogosBlock.module.css";
 import { getSectionContent, normalizeItems } from "../shared/blockUtils";
 import { getCommonPartners } from "../shared/commonPartners";
 
@@ -21,14 +22,15 @@ export default function PartnerLogosBlock({ section }) {
     .filter(Boolean)
     .slice(0, 3);
   const partners = [...getCommonPartners(), ...contextual];
+  const headingId = `partners-${section?.id || "common"}`;
 
   return (
-    <section className="as-section as-partners" aria-labelledby={`partners-${section?.id || "common"}`}>
+    <section className={`as-section ${styles.section}`} aria-labelledby={headingId}>
       <div className="as-shell">
-        <div className="as-section-heading as-partners-heading">
+        <div className={`as-section-heading ${styles.heading}`}>
           <div>
-            <p className="as-eyebrow as-partners-eyebrow">Nos partenaires voyagistes</p>
-            <h2 id={`partners-${section?.id || "common"}`}>
+            <p className={`as-eyebrow ${styles.eyebrow}`}>Nos partenaires voyagistes</p>
+            <h2 id={headingId}>
               {content.title || "Les plus grands voyagistes, un seul conseiller"}
             </h2>
           </div>
@@ -37,9 +39,9 @@ export default function PartnerLogosBlock({ section }) {
           </p>
         </div>
 
-        <div className="as-partner-grid" role="list" aria-label="Partenaires voyagistes Mondescale">
+        <div className={styles.grid} role="list" aria-label="Partenaires voyagistes Mondescale">
           {partners.map((partner) => (
-            <div className="as-partner-logo" role="listitem" key={partner.id} title={partner.name}>
+            <div className={styles.logo} role="listitem" key={partner.id} title={partner.name}>
               <img
                 src={partner.logo}
                 alt={partner.alt}
