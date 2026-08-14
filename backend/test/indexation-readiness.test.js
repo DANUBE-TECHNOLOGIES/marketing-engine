@@ -19,6 +19,7 @@ function sitemapFixture() {
     ],
     excluded: [
       { siteSlug: "gien", pageSlug: "engagements", reason: "critically-thin-content" },
+      { siteSlug: "draft-agency", reason: "site-not-published" },
     ],
     crawlability: {
       orphanEntries: [],
@@ -54,12 +55,13 @@ test("orphaned entries block sitemap submission for the affected minisite", () =
   assert.ok(readiness.blockers.includes("orphaned-indexable-entries"));
 });
 
-test("network readiness aggregates ready and blocked minisites", () => {
+test("network readiness aggregates only published indexation candidates", () => {
   const result = attachIndexationReadiness(sitemapFixture());
   assert.equal(result.indexationReadiness.siteCount, 2);
   assert.equal(result.indexationReadiness.readySites, 1);
   assert.equal(result.indexationReadiness.blockedSites, 1);
   assert.equal(result.indexationReadiness.readyToSubmit, false);
+  assert.equal(result.indexationReadiness.sites.some((item) => item.siteSlug === "draft-agency"), false);
   assert.equal(result.summary.indexationReadySites, 1);
   assert.equal(result.summary.indexationBlockedSites, 1);
 });
