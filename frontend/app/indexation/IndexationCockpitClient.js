@@ -116,7 +116,41 @@ export default function IndexationCockpitClient() {
   };
 
   useEffect(() => {
-    load();
+    let cancelled = false;
+
+    Promise.allSettled([
+      indexationApi.health(),
+      indexationApi.candidates(),
+      indexationApi.history({ limit: 100 }),
+      indexationApi.properties(),
+    ]).then(([healthResult, candidatesResult, historyResult, propertiesResult]) => {
+      if (cancelled) return;
+
+      if (healthResult.status === "fulfilled") setHealth(healthResult.value);
+      if (candidatesResult.status === "fulfilled") setCandidates(candidatesResult.value || { sites: [] });
+      if (historyResult.status === "fulfilled") setHistory(historyResult.value || { runs: [] });
+
+      if (propertiesResult.status === "fulfilled") {
+        const nextProperties = propertiesResult.value || { properties: [] };
+        setProperties(nextProperties);
+        const owner = asArray(nextProperties.properties).find(
+          (property) => property.eligibleForSitemapSubmission === true
+        );
+        if (owner?.siteUrl) setSiteUrl(owner.siteUrl);
+      } else {
+        setProperties({ properties: [] });
+      }
+
+      if (candidatesResult.status === "rejected") {
+        setError(candidatesResult.reason?.message || "Impossible de charger les candidats à l’indexation.");
+      }
+
+      setLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const latestRuns = useMemo(
