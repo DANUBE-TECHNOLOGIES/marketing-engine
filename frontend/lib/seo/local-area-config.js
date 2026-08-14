@@ -39,18 +39,18 @@ const LOCAL_AREA_BY_SITE_SLUG = Object.freeze({
     "Challuy",
   ],
   "ambassade-fram-mondescale-ozoir-la-ferriere": [
+    "Pontault-Combault",
     "Roissy-en-Brie",
     "Gretz-Armainvilliers",
     "Tournan-en-Brie",
     "Lésigny",
-    "Férolles-Attilly",
   ],
   "mondescale-lamorlaye": [
+    "Chantilly",
     "Gouvieux",
     "Coye-la-Forêt",
     "Chaumontel",
-    "Asnières-sur-Oise",
-    "Viarmes",
+    "Orry-la-Ville",
   ],
 });
 
