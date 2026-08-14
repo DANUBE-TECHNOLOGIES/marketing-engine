@@ -11,6 +11,9 @@ import {
 import {
   buildLocalPageSeo,
 } from "../../../../lib/seo/local-page-seo";
+import {
+  resolvedTargetCities,
+} from "../../../../lib/seo/local-area-config";
 
 const PUBLIC_ORIGIN = String(
   process.env.NEXT_PUBLIC_SITE_ORIGIN ||
@@ -46,6 +49,25 @@ function inspirationSeo(site) {
     },
     pageSlug: "inspiration",
   });
+}
+
+function inspirationHeading(site) {
+  const city = String(site?.agency?.city || site?.city || "").trim();
+  return city
+    ? `Inspirations voyage depuis ${city}`
+    : "Inspirations voyage";
+}
+
+function inspirationIntroduction(site) {
+  const city = String(site?.agency?.city || site?.city || "").trim();
+  const nearby = resolvedTargetCities(site, { limit: 3 });
+  const local = city
+    ? `Des idées de destinations, des conseils et des expériences sélectionnés par votre agence ${site.name} à ${city} pour préparer votre prochain voyage.`
+    : `Des idées de destinations, des conseils et des expériences sélectionnés par votre agence ${site.name} pour préparer votre prochain voyage.`;
+
+  return nearby.length
+    ? `${local} Notre équipe accompagne aussi les voyageurs de ${nearby.join(", ")}.`
+    : local;
 }
 
 export async function generateMetadata({ params }) {
@@ -116,6 +138,8 @@ export default async function InspirationIndexPage({ params }) {
   const canonical = `${PUBLIC_ORIGIN}${canonicalPath(siteSlug)}`;
   const homePath = `/agence/${encodeURIComponent(siteSlug)}`;
   const contactPath = `${homePath}/contact`;
+  const servicesPath = `${homePath}/services`;
+  const destinationsPath = `${homePath}/destinations`;
   const seo = inspirationSeo(site);
   const breadcrumb = buildBreadcrumbSchema([
     { name: "Accueil", path: site.basePath },
@@ -147,11 +171,8 @@ export default async function InspirationIndexPage({ params }) {
           </nav>
 
           <p className="public-site-eyebrow">Idées & conseils</p>
-          <h1>Inspirations voyage</h1>
-          <p>
-            Des idées de destinations, des conseils et des expériences sélectionnés
-            par votre agence {site.name} pour préparer votre prochain voyage.
-          </p>
+          <h1>{inspirationHeading(site)}</h1>
+          <p>{inspirationIntroduction(site)}</p>
         </div>
       </section>
 
@@ -216,6 +237,8 @@ export default async function InspirationIndexPage({ params }) {
 
           <div className="public-site-related-links" aria-label="Liens utiles">
             <Link href={homePath}>Découvrir votre agence {site.name}</Link>
+            <Link href={destinationsPath}>Explorer nos destinations</Link>
+            <Link href={servicesPath}>Découvrir nos services voyage</Link>
             <Link href={contactPath}>Parler de votre projet de voyage</Link>
           </div>
         </div>
@@ -224,4 +247,10 @@ export default async function InspirationIndexPage({ params }) {
   );
 }
 
-export { canonicalPath, formatPublishedDate, inspirationSeo };
+export {
+  canonicalPath,
+  formatPublishedDate,
+  inspirationHeading,
+  inspirationIntroduction,
+  inspirationSeo,
+};
