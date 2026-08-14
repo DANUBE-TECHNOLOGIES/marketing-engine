@@ -9,6 +9,9 @@ const {
 const {
   applyInspirationIndexabilityContract,
 } = require("./inspiration-indexability");
+const {
+  auditSitemapCrawlability,
+} = require("./crawlability-audit");
 const { MiniSiteStructuredDataRepository } = require("./repository");
 
 function normalizePublicOrigin(value) {
@@ -58,6 +61,7 @@ class MiniSiteStructuredDataService {
       destinationSitemap: "localized-per-published-agency-site",
       editorialSitemap: "canonical-agency-only",
       inspirationIndexSitemap: "only-when-public-content-targets-agency",
+      crawlabilityAudit: "discovery-source-and-orphan-detection",
       publicOrigin: this.publicOrigin,
       schemas: ["TravelAgency", "LocalBusiness", "WebSite", "WebPage", "BreadcrumbList", "FAQPage"],
       operations: ["previewNetwork", "previewSitemap", "previewSite"],
@@ -103,7 +107,13 @@ class MiniSiteStructuredDataService {
       publicOrigin: this.publicOrigin,
     });
 
-    return applyInspirationIndexabilityContract(sitemap, sites, inspirations);
+    const indexableSitemap = applyInspirationIndexabilityContract(
+      sitemap,
+      sites,
+      inspirations
+    );
+
+    return auditSitemapCrawlability(indexableSitemap);
   }
 
   async previewNetwork({ tenantId } = {}) {
