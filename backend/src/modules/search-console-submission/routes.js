@@ -12,9 +12,9 @@ function sendError(response, error) {
   });
 }
 
-function routes({ prisma, service } = {}) {
+function routes({ prisma, service, provider } = {}) {
   const router = express.Router();
-  const submissionService = service || new SearchConsoleSubmissionService({ prisma });
+  const submissionService = service || new SearchConsoleSubmissionService({ prisma, provider });
 
   router.get("/search-console-submissions/health", (_request, response) => {
     response.json({
@@ -25,6 +25,20 @@ function routes({ prisma, service } = {}) {
       explicitApprovalRequired: true,
       autoSubmit: false,
     });
+  });
+
+  router.get("/search-console-submissions/properties", async (request, response) => {
+    try {
+      await tenantIdForRequest(prisma, request);
+      const properties = await submissionService.provider.listSites();
+      response.json({
+        provider: submissionService.provider?.name || "unknown",
+        count: properties.length,
+        properties,
+      });
+    } catch (error) {
+      sendError(response, error);
+    }
   });
 
   router.post("/search-console-submissions/prepare", async (request, response) => {
