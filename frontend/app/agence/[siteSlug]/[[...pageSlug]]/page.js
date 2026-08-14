@@ -46,6 +46,9 @@ const LEGAL_PAGE_SLUGS = new Set([
 ]);
 
 const PAGE_ALIASES = Object.freeze({
+  home: "",
+  accueil: "",
+  index: "",
   inspirations: "inspiration",
 });
 
@@ -55,12 +58,14 @@ function normalizePageSlug(value) {
 
 function canonicalPageSlug(value) {
   const slug = normalizePageSlug(value);
-  return PAGE_ALIASES[slug] || slug;
+  return Object.prototype.hasOwnProperty.call(PAGE_ALIASES, slug)
+    ? PAGE_ALIASES[slug]
+    : slug;
 }
 
 function isAliasPage(value) {
   const slug = normalizePageSlug(value);
-  return Boolean(PAGE_ALIASES[slug]);
+  return Object.prototype.hasOwnProperty.call(PAGE_ALIASES, slug);
 }
 
 function isHomePage(pageSlug) {
@@ -85,7 +90,7 @@ function canonicalPath({ siteSlug, pageSlug }) {
   const root = `/agence/${siteSlug}`;
   const slug = canonicalPageSlug(pageSlug);
 
-  if (isHomePage(slug)) {
+  if (!slug || isHomePage(slug)) {
     return root;
   }
 
