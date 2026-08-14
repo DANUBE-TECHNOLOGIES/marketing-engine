@@ -4,6 +4,10 @@ const {
   Prisma,
 } = require("@prisma/client");
 
+const {
+  hydrateGalleryMediaAssets,
+} = require("./gallery-media-hydrator");
+
 function fieldsFor(modelName) {
   const model = Prisma.dmmf.datamodel.models.find((entry) => entry.name === modelName);
   return new Set(model?.fields.map((field) => field.name) || []);
@@ -324,7 +328,15 @@ class PublicSiteReadService {
     const pages = Array.isArray(site.pages) ? site.pages.map(normalizePage) : [];
     const visiblePagesRaw = pages.filter((page) => page.published);
     const tenantId = site.tenantId ?? site.agency?.tenantId ?? null;
-    const visiblePages = await this.enrichDestinations(visiblePagesRaw, tenantId);
+    const destinationEnrichedPages = await this.enrichDestinations(
+      visiblePagesRaw,
+      tenantId
+    );
+    const visiblePages = await hydrateGalleryMediaAssets({
+      prisma: this.prisma,
+      tenantId,
+      pages: destinationEnrichedPages,
+    });
     const homePage = visiblePages.find((page) =>
       page.slug === "" || ["accueil", "home"].includes(String(page.slug || "").toLowerCase())
     ) || visiblePages[0] || null;
