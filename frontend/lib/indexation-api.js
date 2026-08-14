@@ -48,6 +48,7 @@ export const indexationApi = Object.freeze({
   candidates: () => read("candidates"),
   history: (params = {}) => read("history", params),
   properties: () => read("properties"),
+  status: ({ siteSlug, siteUrl }) => read("status", { siteSlug, siteUrl }),
   preflight: ({ siteSlug, siteUrl }) =>
     action("preflight", { siteSlug, siteUrl }),
   prepare: ({ siteSlug, siteUrl, sitemapUrl, requestedBy }) =>
