@@ -63,6 +63,24 @@ test("MSE-25.17 requires a successful preflight before preparation", () => {
   assert.match(source, /Aucune donnée n’a été envoyée à Google/);
 });
 
+test("MSE-25.17 failed submissions restart with a fresh preflight", () => {
+  const source = read("app/indexation/IndexationCockpitClient.js");
+
+  assert.match(source, /run\.status === ["']failed["']/);
+  assert.match(source, /canStartFreshCycle/);
+  assert.match(source, /Relancer le préflight/);
+  assert.match(source, /Un nouveau préflight est obligatoire/);
+  assert.match(source, /Préparer une nouvelle soumission/);
+  assert.doesNotMatch(source, /run\?\.status === ["']failed["'][\s\S]{0,300}submit\(site, run\)/);
+});
+
+test("MSE-25.17 cockpit is exposed in the internal navigation", () => {
+  const layout = read("app/layout.js");
+
+  assert.match(layout, /href=["']\/indexation["']/);
+  assert.match(layout, />Indexation</);
+});
+
 test("MSE-25.17 page is an internal noindex operations screen", () => {
   const page = read("app/indexation/page.js");
   const css = read("app/indexation/indexation.css");
