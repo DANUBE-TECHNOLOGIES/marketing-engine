@@ -11,6 +11,7 @@ import LegalJourneyCta from "../../../../components/public-site/LegalJourneyCta"
 import LegalRuntimeDocument from "../../../../components/public-site/LegalRuntimeDocument";
 import LocalContentContext from "../../../../components/public-site/LocalContentContext";
 import LocalSeoAreaLinks from "../../../../components/public-site/LocalSeoAreaLinks";
+import PublicBreadcrumbs from "../../../../components/public-site/PublicBreadcrumbs";
 import PublicSiteSections from "../../../../components/public-site/PublicSiteSections";
 
 import JsonLd from "../../../../components/JsonLd";
@@ -32,6 +33,7 @@ import { assessLocalContentQuality } from "../../../../lib/seo/local-content-qua
 import {
   buildLocalPageSeo,
 } from "../../../../lib/seo/local-page-seo";
+import { absoluteUrl } from "../../../../lib/seo/site-url";
 
 const PUBLIC_ORIGIN = String(
   process.env.NEXT_PUBLIC_SITE_ORIGIN ||
@@ -118,8 +120,13 @@ async function loadPage({ siteSlug, pageSlug }) {
   return publicSiteApi.getPage(siteSlug, slug);
 }
 
+function absoluteMetadataImage(image) {
+  return image ? absoluteUrl(image) : null;
+}
+
 function metadataImages(image) {
-  return image ? [{ url: image }] : undefined;
+  const url = absoluteMetadataImage(image);
+  return url ? [{ url }] : undefined;
 }
 
 export async function generateMetadata({ params }) {
@@ -145,6 +152,7 @@ export async function generateMetadata({ params }) {
     const title = localSeo.title;
     const description = localSeo.description;
     const legalPage = isLegalPage(pageSlug, page);
+    const socialImage = absoluteMetadataImage(localSeo.image);
     const images = metadataImages(localSeo.image);
     return mergePublicMetadata({
       title,
@@ -158,6 +166,7 @@ export async function generateMetadata({ params }) {
           follow: true,
           "max-image-preview": "large",
           "max-snippet": -1,
+          "max-video-preview": -1,
         },
       },
       openGraph: {
@@ -170,10 +179,10 @@ export async function generateMetadata({ params }) {
         images,
       },
       twitter: {
-        card: localSeo.image ? "summary_large_image" : "summary",
+        card: socialImage ? "summary_large_image" : "summary",
         title,
         description,
-        images: localSeo.image ? [localSeo.image] : undefined,
+        images: socialImage ? [socialImage] : undefined,
       },
     }, runtime);
   } catch (error) {
@@ -203,12 +212,18 @@ export default async function AgencySitePage({ params }) {
   }
   if (!site || !page) notFound();
 
+  const homePath = canonicalPath({ siteSlug: resolved.siteSlug, pageSlug: "" });
+  const currentPath = canonicalPath({ siteSlug: resolved.siteSlug, pageSlug });
   const homeUrl = canonicalUrl({ siteSlug: resolved.siteSlug, pageSlug: "" });
   const currentUrl = canonicalUrl({ siteSlug: resolved.siteSlug, pageSlug });
   const localSeo = buildLocalPageSeo({ site, page, pageSlug });
   const quality = assessLocalContentQuality({ site, page });
   const breadcrumbItems = [{ name: "Accueil", path: homeUrl }];
-  if (currentUrl !== homeUrl) breadcrumbItems.push({ name: page.title, path: currentUrl });
+  const visibleBreadcrumbItems = [{ name: `Agence ${site?.agency?.city || site?.city || site.name}`, href: homePath }];
+  if (currentUrl !== homeUrl) {
+    breadcrumbItems.push({ name: page.title, path: currentUrl });
+    visibleBreadcrumbItems.push({ name: page.title || localSeo.heading, href: currentPath });
+  }
 
   const legalPage = isLegalPage(pageSlug, page);
   const servicesPage = isServicesPage(pageSlug, page);
@@ -220,6 +235,7 @@ export default async function AgencySitePage({ params }) {
     url: currentUrl,
     title: localSeo.title,
     description: localSeo.description,
+    image: localSeo.image,
   });
   const needsFallbackHeading = !legalPage && !pageHasHero(page);
   let legalRuntimeHtml = null;
@@ -240,6 +256,8 @@ export default async function AgencySitePage({ params }) {
         data-public-page-kind={legalPage ? "legal" : "content"}
         data-content-quality={quality.thin ? "thin" : quality.strong ? "strong" : "standard"}
       >
+        {!isHomePage(pageSlug) ? <PublicBreadcrumbs items={visibleBreadcrumbItems} /> : null}
+
         {legalPage && legalRuntimeHtml ? (
           <LegalRuntimeDocument title={page.title} html={legalRuntimeHtml} />
         ) : (
@@ -268,6 +286,7 @@ export default async function AgencySitePage({ params }) {
 
 export {
   PAGE_ALIASES,
+  absoluteMetadataImage,
   canonicalPageSlug,
   canonicalPath,
   canonicalUrl,
