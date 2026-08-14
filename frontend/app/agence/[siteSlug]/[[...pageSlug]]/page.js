@@ -150,9 +150,11 @@ export async function generateMetadata({ params }) {
     ]);
     const canonical = canonicalUrl({ siteSlug: resolved.siteSlug, pageSlug });
     const localSeo = buildLocalPageSeo({ site, page, pageSlug });
+    const quality = assessLocalContentQuality({ site, page });
     const title = localSeo.title;
     const description = localSeo.description;
     const legalPage = isLegalPage(pageSlug, page);
+    const indexable = !legalPage && !quality.criticallyThin;
     const socialImage = absoluteMetadataImage(localSeo.image);
     const images = metadataImages(localSeo.image);
     return mergePublicMetadata({
@@ -160,10 +162,10 @@ export async function generateMetadata({ params }) {
       description,
       alternates: { canonical },
       robots: {
-        index: !legalPage,
+        index: indexable,
         follow: true,
         googleBot: {
-          index: !legalPage,
+          index: indexable,
           follow: true,
           "max-image-preview": "large",
           "max-snippet": -1,
@@ -257,7 +259,7 @@ export default async function AgencySitePage({ params }) {
 
       <div
         data-public-page-kind={legalPage ? "legal" : "content"}
-        data-content-quality={quality.thin ? "thin" : quality.strong ? "strong" : "standard"}
+        data-content-quality={quality.criticallyThin ? "critical" : quality.thin ? "thin" : quality.strong ? "strong" : "standard"}
       >
         {!isHomePage(pageSlug) ? <PublicBreadcrumbs items={visibleBreadcrumbItems} /> : null}
 
