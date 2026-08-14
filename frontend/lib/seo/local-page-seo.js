@@ -137,6 +137,37 @@ function titleForKind({ kind, city, brand, pageTitle }) {
   }
 }
 
+function headingForKind({ kind, city, pageTitle }) {
+  if (!city) return pageTitle || "Votre agence de voyages";
+
+  switch (kind) {
+    case "home":
+      return `Agence de voyages à ${city}`;
+    case "agency":
+      return `Votre agence de voyages à ${city}`;
+    case "team":
+      return `Votre équipe de conseillers voyage à ${city}`;
+    case "services":
+      return `Services de votre agence de voyages à ${city}`;
+    case "destinations":
+      return `Destinations et voyages depuis ${city}`;
+    case "inspirations":
+      return `Inspirations voyage depuis ${city}`;
+    case "offers":
+      return `Offres de voyages au départ de ${city}`;
+    case "reviews":
+      return `Avis clients de votre agence de voyages à ${city}`;
+    case "commitments":
+      return `Les engagements de votre agence à ${city}`;
+    case "partners":
+      return `Les partenaires de votre agence de voyages à ${city}`;
+    case "contact":
+      return `Contacter votre agence de voyages à ${city}`;
+    default:
+      return pageTitle ? `${pageTitle} à ${city}` : `Agence de voyages à ${city}`;
+  }
+}
+
 function descriptionForKind({ kind, site, page }) {
   const city = localCity(site);
   const brand = brandLabel(site);
@@ -231,6 +262,7 @@ export function buildLocalPageSeo({ site, page, pageSlug }) {
     kind,
     city,
     brand,
+    heading: headingForKind({ kind, city, pageTitle }),
     title: preferLocalOverride(page?.seoTitle, site, generatedTitle),
     description: preferLocalOverride(
       page?.metaDescription || page?.seoDescription,
@@ -248,6 +280,7 @@ export {
   brandLabel,
   containsLocalSignal,
   extractPageImage,
+  headingForKind,
   localCity,
   pageKind,
   preferLocalOverride,
