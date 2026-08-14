@@ -188,6 +188,37 @@ class SearchConsoleSubmissionService {
     }
   }
 
+  async candidates({ tenantId } = {}) {
+    const sitemap = await this.structuredDataService.previewSitemap({ tenantId });
+    const readinessSites = Array.isArray(sitemap?.indexationReadiness?.sites)
+      ? sitemap.indexationReadiness.sites
+      : [];
+    const sites = readinessSites.map((item) => ({
+      ...item,
+      sitemapUrl: siteSitemapPublicUrl(this.structuredDataService.publicOrigin, item.siteSlug),
+    }));
+    return {
+      provider: this.provider?.name || "unknown",
+      providerConfigured: this.provider?.isConfigured?.() === true,
+      count: sites.length,
+      readyCount: sites.filter((item) => item.readyToSubmit === true).length,
+      blockedCount: sites.filter((item) => item.readyToSubmit !== true).length,
+      sites,
+    };
+  }
+
+  async list({ tenantId, status, limit = 50 } = {}) {
+    const runs = await this.repository(tenantId).listRuns({
+      status: String(status || "").trim() || undefined,
+      mode: MODE,
+      limit,
+    });
+    return {
+      count: runs.length,
+      runs,
+    };
+  }
+
   async get({ tenantId, runId } = {}) {
     return this.repository(tenantId).getRun(runId);
   }
