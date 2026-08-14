@@ -6,6 +6,11 @@ import {
   getSectionTitle,
 } from "./helpers";
 
+function siteRoot(site) {
+  return String(site?.basePath || `/agence/${encodeURIComponent(site?.slug || "")}`)
+    .replace(/\/$/, "");
+}
+
 function inspirationHref(site, item) {
   if (!site?.slug || !item?.slug) return null;
   return `/agence/${encodeURIComponent(site.slug)}/inspiration/${encodeURIComponent(item.slug)}`;
@@ -37,6 +42,8 @@ export default function InspirationsRenderer({
     "articles",
     "inspirations",
   ]);
+  const root = siteRoot(site);
+  const city = String(site?.agency?.city || site?.city || "").trim();
 
   if (!items.length && content.showWhenEmpty !== true) {
     return null;
@@ -52,12 +59,16 @@ export default function InspirationsRenderer({
         <h2>
           {getSectionTitle(
             section,
-            "Laissez-vous inspirer"
+            city ? `Conseils voyage de votre agence à ${city}` : "Laissez-vous inspirer"
           )}
         </h2>
 
         {content.text ? (
           <p>{content.text}</p>
+        ) : city ? (
+          <p className="public-site-section-intro">
+            Préparez votre prochain voyage avec les conseils, idées de destinations et sélections de votre agence de voyages à {city}.
+          </p>
         ) : null}
 
         {items.length ? (
@@ -104,6 +115,12 @@ export default function InspirationsRenderer({
             })}
           </div>
         ) : null}
+
+        <nav className="public-site-related-links" aria-label="Explorer les conseils et services de l'agence">
+          <Link href={`${root}/destinations`}>Découvrir les destinations proposées par votre agence</Link>
+          <Link href={`${root}/services`}>Voir les services de votre agence de voyages</Link>
+          <Link href={`${root}/contact`}>{city ? `Contacter votre agence de voyages à ${city}` : "Contacter votre agence de voyages"}</Link>
+        </nav>
       </div>
     </section>
   );
@@ -114,4 +131,5 @@ export {
   inspirationImage,
   inspirationImageAlt,
   inspirationTitle,
+  siteRoot,
 };
