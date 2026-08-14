@@ -8,7 +8,8 @@
     "start": "next start -H 0.0.0.0",
     "lint": "eslint",
     "seo:audit-public": "node scripts/audit-public-seo.mjs",
-    "seo:audit-public:strict": "node scripts/audit-public-seo.mjs --strict=true"
+    "seo:audit-public:strict": "node scripts/audit-public-seo.mjs --strict=true",
+    "seo:recommend-public": "node scripts/recommend-public-seo.mjs"
   },
   "dependencies": {
     "google-auth-library": "10.7.0",
