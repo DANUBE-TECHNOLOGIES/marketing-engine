@@ -40,15 +40,29 @@ test("PARTNERS reçoit un annuaire complet et un CTA sans dupliquer le bloc Home
   );
 });
 
+test("PARTNERS reçoit un SEO éditorial dédié", () => {
+  const page = builder.buildPage(
+    { pageType: "PARTNERS" },
+    agency,
+    site
+  );
+
+  assert.match(page.seo.title, /Tour-opérateurs et partenaires/);
+  assert.match(page.seo.description, /croisiéristes/);
+  assert.equal(page.seo.h1, "Nos partenaires voyage à Testville");
+  assert.equal(page.seo.schemaType, "CollectionPage");
+});
+
 test("PARTENAIRES est accepté comme alias de type de page", () => {
-  const sections = builder.buildSections(
+  const page = builder.buildPage(
     { pageType: "PARTENAIRES" },
     agency,
     site
   );
 
   assert.equal(
-    sections.some((section) => section.sectionType === "partner-directory"),
+    page.sections.some((section) => section.sectionType === "partner-directory"),
     true
   );
+  assert.equal(page.seo.schemaType, "CollectionPage");
 });
