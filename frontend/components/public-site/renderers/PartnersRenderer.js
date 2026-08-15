@@ -3,30 +3,45 @@ import {
   getSectionContent,
   getSectionTitle,
 } from "./helpers";
+import {
+  getCommonPartners,
+} from "../../page-builder/shared/commonPartners";
 
-const spriteWrapStyle = {
+const networkGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
+  gap: "16px",
   marginTop: "28px",
-  padding: "24px 28px",
-  borderRadius: "24px",
-  background: "#fff",
-  boxShadow: "0 18px 46px rgba(7, 29, 48, 0.07)",
 };
 
-const spriteImageStyle = {
-  width: "100%",
-  maxWidth: "1040px",
-  height: "auto",
+const networkCardStyle = {
+  minHeight: "132px",
+  padding: "22px 24px",
+  border: "1px solid rgba(7, 29, 48, 0.07)",
+  borderRadius: "22px",
+  background: "#fff",
+  boxShadow: "0 14px 34px rgba(7, 29, 48, 0.055)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+};
+
+const networkLogoStyle = {
   display: "block",
-  margin: "0 auto",
+  width: "100%",
+  maxWidth: "210px",
+  height: "76px",
   objectFit: "contain",
 };
 
 const agencyWrapStyle = {
-  marginTop: "22px",
+  marginTop: "30px",
+  paddingTop: "22px",
+  borderTop: "1px solid rgba(7, 29, 48, 0.08)",
 };
 
 const agencyLabelStyle = {
-  margin: "0 0 12px",
+  margin: "0 0 14px",
   textAlign: "center",
   fontSize: "0.78rem",
   fontWeight: 700,
@@ -62,57 +77,52 @@ const agencyLogoStyle = {
   objectFit: "contain",
 };
 
-function PartnerGrid({ items, agency = false }) {
-  if (!items.length) return null;
+function normalizeName(value) {
+  return String(value || "")
+    .toLocaleLowerCase("fr-FR")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
 
-  if (agency) {
-    return (
-      <div className="public-site-agency-partners" style={agencyWrapStyle}>
-        <p style={agencyLabelStyle}>Également sélectionnés par votre agence</p>
-        <div className="public-site-agency-partners-grid" style={agencyGridStyle}>
-          {items.map((item, index) => {
-            const logo = item.logo || item.logoUrl || item.imageUrl || null;
-            const name = item.name || item.title || "Partenaire voyage";
+function resolveNetworkItems(sectionItems) {
+  const common = getCommonPartners();
+  const byId = new Map(common.map((item) => [item.id, item]));
+  const byName = new Map(common.map((item) => [normalizeName(item.name), item]));
 
-            return (
-              <div key={item.id || item.name || index} style={agencyCardStyle}>
-                {logo ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={logo}
-                    alt={`Logo ${name}`}
-                    loading="lazy"
-                    decoding="async"
-                    style={agencyLogoStyle}
-                  />
-                ) : (
-                  <strong>{name}</strong>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
+  const resolved = (sectionItems || [])
+    .filter((item) => item?.scope !== "agency")
+    .map((item) => {
+      const match = byId.get(item.id) || byName.get(normalizeName(item.name || item.title));
+      return match ? { ...match, ...item, logoUrl: match.logoUrl, alt: match.alt } : item;
+    });
 
+  return resolved.length ? resolved : common;
+}
+
+function NetworkPartnerGrid({ items }) {
   return (
-    <div className="public-site-partners-grid">
+    <div className="public-site-partners-grid public-site-partners-grid--network" style={networkGridStyle}>
       {items.map((item, index) => {
-        const logo = item.logo || item.logoUrl || item.imageUrl || null;
+        const logo = item.logoUrl || item.logo || item.imageUrl || null;
+        const name = item.name || item.title || "Partenaire voyage";
 
         return (
-          <div key={item.id || item.name || index}>
+          <div key={item.id || name || index} className="public-site-partner-card" style={networkCardStyle}>
             {logo ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={logo}
-                alt={item.name || item.title || ""}
+                alt={item.alt || `Logo ${name}`}
                 loading="lazy"
                 decoding="async"
+                width="600"
+                height="240"
+                style={networkLogoStyle}
               />
             ) : (
-              <strong>{item.name || item.title}</strong>
+              <strong>{name}</strong>
             )}
           </div>
         );
@@ -121,18 +131,48 @@ function PartnerGrid({ items, agency = false }) {
   );
 }
 
+function AgencyPartnerGrid({ items }) {
+  if (!items.length) return null;
+
+  return (
+    <div className="public-site-agency-partners" style={agencyWrapStyle}>
+      <p style={agencyLabelStyle}>Également sélectionnés par votre agence</p>
+      <div className="public-site-agency-partners-grid" style={agencyGridStyle}>
+        {items.map((item, index) => {
+          const logo = item.logo || item.logoUrl || item.imageUrl || null;
+          const name = item.name || item.title || "Partenaire voyage";
+
+          return (
+            <div key={item.id || name || index} style={agencyCardStyle}>
+              {logo ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={logo}
+                  alt={`Logo ${name}`}
+                  loading="lazy"
+                  decoding="async"
+                  style={agencyLogoStyle}
+                />
+              ) : (
+                <strong>{name}</strong>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function PartnersRenderer({ section }) {
   const content = getSectionContent(section);
-  const networkItems = getItems(section, ["items", "partners"])
-    .filter((item) => item?.scope !== "agency");
+  const networkItems = resolveNetworkItems(getItems(section, ["items", "partners"]));
   const agencyItems = Array.isArray(content.agencyPartners)
     ? content.agencyPartners
         .filter((item) => item && (item.name || item.title || item.logo || item.logoUrl || item.imageUrl))
         .slice(0, Number(content.maxAgencyPartners) || 3)
         .map((item) => ({ ...item, scope: "agency" }))
     : [];
-
-  const sprite = content.sprite || content.spriteUrl || null;
 
   return (
     <section className="public-site-section public-site-partners">
@@ -143,28 +183,8 @@ export default function PartnersRenderer({ section }) {
           <p className="public-site-section-intro">{content.text}</p>
         ) : null}
 
-        {sprite ? (
-          <div className="public-site-partners-sprite" style={spriteWrapStyle}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={sprite}
-              alt={
-                content.spriteAlt ||
-                networkItems
-                  .map((item) => item.name || item.title)
-                  .filter(Boolean)
-                  .join(", ")
-              }
-              loading="lazy"
-              decoding="async"
-              style={spriteImageStyle}
-            />
-          </div>
-        ) : (
-          <PartnerGrid items={networkItems} />
-        )}
-
-        <PartnerGrid items={agencyItems} agency />
+        <NetworkPartnerGrid items={networkItems} />
+        <AgencyPartnerGrid items={agencyItems} />
       </div>
     </section>
   );
