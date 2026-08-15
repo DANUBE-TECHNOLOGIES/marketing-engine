@@ -1,5 +1,4 @@
 import {
-  getItems,
   getSectionContent,
   getSectionTitle,
 } from "./helpers";
@@ -9,14 +8,14 @@ import {
 
 const networkGridStyle = {
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
-  gap: "16px",
+  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+  gap: "18px",
   marginTop: "28px",
 };
 
 const networkCardStyle = {
-  minHeight: "132px",
-  padding: "22px 24px",
+  minHeight: "150px",
+  padding: "24px 26px",
   border: "1px solid rgba(7, 29, 48, 0.07)",
   borderRadius: "22px",
   background: "#fff",
@@ -29,8 +28,8 @@ const networkCardStyle = {
 const networkLogoStyle = {
   display: "block",
   width: "100%",
-  maxWidth: "210px",
-  height: "76px",
+  maxWidth: "220px",
+  height: "88px",
   objectFit: "contain",
 };
 
@@ -77,39 +76,30 @@ const agencyLogoStyle = {
   objectFit: "contain",
 };
 
-function normalizeName(value) {
-  return String(value || "")
-    .toLocaleLowerCase("fr-FR")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
+function NetworkPartnerGrid() {
+  // Le socle réseau est volontairement canonique : les anciens PageBlock
+  // peuvent encore contenir FRAM / Plein Vent / Promovacances / Kappa ou
+  // les quatre marques TUI séparées. Le rendu public ne doit jamais
+  // réinterpréter ces données historiques comme sept cartes différentes.
+  // getCommonPartners() est donc l'unique source de vérité du socle 7 marques.
+  const items = getCommonPartners();
 
-function resolveNetworkItems(sectionItems) {
-  const common = getCommonPartners();
-  const byId = new Map(common.map((item) => [item.id, item]));
-  const byName = new Map(common.map((item) => [normalizeName(item.name), item]));
-
-  const resolved = (sectionItems || [])
-    .filter((item) => item?.scope !== "agency")
-    .map((item) => {
-      const match = byId.get(item.id) || byName.get(normalizeName(item.name || item.title));
-      return match ? { ...match, ...item, logoUrl: match.logoUrl, alt: match.alt } : item;
-    });
-
-  return resolved.length ? resolved : common;
-}
-
-function NetworkPartnerGrid({ items }) {
   return (
-    <div className="public-site-partners-grid public-site-partners-grid--network" style={networkGridStyle}>
+    <div
+      className="public-site-partners-grid public-site-partners-grid--network"
+      style={networkGridStyle}
+    >
       {items.map((item, index) => {
         const logo = item.logoUrl || item.logo || item.imageUrl || null;
         const name = item.name || item.title || "Partenaire voyage";
 
         return (
-          <div key={item.id || name || index} className="public-site-partner-card" style={networkCardStyle}>
+          <div
+            key={item.id || name || index}
+            className={`public-site-partner-card public-site-partner-card--${item.id || index}`}
+            data-partner-id={item.id || undefined}
+            style={networkCardStyle}
+          >
             {logo ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -166,7 +156,6 @@ function AgencyPartnerGrid({ items }) {
 
 export default function PartnersRenderer({ section }) {
   const content = getSectionContent(section);
-  const networkItems = resolveNetworkItems(getItems(section, ["items", "partners"]));
   const agencyItems = Array.isArray(content.agencyPartners)
     ? content.agencyPartners
         .filter((item) => item && (item.name || item.title || item.logo || item.logoUrl || item.imageUrl))
@@ -183,7 +172,7 @@ export default function PartnersRenderer({ section }) {
           <p className="public-site-section-intro">{content.text}</p>
         ) : null}
 
-        <NetworkPartnerGrid items={networkItems} />
+        <NetworkPartnerGrid />
         <AgencyPartnerGrid items={agencyItems} />
       </div>
     </section>
