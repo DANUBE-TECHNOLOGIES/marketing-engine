@@ -26,6 +26,16 @@ test("génère un titre local pour l’accueil", () => {
   assert.ok(title.length <= 65);
 });
 
+test("traite accueil et home comme la vraie home SEO", () => {
+  for (const slug of ["accueil", "home"]) {
+    const title = titleForPage({ agency, page: { slug, title: "Accueil" } });
+    const description = descriptionForPage({ agency, page: { slug, title: "Accueil" } });
+    assert.match(title, /^Agence de voyages à Bois-Colombes/i);
+    assert.match(description, /Bois-Colombes/);
+    assert.match(description, /séjours|circuits|croisières/i);
+  }
+});
+
 test("génère une description bornée", () => {
   const description = descriptionForPage({ agency, page: { slug: "services", title: "Nos services" } });
   assert.ok(description.length <= 160);
