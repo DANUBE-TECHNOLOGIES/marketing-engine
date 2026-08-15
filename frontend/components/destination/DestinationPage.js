@@ -22,6 +22,48 @@ function joinCities(values) {
   return `${values.slice(0, -1).join(", ")} et ${values[values.length - 1]}`;
 }
 
+function normalize(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("fr-FR")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+const COMMERCIAL_PAGE_INTENTS = Object.freeze([
+  { key: "cruise", label: "croisières", terms: ["croisiere", "croisieres"] },
+  { key: "circuit", label: "circuits", terms: ["circuit", "circuits"] },
+  { key: "custom", label: "voyages sur mesure", terms: ["voyage-sur-mesure", "voyages-sur-mesure", "sur-mesure"] },
+  { key: "stay", label: "séjours", terms: ["sejour", "sejours", "club", "clubs"] },
+  { key: "ticketing", label: "billetterie et vols", terms: ["billetterie", "billetterie-vols", "vol", "vols"] },
+]);
+
+function commercialPageLinks(site) {
+  const root = String(site?.basePath || `/agence/${encodeURIComponent(site?.slug || "")}`).replace(/\/$/, "");
+  const pages = Array.isArray(site?.pages) ? site.pages : [];
+  const seen = new Set();
+  const result = [];
+
+  for (const page of pages) {
+    const slug = String(page?.slug || "").trim();
+    if (!slug) continue;
+    const source = normalize(`${slug} ${page?.title || ""}`);
+    const intent = COMMERCIAL_PAGE_INTENTS.find((candidate) =>
+      candidate.terms.some((term) => source.includes(term))
+    );
+    if (!intent || seen.has(intent.key)) continue;
+    seen.add(intent.key);
+    result.push({
+      key: intent.key,
+      label: intent.label,
+      href: `${root}/${slug}`,
+    });
+  }
+
+  return result;
+}
+
 function SectionContent({ section }) {
   const content = section?.content && typeof section.content === "object"
     ? section.content
@@ -146,6 +188,7 @@ export default function DestinationPage({ data }) {
   const contactPath = `${root}/contact`;
   const city = site?.agency?.city || null;
   const nearby = resolvedTargetCities(site, { limit: 4 });
+  const commercialLinks = commercialPageLinks(site);
   const destinationHeading = city ? `Voyage à ${d.name} depuis ${city}` : `Voyage à ${d.name}`;
 
   const destinationSchema = buildDestinationSchema(data);
@@ -293,6 +336,11 @@ export default function DestinationPage({ data }) {
             <Link href={data.quotePath}>
               Demander mon devis personnalisé
             </Link>
+            {commercialLinks.map((item) => (
+              <Link key={item.key} href={item.href}>
+                Découvrir nos {item.label} {city ? `à ${city}` : ""}
+              </Link>
+            ))}
             <Link href={servicesPath}>
               Découvrir nos services voyage
             </Link>
@@ -308,3 +356,8 @@ export default function DestinationPage({ data }) {
     </div>
   );
 }
+
+export {
+  COMMERCIAL_PAGE_INTENTS,
+  commercialPageLinks,
+};
