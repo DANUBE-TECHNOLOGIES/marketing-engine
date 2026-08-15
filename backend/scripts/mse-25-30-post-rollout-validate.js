@@ -14,7 +14,11 @@ function normalizeOrigin(value) {
 
 function normalizeSlug(value) {
   const slug = String(value ?? "").trim().replace(/^\/+|\/+$/g, "").toLowerCase();
-  return ["home", "accueil"].includes(slug) ? "" : slug;
+  return ["home", "accueil", "index"].includes(slug) ? "" : slug;
+}
+
+function pageBuilderSlug(value) {
+  return normalizeSlug(value) || "home";
 }
 
 function loadRolloutReport(filePath) {
@@ -205,6 +209,21 @@ function sitemapEntryForPath(entries, expectedPath) {
   return (entries || []).find((entry) => entryMatchesPath(entry, expectedPath)) || null;
 }
 
+function exclusionForPage(excluded = [], siteSlug, pageSlug) {
+  const site = String(siteSlug || "").trim();
+  const rawSlug = String(pageSlug || "").trim().replace(/^\/+|\/+$/g, "").toLowerCase();
+  return (excluded || []).find((item) =>
+    item?.type === "page"
+    && String(item?.siteSlug || "").trim() === site
+    && String(item?.pageSlug || "").trim().replace(/^\/+|\/+$/g, "").toLowerCase() === rawSlug
+  ) || null;
+}
+
+function absolutePublicUrl(publicOrigin, expectedPath) {
+  const origin = String(publicOrigin || "").trim().replace(/\/+$/g, "");
+  return origin ? `${origin}${expectedPath}` : null;
+}
+
 function postRolloutReportPath(value) {
   if (value) return path.resolve(value);
   const directory = path.resolve(process.env.MSE_25_30_REPORT_DIR || DEFAULT_REPORT_DIR);
@@ -219,7 +238,34 @@ function writePostRolloutReport(result, output) {
   return file;
 }
 
-async function validateSite({ origin, tenant, agency }) {
+async function htmlProofFor({ canonicalUrl, expectedChanges, expectedIndexable, verifyExpectedHero = true }) {
+  if (!canonicalUrl) return { ok: false, skipped: true, reason: "canonical-url-missing" };
+  try {
+    const htmlResult = await readOnlyRequest(canonicalUrl, { headers: { Accept: "text/html" } });
+    return {
+      ...validatePublicHtml({
+        html: htmlResult.payload,
+        canonicalUrl,
+        expectedChanges,
+        expectedIndexable,
+        verifyExpectedHero,
+      }),
+      skipped: false,
+      status: htmlResult.status,
+      contentType: htmlResult.contentType,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      skipped: false,
+      error: error.code || "PUBLIC_HTML_FETCH_FAILED",
+      message: error.message,
+      status: error.statusCode || null,
+    };
+  }
+}
+
+async function validateSite({ origin, tenant, agency, sitemapExcluded = [], publicOrigin = "" }) {
   const siteSlug = String(agency?.siteSlug || "").trim();
   if (!siteSlug) {
     return { siteSlug: null, ok: false, errors: [{ code: "SITE_SLUG_MISSING" }], pages: [] };
@@ -234,67 +280,95 @@ async function validateSite({ origin, tenant, agency }) {
 
   for (const rolloutPage of agency?.pages || []) {
     if (rolloutPage?.changed !== true) continue;
-    const page = findPage(contract, rolloutPage.slug);
+
     const expectedPath = canonicalPagePath(siteSlug, rolloutPage.slug);
     const expectedChanges = Array.isArray(rolloutPage.expectedChanges) ? rolloutPage.expectedChanges : [];
-    const changeChecks = expectedChanges.map((change) => page
+    const expectedChangesPresent = expectedChanges.length > 0;
+    const persistedResult = await readOnlyRequest(
+      `${origin}/agencies/${encodeURIComponent(agency.agencyId)}/site/pages/${encodeURIComponent(pageBuilderSlug(rolloutPage.slug))}/blocks`,
+      { headers }
+    );
+    const persistedPage = persistedResult.payload || {};
+    const persistedChanges = expectedChanges.map((change) => validateExpectedChange(persistedPage, change));
+    const persistedProof = {
+      ok: expectedChangesPresent && persistedChanges.every((item) => item.ok),
+      expectedChangeCount: persistedChanges.length,
+      matchedChangeCount: persistedChanges.filter((item) => item.ok).length,
+      published: persistedPage?.published === true,
+      status: persistedPage?.status || null,
+      changes: persistedChanges,
+    };
+
+    const page = findPage(contract, rolloutPage.slug);
+    const publicChanges = expectedChanges.map((change) => page
       ? validateExpectedChange(page, change)
       : { ok: false, reason: "page-not-public", expected: change, actual: null });
-    const expectedChangesPresent = expectedChanges.length > 0;
-    const sitemapEntry = sitemapEntryForPath(indexation.entries, expectedPath);
-    const sitemapPresent = Boolean(sitemapEntry);
-    const sourceOk = page?.contentSource === "website-designer-v2-blocks";
-
-    let htmlProof = {
-      ok: false,
-      skipped: true,
-      reason: sitemapEntry?.url ? null : "canonical-url-missing",
+    const publicProof = {
+      present: Boolean(page),
+      published: page?.published === true,
+      contentSource: page?.contentSource || null,
+      websiteDesignerV2: page?.contentSource === "website-designer-v2-blocks",
+      matchedChangeCount: publicChanges.filter((item) => item.ok).length,
+      changes: publicChanges,
     };
-    if (sitemapEntry?.url) {
-      try {
-        const htmlResult = await readOnlyRequest(String(sitemapEntry.url), {
-          headers: { Accept: "text/html" },
-        });
-        htmlProof = {
-          ...validatePublicHtml({
-            html: htmlResult.payload,
-            canonicalUrl: String(sitemapEntry.url),
-            expectedChanges,
-          }),
-          skipped: false,
-          status: htmlResult.status,
-          contentType: htmlResult.contentType,
-        };
-      } catch (error) {
-        htmlProof = {
-          ok: false,
-          skipped: false,
-          error: error.code || "PUBLIC_HTML_FETCH_FAILED",
-          message: error.message,
-          status: error.statusCode || null,
-        };
-      }
+
+    const sitemapEntry = sitemapEntryForPath(indexation.entries, expectedPath);
+    const exclusion = exclusionForPage(sitemapExcluded, siteSlug, rolloutPage.slug);
+    let mode = "invalid-sitemap-state";
+    if (sitemapEntry) mode = "indexable";
+    else if (exclusion?.reason === "noindex-page") mode = "noindex";
+    else if (exclusion?.reason === "page-not-published") mode = "unpublished";
+
+    let canonicalUrl = sitemapEntry?.url || null;
+    let htmlProof = { ok: true, skipped: true, reason: "not-required" };
+    let publicStateOk = false;
+
+    if (mode === "indexable") {
+      canonicalUrl = String(sitemapEntry.url);
+      htmlProof = await htmlProofFor({
+        canonicalUrl,
+        expectedChanges,
+        expectedIndexable: true,
+        verifyExpectedHero: true,
+      });
+      publicStateOk = publicProof.present
+        && publicProof.published
+        && publicProof.websiteDesignerV2
+        && publicChanges.every((item) => item.ok)
+        && htmlProof.ok === true;
+    } else if (mode === "noindex") {
+      canonicalUrl = absolutePublicUrl(publicOrigin, expectedPath);
+      htmlProof = await htmlProofFor({
+        canonicalUrl,
+        expectedChanges,
+        expectedIndexable: false,
+        verifyExpectedHero: false,
+      });
+      publicStateOk = publicProof.present
+        && publicProof.published
+        && publicProof.websiteDesignerV2
+        && publicChanges.every((item) => item.ok)
+        && htmlProof.ok === true;
+    } else if (mode === "unpublished") {
+      const remainsDraft = persistedPage?.published !== true
+        && String(persistedPage?.status || "").trim().toLowerCase() !== "published";
+      publicStateOk = remainsDraft && !publicProof.present;
+      htmlProof = { ok: true, skipped: true, reason: "page-not-published" };
     }
 
     pageResults.push({
       slug: normalizeSlug(rolloutPage.slug),
+      rawSlug: String(rolloutPage.slug ?? ""),
       expectedPath,
-      public: Boolean(page?.published === true),
-      contentSource: page?.contentSource || null,
-      websiteDesignerV2: sourceOk,
-      sitemapPresent,
-      canonicalUrl: sitemapEntry?.url || null,
-      htmlProof,
+      mode,
+      exclusion: exclusion ? { reason: exclusion.reason, pageSlug: exclusion.pageSlug } : null,
+      sitemapPresent: Boolean(sitemapEntry),
+      canonicalUrl,
       expectedChangesPresent,
-      expectedChangeCount: changeChecks.length,
-      matchedChangeCount: changeChecks.filter((item) => item.ok).length,
-      changes: changeChecks,
-      ok: Boolean(page?.published === true)
-        && sourceOk
-        && sitemapPresent
-        && htmlProof.ok === true
-        && expectedChangesPresent
-        && changeChecks.every((item) => item.ok),
+      persistedProof,
+      publicProof,
+      htmlProof,
+      ok: persistedProof.ok && publicStateOk && mode !== "invalid-sitemap-state",
     });
   }
 
@@ -316,26 +390,41 @@ async function run({ rolloutReport, backendOrigin, tenantSlug, output } = {}) {
     origin: backendOrigin || process.env.BACKEND_ORIGIN,
     tenant: tenantSlug || process.env.TENANT_SLUG,
   });
+  const headers = { "x-tenant-slug": context.tenant };
+  const sitemapResult = await readOnlyRequest(`${context.origin}/minisite-structured-data/sitemap`, { headers });
+  const sitemap = sitemapResult.payload || {};
 
   const agencies = [];
   for (const agency of loaded.report?.result?.agencies || []) {
-    agencies.push(await validateSite({ ...context, agency }));
+    agencies.push(await validateSite({
+      ...context,
+      agency,
+      sitemapExcluded: sitemap.excluded || [],
+      publicOrigin: sitemap.publicOrigin || "",
+    }));
   }
 
+  const pages = agencies.flatMap((item) => item.pages || []);
   const result = {
     type: "mse-25.30-post-rollout-validation",
     generatedAt: new Date().toISOString(),
     readOnly: true,
     rolloutReportPath: loaded.reportPath,
     backend: context,
+    publicOrigin: sitemap.publicOrigin || null,
     summary: {
       agenciesChecked: agencies.length,
       agenciesOk: agencies.filter((item) => item.ok).length,
-      pagesChecked: agencies.reduce((sum, item) => sum + item.pages.length, 0),
-      pagesOk: agencies.reduce((sum, item) => sum + item.pages.filter((page) => page.ok).length, 0),
-      htmlPagesOk: agencies.reduce((sum, item) => sum + item.pages.filter((page) => page.htmlProof?.ok === true).length, 0),
-      failedChanges: agencies.reduce((sum, item) => sum + item.pages.reduce((pageSum, page) => pageSum + page.changes.filter((change) => !change.ok).length, 0), 0),
-      missingExpectedChangeSets: agencies.reduce((sum, item) => sum + item.pages.filter((page) => page.expectedChangesPresent !== true).length, 0),
+      pagesChecked: pages.length,
+      pagesOk: pages.filter((page) => page.ok).length,
+      indexablePages: pages.filter((page) => page.mode === "indexable").length,
+      noindexPages: pages.filter((page) => page.mode === "noindex").length,
+      unpublishedPages: pages.filter((page) => page.mode === "unpublished").length,
+      invalidSitemapStates: pages.filter((page) => page.mode === "invalid-sitemap-state").length,
+      htmlPagesOk: pages.filter((page) => page.htmlProof?.skipped !== true && page.htmlProof?.ok === true).length,
+      failedPersistedChanges: pages.reduce((sum, page) => sum + (page.persistedProof?.changes || []).filter((change) => !change.ok).length, 0),
+      failedPublicChanges: pages.reduce((sum, page) => sum + (page.publicProof?.changes || []).filter((change) => !change.ok).length, 0),
+      missingExpectedChangeSets: pages.filter((page) => page.expectedChangesPresent !== true).length,
       sitesNotReady: agencies.filter((item) => item.readyToSubmit !== true).length,
     },
     agencies,
@@ -365,6 +454,7 @@ if (require.main === module) {
 module.exports = {
   DEFAULT_REPORT_DIR,
   ROLLOUT_REPORT_TYPE,
+  absolutePublicUrl,
   assertContext,
   blockType,
   candidateBlocks,
@@ -372,10 +462,13 @@ module.exports = {
   containsExpected,
   deepEqual,
   entryMatchesPath,
+  exclusionForPage,
   findPage,
+  htmlProofFor,
   loadRolloutReport,
   normalizeOrigin,
   normalizeSlug,
+  pageBuilderSlug,
   postRolloutReportPath,
   readOnlyRequest,
   run,
