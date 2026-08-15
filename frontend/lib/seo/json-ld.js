@@ -384,6 +384,52 @@ export function buildDestinationSchema(data) {
   });
 }
 
+export function buildDestinationWebPageSchema(data) {
+  const destination = data?.destination || {};
+  const site = data?.site || {};
+  const pageUrl = absoluteUrl(data?.canonicalPath);
+  const destinationId = `${pageUrl}#destination`;
+  const agencyId = `${absoluteUrl(site.basePath)}#travel-agency`;
+  const description =
+    destination.seoDescription ||
+    destination.summary ||
+    destination.tagline;
+
+  return compactJsonLd({
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "@id": `${pageUrl}#webpage`,
+    url: pageUrl,
+    name: destination.name
+      ? `Voyage à ${destination.name}${site?.agency?.city ? ` depuis ${site.agency.city}` : ""}`
+      : undefined,
+    description,
+    inLanguage: "fr-FR",
+    isPartOf: {
+      "@type": "WebSite",
+      "@id": `${absoluteUrl("/")}#website`,
+      url: absoluteUrl("/"),
+      name: "Mondescale Voyages",
+    },
+    primaryImageOfPage: destination.heroImageUrl
+      ? {
+          "@type": "ImageObject",
+          url: absoluteUrl(destination.heroImageUrl),
+        }
+      : undefined,
+    about: {
+      "@type": "TravelAgency",
+      "@id": agencyId,
+      name: site.name || site?.agency?.name,
+      url: absoluteUrl(site.basePath),
+    },
+    mainEntity: {
+      "@type": "TouristDestination",
+      "@id": destinationId,
+    },
+  });
+}
+
 export {
   internationalPhone,
   openingHoursSpecification,
