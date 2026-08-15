@@ -16,7 +16,8 @@
     "mse-25.30:preflight": "node scripts/mse-25-30-preflight.js",
     "mse-25.30:network-preview": "node scripts/mse-25-30-network-preview.js",
     "mse-25.30:network-apply": "node scripts/mse-25-30-network-apply.js",
-    "mse-25.30:network-rollback": "node scripts/mse-25-30-network-rollback.js"
+    "mse-25.30:network-rollback": "node scripts/mse-25-30-network-rollback.js",
+    "mse-25.30:post-rollout-validate": "node scripts/mse-25-30-post-rollout-validate.js"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",
