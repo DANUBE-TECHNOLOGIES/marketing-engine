@@ -29,6 +29,7 @@ class MiniSiteSeoEnrichmentService {
       networkSimilarityGuard: true,
       preRolloutQualityGate: true,
       sitemapReadinessGate: Boolean(this.structuredDataService),
+      networkRollbackSnapshots: true,
       operations: ["previewNetwork", "previewAgency", "applyAgency", "previewAgencyOptimization", "optimizeAgency", "previewAgencyContentOptimization", "optimizeAgencyContent", "previewNetworkContentOptimization", "optimizeNetworkContent", "normalizeAgencyTitles"],
     };
   }
@@ -177,6 +178,34 @@ class MiniSiteSeoEnrichmentService {
     return { operation: "preview-network-content-optimize", destructive: false, writes: false, ...plan, plans: plan.plans.map((agencyPlan) => ({ ...agencyPlan, pages: agencyPlan.pages.map(({ page, currentBlocks, optimizedBlocks, ...item }) => ({ ...item, before: currentBlocks, after: optimizedBlocks })) })) };
   }
 
+  async createRollbackSnapshot(persistence, agencyId, item, createdBy) {
+    const snapshot = await persistence.save({
+      agencyId,
+      pageSlug: item.slug,
+      body: {
+        page: {
+          title: item.page.title,
+          slug: item.page.slug,
+          status: item.page.status,
+          seoTitle: item.page.seoTitle,
+          metaDescription: item.page.metaDescription,
+          published: item.page.published,
+        },
+        blocks: item.currentBlocks,
+      },
+      metadata: {
+        reason: "mse-25.30-network-pre-rollout-snapshot",
+        createdBy,
+      },
+    });
+    const versions = await persistence.versions({ agencyId, pageSlug: item.slug });
+    const rollbackVersion = (versions.items || []).find((version) => Number(version.version) === Number(snapshot.version)) || (versions.items || [])[0] || null;
+    return {
+      version: snapshot.version || null,
+      versionId: rollbackVersion?.id || null,
+    };
+  }
+
   async optimizeNetworkContent({ dryRun = true, confirm = false, createdBy = "minisite-seo-network-rollout", similarityThreshold = 0.78, minimumWords = 80, qualityMinimumWords = 120 } = {}) {
     if (dryRun === false && confirm !== true) {
       const error = new Error("Une confirmation explicite est obligatoire pour le rollout SEO réseau."); error.code = "MINISITE_SEO_NETWORK_ROLLOUT_CONFIRMATION_REQUIRED"; error.status = 400; throw error;
@@ -191,17 +220,20 @@ class MiniSiteSeoEnrichmentService {
     const persistence = this.requirePageBuilderPersistence();
     const agencies = [];
     let pagesWritten = 0;
+    let rollbackSnapshots = 0;
     for (const agencyPlan of plan.plans) {
       const results = [];
       for (const item of agencyPlan.pages) {
-        if (!item.changed) { results.push({ pageId: item.pageId, slug: item.slug, changed: false, version: item.page.version || null }); continue; }
+        if (!item.changed) { results.push({ pageId: item.pageId, slug: item.slug, changed: false, version: item.page.version || null, rollbackVersionId: null }); continue; }
+        const rollback = await this.createRollbackSnapshot(persistence, agencyPlan.agencyId, item, createdBy);
+        rollbackSnapshots += 1;
         const saved = await persistence.save({ agencyId: agencyPlan.agencyId, pageSlug: item.slug, body: { page: { title: item.page.title, slug: item.page.slug, status: item.page.status, seoTitle: item.page.seoTitle, metaDescription: item.page.metaDescription, published: item.page.published }, blocks: item.optimizedBlocks }, metadata: { reason: "mse-25.30-network-local-content-rollout", createdBy } });
         pagesWritten += 1;
-        results.push({ pageId: saved.id, slug: saved.slug, changed: true, version: saved.version, changes: item.changes });
+        results.push({ pageId: saved.id, slug: saved.slug, changed: true, version: saved.version, rollbackVersion: rollback.version, rollbackVersionId: rollback.versionId, changes: item.changes });
       }
       agencies.push({ agencyId: agencyPlan.agencyId, siteSlug: agencyPlan.siteSlug, pages: results });
     }
-    return { operation: "network-content-optimize", destructive: false, writes: true, versioned: true, similarity: plan.similarity, quality: plan.quality, sitemapReadiness: plan.sitemapReadiness, summary: { ...plan.summary, pagesWritten }, agencies };
+    return { operation: "network-content-optimize", destructive: false, writes: true, versioned: true, rollbackReady: true, similarity: plan.similarity, quality: plan.quality, sitemapReadiness: plan.sitemapReadiness, summary: { ...plan.summary, pagesWritten, rollbackSnapshots }, agencies };
   }
 
   async normalizeAgencyTitles({ agencyId, limit = 65, dryRun = true, confirm = false } = {}) {
