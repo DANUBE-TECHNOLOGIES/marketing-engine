@@ -18,7 +18,7 @@ test("MSE-25.30 network apply command refuses to run without explicit operator c
   assert.doesNotThrow(() => requireConfirmation("YES"));
 });
 
-test("MSE-25.30 network apply summary preserves versioned write, guards and rollback manifest", () => {
+test("MSE-25.30 network apply summary preserves versioned write, guards, expected public changes and rollback manifest", () => {
   const result = summarize({
     operation: "network-content-optimize",
     writes: true,
@@ -33,7 +33,17 @@ test("MSE-25.30 network apply summary preserves versioned write, guards and roll
         agencyId: 1,
         siteSlug: "gien",
         pages: [
-          { slug: "circuits", changed: true, version: 5, rollbackVersion: 4, rollbackVersionId: 104 },
+          {
+            slug: "circuits",
+            changed: true,
+            version: 5,
+            rollbackVersion: 4,
+            rollbackVersionId: 104,
+            changes: [
+              { blockId: 12, blockType: "hero", field: "title", previous: "Circuits", next: "Circuits à Gien" },
+              { blockId: 12, blockType: "hero", field: "subtitle", previous: "", next: "Introduction locale" },
+            ],
+          },
           { slug: "contact", changed: false, version: 2 },
         ],
       },
@@ -51,6 +61,10 @@ test("MSE-25.30 network apply summary preserves versioned write, guards and roll
   assert.equal(result.agencies[0].pagesWritten, 1);
   assert.equal(result.agencies[0].pages[0].version, 5);
   assert.equal(result.agencies[0].pages[0].rollbackVersionId, 104);
+  assert.deepEqual(result.agencies[0].pages[0].expectedChanges, [
+    { blockId: 12, blockType: "hero", field: "title", previous: "Circuits", next: "Circuits à Gien" },
+    { blockId: 12, blockType: "hero", field: "subtitle", previous: "", next: "Introduction locale" },
+  ]);
   assert.deepEqual(result.rollbackManifest, [
     {
       agencyId: 1,
