@@ -7,6 +7,7 @@ const { optimizePageContent } = require("./content-optimizer");
 const { resolvedTargetCities } = require("./local-area-context");
 const { applyLocalAreaDifferentiation } = require("./local-differentiator");
 const { networkSimilarityReport } = require("./similarity-guard");
+const { preRolloutQualityReport } = require("./pre-rollout-quality");
 const PageBuilderPersistenceService = require("../page-builder-persistence/service");
 
 class MiniSiteSeoEnrichmentService {
@@ -24,6 +25,7 @@ class MiniSiteSeoEnrichmentService {
       deterministic: true,
       versionedContentWrites: true,
       networkSimilarityGuard: true,
+      preRolloutQualityGate: true,
       operations: ["previewNetwork", "previewAgency", "applyAgency", "previewAgencyOptimization", "optimizeAgency", "previewAgencyContentOptimization", "optimizeAgencyContent", "previewNetworkContentOptimization", "optimizeNetworkContent", "normalizeAgencyTitles"],
     };
   }
@@ -216,7 +218,7 @@ class MiniSiteSeoEnrichmentService {
     };
   }
 
-  async buildNetworkContentOptimization({ similarityThreshold = 0.78, minimumWords = 80 } = {}) {
+  async buildNetworkContentOptimization({ similarityThreshold = 0.78, minimumWords = 80, qualityMinimumWords = 120 } = {}) {
     const sites = await this.repository.listSites();
     const plans = [];
     for (const site of sites || []) {
@@ -225,16 +227,20 @@ class MiniSiteSeoEnrichmentService {
       plans.push(await this.buildAgencyContentOptimization({ agencyId }));
     }
     const similarity = networkSimilarityReport(plans, { threshold: similarityThreshold, minimumWords });
+    const quality = preRolloutQualityReport(plans, { minimumWords: qualityMinimumWords });
     return {
       version: "mse-25.30",
       plans,
       similarity,
+      quality,
       summary: {
         agenciesProcessed: plans.length,
         pagesProcessed: plans.reduce((sum, plan) => sum + plan.summary.pagesProcessed, 0),
         pagesChanged: plans.reduce((sum, plan) => sum + plan.summary.pagesChanged, 0),
         similarityConflicts: similarity.conflictCount,
-        rolloutBlocked: similarity.blocked,
+        qualityBlockingIssues: quality.blockingCount,
+        qualityWarnings: quality.warningCount,
+        rolloutBlocked: similarity.blocked || quality.blocked,
       },
     };
   }
@@ -253,7 +259,7 @@ class MiniSiteSeoEnrichmentService {
     };
   }
 
-  async optimizeNetworkContent({ dryRun = true, confirm = false, createdBy = "minisite-seo-network-rollout", similarityThreshold = 0.78, minimumWords = 80 } = {}) {
+  async optimizeNetworkContent({ dryRun = true, confirm = false, createdBy = "minisite-seo-network-rollout", similarityThreshold = 0.78, minimumWords = 80, qualityMinimumWords = 120 } = {}) {
     if (dryRun === false && confirm !== true) {
       const error = new Error("Une confirmation explicite est obligatoire pour le rollout SEO réseau.");
       error.code = "MINISITE_SEO_NETWORK_ROLLOUT_CONFIRMATION_REQUIRED";
@@ -261,7 +267,7 @@ class MiniSiteSeoEnrichmentService {
       throw error;
     }
 
-    const plan = await this.buildNetworkContentOptimization({ similarityThreshold, minimumWords });
+    const plan = await this.buildNetworkContentOptimization({ similarityThreshold, minimumWords, qualityMinimumWords });
     if (dryRun !== false) {
       return {
         operation: "preview-network-content-optimize",
@@ -269,6 +275,7 @@ class MiniSiteSeoEnrichmentService {
         writes: false,
         summary: plan.summary,
         similarity: plan.similarity,
+        quality: plan.quality,
       };
     }
 
@@ -277,6 +284,14 @@ class MiniSiteSeoEnrichmentService {
       error.code = "MINISITE_SEO_NETWORK_SIMILARITY_BLOCKED";
       error.status = 409;
       error.details = plan.similarity;
+      throw error;
+    }
+
+    if (plan.quality.blocked) {
+      const error = new Error(`Rollout bloqué : ${plan.quality.blockingCount} anomalie(s) SEO pré-rollout bloquante(s).`);
+      error.code = "MINISITE_SEO_NETWORK_QUALITY_BLOCKED";
+      error.status = 409;
+      error.details = plan.quality;
       throw error;
     }
 
@@ -321,6 +336,7 @@ class MiniSiteSeoEnrichmentService {
       writes: true,
       versioned: true,
       similarity: plan.similarity,
+      quality: plan.quality,
       summary: { ...plan.summary, pagesWritten },
       agencies,
     };
