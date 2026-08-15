@@ -41,6 +41,7 @@ export const indexationApi = Object.freeze({
   history: (params = {}) => read("history", params),
   properties: () => read("properties"),
   localSeoCoverage: () => read("localSeoCoverage"),
+  localContentUniqueness: () => read("localContentUniqueness"),
   status: ({ siteSlug, siteUrl }) => read("status", { siteSlug, siteUrl }),
   performance: ({ siteUrl, siteSlug, pagePrefix, days = 28, dimensions = "query", rowLimit = 50 }) =>
     read("performance", { siteUrl, siteSlug, pagePrefix, days, dimensions, rowLimit }),
