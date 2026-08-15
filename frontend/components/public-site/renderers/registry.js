@@ -10,6 +10,7 @@ import OffersRenderer from "./OffersRenderer";
 import InspirationsRenderer from "./InspirationsRenderer";
 import StatsRenderer from "./StatsRenderer";
 import PartnersRenderer from "./PartnersRenderer";
+import PartnerDirectoryRenderer from "./PartnerDirectoryRenderer";
 import AppointmentRenderer from "./AppointmentRenderer";
 import FaqRenderer from "./FaqRenderer";
 import ContactRenderer from "./ContactRenderer";
@@ -54,6 +55,8 @@ export const PUBLIC_RENDERER_REGISTRY = {
   partners: PartnersRenderer,
   logos: PartnersRenderer,
   "partner-logos": PartnersRenderer,
+  "partner-directory": PartnerDirectoryRenderer,
+  "partners-directory": PartnerDirectoryRenderer,
   appointment: AppointmentRenderer,
   faq: FaqRenderer,
   reviews: ReviewsRenderer,
