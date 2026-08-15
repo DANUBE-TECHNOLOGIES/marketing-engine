@@ -49,7 +49,16 @@ export BACKEND_ORIGIN=http://127.0.0.1:4000
 export TENANT_SLUG=mondescale
 ```
 
-Le backend doit exposer les capacités MSE-25.30 attendues par le health check : persistance, écritures versionnées, garde de similarité, quality gate, sitemap readiness, snapshots de rollback et compensation automatique.
+Le backend doit exposer les capacités MSE-25.30 attendues par le health check : persistance, écritures versionnées, garde de similarité, quality gate, sitemap readiness, snapshots de rollback, compensation automatique, protection des pages `noindex` et protection des routes canoniques rendues hors Website Designer V2.
+
+Les deux protections d'écriture suivantes sont obligatoires :
+
+```text
+noindexContentWriteGuard = true
+managedRouteContentWriteGuard = true
+```
+
+Elles garantissent notamment que les pages légales volontairement `noindex` et les pages V2 dont la route canonique est gérée par un renderer dédié ne sont ni chargées ni écrites inutilement par le rollout de contenu.
 
 ## 5. Lancer le préflight réel — aucune écriture
 
@@ -83,6 +92,35 @@ sitemapReadiness.notReadyCount = 0
 
 Les avertissements non bloquants doivent malgré tout être lus. Le seuil de similarité réseau par défaut est de `0.78`.
 
+Pour chaque agence, examiner également :
+
+- `changedPages` : pages qui recevront réellement des modifications ;
+- `excludedPages` : pages volontairement sorties du rollout de contenu ;
+- `pagesExcludedNoindex` : nombre de pages exclues car elles sont volontairement non indexables ;
+- `pagesExcludedManagedRoute` : nombre de pages exclues car leur route canonique est rendue par un composant dédié et non par leur contenu Website Designer V2.
+
+Chaque entrée de `excludedPages` expose uniquement les informations utiles à l'opérateur :
+
+```json
+{
+  "slug": "mentions-legales",
+  "title": "Mentions légales",
+  "reason": "noindex-page"
+}
+```
+
+ou, pour une route publique gérée séparément :
+
+```json
+{
+  "slug": "inspiration",
+  "title": "Inspirations",
+  "reason": "canonical-route-managed"
+}
+```
+
+Une exclusion connue n'est pas une anomalie. En revanche, une page commerciale ou éditoriale attendue qui disparaîtrait de `changedPages` sans apparaître dans `excludedPages` doit être examinée avant tout apply.
+
 Le rapport de préflight expire au bout de 30 minutes par défaut. L'apply exige également le même tenant, le même backend et le même HEAD Git que le préflight.
 
 ## 7. Appliquer MSE-25.30
@@ -107,6 +145,8 @@ Pour chaque page réellement modifiée, le backend :
 4. conserve les valeurs attendues des changements (`expectedChanges`) ;
 5. ajoute l'entrée correspondante au manifeste de rollback.
 
+Les pages listées dans `excludedPages` restent également associées au résultat de l'agence afin que l'opérateur puisse vérifier qu'elles n'ont pas été transformées silencieusement en écritures.
+
 Si une écriture suivante échoue, les pages déjà appliquées sont automatiquement compensées en ordre inverse à partir de leurs snapshots. Une compensation partielle est remontée explicitement comme erreur.
 
 Après un rollout réussi, le script crée automatiquement un rapport contextualisé horodaté sous `~/mse-25-30-reports/`. Sa sortie contient `rolloutReportPath`. Ce rapport lie ensemble le HEAD, le tenant, le backend, le préflight, les versions appliquées, les changements attendus et le manifeste de rollback.
@@ -130,6 +170,8 @@ Pour chaque page modifiée il vérifie d'abord la persistance Website Designer V
 - `noindex` : les changements V2 sont présents, la page reste explicitement exclue du sitemap avec la raison `noindex-page`, reste publique et son HTML conserve `noindex` ;
 - `unpublished` : les changements V2 sont présents, la page reste en draft/non publiée et n'apparaît pas dans le contrat public ;
 - tout état sitemap incohérent devient `invalid-sitemap-state` et fait échouer la validation.
+
+Les pages exclues en amont par les gardes d'écriture ne font pas partie des pages modifiées à valider : leur présence explicite dans `excludedPages` constitue la trace opérateur justifiant leur absence du diff.
 
 Le validateur exige aussi que chaque mini-site reste `readyToSubmit = true`. Il archive à son tour un rapport JSON horodaté.
 
@@ -156,6 +198,7 @@ Après un rollback, refaire les contrôles publics et d'indexation appropriés a
 
 - Ne jamais lancer `network-apply` sans préflight récent.
 - Ne jamais réutiliser un préflight d'un autre HEAD, tenant ou backend.
+- Lire les pages exclues et leur raison au même titre que les pages modifiées.
 - Ne jamais abaisser le seuil de similarité pour forcer un rollout sans analyse.
 - Ne jamais supprimer les versions Website Designer V2 référencées par un rapport de rollout encore actif.
 - Conserver ensemble le HEAD Git, le rapport de préflight, le rapport de rollout, le rapport post-rollout et, en cas d'incident, la sortie du rollback.
