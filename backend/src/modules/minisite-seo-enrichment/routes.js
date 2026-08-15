@@ -52,6 +52,27 @@ function routes({ prisma, service } = {}) {
     try { response.json(await seoService.previewNetwork()); } catch (error) { sendError(response, error); }
   });
 
+  router.post("/minisite-seo-enrichment/network/content-optimize/preview", async (request, response) => {
+    try {
+      response.json(await seoService.previewNetworkContentOptimization({
+        similarityThreshold: request.body?.similarityThreshold,
+        minimumWords: request.body?.minimumWords,
+      }));
+    } catch (error) { sendError(response, error); }
+  });
+
+  router.post("/minisite-seo-enrichment/network/content-optimize", async (request, response) => {
+    try {
+      response.json(await seoService.optimizeNetworkContent({
+        dryRun: request.body?.dryRun !== false,
+        confirm: request.body?.confirm === true,
+        createdBy: request.body?.createdBy || "minisite-seo-network-rollout",
+        similarityThreshold: request.body?.similarityThreshold,
+        minimumWords: request.body?.minimumWords,
+      }));
+    } catch (error) { sendError(response, error); }
+  });
+
   return router;
 }
 
