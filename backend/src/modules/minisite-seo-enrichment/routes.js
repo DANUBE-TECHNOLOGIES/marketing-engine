@@ -57,6 +57,7 @@ function routes({ prisma, service } = {}) {
       response.json(await seoService.previewNetworkContentOptimization({
         similarityThreshold: request.body?.similarityThreshold,
         minimumWords: request.body?.minimumWords,
+        qualityMinimumWords: request.body?.qualityMinimumWords,
       }));
     } catch (error) { sendError(response, error); }
   });
@@ -69,6 +70,7 @@ function routes({ prisma, service } = {}) {
         createdBy: request.body?.createdBy || "minisite-seo-network-rollout",
         similarityThreshold: request.body?.similarityThreshold,
         minimumWords: request.body?.minimumWords,
+        qualityMinimumWords: request.body?.qualityMinimumWords,
       }));
     } catch (error) { sendError(response, error); }
   });
