@@ -8,9 +8,11 @@ on:
     paths:
       - 'backend/src/modules/search-console-submission/**'
       - 'backend/src/modules/minisite-structured-data/**'
+      - 'backend/src/modules/agency-seo/**'
       - 'backend/scripts/search-console-readiness-check.js'
       - 'backend/test/search-console-*.test.js'
       - 'backend/test/minisite-local-*.test.js'
+      - 'backend/test/agency-seo-*.test.js'
       - 'frontend/app/agence/[siteSlug]/sitemap.xml/route.js'
       - 'frontend/app/api/indexation/**'
       - 'frontend/app/indexation/**'
@@ -43,15 +45,18 @@ jobs:
       - name: Install backend dependencies
         run: npm ci
 
-      - name: Run Search Console and local SEO backend tests
+      - name: Run Search Console, local SEO and optimizer backend tests
         env:
           SEARCH_CONSOLE_ENABLED: 'false'
-        run: node --test test/search-console-*.test.js test/minisite-local-*.test.js
+        run: node --test test/search-console-*.test.js test/minisite-local-*.test.js test/agency-seo-*.test.js
 
       - name: Verify Search Console module loads with provider disabled
         env:
           SEARCH_CONSOLE_ENABLED: 'false'
         run: node -e "const m=require('./src/modules/search-console-submission'); const p=m.createConfiguredSearchConsoleProvider(); if(p.name!=='disabled') process.exit(1); console.log('Search Console provider safely disabled')"
+
+      - name: Verify local SEO optimizer module loads
+        run: node -e "const m=require('./src/modules/agency-seo/local-page-optimizer'); if(typeof m.buildLocalPageOptimization!=='function') process.exit(1); console.log('Local SEO optimizer loaded')"
 
   frontend-indexation:
     runs-on: ubuntu-latest
