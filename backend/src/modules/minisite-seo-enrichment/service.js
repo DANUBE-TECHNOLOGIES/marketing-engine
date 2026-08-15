@@ -11,6 +11,44 @@ const { preRolloutQualityReport } = require("./pre-rollout-quality");
 const { MiniSiteStructuredDataService } = require("../minisite-structured-data/service");
 const PageBuilderPersistenceService = require("../page-builder-persistence/service");
 
+async function compensateAppliedWrites(appliedWrites = [], { createdBy = "mse-25.30-auto-compensation" } = {}) {
+  const compensated = [];
+  const failures = [];
+
+  for (const applied of [...appliedWrites].reverse()) {
+    try {
+      const restored = await applied.persistence.rollback({
+        agencyId: applied.agencyId,
+        pageSlug: applied.slug,
+        versionId: applied.rollbackVersionId,
+        metadata: {
+          reason: "mse-25.30-network-rollout-auto-compensation",
+          createdBy,
+          failedAppliedVersion: applied.appliedVersion || null,
+          failedAppliedVersionId: applied.appliedVersionId || null,
+        },
+      });
+      compensated.push({
+        agencyId: applied.agencyId,
+        slug: applied.slug,
+        rollbackVersionId: applied.rollbackVersionId,
+        restoredVersion: restored?.version || null,
+        restoredVersionId: restored?.versionId || null,
+      });
+    } catch (error) {
+      failures.push({
+        agencyId: applied.agencyId,
+        slug: applied.slug,
+        rollbackVersionId: applied.rollbackVersionId,
+        error: error?.code || "MINISITE_SEO_NETWORK_COMPENSATION_PAGE_FAILED",
+        message: error?.message || String(error),
+      });
+    }
+  }
+
+  return { compensated, failures };
+}
+
 class MiniSiteSeoEnrichmentService {
   constructor({ prisma, repository, publicOrigin, pageBuilderPersistenceService, structuredDataService } = {}) {
     this.repository = repository || new MiniSiteSeoRepository(prisma);
@@ -30,6 +68,7 @@ class MiniSiteSeoEnrichmentService {
       preRolloutQualityGate: true,
       sitemapReadinessGate: Boolean(this.structuredDataService),
       networkRollbackSnapshots: true,
+      networkAutomaticCompensation: true,
       operations: ["previewNetwork", "previewAgency", "applyAgency", "previewAgencyOptimization", "optimizeAgency", "previewAgencyContentOptimization", "optimizeAgencyContent", "previewNetworkContentOptimization", "optimizeNetworkContent", "normalizeAgencyTitles"],
     };
   }
@@ -221,21 +260,57 @@ class MiniSiteSeoEnrichmentService {
 
     const persistence = this.requirePageBuilderPersistence();
     const agencies = [];
+    const appliedWrites = [];
     let pagesWritten = 0;
     let rollbackSnapshots = 0;
-    for (const agencyPlan of plan.plans) {
-      const results = [];
-      for (const item of agencyPlan.pages) {
-        if (!item.changed) { results.push({ pageId: item.pageId, slug: item.slug, changed: false, version: item.page.version || null, rollbackVersionId: null }); continue; }
-        const rollback = await this.createRollbackSnapshot(persistence, agencyPlan.agencyId, item, createdBy);
-        rollbackSnapshots += 1;
-        const saved = await persistence.save({ agencyId: agencyPlan.agencyId, pageSlug: item.slug, body: { page: { title: item.page.title, slug: item.page.slug, status: item.page.status, seoTitle: item.page.seoTitle, metaDescription: item.page.metaDescription, published: item.page.published }, blocks: item.optimizedBlocks }, metadata: { reason: "mse-25.30-network-local-content-rollout", createdBy } });
-        pagesWritten += 1;
-        results.push({ pageId: saved.id, slug: saved.slug, changed: true, version: saved.version, rollbackVersion: rollback.version, rollbackVersionId: rollback.versionId, changes: item.changes });
+
+    try {
+      for (const agencyPlan of plan.plans) {
+        const results = [];
+        for (const item of agencyPlan.pages) {
+          if (!item.changed) { results.push({ pageId: item.pageId, slug: item.slug, changed: false, version: item.page.version || null, rollbackVersionId: null }); continue; }
+          const rollback = await this.createRollbackSnapshot(persistence, agencyPlan.agencyId, item, createdBy);
+          rollbackSnapshots += 1;
+          if (!rollback.versionId) {
+            const error = new Error(`Snapshot de rollback introuvable pour ${agencyPlan.agencyId}/${item.slug}.`);
+            error.code = "MINISITE_SEO_NETWORK_ROLLBACK_SNAPSHOT_MISSING";
+            error.status = 500;
+            throw error;
+          }
+          const saved = await persistence.save({ agencyId: agencyPlan.agencyId, pageSlug: item.slug, body: { page: { title: item.page.title, slug: item.page.slug, status: item.page.status, seoTitle: item.page.seoTitle, metaDescription: item.page.metaDescription, published: item.page.published }, blocks: item.optimizedBlocks }, metadata: { reason: "mse-25.30-network-local-content-rollout", createdBy } });
+          appliedWrites.push({ persistence, agencyId: agencyPlan.agencyId, slug: item.slug, rollbackVersionId: rollback.versionId, appliedVersion: saved.version || null, appliedVersionId: saved.versionId || null });
+          pagesWritten += 1;
+          results.push({ pageId: saved.id, slug: saved.slug, changed: true, version: saved.version, rollbackVersion: rollback.version, rollbackVersionId: rollback.versionId, changes: item.changes });
+        }
+        agencies.push({ agencyId: agencyPlan.agencyId, siteSlug: agencyPlan.siteSlug, pages: results });
       }
-      agencies.push({ agencyId: agencyPlan.agencyId, siteSlug: agencyPlan.siteSlug, pages: results });
+    } catch (cause) {
+      const compensation = await compensateAppliedWrites(appliedWrites);
+      const incomplete = compensation.failures.length > 0;
+      const error = new Error(incomplete
+        ? "Le rollout réseau a échoué et sa compensation automatique est incomplète."
+        : "Le rollout réseau a échoué ; les écritures déjà appliquées ont été restaurées automatiquement.");
+      error.code = incomplete
+        ? "MINISITE_SEO_NETWORK_ROLLOUT_COMPENSATION_FAILED"
+        : "MINISITE_SEO_NETWORK_ROLLOUT_COMPENSATED";
+      error.status = 500;
+      error.details = {
+        originalError: {
+          code: cause?.code || null,
+          message: cause?.message || String(cause),
+        },
+        pagesWrittenBeforeFailure: appliedWrites.length,
+        rollbackSnapshots,
+        compensatedCount: compensation.compensated.length,
+        compensationFailureCount: compensation.failures.length,
+        compensated: compensation.compensated,
+        compensationFailures: compensation.failures,
+      };
+      error.cause = cause;
+      throw error;
     }
-    return { operation: "network-content-optimize", destructive: false, writes: true, versioned: true, rollbackReady: true, similarity: plan.similarity, quality: plan.quality, sitemapReadiness: plan.sitemapReadiness, summary: { ...plan.summary, pagesWritten, rollbackSnapshots }, agencies };
+
+    return { operation: "network-content-optimize", destructive: false, writes: true, versioned: true, rollbackReady: true, automaticallyCompensatedOnFailure: true, similarity: plan.similarity, quality: plan.quality, sitemapReadiness: plan.sitemapReadiness, summary: { ...plan.summary, pagesWritten, rollbackSnapshots }, agencies };
   }
 
   async normalizeAgencyTitles({ agencyId, limit = 65, dryRun = true, confirm = false } = {}) {
@@ -246,4 +321,4 @@ class MiniSiteSeoEnrichmentService {
   async previewNetwork() { const sites = await this.repository.listSites(); return buildSeoPlan({ sites, publicOrigin: this.publicOrigin, optimizeExisting: false }); }
 }
 
-module.exports = { MiniSiteSeoEnrichmentService };
+module.exports = { MiniSiteSeoEnrichmentService, compensateAppliedWrites };
