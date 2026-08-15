@@ -6,8 +6,8 @@
 }
 
 .networkCard {
-  min-height: 154px;
-  padding: 18px 20px;
+  min-height: 168px;
+  padding: 14px 16px;
   border: 1px solid rgba(7, 29, 48, 0.07);
   border-radius: 24px;
   background: #fff;
@@ -20,51 +20,57 @@
 
 .networkLogo {
   display: block;
-  width: 100%;
-  max-width: 260px;
-  max-height: 104px;
+  width: min(82%, 300px);
+  height: 118px;
   object-fit: contain;
+  object-position: center;
 }
 
 .tuiCard {
-  grid-column: span 2;
-  min-height: 154px;
-  padding: 18px 24px 20px;
+  grid-column: span 1;
+  min-height: 168px;
+  padding: 12px 14px 14px;
   flex-direction: column;
-  gap: 14px;
+  gap: 8px;
 }
 
 .tuiMainLogo {
   display: block;
-  width: auto;
-  max-width: 130px;
-  max-height: 56px;
+  width: min(52%, 150px);
+  height: 48px;
   object-fit: contain;
+  object-position: center;
 }
 
 .tuiChildren {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   width: 100%;
-  gap: 12px;
-  align-items: center;
+  gap: 4px;
+  align-items: stretch;
+  border-top: 1px solid rgba(7, 29, 48, 0.07);
+  padding-top: 8px;
 }
 
 .tuiChild {
-  min-height: 66px;
-  padding: 8px 10px;
+  min-width: 0;
+  min-height: 76px;
+  padding: 2px 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-top: 1px solid rgba(7, 29, 48, 0.07);
+}
+
+.tuiChild + .tuiChild {
+  border-left: 1px solid rgba(7, 29, 48, 0.07);
 }
 
 .tuiChildLogo {
   display: block;
-  width: 100%;
-  max-width: 150px;
-  max-height: 52px;
+  width: 94%;
+  height: 68px;
   object-fit: contain;
+  object-position: center;
 }
 
 .agencyWrap {
@@ -120,10 +126,6 @@
   .networkGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-
-  .tuiCard {
-    grid-column: span 2;
-  }
 }
 
 @media (max-width: 520px) {
@@ -131,15 +133,16 @@
     grid-template-columns: 1fr;
   }
 
+  .networkCard,
   .tuiCard {
-    grid-column: span 1;
+    min-height: 154px;
   }
 
   .tuiChildren {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .tuiChild {
-    border-top: 1px solid rgba(7, 29, 48, 0.07);
+  .tuiChildLogo {
+    height: 58px;
   }
 }
