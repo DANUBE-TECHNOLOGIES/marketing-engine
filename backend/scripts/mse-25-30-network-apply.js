@@ -1,6 +1,7 @@
 "use strict";
 
 const fs = require("node:fs");
+const os = require("node:os");
 const path = require("node:path");
 const {
   EXPECTED_BRANCH,
@@ -12,6 +13,7 @@ const DEFAULT_BACKEND_ORIGIN = "http://127.0.0.1:4000";
 const REQUIRED_CONFIRMATION = "YES";
 const DEFAULT_MAX_PREFLIGHT_AGE_MS = 30 * 60 * 1000;
 const MAX_CLOCK_SKEW_MS = 5 * 60 * 1000;
+const DEFAULT_REPORT_DIR = path.join(os.homedir(), "mse-25-30-reports");
 
 function normalizeOrigin(value) {
   return String(value || DEFAULT_BACKEND_ORIGIN).trim().replace(/\/+$/g, "");
@@ -163,6 +165,7 @@ function summarize(payload = {}) {
     writes: payload?.writes === true,
     versioned: payload?.versioned === true,
     rollbackReady: payload?.rollbackReady === true,
+    automaticallyCompensatedOnFailure: payload?.automaticallyCompensatedOnFailure === true,
     summary: payload?.summary || {},
     similarity: {
       threshold: payload?.similarity?.threshold ?? null,
@@ -189,7 +192,30 @@ function summarize(payload = {}) {
   };
 }
 
-async function run({ backendOrigin, tenantSlug, confirmation, createdBy, similarityThreshold, minimumWords, qualityMinimumWords, preflightReport, maxPreflightAgeMs } = {}) {
+function rolloutReportPath(value) {
+  if (value) return path.resolve(value);
+  const directory = path.resolve(process.env.MSE_25_30_REPORT_DIR || DEFAULT_REPORT_DIR);
+  fs.mkdirSync(directory, { recursive: true });
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  return path.join(directory, `mse-25-30-network-rollout-${stamp}.json`);
+}
+
+function writeRolloutReport({ output, repository, origin, tenant, preflight, result } = {}) {
+  const file = rolloutReportPath(output || process.env.MSE_25_30_ROLLOUT_OUTPUT);
+  const report = {
+    type: "mse-25.30-network-rollout-report",
+    generatedAt: new Date().toISOString(),
+    repository,
+    backend: { origin, tenant },
+    preflight,
+    result,
+    rollbackManifest: result?.rollbackManifest || [],
+  };
+  fs.writeFileSync(file, JSON.stringify(report, null, 2) + "\n", "utf8");
+  return { file, report };
+}
+
+async function run({ backendOrigin, tenantSlug, confirmation, createdBy, similarityThreshold, minimumWords, qualityMinimumWords, preflightReport, maxPreflightAgeMs, output } = {}) {
   requireConfirmation(confirmation || process.env.CONFIRM_MSE_25_30_ROLLOUT);
 
   const repo = repositoryState();
@@ -239,6 +265,17 @@ async function run({ backendOrigin, tenantSlug, confirmation, createdBy, similar
       repositoryHead: repo.head,
     },
   };
+
+  const written = writeRolloutReport({
+    output,
+    repository: repo,
+    origin,
+    tenant,
+    preflight: result.preflight,
+    result,
+  });
+  result.rolloutReportPath = written.file;
+
   console.log(JSON.stringify(result, null, 2));
   if (!result.ok) process.exitCode = 2;
   return result;
@@ -258,12 +295,15 @@ if (require.main === module) {
 
 module.exports = {
   DEFAULT_MAX_PREFLIGHT_AGE_MS,
+  DEFAULT_REPORT_DIR,
   MAX_CLOCK_SKEW_MS,
   assertPreflightReport,
   jsonRequest,
   loadPreflightReport,
   normalizeOrigin,
   requireConfirmation,
+  rolloutReportPath,
   run,
   summarize,
+  writeRolloutReport,
 };
