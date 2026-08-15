@@ -3,6 +3,7 @@
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
+const { validatePublicHtml } = require("./mse-25-30-public-html-check");
 
 const DEFAULT_REPORT_DIR = path.join(os.homedir(), "mse-25-30-reports");
 const ROLLOUT_REPORT_TYPE = "mse-25.30-network-rollout-report";
@@ -200,6 +201,10 @@ function entryMatchesPath(entry, expectedPath) {
   }
 }
 
+function sitemapEntryForPath(entries, expectedPath) {
+  return (entries || []).find((entry) => entryMatchesPath(entry, expectedPath)) || null;
+}
+
 function postRolloutReportPath(value) {
   if (value) return path.resolve(value);
   const directory = path.resolve(process.env.MSE_25_30_REPORT_DIR || DEFAULT_REPORT_DIR);
@@ -236,8 +241,40 @@ async function validateSite({ origin, tenant, agency }) {
       ? validateExpectedChange(page, change)
       : { ok: false, reason: "page-not-public", expected: change, actual: null });
     const expectedChangesPresent = expectedChanges.length > 0;
-    const sitemapPresent = (indexation.entries || []).some((entry) => entryMatchesPath(entry, expectedPath));
+    const sitemapEntry = sitemapEntryForPath(indexation.entries, expectedPath);
+    const sitemapPresent = Boolean(sitemapEntry);
     const sourceOk = page?.contentSource === "website-designer-v2-blocks";
+
+    let htmlProof = {
+      ok: false,
+      skipped: true,
+      reason: sitemapEntry?.url ? null : "canonical-url-missing",
+    };
+    if (sitemapEntry?.url) {
+      try {
+        const htmlResult = await readOnlyRequest(String(sitemapEntry.url), {
+          headers: { Accept: "text/html" },
+        });
+        htmlProof = {
+          ...validatePublicHtml({
+            html: htmlResult.payload,
+            canonicalUrl: String(sitemapEntry.url),
+            expectedChanges,
+          }),
+          skipped: false,
+          status: htmlResult.status,
+          contentType: htmlResult.contentType,
+        };
+      } catch (error) {
+        htmlProof = {
+          ok: false,
+          skipped: false,
+          error: error.code || "PUBLIC_HTML_FETCH_FAILED",
+          message: error.message,
+          status: error.statusCode || null,
+        };
+      }
+    }
 
     pageResults.push({
       slug: normalizeSlug(rolloutPage.slug),
@@ -246,11 +283,18 @@ async function validateSite({ origin, tenant, agency }) {
       contentSource: page?.contentSource || null,
       websiteDesignerV2: sourceOk,
       sitemapPresent,
+      canonicalUrl: sitemapEntry?.url || null,
+      htmlProof,
       expectedChangesPresent,
       expectedChangeCount: changeChecks.length,
       matchedChangeCount: changeChecks.filter((item) => item.ok).length,
       changes: changeChecks,
-      ok: Boolean(page?.published === true) && sourceOk && sitemapPresent && expectedChangesPresent && changeChecks.every((item) => item.ok),
+      ok: Boolean(page?.published === true)
+        && sourceOk
+        && sitemapPresent
+        && htmlProof.ok === true
+        && expectedChangesPresent
+        && changeChecks.every((item) => item.ok),
     });
   }
 
@@ -289,6 +333,7 @@ async function run({ rolloutReport, backendOrigin, tenantSlug, output } = {}) {
       agenciesOk: agencies.filter((item) => item.ok).length,
       pagesChecked: agencies.reduce((sum, item) => sum + item.pages.length, 0),
       pagesOk: agencies.reduce((sum, item) => sum + item.pages.filter((page) => page.ok).length, 0),
+      htmlPagesOk: agencies.reduce((sum, item) => sum + item.pages.filter((page) => page.htmlProof?.ok === true).length, 0),
       failedChanges: agencies.reduce((sum, item) => sum + item.pages.reduce((pageSum, page) => pageSum + page.changes.filter((change) => !change.ok).length, 0), 0),
       missingExpectedChangeSets: agencies.reduce((sum, item) => sum + item.pages.filter((page) => page.expectedChangesPresent !== true).length, 0),
       sitesNotReady: agencies.filter((item) => item.readyToSubmit !== true).length,
@@ -334,6 +379,7 @@ module.exports = {
   postRolloutReportPath,
   readOnlyRequest,
   run,
+  sitemapEntryForPath,
   stableComparable,
   validateExpectedChange,
   validateSite,
