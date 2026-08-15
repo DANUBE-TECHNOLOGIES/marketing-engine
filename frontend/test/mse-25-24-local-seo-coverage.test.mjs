@@ -12,7 +12,8 @@ test("MSE-25.24 exposes the published local coverage audit in the cockpit", () =
   assert.match(proxy, /minisite-structured-data\/local-seo-coverage/);
   assert.match(api, /localSeoCoverage/);
   assert.match(client, /Couverture SEO locale/);
-  assert.match(client, /Ville principale, title, meta, contenu publié/);
+  assert.match(client, /Ville principale, title, meta, H1, contenu publié, NAP, TravelAgency\/LocalBusiness/);
+  assert.match(client, /schemas locaux complets/);
 });
 
 test("MSE-25.24 remains diagnostic and does not create local doorway pages", () => {
