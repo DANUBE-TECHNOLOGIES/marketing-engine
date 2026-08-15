@@ -6,6 +6,7 @@ const { resolvedTargetCities } = require("../src/modules/minisite-seo-enrichment
 const {
   applyLocalAreaDifferentiation,
   buildLocalAreaContent,
+  localPageProfile,
 } = require("../src/modules/minisite-seo-enrichment/local-differentiator");
 const { validatePagePayload } = require("../src/modules/page-builder-persistence/validation");
 
@@ -34,7 +35,7 @@ test("MSE-25.30 prefers explicit target cities over configured fallback", () => 
   assert.deepEqual(cities, ["Montargis", "Sully-sur-Loire"]);
 });
 
-test("MSE-25.30 adds one local-area block without creating doorway pages", () => {
+test("MSE-25.30 adds one published local-area block to a published page without doorway pages", () => {
   const baseBlocks = [
     {
       type: "hero",
@@ -50,12 +51,13 @@ test("MSE-25.30 adds one local-area block without creating doorway pages", () =>
     blocks: baseBlocks,
     changes: [],
     agency: { name: "Mondescale Gien", city: "Gien" },
-    page: { slug: "croisieres", title: "Croisières" },
+    page: { slug: "croisieres", title: "Croisières", status: "published", published: true },
     targetCities: ["Poilly-lez-Gien", "Briare", "Châtillon-sur-Loire"],
   });
 
   assert.equal(result.blocks.length, 2);
   assert.equal(result.blocks[1].type, "rich_text");
+  assert.equal(result.blocks[1].status, "published");
   assert.match(result.blocks[1].content.html, /Poilly-lez-Gien/);
   assert.match(result.blocks[1].content.html, /Briare/);
   assert.match(result.blocks[1].content.html, /croisières/i);
@@ -70,6 +72,21 @@ test("MSE-25.30 adds one local-area block without creating doorway pages", () =>
     },
     blocks: result.blocks,
   }));
+});
+
+test("MSE-25.30 differentiates high-conflict generic public pages", () => {
+  assert.equal(localPageProfile({ slug: "services", title: "Services" }).key, "services");
+  assert.equal(localPageProfile({ slug: "destinations", title: "Destinations" }).key, "destinations");
+  assert.equal(localPageProfile({ slug: "inspirations", title: "Inspirations" }).key, "inspirations");
+  assert.equal(localPageProfile({ slug: "engagements", title: "Nos engagements" }).key, "engagements");
+
+  const services = buildLocalAreaContent({
+    agency: { name: "Mondescale Gien", city: "Gien" },
+    page: { slug: "services", title: "Services" },
+    targetCities: ["Briare", "Poilly-lez-Gien", "Sully-sur-Loire"],
+  });
+  assert.match(services.title, /services voyage/i);
+  assert.match(services.html, /Briare/);
 });
 
 test("MSE-25.30 does not duplicate local-area copy when the page already covers the catchment", () => {
