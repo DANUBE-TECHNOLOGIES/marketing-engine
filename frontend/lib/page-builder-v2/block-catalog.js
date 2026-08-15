@@ -80,6 +80,19 @@ export const BLOCK_CATALOG = Object.freeze([
     },
   },
   {
+    type: "partner-logos",
+    label: "Partenaires",
+    category: "Confiance",
+    icon: "◇",
+    defaults: {
+      title: "Nos partenaires voyage",
+      text: "",
+      items: [],
+      agencyPartners: [],
+      maxAgencyPartners: 3,
+    },
+  },
+  {
     type: "gallery",
     label: "Galerie",
     category: "Médias",
