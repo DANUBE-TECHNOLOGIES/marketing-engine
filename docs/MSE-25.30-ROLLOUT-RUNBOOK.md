@@ -1,6 +1,6 @@
 # MSE-25.30 — Runbook de rollout des mini-sites
 
-Ce document décrit le passage contrôlé de MSE-25.30 depuis la branche Git vers le preview réseau réel, puis éventuellement vers l'application et le rollback.
+Ce document décrit la chaîne opérateur complète de MSE-25.30 : synchronisation, préflight read-only, application confirmée, validation post-rollout read-only et rollback contextualisé.
 
 ## 1. Préconditions
 
@@ -8,7 +8,8 @@ Ce document décrit le passage contrôlé de MSE-25.30 depuis la branche Git ver
 - Working tree propre.
 - Backend Local Engine démarré et joignable depuis la machine d'administration.
 - Tenant par défaut : `mondescale`.
-- Aucun rollout ne doit être lancé avant lecture du rapport de préflight.
+- Aucun rollout ne doit être lancé sans rapport de préflight récent et validé.
+- Ne pas modifier les chemins runtime MSE-25.30 après la baseline CI validée sans refaire la validation CI.
 
 ## 2. Synchroniser la branche sur le serveur
 
@@ -33,7 +34,7 @@ npm ci
 
 Aucune migration Prisma n'est requise uniquement pour MSE-25.30 tant qu'aucune migration nouvelle n'est présente dans la branche déployée.
 
-## 4. Vérifier le backend
+## 4. Configurer le backend ciblé
 
 Par défaut les scripts opérateurs utilisent :
 
@@ -45,17 +46,12 @@ Pour une autre origine :
 
 ```bash
 export BACKEND_ORIGIN=http://127.0.0.1:4000
+export TENANT_SLUG=mondescale
 ```
 
-Le backend déployé doit exposer :
+Le backend doit exposer les capacités MSE-25.30 attendues par le health check : persistance, écritures versionnées, garde de similarité, quality gate, sitemap readiness, snapshots de rollback et compensation automatique.
 
-```text
-GET  /minisite-seo-enrichment/health
-POST /minisite-seo-enrichment/network/content-optimize/preview
-POST /minisite-seo-enrichment/network/content-optimize
-```
-
-## 5. Lancer le préflight réel
+## 5. Lancer le préflight réel — aucune écriture
 
 ```bash
 cd backend
@@ -64,95 +60,104 @@ npm run mse-25.30:preflight
 
 Le préflight :
 
-1. refuse une branche autre que `feature/mse-25-30-local-seo-optimizer` ;
+1. refuse une branche inattendue ;
 2. refuse un working tree sale ;
-3. enregistre le HEAD exact ;
-4. vérifie la santé MSE-25.30 ;
-5. lance le preview réseau sans écriture ;
-6. archive un rapport JSON horodaté.
+3. vérifie que la baseline CI validée est bien dans l'historique courant ;
+4. refuse toute dérive des chemins runtime protégés depuis cette baseline ;
+5. vérifie les capacités annoncées par `/minisite-seo-enrichment/health` ;
+6. lance le preview réseau sans écriture ;
+7. archive un rapport JSON horodaté, par défaut sous `~/mse-25-30-reports/`.
 
-Aucune page n'est modifiée pendant cette opération.
+La sortie contient le chemin exact `reportPath`. Le conserver : l'apply exigera ce même fichier.
 
 ## 6. Conditions obligatoires avant rollout
 
-Le rapport doit satisfaire au minimum :
+Le rapport doit notamment indiquer :
 
 ```text
 rolloutBlocked = false
-similarity.conflictCount = 0
+similarity.blockingConflictCount = 0
 quality.blockingCount = 0
 sitemapReadiness.notReadyCount = 0
 ```
 
-Les avertissements `quality.warnings` doivent être lus même s'ils ne bloquent pas automatiquement le rollout.
+Les avertissements non bloquants doivent malgré tout être lus. Le seuil de similarité réseau par défaut est de `0.78`.
 
-Le seuil de similarité réseau par défaut est de 0,78.
+Le rapport de préflight expire au bout de 30 minutes par défaut. L'apply exige également le même tenant, le même backend et le même HEAD Git que le préflight.
 
 ## 7. Appliquer MSE-25.30
 
-Uniquement après validation du rapport de préflight :
+Récupérer d'abord le chemin exact affiché par le préflight :
 
 ```bash
-cd backend
+export MSE_25_30_PREFLIGHT_REPORT=/chemin/vers/mse-25-30-network-preview-....json
+```
+
+Puis seulement après validation humaine du rapport :
+
+```bash
 CONFIRM_MSE_25_30_ROLLOUT=YES npm run mse-25.30:network-apply
 ```
 
-Le backend refait les garde-fous avant écriture. Un rapport de preview ancien ne permet donc pas de contourner une anomalie apparue entre-temps.
+Pour chaque page réellement modifiée, le backend :
 
-Pour chaque page modifiée :
+1. crée un snapshot Website Designer V2 ;
+2. refuse l'écriture si l'identifiant exact du snapshot de rollback n'est pas résolu ;
+3. sauvegarde le contenu optimisé dans une nouvelle version ;
+4. conserve les valeurs attendues des changements (`expectedChanges`) ;
+5. ajoute l'entrée correspondante au manifeste de rollback.
 
-1. un snapshot de sécurité Website Designer V2 est créé ;
-2. l'optimisation MSE-25.30 est sauvegardée ;
-3. une nouvelle `AgencySitePageVersion` est créée ;
-4. la réponse contient un `rollbackManifest` avec l'ID exact du snapshot à restaurer.
+Si une écriture suivante échoue, les pages déjà appliquées sont automatiquement compensées en ordre inverse à partir de leurs snapshots. Une compensation partielle est remontée explicitement comme erreur.
 
-Conserver immédiatement la sortie JSON de cette commande dans un fichier durable.
+Après un rollout réussi, le script crée automatiquement un rapport contextualisé horodaté sous `~/mse-25-30-reports/`. Sa sortie contient `rolloutReportPath`. Ce rapport lie ensemble le HEAD, le tenant, le backend, le préflight, les versions appliquées, les changements attendus et le manifeste de rollback.
 
-Exemple :
+Si le serveur a appliqué le rollout mais que l'écriture locale du rapport échoue, le résultat reste explicitement `ok: true` pour l'application serveur, avec `operatorAttentionRequired: true`, le manifeste restant dans la sortie et un code de sortie opérateur non nul. Ne jamais relancer aveuglément l'apply dans ce cas.
+
+## 8. Validation post-rollout — strictement read-only
+
+Dès que l'apply a produit son rapport :
 
 ```bash
-CONFIRM_MSE_25_30_ROLLOUT=YES npm run mse-25.30:network-apply | tee mse-25.30-rollout.json
+export MSE_25_30_ROLLOUT_REPORT=/chemin/vers/mse-25-30-network-rollout-....json
+npm run mse-25.30:post-rollout-validate
 ```
 
-## 8. Vérifications après rollout
+Le validateur refuse toute méthode autre que `GET`. Il ne peut donc pas modifier le contenu.
 
-Contrôler au minimum :
+Pour chaque page modifiée il vérifie d'abord la persistance Website Designer V2 via le GET `/agencies/:agencyId/site/pages/:pageSlug/blocks`, puis applique le contrôle correspondant à son état :
 
-- la home de plusieurs agences ;
-- une page Croisières ;
-- une page Circuits ;
-- une page Sur mesure ;
-- une landing Destination exposée ;
-- le H1 public ;
-- la FAQ ;
-- les liens internes ;
-- le contact ;
-- le sitemap public ;
-- l'absence de 404 nouvelles.
+- `indexable` : les changements attendus sont présents dans V2 et dans le contrat public, la page est dans le sitemap, l'HTML canonique répond, le `<h1>` attendu est réellement rendu, l'introduction Hero attendue est rendue lorsqu'elle a été modifiée, le canonical est cohérent et aucun `noindex` n'est présent ;
+- `noindex` : les changements V2 sont présents, la page reste explicitement exclue du sitemap avec la raison `noindex-page`, reste publique et son HTML conserve `noindex` ;
+- `unpublished` : les changements V2 sont présents, la page reste en draft/non publiée et n'apparaît pas dans le contrat public ;
+- tout état sitemap incohérent devient `invalid-sitemap-state` et fait échouer la validation.
 
-Le renderer public doit toujours conserver un seul H1 lorsqu'un Hero est présent.
+Le validateur exige aussi que chaque mini-site reste `readyToSubmit = true`. Il archive à son tour un rapport JSON horodaté.
+
+Un rollout ne doit être considéré comme terminé que si cette validation retourne `ok: true`.
 
 ## 9. Rollback réseau
 
-Extraire le tableau `rollbackManifest` de la sortie du rollout et l'enregistrer dans un fichier JSON dédié.
-
-Puis :
+Le rollback utilise directement le rapport contextualisé généré par l'apply ; il n'est plus nécessaire d'extraire manuellement un tableau de versions.
 
 ```bash
 cd backend
 CONFIRM_MSE_25_30_ROLLBACK=YES \
-MSE_25_30_ROLLBACK_MANIFEST=/chemin/rollback-manifest.json \
+MSE_25_30_ROLLBACK_MANIFEST=/chemin/vers/mse-25-30-network-rollout-....json \
 npm run mse-25.30:network-rollback
 ```
 
-Le rollback est fail-fast : il s'arrête à la première restauration en échec et indique les restaurations déjà effectuées.
+Avant restauration, le script vérifie que le tenant et le backend correspondent à ceux du rollout. Les restaurations sont exécutées en ordre inverse. Le rollback est fail-fast : il s'arrête à la première restauration en échec et indique précisément ce qui a déjà été restauré.
 
-Il ne restaure que les pages explicitement présentes dans le manifeste.
+Les anciens manifestes non contextualisés sont refusés par défaut. Leur usage nécessite volontairement `MSE_25_30_ALLOW_LEGACY_ROLLBACK_MANIFEST=YES` et ne doit être réservé qu'à un cas de récupération exceptionnel.
+
+Après un rollback, refaire les contrôles publics et d'indexation appropriés avant toute nouvelle tentative de rollout.
 
 ## 10. Règles d'exploitation
 
-- Ne jamais lancer `network-apply` directement sans préflight récent.
-- Ne jamais modifier le seuil de similarité pour forcer un rollout sans analyser les conflits.
-- Ne jamais supprimer les versions Website Designer V2 utilisées par un manifeste de rollback encore actif.
-- Conserver le HEAD Git, le rapport de préflight, la sortie du rollout et le manifeste de rollback ensemble.
-- Une page avec contenu manuel reste prioritaire : MSE-25.30 ne doit pas l'écraser lorsqu'un champ éditorial existe déjà.
+- Ne jamais lancer `network-apply` sans préflight récent.
+- Ne jamais réutiliser un préflight d'un autre HEAD, tenant ou backend.
+- Ne jamais abaisser le seuil de similarité pour forcer un rollout sans analyse.
+- Ne jamais supprimer les versions Website Designer V2 référencées par un rapport de rollout encore actif.
+- Conserver ensemble le HEAD Git, le rapport de préflight, le rapport de rollout, le rapport post-rollout et, en cas d'incident, la sortie du rollback.
+- Ne jamais considérer l'écriture backend comme seule preuve de réussite : la validation post-rollout doit également confirmer le contrat public, l'HTML réellement rendu et l'indexabilité attendue.
+- Une introduction ou un contenu manuel existant reste prioritaire : MSE-25.30 ne doit pas l'écraser lorsqu'il est conçu pour préserver ce champ.
