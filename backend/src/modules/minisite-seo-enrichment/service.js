@@ -160,6 +160,14 @@ class MiniSiteSeoEnrichmentService {
     const optimizablePages = exclusions.filter((item) => !item.reason).map((item) => item.page);
     const noindexPages = exclusions.filter((item) => item.reason === "noindex-page");
     const managedRoutePages = exclusions.filter((item) => item.reason === "canonical-route-managed");
+    const excludedPages = exclusions
+      .filter((item) => item.reason)
+      .map(({ page, reason }) => ({
+        pageId: page?.id ?? null,
+        slug: page?.slug ?? null,
+        title: page?.title ?? null,
+        reason,
+      }));
     const targetCities = resolvedTargetCities(site, { limit: 5 });
 
     for (const pageSummary of optimizablePages) {
@@ -170,7 +178,7 @@ class MiniSiteSeoEnrichmentService {
     }
 
     return {
-      version: "mse-25.30", agencyId, siteId: site.id, siteSlug: site.slug, city: site.agency?.city || "", targetCities, pages,
+      version: "mse-25.30", agencyId, siteId: site.id, siteSlug: site.slug, city: site.agency?.city || "", targetCities, pages, excludedPages,
       summary: {
         pagesProcessed: pages.length,
         pagesChanged: pages.filter((page) => page.changed).length,
@@ -195,7 +203,7 @@ class MiniSiteSeoEnrichmentService {
       throw error;
     }
     const plan = await this.buildAgencyContentOptimization({ agencyId });
-    if (dryRun !== false) return { operation: "preview-content-optimize", destructive: false, writes: false, agencyId, summary: plan.summary, pages: plan.pages.map(({ page, currentBlocks, optimizedBlocks, ...item }) => ({ ...item, before: currentBlocks, after: optimizedBlocks })) };
+    if (dryRun !== false) return { operation: "preview-content-optimize", destructive: false, writes: false, agencyId, summary: plan.summary, excludedPages: plan.excludedPages, pages: plan.pages.map(({ page, currentBlocks, optimizedBlocks, ...item }) => ({ ...item, before: currentBlocks, after: optimizedBlocks })) };
 
     const persistence = this.requirePageBuilderPersistence();
     const results = [];
@@ -204,7 +212,7 @@ class MiniSiteSeoEnrichmentService {
       const saved = await persistence.save({ agencyId, pageSlug: item.slug, body: { page: { title: item.page.title, slug: item.page.slug, status: item.page.status, seoTitle: item.page.seoTitle, metaDescription: item.page.metaDescription, published: item.page.published }, blocks: item.optimizedBlocks }, metadata: { reason: "mse-25.30-local-content-optimization", createdBy } });
       results.push({ pageId: saved.id, slug: saved.slug, changed: true, version: saved.version, changes: item.changes });
     }
-    return { operation: "content-optimize", destructive: false, writes: true, versioned: true, agencyId, summary: { ...plan.summary, pagesWritten: results.filter((item) => item.changed).length }, pages: results };
+    return { operation: "content-optimize", destructive: false, writes: true, versioned: true, agencyId, summary: { ...plan.summary, pagesWritten: results.filter((item) => item.changed).length }, excludedPages: plan.excludedPages, pages: results };
   }
 
   async buildSitemapReadiness() {
@@ -283,7 +291,7 @@ class MiniSiteSeoEnrichmentService {
       const error = new Error("Une confirmation explicite est obligatoire pour le rollout SEO réseau."); error.code = "MINISITE_SEO_NETWORK_ROLLOUT_CONFIRMATION_REQUIRED"; error.status = 400; throw error;
     }
     const plan = await this.buildNetworkContentOptimization({ similarityThreshold, minimumWords, qualityMinimumWords });
-    if (dryRun !== false) return { operation: "preview-network-content-optimize", destructive: false, writes: false, summary: plan.summary, similarity: plan.similarity, quality: plan.quality, sitemapReadiness: plan.sitemapReadiness };
+    if (dryRun !== false) return { operation: "preview-network-content-optimize", destructive: false, writes: false, summary: plan.summary, similarity: plan.similarity, quality: plan.quality, sitemapReadiness: plan.sitemapReadiness, plans: plan.plans.map((agencyPlan) => ({ agencyId: agencyPlan.agencyId, siteSlug: agencyPlan.siteSlug, excludedPages: agencyPlan.excludedPages || [] })) };
 
     if (plan.similarity.blocked) { const error = new Error(`Rollout bloqué : ${plan.similarity.blockingConflictCount} conflit(s) de similarité SEO stratégique au-dessus du seuil.`); error.code = "MINISITE_SEO_NETWORK_SIMILARITY_BLOCKED"; error.status = 409; error.details = plan.similarity; throw error; }
     if (plan.quality.blocked) { const error = new Error(`Rollout bloqué : ${plan.quality.blockingCount} anomalie(s) SEO pré-rollout bloquante(s).`); error.code = "MINISITE_SEO_NETWORK_QUALITY_BLOCKED"; error.status = 409; error.details = plan.quality; throw error; }
@@ -313,7 +321,7 @@ class MiniSiteSeoEnrichmentService {
           pagesWritten += 1;
           results.push({ pageId: saved.id, slug: saved.slug, changed: true, version: saved.version, rollbackVersion: rollback.version, rollbackVersionId: rollback.versionId, changes: item.changes });
         }
-        agencies.push({ agencyId: agencyPlan.agencyId, siteSlug: agencyPlan.siteSlug, pages: results });
+        agencies.push({ agencyId: agencyPlan.agencyId, siteSlug: agencyPlan.siteSlug, excludedPages: agencyPlan.excludedPages || [], pages: results });
       }
     } catch (cause) {
       const compensation = await compensateAppliedWrites(appliedWrites);
