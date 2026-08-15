@@ -24,7 +24,21 @@ class DestinationRepository {
     if (!normalizedTenantId) return null;
     return this.prisma.agencySite.findFirst({
       where: { slug, tenantId: normalizedTenantId },
-      include: { agency: true }
+      include: {
+        agency: true,
+        pages: {
+          where: { status: 'published', published: true },
+          orderBy: [{ displayOrder: 'asc' }, { title: 'asc' }],
+          select: {
+            id: true,
+            slug: true,
+            title: true,
+            pageType: true,
+            status: true,
+            published: true,
+          },
+        },
+      }
     });
   }
 
