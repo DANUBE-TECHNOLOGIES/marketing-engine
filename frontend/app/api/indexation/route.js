@@ -15,6 +15,7 @@ const READ_RESOURCES = Object.freeze({
   history: "/search-console-submissions",
   properties: "/search-console-submissions/properties",
   workQueue: "/seo-opportunity-work-queue",
+  localSeoCoverage: "/minisite-structured-data/local-seo-coverage",
 });
 
 function jsonError(message, status = 500, details = null) {
