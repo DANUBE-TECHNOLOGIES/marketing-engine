@@ -16,7 +16,15 @@ export default function LocalSeoCoverageClient() {
   const [queued, setQueued] = useState(() => new Set());
   const [error, setError] = useState("");
   const load = async () => { setLoading(true); setError(""); try { setData(await indexationApi.localSeoCoverage()); } catch (loadError) { setError(loadError.message || "Impossible de charger l’audit SEO local."); } finally { setLoading(false); } };
-  useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    let active = true;
+    indexationApi.localSeoCoverage()
+      .then((payload) => { if (active) setData(payload); })
+      .catch((loadError) => { if (active) setError(loadError.message || "Impossible de charger l’audit SEO local."); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
 
   const addGapToQueue = async (site, gap) => {
     const key = `${site.siteSlug}:${gap.code}:${gap.city || ""}`;
