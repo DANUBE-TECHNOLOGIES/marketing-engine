@@ -1,7 +1,17 @@
 "use strict";
 
+const fs = require("node:fs");
+const path = require("node:path");
+const {
+  EXPECTED_BRANCH,
+  assertRepositoryState,
+  repositoryState,
+} = require("./mse-25-30-preflight");
+
 const DEFAULT_BACKEND_ORIGIN = "http://127.0.0.1:4000";
 const REQUIRED_CONFIRMATION = "YES";
+const DEFAULT_MAX_PREFLIGHT_AGE_MS = 30 * 60 * 1000;
+const MAX_CLOCK_SKEW_MS = 5 * 60 * 1000;
 
 function normalizeOrigin(value) {
   return String(value || DEFAULT_BACKEND_ORIGIN).trim().replace(/\/+$/g, "");
@@ -14,6 +24,101 @@ function requireConfirmation(value) {
     error.code = "MSE_25_30_NETWORK_ROLLOUT_OPERATOR_CONFIRMATION_REQUIRED";
     throw error;
   }
+}
+
+function loadPreflightReport(filePath) {
+  const configuredPath = String(filePath || process.env.MSE_25_30_PREFLIGHT_REPORT || "").trim();
+  if (!configuredPath) {
+    const error = new Error("Le rollout réseau exige MSE_25_30_PREFLIGHT_REPORT vers un rapport de preflight validé.");
+    error.code = "MSE_25_30_NETWORK_ROLLOUT_PREFLIGHT_REPORT_REQUIRED";
+    throw error;
+  }
+
+  const resolvedPath = path.resolve(configuredPath);
+  let parsed;
+  try {
+    parsed = JSON.parse(fs.readFileSync(resolvedPath, "utf8"));
+  } catch (cause) {
+    const error = new Error(`Impossible de lire le rapport de preflight : ${resolvedPath}`);
+    error.code = "MSE_25_30_NETWORK_ROLLOUT_PREFLIGHT_REPORT_INVALID";
+    error.details = { reportPath: resolvedPath, cause: cause?.message || String(cause) };
+    throw error;
+  }
+
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    const error = new Error("Le rapport de preflight MSE-25.30 est invalide.");
+    error.code = "MSE_25_30_NETWORK_ROLLOUT_PREFLIGHT_REPORT_INVALID";
+    error.details = { reportPath: resolvedPath };
+    throw error;
+  }
+
+  return { report: parsed, reportPath: resolvedPath };
+}
+
+function assertPreflightReport(report, {
+  origin,
+  tenant,
+  repository,
+  now = Date.now(),
+  maxAgeMs = Number(process.env.MSE_25_30_PREFLIGHT_MAX_AGE_MS || DEFAULT_MAX_PREFLIGHT_AGE_MS),
+} = {}) {
+  const generatedAtMs = Date.parse(report?.generatedAt || "");
+  const effectiveMaxAgeMs = Number(maxAgeMs);
+  if (!Number.isFinite(generatedAtMs)) {
+    const error = new Error("Le rapport de preflight ne contient pas de date generatedAt valide.");
+    error.code = "MSE_25_30_NETWORK_ROLLOUT_PREFLIGHT_TIMESTAMP_INVALID";
+    throw error;
+  }
+  if (!Number.isFinite(effectiveMaxAgeMs) || effectiveMaxAgeMs <= 0) {
+    const error = new Error("La durée maximale du preflight est invalide.");
+    error.code = "MSE_25_30_NETWORK_ROLLOUT_PREFLIGHT_MAX_AGE_INVALID";
+    throw error;
+  }
+
+  const ageMs = Number(now) - generatedAtMs;
+  if (ageMs < -MAX_CLOCK_SKEW_MS) {
+    const error = new Error("Le rapport de preflight semble provenir du futur ; vérifiez l'horloge de la VM.");
+    error.code = "MSE_25_30_NETWORK_ROLLOUT_PREFLIGHT_CLOCK_SKEW";
+    error.details = { generatedAt: report.generatedAt, ageMs };
+    throw error;
+  }
+  if (ageMs > effectiveMaxAgeMs) {
+    const error = new Error("Le rapport de preflight est trop ancien. Relancez npm run mse-25.30:preflight avant le rollout.");
+    error.code = "MSE_25_30_NETWORK_ROLLOUT_PREFLIGHT_EXPIRED";
+    error.details = { generatedAt: report.generatedAt, ageMs, maxAgeMs: effectiveMaxAgeMs };
+    throw error;
+  }
+
+  if (report?.preview?.ok !== true || report?.preview?.rolloutBlocked === true || report?.preview?.summary?.rolloutBlocked === true) {
+    const error = new Error("Le rapport de preflight n'autorise pas le rollout réseau.");
+    error.code = "MSE_25_30_NETWORK_ROLLOUT_PREFLIGHT_BLOCKED";
+    error.details = {
+      previewOk: report?.preview?.ok,
+      rolloutBlocked: report?.preview?.rolloutBlocked ?? report?.preview?.summary?.rolloutBlocked,
+    };
+    throw error;
+  }
+
+  if (normalizeOrigin(report?.backend?.origin) !== normalizeOrigin(origin)) {
+    const error = new Error("Le backend ciblé ne correspond pas au backend validé par le preflight.");
+    error.code = "MSE_25_30_NETWORK_ROLLOUT_PREFLIGHT_BACKEND_MISMATCH";
+    error.details = { expected: report?.backend?.origin || null, actual: origin };
+    throw error;
+  }
+  if (String(report?.backend?.tenant || "").trim() !== String(tenant || "").trim()) {
+    const error = new Error("Le tenant ciblé ne correspond pas au tenant validé par le preflight.");
+    error.code = "MSE_25_30_NETWORK_ROLLOUT_PREFLIGHT_TENANT_MISMATCH";
+    error.details = { expected: report?.backend?.tenant || null, actual: tenant };
+    throw error;
+  }
+  if (!report?.repository?.head || report.repository.head !== repository?.head) {
+    const error = new Error("Le HEAD Git courant ne correspond pas à celui du preflight. Relancez le preflight.");
+    error.code = "MSE_25_30_NETWORK_ROLLOUT_PREFLIGHT_HEAD_MISMATCH";
+    error.details = { expected: report?.repository?.head || null, actual: repository?.head || null };
+    throw error;
+  }
+
+  return { ageMs, maxAgeMs: effectiveMaxAgeMs };
 }
 
 async function jsonRequest(url, options = {}) {
@@ -84,11 +189,25 @@ function summarize(payload = {}) {
   };
 }
 
-async function run({ backendOrigin, tenantSlug, confirmation, createdBy, similarityThreshold, minimumWords, qualityMinimumWords } = {}) {
+async function run({ backendOrigin, tenantSlug, confirmation, createdBy, similarityThreshold, minimumWords, qualityMinimumWords, preflightReport, maxPreflightAgeMs } = {}) {
   requireConfirmation(confirmation || process.env.CONFIRM_MSE_25_30_ROLLOUT);
+
+  const repo = repositoryState();
+  assertRepositoryState(repo, {
+    expectedBranch: process.env.MSE_25_30_EXPECTED_BRANCH || EXPECTED_BRANCH,
+    allowDirty: false,
+  });
 
   const origin = normalizeOrigin(backendOrigin || process.env.BACKEND_ORIGIN);
   const tenant = String(tenantSlug || process.env.TENANT_SLUG || "mondescale").trim();
+  const loadedPreflight = loadPreflightReport(preflightReport);
+  const preflightValidation = assertPreflightReport(loadedPreflight.report, {
+    origin,
+    tenant,
+    repository: repo,
+    maxAgeMs: maxPreflightAgeMs,
+  });
+
   const body = {
     dryRun: false,
     confirm: true,
@@ -111,7 +230,15 @@ async function run({ backendOrigin, tenantSlug, confirmation, createdBy, similar
     body: JSON.stringify(body),
   });
 
-  const result = summarize(payload);
+  const result = {
+    ...summarize(payload),
+    preflight: {
+      reportPath: loadedPreflight.reportPath,
+      generatedAt: loadedPreflight.report.generatedAt,
+      ageMs: preflightValidation.ageMs,
+      repositoryHead: repo.head,
+    },
+  };
   console.log(JSON.stringify(result, null, 2));
   if (!result.ok) process.exitCode = 2;
   return result;
@@ -129,4 +256,14 @@ if (require.main === module) {
   });
 }
 
-module.exports = { run, jsonRequest, normalizeOrigin, requireConfirmation, summarize };
+module.exports = {
+  DEFAULT_MAX_PREFLIGHT_AGE_MS,
+  MAX_CLOCK_SKEW_MS,
+  assertPreflightReport,
+  jsonRequest,
+  loadPreflightReport,
+  normalizeOrigin,
+  requireConfirmation,
+  run,
+  summarize,
+};
