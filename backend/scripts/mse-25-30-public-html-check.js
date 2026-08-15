@@ -76,23 +76,29 @@ function expectedHeroProofs(expectedChanges = []) {
   };
 }
 
-function validatePublicHtml({ html, canonicalUrl, expectedChanges = [] } = {}) {
+function validatePublicHtml({ html, canonicalUrl, expectedChanges = [], expectedIndexable = true, verifyExpectedHero = true } = {}) {
   const source = String(html || "");
   const proofs = expectedHeroProofs(expectedChanges);
   const h1 = extractFirstTagText(source, "h1");
   const heroText = extractHeroText(source);
   const canonical = extractCanonical(source);
   const indexable = allowsIndexing(source);
-  const h1Ok = proofs.title === null || h1 === String(proofs.title).trim();
-  const heroTextOk = proofs.subtitle === null || heroText === String(proofs.subtitle).trim();
+  const h1Expected = verifyExpectedHero ? proofs.title : null;
+  const heroTextExpected = verifyExpectedHero ? proofs.subtitle : null;
+  const h1Ok = h1Expected === null || h1 === String(h1Expected).trim();
+  const heroTextOk = heroTextExpected === null || heroText === String(heroTextExpected).trim();
   const canonicalOk = sameCanonical(canonical, canonicalUrl);
+  const indexabilityOk = expectedIndexable ? indexable : !indexable;
+  const h1Present = expectedIndexable ? Boolean(h1) : true;
 
   return {
-    ok: Boolean(source) && h1Ok && heroTextOk && canonicalOk && indexable,
-    h1: { expected: proofs.title, actual: h1 || null, ok: h1Ok },
-    heroText: { expected: proofs.subtitle, actual: heroText || null, ok: heroTextOk },
+    ok: Boolean(source) && h1Present && h1Ok && heroTextOk && canonicalOk && indexabilityOk,
+    h1: { expected: h1Expected, actual: h1 || null, present: Boolean(h1), ok: h1Present && h1Ok },
+    heroText: { expected: heroTextExpected, actual: heroText || null, ok: heroTextOk },
     canonical: { expected: canonicalUrl || null, actual: canonical || null, ok: canonicalOk },
+    expectedIndexable: expectedIndexable === true,
     indexable,
+    indexabilityOk,
     robots: robotsDirectives(source),
   };
 }
