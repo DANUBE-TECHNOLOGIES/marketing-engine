@@ -80,6 +80,32 @@ export const BLOCK_CATALOG = Object.freeze([
     },
   },
   {
+    type: "partner-logos",
+    label: "Partenaires voyagistes",
+    category: "Confiance",
+    icon: "◆",
+    singleton: true,
+    defaults: {
+      title: "Les plus grands voyagistes, un seul conseiller",
+      text: "Nous comparons les offres de partenaires reconnus pour construire le voyage qui correspond vraiment à vos envies.",
+      sprite: {
+        src: "/partners/common-partners-sprite.webp",
+        alt: "Partenaires Mondescale : FRAM, TUI, Club Lookéa, Club Marmara, Nouvelles Frontières, Club Med, MSC Croisières, Costa Croisières, Salaün Holidays et Exotismes",
+      },
+      commonPartners: [
+        { id: "fram", name: "FRAM" },
+        { id: "tui-universe", name: "TUI, Club Lookéa, Club Marmara et Nouvelles Frontières" },
+        { id: "club-med", name: "Club Med" },
+        { id: "msc-croisieres", name: "MSC Croisières" },
+        { id: "costa-croisieres", name: "Costa Croisières" },
+        { id: "salaun-holidays", name: "Salaün Holidays" },
+        { id: "exotismes", name: "Exotismes" },
+      ],
+      agencyPartners: [],
+      maxAgencyPartners: 3,
+    },
+  },
+  {
     type: "gallery",
     label: "Galerie",
     category: "Médias",
