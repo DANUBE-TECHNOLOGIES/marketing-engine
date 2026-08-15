@@ -4,6 +4,8 @@ const { buildSeoPlan } = require("./planner");
 const { MiniSiteSeoRepository } = require("./repository");
 const { applyOptimizedSeoItems } = require("./optimizer-executor");
 const { optimizePageContent } = require("./content-optimizer");
+const { resolvedTargetCities } = require("./local-area-context");
+const { applyLocalAreaDifferentiation } = require("./local-differentiator");
 const PageBuilderPersistenceService = require("../page-builder-persistence/service");
 
 class MiniSiteSeoEnrichmentService {
@@ -89,15 +91,23 @@ class MiniSiteSeoEnrichmentService {
     const site = await this.requireAgencySite(agencyId);
     const persistence = this.requirePageBuilderPersistence();
     const pages = [];
+    const targetCities = resolvedTargetCities(site, { limit: 5 });
 
     for (const pageSummary of site.pages || []) {
       const page = await persistence.get({ agencyId, pageSlug: pageSummary.slug });
-      const result = optimizePageContent({
+      const baseResult = optimizePageContent({
         agency: site.agency || {},
         page,
         blocks: page.blocks || [],
         availablePages: site.pages || [],
         siteSlug: site.slug || "",
+      });
+      const result = applyLocalAreaDifferentiation({
+        blocks: baseResult.blocks,
+        changes: baseResult.changes,
+        agency: site.agency || {},
+        page,
+        targetCities,
       });
       pages.push({
         pageId: page.id,
@@ -117,11 +127,13 @@ class MiniSiteSeoEnrichmentService {
       agencyId,
       siteId: site.id,
       siteSlug: site.slug,
+      targetCities,
       pages,
       summary: {
         pagesProcessed: pages.length,
         pagesChanged: pages.filter((page) => page.changed).length,
         blockFieldsChanged: pages.reduce((sum, page) => sum + page.changes.length, 0),
+        localAreaCities: targetCities.length,
       },
     };
   }
