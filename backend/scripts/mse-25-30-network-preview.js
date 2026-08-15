@@ -54,7 +54,15 @@ function agencySummary(plan = {}) {
   };
 }
 
-async function run({ backendOrigin, tenantSlug, similarityThreshold, minimumWords, qualityMinimumWords } = {}) {
+async function run({
+  backendOrigin,
+  tenantSlug,
+  similarityThreshold,
+  minimumWords,
+  qualityMinimumWords,
+  emitOutput = true,
+  setExitCode = true,
+} = {}) {
   const origin = normalizeOrigin(backendOrigin || process.env.BACKEND_ORIGIN);
   const tenant = String(tenantSlug || process.env.TENANT_SLUG || "mondescale").trim();
   const body = {};
@@ -93,8 +101,8 @@ async function run({ backendOrigin, tenantSlug, similarityThreshold, minimumWord
     agencies: (payload?.plans || []).map(agencySummary),
   };
 
-  console.log(JSON.stringify(result, null, 2));
-  if (result.rolloutBlocked) process.exitCode = 2;
+  if (emitOutput) console.log(JSON.stringify(result, null, 2));
+  if (setExitCode && result.rolloutBlocked) process.exitCode = 2;
   return result;
 }
 
