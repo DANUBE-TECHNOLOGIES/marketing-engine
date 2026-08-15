@@ -121,22 +121,6 @@ function buildCommercialProofs({ agency, page }) {
   ];
 }
 
-function buildCommercialCta({ agency, page, siteSlug }) {
-  const { city } = agencyLabel(agency);
-  const intent = pageIntent(page);
-  if (!city || !isCommercialIntent(intent)) return null;
-  const href = clean(siteSlug)
-    ? `/agence/${encodeURIComponent(clean(siteSlug))}/contact`
-    : "#contact";
-  return {
-    title: `Parlons de votre projet de ${intent.service} à ${city}`,
-    text: "Expliquez-nous vos envies, vos dates et votre budget : votre conseiller vous aide à préparer une solution adaptée à votre projet.",
-    primaryCta: { label: "Demander un devis", href },
-    secondaryCta: null,
-    style: "primary",
-  };
-}
-
 function commercialPages(availablePages = []) {
   const seen = new Set();
   return (availablePages || [])
@@ -151,8 +135,83 @@ function commercialPages(availablePages = []) {
       title: intent.label,
       description: clean(candidate.title) && normalize(candidate.title) !== normalize(intent.label) ? clean(candidate.title) : undefined,
       href: clean(candidate.slug),
+      intentKey: intent.key,
       seoInternalLink: true,
     }));
+}
+
+function relatedCommercialPage(page, availablePages = []) {
+  const currentIntent = pageIntent(page);
+  const pages = commercialPages(availablePages);
+  if (!isCommercialIntent(currentIntent) || pages.length < 2) return null;
+  const currentIndex = pages.findIndex((item) => item.intentKey === currentIntent.key);
+  if (currentIndex < 0) return pages[0] || null;
+  return pages[(currentIndex + 1) % pages.length] || null;
+}
+
+function buildCommercialCta({ agency, page, siteSlug, availablePages = [] }) {
+  const { city } = agencyLabel(agency);
+  const intent = pageIntent(page);
+  if (!city || !isCommercialIntent(intent)) return null;
+  const contactHref = clean(siteSlug)
+    ? `/agence/${encodeURIComponent(clean(siteSlug))}/contact`
+    : "#contact";
+  const related = relatedCommercialPage(page, availablePages);
+  const relatedHref = related && clean(siteSlug)
+    ? `/agence/${encodeURIComponent(clean(siteSlug))}/${encodeURIComponent(related.href)}`
+    : related?.href
+      ? `/${related.href}`
+      : null;
+  return {
+    title: `Parlons de votre projet de ${intent.service} à ${city}`,
+    text: "Expliquez-nous vos envies, vos dates et votre budget : votre conseiller vous aide à préparer une solution adaptée à votre projet.",
+    primaryCta: { label: "Demander un devis", href: contactHref },
+    secondaryCta: related && relatedHref
+      ? { label: `Découvrir nos ${related.title.toLowerCase()}`, href: relatedHref }
+      : null,
+    style: "primary",
+  };
+}
+
+function buildCommercialFaq({ agency, page }) {
+  const { city, name } = agencyLabel(agency);
+  const intent = pageIntent(page);
+  if (!city || !isCommercialIntent(intent)) return [];
+
+  const first = {
+    cruise: {
+      question: `Comment choisir une croisière depuis ${city} ?`,
+      answer: `L’équipe ${name} vous aide à comparer les compagnies, les itinéraires, les ports de départ, la durée et le niveau de prestations selon votre budget et vos envies.`,
+    },
+    circuit: {
+      question: `Comment choisir un circuit au départ de ${city} ?`,
+      answer: `Votre conseiller à ${city} compare le rythme du circuit, les étapes, les transports, les hébergements et les excursions incluses afin de retenir une formule cohérente avec votre façon de voyager.`,
+    },
+    custom: {
+      question: `Comment créer un voyage sur mesure à ${city} ?`,
+      answer: `Nous partons de vos dates, de votre budget et de vos priorités pour assembler les transports, hébergements et expériences qui correspondent réellement à votre projet.`,
+    },
+    stay: {
+      question: `Comment choisir un séjour avec votre agence à ${city} ?`,
+      answer: `Nous comparons avec vous la destination, la situation de l’hôtel, la formule de pension, les services et les conditions de voyage avant de vous proposer les solutions les plus adaptées.`,
+    },
+    ticketing: {
+      question: `Votre agence à ${city} peut-elle comparer plusieurs vols ?`,
+      answer: `Oui. Nous pouvons étudier différents itinéraires, horaires et conditions tarifaires afin de vous aider à choisir une solution aérienne adaptée à votre voyage.`,
+    },
+  }[intent.key];
+
+  return [
+    first,
+    {
+      question: `Pourquoi réserver vos ${intent.service} avec une agence à ${city} ?`,
+      answer: `Vous bénéficiez d’un interlocuteur identifié qui connaît votre dossier, vous explique les principales conditions de l’offre et reste disponible pour le suivi de votre réservation.`,
+    },
+    {
+      question: `Que faut-il préparer avant de demander un devis à ${name} ?`,
+      answer: `Vos dates ou votre période de départ, le nombre de voyageurs, votre budget indicatif et vos principales envies nous permettent de cibler plus rapidement les solutions pertinentes.`,
+    },
+  ];
 }
 
 function hasEditorialCopy(content = {}) {
@@ -218,7 +277,7 @@ function optimizeCommercialLinks(nextBlocks, { page, availablePages, changes }) 
   const links = commercialPages(availablePages).filter((link) => normalize(link.href) !== normalize(page.slug));
   if (!links.length) return;
 
-  const index = nextBlocks.findIndex((block) => ["cards", "services", "features"].includes(blockType(block)));
+  const index = nextBlocks.findIndex((block) => ["cards", "services"].includes(blockType(block)));
   if (index < 0) return;
   const block = nextBlocks[index];
   const field = Array.isArray(block.content.items) ? "items" : Array.isArray(block.content.cards) ? "cards" : null;
@@ -245,7 +304,7 @@ function optimizeCommercialLinks(nextBlocks, { page, availablePages, changes }) 
   if (changed) block.content[field] = items;
 }
 
-function ensureCommercialPageStructure(nextBlocks, { agency, page, siteSlug, changes }) {
+function ensureCommercialPageStructure(nextBlocks, { agency, page, siteSlug, availablePages, changes }) {
   const intent = pageIntent(page);
   const { city } = agencyLabel(agency);
   if (!city || !isCommercialIntent(intent)) return;
@@ -254,7 +313,9 @@ function ensureCommercialPageStructure(nextBlocks, { agency, page, siteSlug, cha
     ["rich-text", "richtext", "image-text", "agency"].includes(blockType(block)) && hasEditorialCopy(block.content)
   );
   const hasProofs = nextBlocks.some((block) => ["features", "services", "cards"].includes(blockType(block)));
+  const hasFaq = nextBlocks.some((block) => blockType(block) === "faq");
   const hasCta = nextBlocks.some((block) => blockType(block).includes("cta"));
+  const generatedStatus = page.published === true || normalize(page.status) === "published" ? "published" : "draft";
 
   let position = nextBlockPosition(nextBlocks);
 
@@ -263,7 +324,7 @@ function ensureCommercialPageStructure(nextBlocks, { agency, page, siteSlug, cha
     const text = buildLocalSectionText({ agency, page });
     addGeneratedBlock(nextBlocks, {
       type: "rich_text",
-      status: "draft",
+      status: generatedStatus,
       position: position++,
       settings: {},
       seo: { generatedBy: "mse-25.30", purpose: "local-commercial-depth" },
@@ -278,7 +339,7 @@ function ensureCommercialPageStructure(nextBlocks, { agency, page, siteSlug, cha
   if (!hasProofs) {
     addGeneratedBlock(nextBlocks, {
       type: "features",
-      status: "draft",
+      status: generatedStatus,
       position: position++,
       settings: {},
       seo: { generatedBy: "mse-25.30", purpose: "commercial-proof" },
@@ -291,14 +352,28 @@ function ensureCommercialPageStructure(nextBlocks, { agency, page, siteSlug, cha
     }, changes);
   }
 
+  if (!hasFaq) {
+    addGeneratedBlock(nextBlocks, {
+      type: "faq",
+      status: generatedStatus,
+      position: position++,
+      settings: {},
+      seo: { generatedBy: "mse-25.30", purpose: "local-commercial-faq" },
+      content: {
+        title: `Questions fréquentes sur les ${intent.service} à ${city}`,
+        items: buildCommercialFaq({ agency, page }),
+      },
+    }, changes);
+  }
+
   if (!hasCta) {
     addGeneratedBlock(nextBlocks, {
       type: "cta",
-      status: "draft",
+      status: generatedStatus,
       position: position++,
       settings: {},
       seo: { generatedBy: "mse-25.30", purpose: "commercial-conversion" },
-      content: buildCommercialCta({ agency, page, siteSlug }),
+      content: buildCommercialCta({ agency, page, siteSlug, availablePages }),
     }, changes);
   }
 }
@@ -329,7 +404,7 @@ function optimizePageContent({ agency = {}, page = {}, blocks = [], availablePag
 
   optimizeEditorialBlock(nextBlocks, { agency, page, changes });
   optimizeCommercialLinks(nextBlocks, { page, availablePages, changes });
-  ensureCommercialPageStructure(nextBlocks, { agency, page, siteSlug, changes });
+  ensureCommercialPageStructure(nextBlocks, { agency, page, siteSlug, availablePages, changes });
 
   return {
     changed: changes.length > 0,
@@ -345,7 +420,9 @@ module.exports = {
   buildLocalSectionText,
   buildCommercialProofs,
   buildCommercialCta,
+  buildCommercialFaq,
   commercialPages,
+  relatedCommercialPage,
   ensureCommercialPageStructure,
   optimizePageContent,
   pageIntent,
