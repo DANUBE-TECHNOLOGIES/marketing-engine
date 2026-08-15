@@ -20,15 +20,16 @@ test("MSE-25.30 pre-rollout gate detects orphan published pages", () => {
     agencyId: 1,
     siteSlug: "gien",
     pages: [
-      page("home", [textBlock(longCopy), { type: "cta", content: { primaryCta: { label: "Contact", href: "/agence/gien/contact" } } }]),
+      page("home", [textBlock(longCopy), { type: "cta", content: { primaryCta: { label: "Contact", href: "/agence/gien/contact" }, secondaryCta: { label: "Circuits", href: "/agence/gien/circuits" } } }]),
       page("circuits", [textBlock(longCopy), { type: "cta", content: { primaryCta: { label: "Contact", href: "/agence/gien/contact" }, secondaryCta: { label: "Croisières", href: "/agence/gien/croisieres" } } }]),
       page("croisieres", [textBlock(longCopy), { type: "cta", content: { primaryCta: { label: "Contact", href: "/agence/gien/contact" }, secondaryCta: { label: "Circuits", href: "/agence/gien/circuits" } } }]),
       page("contact", [textBlock(longCopy)]),
+      page("inspiration-secrete", [textBlock(longCopy)]),
     ],
   }];
   const report = preRolloutQualityReport(plans, { minimumWords: 120 });
   assert.equal(report.blocked, true);
-  assert.ok(report.blocking.some((issue) => issue.code === "ORPHAN_PAGE"));
+  assert.ok(report.blocking.some((issue) => issue.code === "ORPHAN_PAGE" && issue.slug === "inspiration-secrete"));
 });
 
 test("MSE-25.30 pre-rollout gate warns on thin content and missing editorial image alt", () => {
