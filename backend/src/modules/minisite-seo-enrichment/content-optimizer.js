@@ -26,6 +26,10 @@ function pageIntent(page = {}) {
   return { key: "generic", label: clean(page.title) || "Voyages", service: clean(page.title).toLowerCase() || "voyages" };
 }
 
+function blockType(block = {}) {
+  return normalize(block.blockType || block.type).replace(/[_\s]+/g, "-");
+}
+
 function buildHeroTitle({ agency, page }) {
   const { city, name } = agencyLabel(agency);
   const intent = pageIntent(page);
@@ -52,10 +56,125 @@ function buildLocalIntroduction({ agency, page }) {
   return `L’équipe ${name} à ${city} vous conseille pour préparer un voyage adapté à vos envies et à votre budget.`;
 }
 
-function optimizePageContent({ agency = {}, page = {}, blocks = [] } = {}) {
+function buildLocalSectionTitle({ agency, page }) {
+  const { city } = agencyLabel(agency);
+  const intent = pageIntent(page);
+  if (!city) return "";
+  const titles = {
+    home: `Des voyages conçus avec votre agence à ${city}`,
+    agency: `Une équipe de proximité pour vos voyages à ${city}`,
+    cruise: `Votre spécialiste des croisières à ${city}`,
+    circuit: `Votre spécialiste des circuits à ${city}`,
+    custom: `Votre voyage sur mesure à ${city}, pensé avec un conseiller`,
+    stay: `Votre spécialiste des séjours à ${city}`,
+    ticketing: `Billetterie et vols : votre conseiller à ${city}`,
+  };
+  return titles[intent.key] || (clean(page.title) ? `${clean(page.title)} à ${city}` : "");
+}
+
+function buildLocalSectionText({ agency, page }) {
+  const { city, name } = agencyLabel(agency);
+  const intent = pageIntent(page);
+  if (!city) return "";
+  if (intent.key === "home") {
+    return `À ${city}, l’équipe ${name} prend le temps de comprendre votre projet avant de comparer les destinations, les voyagistes et les formules disponibles. Vous bénéficiez d’un interlocuteur de proximité pour construire, réserver et suivre votre voyage.`;
+  }
+  if (intent.key === "agency") {
+    return `Notre équipe à ${city} vous accueille pour étudier votre projet, comparer les solutions et sécuriser chaque étape de votre réservation. Conseils, formalités, suivi du dossier et assistance : vous gardez un interlocuteur identifié jusqu’à votre retour.`;
+  }
+  if (intent.key !== "generic") {
+    return `Pour vos ${intent.service} à ${city}, ${name} sélectionne avec vous les solutions adaptées à votre budget, à vos dates et à votre façon de voyager. Notre équipe vous aide à comparer les offres et reste disponible pour le suivi de votre dossier.`;
+  }
+  return `À ${city}, ${name} vous accompagne avec des conseils personnalisés et un suivi de proximité pour préparer votre prochain voyage.`;
+}
+
+function commercialPages(availablePages = []) {
+  const seen = new Set();
+  return (availablePages || [])
+    .map((candidate) => ({ candidate, intent: pageIntent(candidate) }))
+    .filter(({ candidate, intent }) => {
+      const slug = clean(candidate.slug);
+      if (!slug || !["cruise", "circuit", "custom", "stay", "ticketing"].includes(intent.key) || seen.has(intent.key)) return false;
+      seen.add(intent.key);
+      return true;
+    })
+    .map(({ candidate, intent }) => ({
+      title: intent.label,
+      description: clean(candidate.title) && normalize(candidate.title) !== normalize(intent.label) ? clean(candidate.title) : undefined,
+      href: clean(candidate.slug),
+      seoInternalLink: true,
+    }));
+}
+
+function hasEditorialCopy(content = {}) {
+  return Boolean(
+    clean(content.text) ||
+    clean(content.description) ||
+    clean(content.html) ||
+    (Array.isArray(content.paragraphs) && content.paragraphs.some((value) => clean(value)))
+  );
+}
+
+function optimizeEditorialBlock(nextBlocks, { agency, page, changes }) {
+  const editorialTypes = new Set(["rich-text", "richtext", "image-text", "agency", "features"]);
+  const index = nextBlocks.findIndex((block) => editorialTypes.has(blockType(block)));
+  if (index < 0) return;
+
+  const block = nextBlocks[index];
+  const previousTitle = clean(block.content.title || block.content.heading || block.title);
+  if (!previousTitle) {
+    const nextTitle = buildLocalSectionTitle({ agency, page });
+    if (nextTitle) {
+      block.content.title = nextTitle;
+      changes.push({ blockId: block.id || null, blockType: blockType(block), field: "title", previous: "", next: nextTitle });
+    }
+  }
+
+  if (!hasEditorialCopy(block.content)) {
+    const nextText = buildLocalSectionText({ agency, page });
+    if (nextText) {
+      block.content.text = nextText;
+      changes.push({ blockId: block.id || null, blockType: blockType(block), field: "text", previous: "", next: nextText });
+    }
+  }
+}
+
+function optimizeCommercialLinks(nextBlocks, { page, availablePages, changes }) {
+  if (!new Set(["home", "agency"]).has(pageIntent(page).key)) return;
+  const links = commercialPages(availablePages).filter((link) => normalize(link.href) !== normalize(page.slug));
+  if (!links.length) return;
+
+  const index = nextBlocks.findIndex((block) => ["cards", "services"].includes(blockType(block)));
+  if (index < 0) return;
+  const block = nextBlocks[index];
+  const field = Array.isArray(block.content.items) ? "items" : Array.isArray(block.content.cards) ? "cards" : null;
+  if (!field) return;
+
+  const items = block.content[field].map((item) => ({ ...item }));
+  let changed = false;
+  for (const link of links) {
+    const existingIndex = items.findIndex((item) => normalize(item.title || item.name || item.label) === normalize(link.title));
+    if (existingIndex < 0) continue;
+    if (!clean(items[existingIndex].href)) {
+      items[existingIndex].href = link.href;
+      items[existingIndex].seoInternalLink = true;
+      changes.push({
+        blockId: block.id || null,
+        blockType: blockType(block),
+        field: `${field}.${existingIndex}.href`,
+        previous: "",
+        next: link.href,
+      });
+      changed = true;
+    }
+  }
+  if (changed) block.content[field] = items;
+}
+
+function optimizePageContent({ agency = {}, page = {}, blocks = [], availablePages = [] } = {}) {
   const nextBlocks = (blocks || []).map((block) => ({ ...block, content: { ...(block.content || {}) } }));
   const changes = [];
-  const heroIndex = nextBlocks.findIndex((block) => block.blockType === "hero" || block.type === "hero");
+  const heroIndex = nextBlocks.findIndex((block) => blockType(block).includes("hero"));
 
   if (heroIndex >= 0) {
     const hero = nextBlocks[heroIndex];
@@ -76,6 +195,9 @@ function optimizePageContent({ agency = {}, page = {}, blocks = [] } = {}) {
     }
   }
 
+  optimizeEditorialBlock(nextBlocks, { agency, page, changes });
+  optimizeCommercialLinks(nextBlocks, { page, availablePages, changes });
+
   return {
     changed: changes.length > 0,
     changes,
@@ -83,4 +205,12 @@ function optimizePageContent({ agency = {}, page = {}, blocks = [] } = {}) {
   };
 }
 
-module.exports = { buildHeroTitle, buildLocalIntroduction, optimizePageContent, pageIntent };
+module.exports = {
+  buildHeroTitle,
+  buildLocalIntroduction,
+  buildLocalSectionTitle,
+  buildLocalSectionText,
+  commercialPages,
+  optimizePageContent,
+  pageIntent,
+};
