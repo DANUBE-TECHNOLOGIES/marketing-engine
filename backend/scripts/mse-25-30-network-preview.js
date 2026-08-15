@@ -53,9 +53,13 @@ function agencySummary(plan = {}) {
         changeCount: Array.isArray(page.changes) ? page.changes.length : 0,
         changes: Array.isArray(page.changes)
           ? page.changes.map((change) => ({
+              blockId: change.blockId ?? null,
               blockType: change.blockType || null,
               field: change.field || null,
+              previous: change.previous ?? null,
+              next: change.next ?? null,
               generated: change.generated === true,
+              purpose: change.purpose || null,
             }))
           : [],
       })),
@@ -93,6 +97,8 @@ async function run({
   const result = {
     ok: payload?.summary?.rolloutBlocked !== true,
     rolloutBlocked: payload?.summary?.rolloutBlocked === true,
+    planFingerprint: payload?.planFingerprint || null,
+    parameters: payload?.parameters || null,
     summary: payload?.summary || {},
     similarity: {
       threshold: payload?.similarity?.threshold ?? null,
