@@ -4,6 +4,23 @@ import {
   getSectionTitle,
 } from "./helpers";
 
+const spriteWrapStyle = {
+  marginTop: "28px",
+  padding: "24px 28px",
+  borderRadius: "24px",
+  background: "#fff",
+  boxShadow: "0 18px 46px rgba(7, 29, 48, 0.07)",
+};
+
+const spriteImageStyle = {
+  width: "100%",
+  maxWidth: "1040px",
+  height: "auto",
+  display: "block",
+  margin: "0 auto",
+  objectFit: "contain",
+};
+
 export default function PartnersRenderer({
   section,
 }) {
@@ -35,7 +52,10 @@ export default function PartnersRenderer({
         ) : null}
 
         {sprite ? (
-          <div className="public-site-partners-sprite">
+          <div
+            className="public-site-partners-sprite"
+            style={spriteWrapStyle}
+          >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={sprite}
@@ -48,23 +68,8 @@ export default function PartnersRenderer({
               }
               loading="lazy"
               decoding="async"
+              style={spriteImageStyle}
             />
-
-            {items.length ? (
-              <ul className="public-site-visually-hidden">
-                {items.map((item, index) => (
-                  <li
-                    key={
-                      item.id ||
-                      item.name ||
-                      index
-                    }
-                  >
-                    {item.name || item.title}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
           </div>
         ) : (
           <div className="public-site-partners-grid">
