@@ -7,6 +7,18 @@ import {
 } from "../../page-builder/shared/commonPartners";
 import styles from "./PartnersRenderer.module.css";
 
+function safePartnerHref(value) {
+  const href = String(value || "").trim();
+  if (!href) return "";
+  if (href.startsWith("/") || href.startsWith("#")) return href;
+  try {
+    const url = new URL(href);
+    return ["http:", "https:"].includes(url.protocol) ? url.toString() : "";
+  } catch {
+    return "";
+  }
+}
+
 function NetworkPartnerGrid() {
   const items = getCommonPartners();
 
@@ -78,21 +90,38 @@ function AgencyPartnerGrid({ items }) {
         {items.map((item, index) => {
           const logo = item.logo || item.logoUrl || item.imageUrl || null;
           const name = item.name || item.title || "Partenaire voyage";
+          const alt = String(item.alt || `Logo ${name}`).trim();
+          const href = safePartnerHref(item.href || item.url || item.link);
+
+          const mark = logo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={logo}
+              alt={alt}
+              loading="lazy"
+              decoding="async"
+              className={styles.agencyLogo}
+            />
+          ) : (
+            <strong>{name}</strong>
+          );
 
           return (
-            <div key={item.id || name || index} className={styles.agencyCard}>
-              {logo ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={logo}
-                  alt={`Logo ${name}`}
-                  loading="lazy"
-                  decoding="async"
-                  className={styles.agencyLogo}
-                />
-              ) : (
-                <strong>{name}</strong>
-              )}
+            <div
+              key={item.id || name || index}
+              className={styles.agencyCard}
+              data-agency-partner-id={item.id || undefined}
+            >
+              {href ? (
+                <a
+                  href={href}
+                  target={href.startsWith("http") ? "_blank" : undefined}
+                  rel={href.startsWith("http") ? "noopener noreferrer" : undefined}
+                  aria-label={`Découvrir ${name}`}
+                >
+                  {mark}
+                </a>
+              ) : mark}
             </div>
           );
         })}
