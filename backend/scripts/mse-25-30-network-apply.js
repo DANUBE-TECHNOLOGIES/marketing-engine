@@ -39,11 +39,25 @@ async function jsonRequest(url, options = {}) {
 }
 
 function summarize(payload = {}) {
+  const agencies = (payload?.agencies || []).map((agency) => ({
+    agencyId: agency.agencyId,
+    siteSlug: agency.siteSlug,
+    pagesWritten: (agency.pages || []).filter((page) => page.changed).length,
+    pages: (agency.pages || []).map((page) => ({
+      slug: page.slug,
+      changed: page.changed === true,
+      version: page.version || null,
+      rollbackVersion: page.rollbackVersion || null,
+      rollbackVersionId: page.rollbackVersionId || null,
+    })),
+  }));
+
   return {
     ok: payload?.writes === true,
     operation: payload?.operation || null,
     writes: payload?.writes === true,
     versioned: payload?.versioned === true,
+    rollbackReady: payload?.rollbackReady === true,
     summary: payload?.summary || {},
     similarity: {
       threshold: payload?.similarity?.threshold ?? null,
@@ -54,16 +68,19 @@ function summarize(payload = {}) {
       warningCount: payload?.quality?.warningCount ?? 0,
     },
     sitemapReadiness: payload?.sitemapReadiness || null,
-    agencies: (payload?.agencies || []).map((agency) => ({
-      agencyId: agency.agencyId,
-      siteSlug: agency.siteSlug,
-      pagesWritten: (agency.pages || []).filter((page) => page.changed).length,
-      pages: (agency.pages || []).map((page) => ({
-        slug: page.slug,
-        changed: page.changed === true,
-        version: page.version || null,
-      })),
-    })),
+    rollbackManifest: agencies.flatMap((agency) =>
+      agency.pages
+        .filter((page) => page.changed && page.rollbackVersionId)
+        .map((page) => ({
+          agencyId: agency.agencyId,
+          siteSlug: agency.siteSlug,
+          slug: page.slug,
+          appliedVersion: page.version,
+          rollbackVersion: page.rollbackVersion,
+          rollbackVersionId: page.rollbackVersionId,
+        }))
+    ),
+    agencies,
   };
 }
 
