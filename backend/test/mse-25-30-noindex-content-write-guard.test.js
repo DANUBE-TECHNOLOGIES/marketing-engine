@@ -4,6 +4,8 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const {
   MiniSiteSeoEnrichmentService,
+  contentOptimizationExclusionReason,
+  isManagedRouteContentPage,
   isNoindexContentPage,
 } = require("../src/modules/minisite-seo-enrichment/service");
 
@@ -18,6 +20,7 @@ const LEGAL_SLUGS = [
 test("MSE-25.30 reconnait toutes les pages canoniques noindex du sitemap", () => {
   for (const slug of LEGAL_SLUGS) {
     assert.equal(isNoindexContentPage({ slug }), true, slug);
+    assert.equal(contentOptimizationExclusionReason({ slug }), "noindex-page", slug);
   }
 
   for (const slug of ["home", "circuits", "contact", "croisieres"]) {
@@ -25,7 +28,19 @@ test("MSE-25.30 reconnait toutes les pages canoniques noindex du sitemap", () =>
   }
 });
 
-test("MSE-25.30 ne charge jamais les pages legales V2 mais conserve les drafts editables", async () => {
+test("MSE-25.30 reconnait les routes canoniques gerees hors Website Designer V2", () => {
+  assert.equal(isManagedRouteContentPage({ slug: "inspiration" }), true);
+  assert.equal(isManagedRouteContentPage({ slug: "inspirations" }), true);
+  assert.equal(contentOptimizationExclusionReason({ slug: "inspiration" }), "canonical-route-managed");
+  assert.equal(contentOptimizationExclusionReason({ slug: "inspirations" }), "canonical-route-managed");
+
+  for (const slug of ["home", "circuits", "contact", "destinations"]) {
+    assert.equal(isManagedRouteContentPage({ slug }), false, slug);
+    assert.equal(contentOptimizationExclusionReason({ slug }), null, slug);
+  }
+});
+
+test("MSE-25.30 ne charge jamais les pages non rendues par V2 mais conserve les drafts editables", async () => {
   const calls = [];
   const site = {
     id: 10,
@@ -41,6 +56,7 @@ test("MSE-25.30 ne charge jamais les pages legales V2 mais conserve les drafts e
       { id: 101, slug: "circuits", title: "Circuits", status: "draft", published: false },
       { id: 102, slug: "mentions-legales", title: "Mentions légales", status: "published", published: true },
       { id: 103, slug: "confidentialite", title: "Confidentialité", status: "published", published: true },
+      { id: 104, slug: "inspiration", title: "Inspirations", status: "published", published: true },
     ],
   };
 
@@ -90,6 +106,7 @@ test("MSE-25.30 ne charge jamais les pages legales V2 mais conserve les drafts e
   assert.deepEqual(plan.pages.map((page) => page.slug), ["home", "circuits"]);
   assert.equal(plan.summary.pagesProcessed, 2);
   assert.equal(plan.summary.pagesExcludedNoindex, 2);
+  assert.equal(plan.summary.pagesExcludedManagedRoute, 1);
 
   const draft = plan.pages.find((page) => page.slug === "circuits");
   assert.ok(draft);
@@ -101,11 +118,12 @@ test("MSE-25.30 ne charge jamais les pages legales V2 mais conserve les drafts e
   );
 });
 
-test("MSE-25.30 expose la protection noindex dans son contrat de sante", () => {
+test("MSE-25.30 expose les protections d'ecriture dans son contrat de sante", () => {
   const service = new MiniSiteSeoEnrichmentService({
     repository: {},
     pageBuilderPersistenceService: {},
   });
 
   assert.equal(service.health().noindexContentWriteGuard, true);
+  assert.equal(service.health().managedRouteContentWriteGuard, true);
 });
