@@ -15,6 +15,44 @@ const {
     "../template-renderer"
   );
 
+const COMMON_HOME_PARTNERS = Object.freeze([
+  {
+    id: "fram",
+    name: "FRAM",
+    scope: "network",
+  },
+  {
+    id: "tui-universe",
+    name: "TUI · Club Lookéa · Club Marmara · Nouvelles Frontières",
+    scope: "network",
+  },
+  {
+    id: "club-med",
+    name: "Club Med",
+    scope: "network",
+  },
+  {
+    id: "msc-croisieres",
+    name: "MSC Croisières",
+    scope: "network",
+  },
+  {
+    id: "costa-croisieres",
+    name: "Costa Croisières",
+    scope: "network",
+  },
+  {
+    id: "salaun-holidays",
+    name: "Salaün Holidays",
+    scope: "network",
+  },
+  {
+    id: "exotismes",
+    name: "Exotismes",
+    scope: "network",
+  },
+]);
+
 const HOME_TEMPLATE = {
   hero: {
     eyebrow:
@@ -105,7 +143,13 @@ const HOME_TEMPLATE = {
       "Les plus grands voyagistes, un seul conseiller",
 
     text:
-      "Nous comparons les offres de partenaires reconnus pour construire le voyage qui correspond vraiment à vos envies.",
+      "Nous sélectionnons parmi des partenaires reconnus les vacances qui correspondent vraiment à vos envies.",
+
+    sprite:
+      "/partners/common-partners-sprite.webp",
+
+    spriteAlt:
+      "Partenaires Mondescale : FRAM, TUI, Club Lookéa, Club Marmara, Nouvelles Frontières, Club Med, MSC Croisières, Costa Croisières, Salaün Holidays et Exotismes",
   },
 
   contact: {
@@ -219,8 +263,19 @@ function homeSections(
       displayOrder:
         60,
 
-      content:
-        rendered.value.partners,
+      content: {
+        ...rendered.value.partners,
+
+        items:
+          COMMON_HOME_PARTNERS.map(
+            partner => ({
+              ...partner,
+            })
+          ),
+
+        maxAgencyPartners:
+          3,
+      },
     },
 
     {
@@ -237,6 +292,7 @@ function homeSections(
 }
 
 module.exports = {
+  COMMON_HOME_PARTNERS,
   HOME_TEMPLATE,
   homeSections,
 };
