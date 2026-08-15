@@ -15,6 +15,7 @@ const RUNTIME_PROTECTED_PATHS = Object.freeze([
   "backend/scripts/mse-25-30-network-apply.js",
   "backend/scripts/mse-25-30-network-rollback.js",
   "backend/scripts/mse-25-30-post-rollout-validate.js",
+  "backend/scripts/mse-25-30-public-html-check.js",
 ]);
 const REQUIRED_HEALTH_FLAGS = Object.freeze([
   "persistence",
