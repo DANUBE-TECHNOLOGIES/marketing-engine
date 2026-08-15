@@ -1,12 +1,14 @@
 "use strict";
 
 const fs = require("node:fs");
+const os = require("node:os");
 const path = require("node:path");
 const { execFileSync } = require("node:child_process");
 const { run: runPreview } = require("./mse-25-30-network-preview");
 
 const DEFAULT_BACKEND_ORIGIN = "http://127.0.0.1:4000";
 const EXPECTED_BRANCH = "feature/mse-25-30-local-seo-optimizer";
+const DEFAULT_REPORT_DIR = path.join(os.homedir(), "mse-25-30-reports");
 
 function normalizeOrigin(value) {
   return String(value || DEFAULT_BACKEND_ORIGIN).trim().replace(/\/+$/g, "");
@@ -59,8 +61,10 @@ async function jsonRequest(url, options = {}) {
 
 function reportPath(value) {
   if (value) return path.resolve(value);
+  const directory = path.resolve(process.env.MSE_25_30_REPORT_DIR || DEFAULT_REPORT_DIR);
+  fs.mkdirSync(directory, { recursive: true });
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-  return path.resolve(process.cwd(), `mse-25-30-network-preview-${stamp}.json`);
+  return path.join(directory, `mse-25-30-network-preview-${stamp}.json`);
 }
 
 async function run({ backendOrigin, tenantSlug, output, expectedBranch, allowDirty = false } = {}) {
@@ -79,7 +83,12 @@ async function run({ backendOrigin, tenantSlug, output, expectedBranch, allowDir
     throw error;
   }
 
-  const preview = await runPreview({ backendOrigin: origin, tenantSlug: tenant });
+  const preview = await runPreview({
+    backendOrigin: origin,
+    tenantSlug: tenant,
+    emitOutput: false,
+    setExitCode: false,
+  });
   const file = reportPath(output || process.env.MSE_25_30_PREFLIGHT_OUTPUT);
   const report = {
     generatedAt: new Date().toISOString(),
@@ -114,6 +123,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  DEFAULT_REPORT_DIR,
   EXPECTED_BRANCH,
   assertRepositoryState,
   jsonRequest,
