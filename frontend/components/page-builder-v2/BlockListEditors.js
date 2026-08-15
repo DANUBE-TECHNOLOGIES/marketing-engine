@@ -61,7 +61,7 @@ function ListEditor({ items, onChange, createItem, addLabel, maxItems = null, ch
   );
 }
 
-export function PartnerLogosEditor({ networkItems, agencyPartners, maxAgencyPartners = 3, onChange }) {
+export function PartnerLogosEditor({ networkItems, agencyPartners, maxAgencyPartners = 3, assets = [], loading = false, onChange }) {
   const locked = Array.isArray(networkItems) ? networkItems.filter((item) => item?.scope !== "agency") : [];
   const agency = Array.isArray(agencyPartners) ? agencyPartners.slice(0, maxAgencyPartners) : [];
 
@@ -85,14 +85,41 @@ export function PartnerLogosEditor({ networkItems, agencyPartners, maxAgencyPart
         onChange={(items) => onChange(items.slice(0, maxAgencyPartners).map((item) => ({ ...item, scope: "agency" })))}
         maxItems={maxAgencyPartners}
         addLabel="Ajouter un partenaire agence"
-        createItem={() => ({ id: `agency-partner-${Date.now()}`, name: "", logoUrl: "", scope: "agency" })}
+        createItem={() => ({ id: `agency-partner-${Date.now()}`, name: "", logoAssetId: "", logoUrl: "", scope: "agency" })}
       >
-        {({ item, update }) => (
-          <>
-            <Field label="Nom du partenaire" value={item.name} onChange={(name) => update({ ...item, name, scope: "agency" })} />
-            <Field label="URL du logo" value={item.logoUrl || item.logo || ""} onChange={(logoUrl) => update({ ...item, logoUrl, scope: "agency" })} />
-          </>
-        )}
+        {({ item, update }) => {
+          const selectedAsset = item.logoAssetId ? assets.find((asset) => asset.id === item.logoAssetId) || null : null;
+          const previewUrl = selectedAsset?.url || item.logoUrl || item.logo || "";
+
+          return (
+            <>
+              {previewUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img className={styles.editorThumbnail} src={previewUrl} alt={item.name || "Logo partenaire"} />
+              ) : null}
+              <Field label="Nom du partenaire" value={item.name} onChange={(name) => update({ ...item, name, scope: "agency" })} />
+              <MediaPicker
+                assets={assets}
+                loading={loading}
+                selectedAssetId={item.logoAssetId || ""}
+                onSelect={(asset) => update({
+                  ...item,
+                  logoAssetId: asset.id,
+                  logoUrl: asset.url,
+                  scope: "agency",
+                })}
+                onClear={() => {
+                  const { logoAssetId: _assetId, logoUrl: _logoUrl, logo: _logo, ...rest } = item;
+                  update({ ...rest, scope: "agency" });
+                }}
+              />
+              <details>
+                <summary>URL de logo héritée</summary>
+                <Field label="URL du logo" value={item.logoUrl || item.logo || ""} onChange={(logoUrl) => update({ ...item, logoAssetId: "", logoUrl, scope: "agency" })} />
+              </details>
+            </>
+          );
+        }}
       </ListEditor>
     </div>
   );
