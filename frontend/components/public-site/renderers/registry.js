@@ -53,6 +53,7 @@ export const PUBLIC_RENDERER_REGISTRY = {
   stats: StatsRenderer,
   partners: PartnersRenderer,
   logos: PartnersRenderer,
+  "partner-logos": PartnersRenderer,
   appointment: AppointmentRenderer,
   faq: FaqRenderer,
   reviews: ReviewsRenderer,

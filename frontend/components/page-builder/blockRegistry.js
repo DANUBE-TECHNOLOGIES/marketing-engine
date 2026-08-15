@@ -7,6 +7,7 @@ import FaqBlock from "./blocks/FaqBlock";
 import HeroBlock from "./blocks/HeroBlock";
 import IntroBlock from "./blocks/IntroBlock";
 import PageHeaderBlock from "./blocks/PageHeaderBlock";
+import PartnerLogosBlock from "./blocks/PartnerLogosBlock";
 import RelatedDestinationsBlock from "./blocks/RelatedDestinationsBlock";
 
 const registry = new Map();
@@ -57,5 +58,7 @@ registerBlock("partner-categories", CardsBlock);
 registerBlock("travel-themes", CardsBlock);
 registerBlock("booking-support", CardsBlock);
 registerBlock("destinations-highlight", CardsBlock);
+registerBlock("partner-logos", PartnerLogosBlock);
+registerBlock("partners", PartnerLogosBlock);
 registerBlock("destination-recommendations", RelatedDestinationsBlock);
 registerBlock("contact-cta", ContactCtaBlock);

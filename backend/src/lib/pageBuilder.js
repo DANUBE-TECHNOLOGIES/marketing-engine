@@ -13,6 +13,7 @@ const BLOCK_DEFINITIONS = Object.freeze({
   faq: { label: "FAQ", category: "seo", required: ["items"] },
   highlights: { label: "Points forts", category: "travel", required: ["items"] },
   "destination-recommendations": { label: "Destinations similaires", category: "travel", required: ["items"] },
+  "partner-logos": { label: "Partenaires voyagistes", category: "trust", required: [] },
   "contact-details": { label: "Coordonnées", category: "conversion", required: [] },
   "contact-cta": { label: "Appel à l'action", category: "conversion", required: ["title"] },
   "map-placeholder": { label: "Carte", category: "local", required: [] },
@@ -24,7 +25,7 @@ const TEMPLATE_DEFINITIONS = Object.freeze({
   "agency-home": {
     label: "Accueil agence",
     pageType: "home",
-    blocks: ["hero", "highlights", "cards", "destination-recommendations", "contact-cta"],
+    blocks: ["hero", "highlights", "cards", "destination-recommendations", "partner-logos", "contact-cta"],
   },
   destination: {
     label: "Destination SEO",

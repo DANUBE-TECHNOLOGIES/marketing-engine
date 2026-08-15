@@ -1355,3 +1355,55 @@
     display: none;
   }
 }
+
+
+/* mse-25-21-partner-editor */
+.partnerEditor {
+  margin-top: 20px;
+  display: grid;
+  gap: 18px;
+}
+
+.partnerLockedPanel {
+  padding: 14px;
+  border: 1px solid #dfe4eb;
+  border-radius: 12px;
+  background: #f7f9fc;
+}
+
+.partnerLockedPanel > p {
+  margin: 6px 0 12px;
+  color: #667287;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.partnerLockedList,
+.partnerPreview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.partnerLockedList span,
+.partnerPreview span {
+  padding: 6px 9px;
+  border: 1px solid #dce3ec;
+  border-radius: 999px;
+  background: #fff;
+  color: #40506a;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.partnerAgencyHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.partnerAgencyHeader small {
+  color: #758299;
+  font-size: 11px;
+}

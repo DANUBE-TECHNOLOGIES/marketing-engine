@@ -100,12 +100,59 @@ test(
 
     assert.equal(
       output.result.created,
-      6
+      7
     );
 
     assert.equal(
       calls.length,
-      6
+      7
+    );
+
+    const partners =
+      calls.find(
+        call =>
+          call.section.sectionType ===
+          "partner-logos"
+      );
+
+    assert.ok(
+      partners,
+      "la Home doit recevoir le bloc partenaires commun"
+    );
+
+    assert.equal(
+      partners.section.displayOrder,
+      60
+    );
+
+    assert.equal(
+      partners.section.content.sprite,
+      "/partners/common-partners-sprite.webp"
+    );
+
+    assert.equal(
+      partners.section.content.items.length,
+      7
+    );
+
+    assert.deepEqual(
+      partners.section.content.items.map(
+        item => item.id
+      ),
+      [
+        "fram",
+        "tui-universe",
+        "club-med",
+        "msc-croisieres",
+        "costa-croisieres",
+        "salaun-holidays",
+        "exotismes",
+      ]
+    );
+
+    assert.equal(
+      partners.section.content.maxAgencyPartners,
+      3
     );
   }
 );
@@ -181,8 +228,15 @@ test(
     );
 
     assert.equal(
+      calls.includes(
+        "partner-logos"
+      ),
+      true
+    );
+
+    assert.equal(
       output.result.created,
-      5
+      6
     );
 
     assert.equal(
@@ -341,7 +395,7 @@ test(
 
     assert.equal(
       first.result.created,
-      6
+      7
     );
 
     assert.equal(
@@ -351,12 +405,12 @@ test(
 
     assert.equal(
       second.result.preserved,
-      6
+      7
     );
 
     assert.equal(
       createCalls,
-      12
+      14
     );
   }
 );
