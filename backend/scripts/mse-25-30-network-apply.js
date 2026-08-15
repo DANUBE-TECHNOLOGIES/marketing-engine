@@ -14,6 +14,7 @@ const REQUIRED_CONFIRMATION = "YES";
 const DEFAULT_MAX_PREFLIGHT_AGE_MS = 30 * 60 * 1000;
 const MAX_CLOCK_SKEW_MS = 5 * 60 * 1000;
 const DEFAULT_REPORT_DIR = path.join(os.homedir(), "mse-25-30-reports");
+const PLAN_FINGERPRINT_PATTERN = /^[a-f0-9]{64}$/;
 
 function normalizeOrigin(value) {
   return String(value || DEFAULT_BACKEND_ORIGIN).trim().replace(/\/+$/g, "");
@@ -55,6 +56,60 @@ function loadPreflightReport(filePath) {
   }
 
   return { report: parsed, reportPath: resolvedPath };
+}
+
+function normalizeApprovedParameters(parameters) {
+  const source = parameters && typeof parameters === "object" ? parameters : {};
+  const normalized = {
+    similarityThreshold: Number(source.similarityThreshold),
+    minimumWords: Number(source.minimumWords),
+    qualityMinimumWords: Number(source.qualityMinimumWords),
+  };
+  const invalid = Object.entries(normalized)
+    .filter(([, value]) => !Number.isFinite(value))
+    .map(([key]) => key);
+  if (invalid.length > 0) {
+    const error = new Error("Le rapport de preflight ne contient pas les paramètres de garde approuvés.");
+    error.code = "MSE_25_30_NETWORK_ROLLOUT_PREFLIGHT_PARAMETERS_INVALID";
+    error.details = { invalid };
+    throw error;
+  }
+  return normalized;
+}
+
+function normalizeApprovedFingerprint(value) {
+  const fingerprint = String(value || "").trim().toLowerCase();
+  if (!PLAN_FINGERPRINT_PATTERN.test(fingerprint)) {
+    const error = new Error("Le rapport de preflight ne contient pas une empreinte de plan MSE-25.30 valide.");
+    error.code = "MSE_25_30_NETWORK_ROLLOUT_PREFLIGHT_FINGERPRINT_INVALID";
+    error.details = { planFingerprint: fingerprint || null };
+    throw error;
+  }
+  return fingerprint;
+}
+
+function assertParameterOverridesMatch(approved, {
+  similarityThreshold,
+  minimumWords,
+  qualityMinimumWords,
+} = {}) {
+  const requested = {
+    similarityThreshold: similarityThreshold !== undefined ? Number(similarityThreshold) : null,
+    minimumWords: minimumWords !== undefined ? Number(minimumWords) : null,
+    qualityMinimumWords: qualityMinimumWords !== undefined ? Number(qualityMinimumWords) : null,
+  };
+
+  const mismatches = Object.entries(requested)
+    .filter(([, value]) => value !== null)
+    .filter(([key, value]) => !Number.isFinite(value) || value !== approved[key])
+    .map(([key, value]) => ({ key, approved: approved[key], requested: value }));
+
+  if (mismatches.length > 0) {
+    const error = new Error("Les paramètres demandés pour l'apply diffèrent de ceux approuvés par le preflight.");
+    error.code = "MSE_25_30_NETWORK_ROLLOUT_PREFLIGHT_PARAMETER_MISMATCH";
+    error.details = { mismatches };
+    throw error;
+  }
 }
 
 function assertPreflightReport(report, {
@@ -101,6 +156,9 @@ function assertPreflightReport(report, {
     throw error;
   }
 
+  const planFingerprint = normalizeApprovedFingerprint(report?.preview?.planFingerprint);
+  const parameters = normalizeApprovedParameters(report?.preview?.parameters);
+
   if (normalizeOrigin(report?.backend?.origin) !== normalizeOrigin(origin)) {
     const error = new Error("Le backend ciblé ne correspond pas au backend validé par le preflight.");
     error.code = "MSE_25_30_NETWORK_ROLLOUT_PREFLIGHT_BACKEND_MISMATCH";
@@ -120,7 +178,7 @@ function assertPreflightReport(report, {
     throw error;
   }
 
-  return { ageMs, maxAgeMs: effectiveMaxAgeMs };
+  return { ageMs, maxAgeMs: effectiveMaxAgeMs, planFingerprint, parameters };
 }
 
 async function jsonRequest(url, options = {}) {
@@ -186,6 +244,8 @@ function summarize(payload = {}) {
     versioned: payload?.versioned === true,
     rollbackReady: payload?.rollbackReady === true,
     automaticallyCompensatedOnFailure: payload?.automaticallyCompensatedOnFailure === true,
+    approvedPlanFingerprint: payload?.approvedPlanFingerprint || null,
+    parameters: payload?.parameters || null,
     summary: payload?.summary || {},
     similarity: {
       threshold: payload?.similarity?.threshold ?? null,
@@ -274,21 +334,19 @@ async function run({ backendOrigin, tenantSlug, confirmation, createdBy, similar
     maxAgeMs: maxPreflightAgeMs,
   });
 
+  assertParameterOverridesMatch(preflightValidation.parameters, {
+    similarityThreshold: similarityThreshold !== undefined ? similarityThreshold : process.env.SIMILARITY_THRESHOLD,
+    minimumWords: minimumWords !== undefined ? minimumWords : process.env.MINIMUM_WORDS,
+    qualityMinimumWords: qualityMinimumWords !== undefined ? qualityMinimumWords : process.env.QUALITY_MINIMUM_WORDS,
+  });
+
   const body = {
     dryRun: false,
     confirm: true,
     createdBy: createdBy || process.env.CREATED_BY || "mse-25.30-network-operator",
+    expectedPlanFingerprint: preflightValidation.planFingerprint,
+    ...preflightValidation.parameters,
   };
-
-  if (similarityThreshold !== undefined || process.env.SIMILARITY_THRESHOLD) {
-    body.similarityThreshold = Number(similarityThreshold ?? process.env.SIMILARITY_THRESHOLD);
-  }
-  if (minimumWords !== undefined || process.env.MINIMUM_WORDS) {
-    body.minimumWords = Number(minimumWords ?? process.env.MINIMUM_WORDS);
-  }
-  if (qualityMinimumWords !== undefined || process.env.QUALITY_MINIMUM_WORDS) {
-    body.qualityMinimumWords = Number(qualityMinimumWords ?? process.env.QUALITY_MINIMUM_WORDS);
-  }
 
   const payload = await jsonRequest(`${origin}/minisite-seo-enrichment/network/content-optimize`, {
     method: "POST",
@@ -303,6 +361,8 @@ async function run({ backendOrigin, tenantSlug, confirmation, createdBy, similar
       generatedAt: loadedPreflight.report.generatedAt,
       ageMs: preflightValidation.ageMs,
       repositoryHead: repo.head,
+      planFingerprint: preflightValidation.planFingerprint,
+      parameters: preflightValidation.parameters,
     },
   };
 
@@ -340,9 +400,13 @@ module.exports = {
   DEFAULT_MAX_PREFLIGHT_AGE_MS,
   DEFAULT_REPORT_DIR,
   MAX_CLOCK_SKEW_MS,
+  PLAN_FINGERPRINT_PATTERN,
+  assertParameterOverridesMatch,
   assertPreflightReport,
   jsonRequest,
   loadPreflightReport,
+  normalizeApprovedFingerprint,
+  normalizeApprovedParameters,
   normalizeExcludedPages,
   normalizeExpectedChanges,
   normalizeOrigin,
