@@ -95,3 +95,6 @@ jobs:
 
       - name: Lint local SEO coverage
         run: npx eslint "app/indexation/local-seo/**/*.js"
+
+      - name: Lint local content uniqueness
+        run: npx eslint "app/indexation/local-content/**/*.js"
