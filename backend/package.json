@@ -13,6 +13,7 @@
     "travel-core:seed:dry-run": "TRAVEL_CORE_DRY_RUN=true node scripts/import-travel-core-reference.js",
     "travel-core:seed": "TRAVEL_CORE_DRY_RUN=false node scripts/import-travel-core-reference.js",
     "search-console:check": "node scripts/search-console-readiness-check.js",
+    "mse-25.30:preflight": "node scripts/mse-25-30-preflight.js",
     "mse-25.30:network-preview": "node scripts/mse-25-30-network-preview.js",
     "mse-25.30:network-apply": "node scripts/mse-25-30-network-apply.js",
     "mse-25.30:network-rollback": "node scripts/mse-25-30-network-rollback.js"
