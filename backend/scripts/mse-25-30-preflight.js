@@ -8,12 +8,21 @@ const { run: runPreview } = require("./mse-25-30-network-preview");
 
 const DEFAULT_BACKEND_ORIGIN = "http://127.0.0.1:4000";
 const EXPECTED_BRANCH = "feature/mse-25-30-local-seo-optimizer";
-const DEFAULT_VALIDATED_BASE_SHA = "c5b9b41ed9567f37b2555a8aa0cea88d9f07b0f9";
+const DEFAULT_VALIDATED_BASE_SHA = "1fbae1340f66d5b6896d4c1e2333ca8997b98569";
 const RUNTIME_PROTECTED_PATHS = Object.freeze([
   "backend/src/modules/minisite-seo-enrichment",
   "backend/scripts/mse-25-30-network-preview.js",
   "backend/scripts/mse-25-30-network-apply.js",
   "backend/scripts/mse-25-30-network-rollback.js",
+]);
+const REQUIRED_HEALTH_FLAGS = Object.freeze([
+  "persistence",
+  "deterministic",
+  "versionedContentWrites",
+  "networkSimilarityGuard",
+  "preRolloutQualityGate",
+  "sitemapReadinessGate",
+  "networkRollbackSnapshots",
 ]);
 const DEFAULT_REPORT_DIR = path.join(os.homedir(), "mse-25-30-reports");
 
@@ -100,6 +109,28 @@ function assertRepositoryState(state, { expectedBranch = EXPECTED_BRANCH, allowD
   }
 }
 
+function assertHealth(health, requiredFlags = REQUIRED_HEALTH_FLAGS) {
+  if (health?.status !== "ok" || health?.capability !== "minisite-seo-enrichment") {
+    const error = new Error("Le backend ne signale pas une capacité minisite-seo-enrichment prête.");
+    error.code = "MSE_25_30_PREFLIGHT_HEALTH_NOT_READY";
+    error.details = health || null;
+    throw error;
+  }
+
+  const missingCapabilities = requiredFlags.filter((flag) => health?.[flag] !== true);
+  if (missingCapabilities.length > 0) {
+    const error = new Error(`Le backend MSE-25.30 ne fournit pas toutes les garanties de rollout requises : ${missingCapabilities.join(", ")}.`);
+    error.code = "MSE_25_30_PREFLIGHT_HEALTH_CAPABILITY_MISSING";
+    error.details = {
+      missingCapabilities,
+      health,
+    };
+    throw error;
+  }
+
+  return health;
+}
+
 async function jsonRequest(url, options = {}) {
   const response = await fetch(url, {
     ...options,
@@ -137,12 +168,7 @@ async function run({ backendOrigin, tenantSlug, output, expectedBranch, allowDir
   const headers = { "x-tenant-slug": tenant };
 
   const health = await jsonRequest(`${origin}/minisite-seo-enrichment/health`, { headers });
-  if (health?.status !== "ok" || health?.capability !== "minisite-seo-enrichment") {
-    const error = new Error("Le backend ne signale pas une capacité minisite-seo-enrichment prête.");
-    error.code = "MSE_25_30_PREFLIGHT_HEALTH_NOT_READY";
-    error.details = health;
-    throw error;
-  }
+  assertHealth(health);
 
   const preview = await runPreview({
     backendOrigin: origin,
@@ -187,7 +213,9 @@ module.exports = {
   DEFAULT_REPORT_DIR,
   DEFAULT_VALIDATED_BASE_SHA,
   EXPECTED_BRANCH,
+  REQUIRED_HEALTH_FLAGS,
   RUNTIME_PROTECTED_PATHS,
+  assertHealth,
   assertRepositoryState,
   gitSucceeds,
   jsonRequest,
