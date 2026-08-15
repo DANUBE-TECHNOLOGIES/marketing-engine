@@ -6,8 +6,9 @@ const MODE = "seo-opportunity-work-queue";
 const ACTION_TYPE = "seo-opportunity-work-item";
 const ALLOWED_STATUSES = new Set(["planned", "succeeded", "measured"]);
 
-function opportunityKey({ siteSlug, query } = {}) {
-  return `${String(siteSlug || "").trim().toLowerCase()}::${String(query || "").trim().toLowerCase()}`;
+function opportunityKey({ siteSlug, query, workKey } = {}) {
+  const identity = String(workKey || query || "").trim().toLowerCase();
+  return `${String(siteSlug || "").trim().toLowerCase()}::${identity}`;
 }
 
 class SeoOpportunityWorkQueueService {
@@ -20,27 +21,43 @@ class SeoOpportunityWorkQueueService {
 
   async create({ tenantId, siteId, siteSlug, opportunity, createdBy } = {}) {
     const query = String(opportunity?.query || "").trim();
-    if (!query || !siteId || !siteSlug) {
-      throw Object.assign(new Error("Site et requête SEO sont obligatoires."), { code: "SEO_OPPORTUNITY_INVALID", statusCode: 400 });
+    const workKey = String(opportunity?.workKey || query || "").trim();
+    const label = String(opportunity?.label || query || workKey || "").trim();
+    if (!workKey || !siteId || !siteSlug) {
+      throw Object.assign(new Error("Site et identifiant de travail SEO sont obligatoires."), { code: "SEO_OPPORTUNITY_INVALID", statusCode: 400 });
     }
     const repository = this.repository(tenantId);
     const existing = await repository.listRuns({ siteId: String(siteId), mode: MODE, limit: 200 });
-    const key = opportunityKey({ siteSlug, query });
+    const key = opportunityKey({ siteSlug, query, workKey });
     const duplicate = existing.find((run) => run?.sourcePlan?.opportunityKey === key && !["measured", "cancelled"].includes(run.status));
     if (duplicate) return repository.getRun(duplicate.id);
 
+    const normalizedOpportunity = { ...opportunity, query: query || null, workKey, label };
     const run = await repository.createRun({
       siteId: String(siteId), status: "pending", mode: MODE, createdBy: createdBy || null,
       policy: { humanValidationRequired: true, automaticContentMutation: false },
-      sourcePlan: { opportunityKey: key, siteSlug, opportunity },
+      sourcePlan: { opportunityKey: key, siteSlug, opportunity: normalizedOpportunity },
       totalActions: 1,
     });
     await repository.createActions(run.id, [{
-      order: 1, type: ACTION_TYPE, title: opportunity?.action?.label || `Travailler la requête ${query}`,
-      priority: opportunity?.priority || "medium", executionMode: "manual", status: "pending",
-      payload: { siteSlug, query, score: opportunity?.score || 0, action: opportunity?.action || null, baseline: { clicks: opportunity?.clicks || 0, impressions: opportunity?.impressions || 0, ctr: opportunity?.ctr || 0, position: opportunity?.position || 0 } },
+      order: 1,
+      type: ACTION_TYPE,
+      title: opportunity?.action?.label || label || `Travailler ${workKey}`,
+      priority: opportunity?.priority || "medium",
+      executionMode: "manual",
+      status: "pending",
+      payload: {
+        siteSlug,
+        query: query || null,
+        workKey,
+        sourceType: opportunity?.sourceType || "search-console",
+        label,
+        score: opportunity?.score || 0,
+        action: opportunity?.action || null,
+        baseline: { clicks: opportunity?.clicks || 0, impressions: opportunity?.impressions || 0, ctr: opportunity?.ctr || 0, position: opportunity?.position || 0 },
+      },
     }]);
-    await repository.createAuditEvent({ runId: run.id, eventType: "seo-opportunity-created", message: "Opportunité SEO ajoutée à la file de travail.", data: { siteSlug, query, score: opportunity?.score || 0 } });
+    await repository.createAuditEvent({ runId: run.id, eventType: "seo-opportunity-created", message: "Opportunité SEO ajoutée à la file de travail.", data: { siteSlug, query: query || null, workKey, sourceType: opportunity?.sourceType || "search-console", score: opportunity?.score || 0 } });
     return repository.getRun(run.id);
   }
 
