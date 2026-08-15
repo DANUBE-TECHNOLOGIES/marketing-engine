@@ -14,6 +14,7 @@ const READ_RESOURCES = Object.freeze({
   candidates: "/search-console-submissions/candidates",
   history: "/search-console-submissions",
   properties: "/search-console-submissions/properties",
+  workQueue: "/seo-opportunity-work-queue",
 });
 
 function jsonError(message, status = 500, details = null) {
@@ -71,7 +72,7 @@ export async function GET(request) {
   if (!path) return jsonError("Ressource cockpit inconnue ou incomplète.", 400, { resource });
   try {
     const backendUrl = new URL(path, BACKEND_URL);
-    if (resource === "history") {
+    if (resource === "history" || resource === "workQueue") {
       const status = url.searchParams.get("status");
       const limit = url.searchParams.get("limit");
       if (status) backendUrl.searchParams.set("status", status);
@@ -89,6 +90,8 @@ function actionPath(operation, runId) {
     case "prepare": return "/search-console-submissions/prepare";
     case "approve": return runId ? `/search-console-submissions/${encodeURIComponent(runId)}/approve` : null;
     case "submit": return runId ? `/search-console-submissions/${encodeURIComponent(runId)}/submit` : null;
+    case "createWorkItem": return "/seo-opportunity-work-queue";
+    case "transitionWorkItem": return runId ? `/seo-opportunity-work-queue/${encodeURIComponent(runId)}/status` : null;
     default: return null;
   }
 }
