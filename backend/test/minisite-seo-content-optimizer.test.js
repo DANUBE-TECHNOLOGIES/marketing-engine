@@ -83,7 +83,7 @@ test("fills an empty editorial H2 and local copy with the native rich_text contr
   assert.match(buildLocalSectionText({ agency, page }), /Gien/);
 });
 
-test("preserves an existing editorial H2 and paragraph", () => {
+test("preserves an existing editorial H2 and paragraph while adding only the missing FAQ", () => {
   const result = optimizePageContent({
     agency: { name: "Mondescale Gien", city: "Gien" },
     page: { slug: "circuits", title: "Circuits" },
@@ -97,7 +97,9 @@ test("preserves an existing editorial H2 and paragraph", () => {
 
   assert.equal(result.blocks[1].content.title, "Notre sélection");
   assert.equal(result.blocks[1].content.html, "<p>Texte rédigé par l'agence.</p>");
-  assert.equal(result.blocks.length, 4);
+  assert.equal(result.blocks.length, 5);
+  assert.equal(result.blocks.filter((block) => (block.type || block.blockType) === "faq").length, 1);
+  assert.equal(result.changes.filter((change) => change.generated === true).length, 1);
 });
 
 test("adds internal hrefs only when matching commercial pages exist", () => {
@@ -141,14 +143,16 @@ test("builds the missing commercial structure for a thin page", () => {
     ],
   });
 
-  assert.deepEqual(result.blocks.map((block) => block.type || block.blockType), ["hero", "rich_text", "features", "cta"]);
+  assert.deepEqual(result.blocks.map((block) => block.type || block.blockType), ["hero", "rich_text", "features", "faq", "cta"]);
   assert.equal(result.blocks[1].position, 1);
   assert.equal(result.blocks[2].position, 2);
   assert.equal(result.blocks[3].position, 3);
+  assert.equal(result.blocks[4].position, 4);
   assert.match(result.blocks[1].content.title, /croisières à Gien/i);
   assert.equal(result.blocks[2].content.items.length, 3);
-  assert.equal(result.blocks[3].content.primaryCta.href, "/agence/gien/contact");
-  assert.equal(result.changes.filter((change) => change.generated === true).length, 3);
+  assert.equal(result.blocks[3].content.items.length, 3);
+  assert.equal(result.blocks[4].content.primaryCta.href, "/agence/gien/contact");
+  assert.equal(result.changes.filter((change) => change.generated === true).length, 4);
 });
 
 test("generated commercial blocks pass the Website Designer V2 persistence validator", () => {
@@ -174,7 +178,7 @@ test("generated commercial blocks pass the Website Designer V2 persistence valid
   }));
 });
 
-test("does not duplicate a complete manually structured commercial page", () => {
+test("does not duplicate manual commercial blocks and adds only a missing FAQ", () => {
   const result = optimizePageContent({
     agency: { name: "Mondescale Gien", city: "Gien" },
     page: { slug: "sejours", title: "Séjours" },
@@ -187,6 +191,10 @@ test("does not duplicate a complete manually structured commercial page", () => 
     ],
   });
 
-  assert.equal(result.blocks.length, 4);
-  assert.equal(result.changes.filter((change) => change.generated === true).length, 0);
+  assert.equal(result.blocks.length, 5);
+  assert.equal(result.blocks.filter((block) => block.type === "rich_text").length, 1);
+  assert.equal(result.blocks.filter((block) => block.type === "features").length, 1);
+  assert.equal(result.blocks.filter((block) => block.type === "cta").length, 1);
+  assert.equal(result.blocks.filter((block) => block.type === "faq").length, 1);
+  assert.equal(result.changes.filter((change) => change.generated === true).length, 1);
 });
