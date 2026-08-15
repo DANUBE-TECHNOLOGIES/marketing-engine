@@ -145,6 +145,16 @@ async function jsonRequest(url, options = {}) {
   return payload;
 }
 
+function normalizeExpectedChanges(changes = []) {
+  return (Array.isArray(changes) ? changes : []).map((change) => ({
+    blockId: change?.blockId ?? null,
+    blockType: change?.blockType || null,
+    field: change?.field || null,
+    previous: change?.previous ?? null,
+    next: change?.next ?? null,
+  }));
+}
+
 function summarize(payload = {}) {
   const agencies = (payload?.agencies || []).map((agency) => ({
     agencyId: agency.agencyId,
@@ -156,6 +166,7 @@ function summarize(payload = {}) {
       version: page.version || null,
       rollbackVersion: page.rollbackVersion || null,
       rollbackVersionId: page.rollbackVersionId || null,
+      expectedChanges: normalizeExpectedChanges(page.changes),
     })),
   }));
 
@@ -323,6 +334,7 @@ module.exports = {
   assertPreflightReport,
   jsonRequest,
   loadPreflightReport,
+  normalizeExpectedChanges,
   normalizeOrigin,
   requireConfirmation,
   rolloutReportPath,
