@@ -3,6 +3,7 @@
 const { cleanText, normalizeSlug, pageLabel, pathForSlug, truncateAtWord } = require("./utils");
 
 function localSuffix(agency) { const city = cleanText(agency.city); return city ? ` à ${city}` : ""; }
+function isHomeSlug(slug) { return ["", "home", "accueil"].includes(normalizeSlug(slug)); }
 
 function titleForPage({ agency, page } = {}) {
   const agencyName = cleanText(agency.name, "Agence de voyages");
@@ -10,8 +11,8 @@ function titleForPage({ agency, page } = {}) {
   const slug = normalizeSlug(page.slug);
   const label = pageLabel(page);
   let title;
-  switch (slug) {
-    case "": title = `Agence de voyages${citySuffix} | ${agencyName}`; break;
+  if (isHomeSlug(slug)) title = `Agence de voyages${citySuffix} | ${agencyName}`;
+  else switch (slug) {
     case "agence": title = `Notre agence de voyages${citySuffix} | ${agencyName}`; break;
     case "equipe": title = `Conseillers voyages${citySuffix} | ${agencyName}`; break;
     case "services": title = `Services de voyage${citySuffix} | ${agencyName}`; break;
@@ -35,8 +36,8 @@ function descriptionForPage({ agency, page } = {}) {
   const slug = normalizeSlug(page.slug);
   const label = pageLabel(page).toLowerCase();
   let description;
-  switch (slug) {
-    case "": description = `${agencyName}${location} vous conseille pour vos séjours, circuits, croisières et voyages sur mesure. Accompagnement avant, pendant et après le départ.`; break;
+  if (isHomeSlug(slug)) description = `${agencyName}${location} vous conseille pour vos séjours, circuits, croisières et voyages sur mesure. Accompagnement avant, pendant et après le départ.`;
+  else switch (slug) {
     case "agence": description = `Découvrez ${agencyName}${location}, son expertise, ses valeurs et son accompagnement personnalisé pour construire votre prochain voyage.`; break;
     case "equipe": description = `Rencontrez les conseillers de ${agencyName}${location}. Une équipe disponible pour créer un voyage adapté à vos envies et à votre budget.`; break;
     case "services": description = `Séjours, circuits, croisières, billetterie et voyages sur mesure : découvrez les services proposés par ${agencyName}${location}.`; break;
@@ -84,4 +85,4 @@ function generateSeoMetadata({ agency, site, page, publicOrigin, optimizeExistin
   };
 }
 
-module.exports = { descriptionForPage, generateSeoMetadata, titleForPage };
+module.exports = { descriptionForPage, generateSeoMetadata, titleForPage, isHomeSlug };
