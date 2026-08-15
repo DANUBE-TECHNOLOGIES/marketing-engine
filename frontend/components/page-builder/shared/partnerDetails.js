@@ -16,6 +16,11 @@ const DETAILS = Object.freeze({
     travelTypes: ["Croisière méditerranéenne", "Escales culturelles", "Itinéraire multi-pays"],
     website: "https://celestyal.com/fr/",
   },
+  "explora-journeys": {
+    destinations: ["Méditerranée & Europe de l’Ouest", "Caraïbes & Amérique centrale", "Alaska", "Asie", "Europe du Nord", "Amérique du Sud & Amazonie"],
+    travelTypes: ["Croisière haut de gamme", "Grand voyage", "Voyage océanique", "Tour du monde"],
+    website: "https://explorajourneys.com/fr/fr/",
+  },
   hurtigruten: {
     destinations: ["Norvège", "Fjords", "Cap Nord", "Arctique"],
     travelTypes: ["Express côtier", "Voyage d'expédition", "Aurores boréales"],
@@ -30,6 +35,11 @@ const DETAILS = Object.freeze({
     destinations: ["Méditerranée", "Caraïbes & Antilles", "Europe du Nord & fjords", "Moyen-Orient", "Asie", "Canaries", "Amérique du Sud"],
     travelTypes: ["Croisière", "Mini-croisière", "Vol + croisière", "Tour du monde"],
     website: "https://www.costacroisieres.fr/",
+  },
+  "double-sens": {
+    destinations: ["Europe", "Afrique", "Asie", "Amérique du Sud", "Caraïbes"],
+    travelTypes: ["Voyage sur mesure", "Petit groupe", "Immersion locale", "Trek & randonnée", "Voyage solidaire"],
+    website: "https://www.doublesens.fr/",
   },
   fram: {
     destinations: ["Méditerranée", "Canaries", "Caraïbes", "Océan Indien", "Asie", "Amériques"],
