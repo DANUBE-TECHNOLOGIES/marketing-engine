@@ -15,7 +15,7 @@ function textBlock(text) {
 
 const longCopy = "Notre équipe vous accompagne pour comparer les solutions, organiser les étapes de votre voyage et préparer un projet cohérent avec vos envies, vos dates et votre budget. ".repeat(10);
 
-test("MSE-25.30 pre-rollout gate detects orphan published pages", () => {
+test("MSE-25.30 reports missing editorial incoming links without duplicating sitemap orphan blocking", () => {
   const plans = [{
     agencyId: 1,
     siteSlug: "gien",
@@ -28,8 +28,9 @@ test("MSE-25.30 pre-rollout gate detects orphan published pages", () => {
     ],
   }];
   const report = preRolloutQualityReport(plans, { minimumWords: 120 });
-  assert.equal(report.blocked, true);
-  assert.ok(report.blocking.some((issue) => issue.code === "ORPHAN_PAGE" && issue.slug === "inspiration-secrete"));
+  assert.equal(report.crawlabilityAuthority, "minisite-structured-data/crawlability-audit");
+  assert.equal(report.blocking.some((issue) => issue.code === "ORPHAN_PAGE"), false);
+  assert.ok(report.warnings.some((issue) => issue.code === "EDITORIAL_INTERNAL_LINK_MISSING" && issue.slug === "inspiration-secrete"));
 });
 
 test("MSE-25.30 pre-rollout gate warns on thin content and missing editorial image alt", () => {
@@ -56,7 +57,7 @@ test("MSE-25.30 network rollout refuses writes on blocking quality issues", asyn
   const service = new MiniSiteSeoEnrichmentService({ repository: {} });
   service.buildNetworkContentOptimization = async () => ({
     similarity: { blocked: false, conflictCount: 0 },
-    quality: { blocked: true, blockingCount: 1, warningCount: 0, blocking: [{ code: "ORPHAN_PAGE" }] },
+    quality: { blocked: true, blockingCount: 1, warningCount: 0, blocking: [{ code: "COMMERCIAL_CONTACT_LINK_MISSING" }] },
     summary: { rolloutBlocked: true },
     plans: [],
   });
