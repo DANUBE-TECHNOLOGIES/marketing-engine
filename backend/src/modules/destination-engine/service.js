@@ -97,6 +97,17 @@ class DestinationService {
       throw e;
     }
 
+    const pages = Array.isArray(site.pages)
+      ? site.pages
+          .filter((page) => page?.published === true && String(page?.status || '').toLowerCase() === 'published')
+          .map((page) => ({
+            id: page.id,
+            slug: page.slug,
+            title: page.title,
+            pageType: page.pageType,
+          }))
+      : [];
+
     return {
       site: {
         id: site.id,
@@ -106,6 +117,7 @@ class DestinationService {
         name: site.name,
         basePath: `/agence/${site.slug}`,
         agency: site.agency,
+        pages,
       },
       destination,
       quotePath: `/agence/${site.slug}/contact?destination=${destination.slug}`,
