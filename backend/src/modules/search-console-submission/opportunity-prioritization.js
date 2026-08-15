@@ -1,5 +1,7 @@
 "use strict";
 
+const { scoreLocalIntent } = require("./local-seo-intent");
+
 function asNumber(value) {
   const number = Number(value);
   return Number.isFinite(number) ? number : 0;
@@ -62,7 +64,7 @@ function recommendedAction(row) {
   };
 }
 
-function prioritizeSearchOpportunities(rows, { limit = 20 } = {}) {
+function prioritizeSearchOpportunities(rows, { limit = 20, localContext = null } = {}) {
   return (Array.isArray(rows) ? rows : [])
     .filter((row) => {
       const impressions = asNumber(row?.impressions);
@@ -76,6 +78,10 @@ function prioritizeSearchOpportunities(rows, { limit = 20 } = {}) {
         ctr: ctrPoints(row.ctr),
       };
       const score = breakdown.impressions + breakdown.position + breakdown.ctr;
+      const localIntent = scoreLocalIntent(row.dimensions.query, localContext || {});
+      const localPriorityScore = localContext
+        ? Math.round((score * 0.7) + (localIntent.score * 0.3))
+        : score;
       return {
         query: row.dimensions.query,
         clicks: asNumber(row.clicks),
@@ -85,10 +91,12 @@ function prioritizeSearchOpportunities(rows, { limit = 20 } = {}) {
         score,
         priority: priorityBand(score),
         scoreBreakdown: breakdown,
+        localIntent,
+        localPriorityScore,
         action: recommendedAction(row),
       };
     })
-    .sort((left, right) => right.score - left.score || right.impressions - left.impressions || left.position - right.position)
+    .sort((left, right) => right.localPriorityScore - left.localPriorityScore || right.score - left.score || right.impressions - left.impressions || left.position - right.position)
     .slice(0, Math.max(1, Math.min(100, Number(limit || 20))));
 }
 
