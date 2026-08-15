@@ -11,6 +11,7 @@ const read = (relativePath) => fs.readFileSync(path.join(frontendRoot, relativeP
 test("full partner directory exposes the network categories and supplier inventory", () => {
   const catalogue = read("components/page-builder/shared/fullPartners.js");
   const details = read("components/page-builder/shared/partnerDetails.js");
+  const assetCoverage = read("components/page-builder/shared/partnerAssetCoverage.js");
   const renderer = read("components/public-site/renderers/PartnerDirectoryRenderer.js");
   const registry = read("components/public-site/renderers/registry.js");
   const blockCatalogue = read("lib/page-builder-v2/block-catalog.js");
@@ -64,6 +65,12 @@ test("full partner directory exposes the network categories and supplier invento
   assert.match(details, /Circuit privatif/);
   assert.match(details, /Méditerranée orientale/);
   assert.match(details, /Alpes françaises/);
+
+  assert.match(assetCoverage, /policy: "individual-assets-only"/);
+  assert.match(assetCoverage, /fallback: "initials"/);
+  assert.match(assetCoverage, /noSprite: true/);
+  assert.match(assetCoverage, /missingLogo/);
+  assert.doesNotMatch(assetCoverage, /common-partners-sprite/);
 
   assert.match(renderer, /getPartnerDirectoryCategories/);
   assert.match(renderer, /categoryNav/);
