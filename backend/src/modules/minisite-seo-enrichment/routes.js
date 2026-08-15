@@ -3,10 +3,12 @@
 const express = require("express");
 const { MiniSiteSeoEnrichmentService } = require("./service");
 const { installProjectedReadiness } = require("./projected-readiness-patch");
+const { installPlanFingerprintGuard } = require("./plan-fingerprint-patch");
 const PageBuilderPersistenceService = require("../page-builder-persistence/service");
 const { MiniSiteStructuredDataService } = require("../minisite-structured-data/service");
 
 installProjectedReadiness(MiniSiteSeoEnrichmentService);
+installPlanFingerprintGuard(MiniSiteSeoEnrichmentService);
 
 function sendError(response, error) {
   response.status(Number(error?.status || error?.statusCode || 500)).json({
@@ -110,6 +112,7 @@ function routes({ prisma, service } = {}) {
         similarityThreshold: request.body?.similarityThreshold,
         minimumWords: request.body?.minimumWords,
         qualityMinimumWords: request.body?.qualityMinimumWords,
+        expectedPlanFingerprint: request.body?.expectedPlanFingerprint,
       }));
     } catch (error) { sendError(response, error); }
   });
