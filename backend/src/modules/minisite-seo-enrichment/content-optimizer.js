@@ -121,14 +121,17 @@ function buildCommercialProofs({ agency, page }) {
   ];
 }
 
-function buildCommercialCta({ agency, page }) {
+function buildCommercialCta({ agency, page, siteSlug }) {
   const { city } = agencyLabel(agency);
   const intent = pageIntent(page);
   if (!city || !isCommercialIntent(intent)) return null;
+  const href = clean(siteSlug)
+    ? `/agence/${encodeURIComponent(clean(siteSlug))}/contact`
+    : "#contact";
   return {
     title: `Parlons de votre projet de ${intent.service} à ${city}`,
-    text: `Expliquez-nous vos envies, vos dates et votre budget : votre conseiller vous aide à préparer une solution adaptée à votre projet.`,
-    primaryCta: { label: "Demander un devis", href: "contact" },
+    text: "Expliquez-nous vos envies, vos dates et votre budget : votre conseiller vous aide à préparer une solution adaptée à votre projet.",
+    primaryCta: { label: "Demander un devis", href },
     secondaryCta: null,
     style: "primary",
   };
@@ -242,7 +245,7 @@ function optimizeCommercialLinks(nextBlocks, { page, availablePages, changes }) 
   if (changed) block.content[field] = items;
 }
 
-function ensureCommercialPageStructure(nextBlocks, { agency, page, changes }) {
+function ensureCommercialPageStructure(nextBlocks, { agency, page, siteSlug, changes }) {
   const intent = pageIntent(page);
   const { city } = agencyLabel(agency);
   if (!city || !isCommercialIntent(intent)) return;
@@ -281,7 +284,7 @@ function ensureCommercialPageStructure(nextBlocks, { agency, page, changes }) {
       seo: { generatedBy: "mse-25.30", purpose: "commercial-proof" },
       content: {
         title: `Pourquoi préparer vos ${intent.service} avec notre agence à ${city} ?`,
-        introduction: `Notre équipe vous accompagne pour comparer les options et préparer votre projet avec un interlocuteur de proximité.`,
+        introduction: "Notre équipe vous accompagne pour comparer les options et préparer votre projet avec un interlocuteur de proximité.",
         items: buildCommercialProofs({ agency, page }),
         columns: 3,
       },
@@ -295,12 +298,12 @@ function ensureCommercialPageStructure(nextBlocks, { agency, page, changes }) {
       position: position++,
       settings: {},
       seo: { generatedBy: "mse-25.30", purpose: "commercial-conversion" },
-      content: buildCommercialCta({ agency, page }),
+      content: buildCommercialCta({ agency, page, siteSlug }),
     }, changes);
   }
 }
 
-function optimizePageContent({ agency = {}, page = {}, blocks = [], availablePages = [] } = {}) {
+function optimizePageContent({ agency = {}, page = {}, blocks = [], availablePages = [], siteSlug = "" } = {}) {
   const nextBlocks = (blocks || []).map((block) => ({ ...block, content: { ...(block.content || {}) } }));
   const changes = [];
   const heroIndex = nextBlocks.findIndex((block) => blockType(block).includes("hero"));
@@ -326,7 +329,7 @@ function optimizePageContent({ agency = {}, page = {}, blocks = [], availablePag
 
   optimizeEditorialBlock(nextBlocks, { agency, page, changes });
   optimizeCommercialLinks(nextBlocks, { page, availablePages, changes });
-  ensureCommercialPageStructure(nextBlocks, { agency, page, changes });
+  ensureCommercialPageStructure(nextBlocks, { agency, page, siteSlug, changes });
 
   return {
     changed: changes.length > 0,
