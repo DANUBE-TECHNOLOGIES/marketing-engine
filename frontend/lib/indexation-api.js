@@ -41,8 +41,8 @@ export const indexationApi = Object.freeze({
   history: (params = {}) => read("history", params),
   properties: () => read("properties"),
   status: ({ siteSlug, siteUrl }) => read("status", { siteSlug, siteUrl }),
-  performance: ({ siteUrl, pagePrefix, days = 28, dimensions = "query", rowLimit = 50 }) =>
-    read("performance", { siteUrl, pagePrefix, days, dimensions, rowLimit }),
+  performance: ({ siteUrl, siteSlug, pagePrefix, days = 28, dimensions = "query", rowLimit = 50 }) =>
+    read("performance", { siteUrl, siteSlug, pagePrefix, days, dimensions, rowLimit }),
   workQueue: (params = {}) => read("workQueue", params),
   createWorkItem: ({ siteSlug, opportunity, createdBy }) =>
     action("createWorkItem", { siteSlug, opportunity, createdBy: createdBy || null }),
