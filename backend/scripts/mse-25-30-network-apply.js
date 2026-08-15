@@ -215,6 +215,26 @@ function writeRolloutReport({ output, repository, origin, tenant, preflight, res
   return { file, report };
 }
 
+function tryWriteRolloutReport(args = {}, writer = writeRolloutReport) {
+  try {
+    const written = writer(args);
+    return {
+      persisted: true,
+      file: written?.file || null,
+      error: null,
+    };
+  } catch (cause) {
+    return {
+      persisted: false,
+      file: null,
+      error: {
+        code: "MSE_25_30_ROLLOUT_REPORT_WRITE_FAILED",
+        message: cause?.message || String(cause),
+      },
+    };
+  }
+}
+
 async function run({ backendOrigin, tenantSlug, confirmation, createdBy, similarityThreshold, minimumWords, qualityMinimumWords, preflightReport, maxPreflightAgeMs, output } = {}) {
   requireConfirmation(confirmation || process.env.CONFIRM_MSE_25_30_ROLLOUT);
 
@@ -266,7 +286,7 @@ async function run({ backendOrigin, tenantSlug, confirmation, createdBy, similar
     },
   };
 
-  const written = writeRolloutReport({
+  const reportWrite = tryWriteRolloutReport({
     output,
     repository: repo,
     origin,
@@ -274,10 +294,13 @@ async function run({ backendOrigin, tenantSlug, confirmation, createdBy, similar
     preflight: result.preflight,
     result,
   });
-  result.rolloutReportPath = written.file;
+  result.rolloutReportPersisted = reportWrite.persisted;
+  result.rolloutReportPath = reportWrite.file;
+  result.operatorAttentionRequired = reportWrite.persisted !== true;
+  if (reportWrite.error) result.rolloutReportError = reportWrite.error;
 
   console.log(JSON.stringify(result, null, 2));
-  if (!result.ok) process.exitCode = 2;
+  if (!result.ok || !result.rolloutReportPersisted) process.exitCode = 2;
   return result;
 }
 
@@ -305,5 +328,6 @@ module.exports = {
   rolloutReportPath,
   run,
   summarize,
+  tryWriteRolloutReport,
   writeRolloutReport,
 };
