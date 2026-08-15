@@ -8,6 +8,13 @@ const { run: runPreview } = require("./mse-25-30-network-preview");
 
 const DEFAULT_BACKEND_ORIGIN = "http://127.0.0.1:4000";
 const EXPECTED_BRANCH = "feature/mse-25-30-local-seo-optimizer";
+const DEFAULT_VALIDATED_BASE_SHA = "c5b9b41ed9567f37b2555a8aa0cea88d9f07b0f9";
+const RUNTIME_PROTECTED_PATHS = Object.freeze([
+  "backend/src/modules/minisite-seo-enrichment",
+  "backend/scripts/mse-25-30-network-preview.js",
+  "backend/scripts/mse-25-30-network-apply.js",
+  "backend/scripts/mse-25-30-network-rollback.js",
+]);
 const DEFAULT_REPORT_DIR = path.join(os.homedir(), "mse-25-30-reports");
 
 function normalizeOrigin(value) {
@@ -18,11 +25,46 @@ function gitValue(args) {
   return execFileSync("git", args, { encoding: "utf8" }).trim();
 }
 
-function repositoryState() {
+function gitSucceeds(args) {
+  try {
+    execFileSync("git", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+    return true;
+  } catch (_error) {
+    return false;
+  }
+}
+
+function protectedChangesSince(validatedBaseSha, protectedPaths = RUNTIME_PROTECTED_PATHS) {
+  if (!validatedBaseSha || !protectedPaths.length) return [];
+  const output = gitValue([
+    "diff",
+    "--name-only",
+    `${validatedBaseSha}...HEAD`,
+    "--",
+    ...protectedPaths,
+  ]);
+  return output ? output.split(/\r?\n/).filter(Boolean) : [];
+}
+
+function repositoryState({
+  validatedBaseSha = process.env.MSE_25_30_VALIDATED_BASE_SHA || DEFAULT_VALIDATED_BASE_SHA,
+  protectedPaths = RUNTIME_PROTECTED_PATHS,
+} = {}) {
+  const branch = gitValue(["branch", "--show-current"]);
+  const head = gitValue(["rev-parse", "HEAD"]);
+  const dirty = Boolean(gitValue(["status", "--porcelain"]));
+  const baselineAncestor = gitSucceeds(["merge-base", "--is-ancestor", validatedBaseSha, "HEAD"]);
+  const protectedChanges = baselineAncestor
+    ? protectedChangesSince(validatedBaseSha, protectedPaths)
+    : [];
+
   return {
-    branch: gitValue(["branch", "--show-current"]),
-    head: gitValue(["rev-parse", "HEAD"]),
-    dirty: Boolean(gitValue(["status", "--porcelain"])),
+    branch,
+    head,
+    dirty,
+    validatedBaseSha,
+    baselineAncestor,
+    protectedChanges,
   };
 }
 
@@ -35,6 +77,25 @@ function assertRepositoryState(state, { expectedBranch = EXPECTED_BRANCH, allowD
   if (state.dirty && !allowDirty) {
     const error = new Error("Le working tree doit être propre avant le preflight MSE-25.30.");
     error.code = "MSE_25_30_PREFLIGHT_DIRTY_WORKTREE";
+    throw error;
+  }
+  if (state.baselineAncestor === false) {
+    const error = new Error(`La baseline CI validée ${state.validatedBaseSha || "(inconnue)"} n'est pas un ancêtre du HEAD courant.`);
+    error.code = "MSE_25_30_PREFLIGHT_BASELINE_MISMATCH";
+    error.details = {
+      head: state.head,
+      validatedBaseSha: state.validatedBaseSha,
+    };
+    throw error;
+  }
+  if (Array.isArray(state.protectedChanges) && state.protectedChanges.length > 0) {
+    const error = new Error("Le runtime MSE-25.30 a changé depuis la baseline CI validée. Une nouvelle validation CI est requise avant le preflight réseau.");
+    error.code = "MSE_25_30_PREFLIGHT_RUNTIME_CHANGED";
+    error.details = {
+      head: state.head,
+      validatedBaseSha: state.validatedBaseSha,
+      protectedChanges: state.protectedChanges,
+    };
     throw error;
   }
 }
@@ -124,10 +185,14 @@ if (require.main === module) {
 
 module.exports = {
   DEFAULT_REPORT_DIR,
+  DEFAULT_VALIDATED_BASE_SHA,
   EXPECTED_BRANCH,
+  RUNTIME_PROTECTED_PATHS,
   assertRepositoryState,
+  gitSucceeds,
   jsonRequest,
   normalizeOrigin,
+  protectedChangesSince,
   repositoryState,
   reportPath,
   run,
