@@ -3,6 +3,7 @@ import JsonLd from "../JsonLd";
 import {
   buildBreadcrumbSchema,
   buildDestinationSchema,
+  buildDestinationWebPageSchema,
   buildTravelAgencySchema,
 } from "../../lib/seo/json-ld";
 import { resolvedTargetCities } from "../../lib/seo/local-area-config";
@@ -192,6 +193,7 @@ export default function DestinationPage({ data }) {
   const destinationHeading = city ? `Voyage à ${d.name} depuis ${city}` : `Voyage à ${d.name}`;
 
   const destinationSchema = buildDestinationSchema(data);
+  const destinationWebPageSchema = buildDestinationWebPageSchema(data);
   const agencySchema = buildTravelAgencySchema(site);
   const breadcrumbSchema = buildBreadcrumbSchema([
     {
@@ -219,6 +221,7 @@ export default function DestinationPage({ data }) {
   return (
     <div className={styles["de-page"]}>
       <JsonLd data={agencySchema} />
+      <JsonLd data={destinationWebPageSchema} />
       <JsonLd data={destinationSchema} />
       <JsonLd data={breadcrumbSchema} />
       {destinationFaqSchema?.mainEntity?.length ? <JsonLd data={destinationFaqSchema} /> : null}
