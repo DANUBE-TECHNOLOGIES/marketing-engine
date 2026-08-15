@@ -30,6 +30,26 @@ test("preserves an existing manual hero subtitle", () => {
   assert.equal(result.changes.length, 1);
 });
 
+test("optimizes commercial service pages around service plus city", () => {
+  const cases = [
+    ["croisieres", "Croisières", "Croisières à Gien"],
+    ["circuits", "Circuits", "Circuits à Gien"],
+    ["voyages-sur-mesure", "Voyages sur mesure", "Voyages sur mesure à Gien"],
+    ["sejours", "Séjours", "Séjours à Gien"],
+    ["billetterie-vols", "Billetterie et vols", "Billetterie et vols à Gien"],
+  ];
+
+  for (const [slug, title, expected] of cases) {
+    const result = optimizePageContent({
+      agency: { name: "Mondescale Gien", city: "Gien" },
+      page: { slug, title },
+      blocks: [{ blockType: "hero", content: { title, subtitle: "" } }],
+    });
+    assert.equal(result.blocks[0].content.title, expected);
+    assert.match(result.blocks[0].content.subtitle, /Gien/);
+  }
+});
+
 test("does not invent local content when agency city is unavailable", () => {
   const result = optimizePageContent({
     agency: { name: "Mondescale" },
