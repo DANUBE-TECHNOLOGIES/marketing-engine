@@ -11,6 +11,7 @@ function pagePrefixFromSitemap(url) { return String(url || "").replace(/\/sitema
 function deltaText(value, formatter = (v) => number(v)) { const n = Number(value || 0); return `${n > 0 ? "+" : ""}${formatter(n)}`; }
 function deltaClass(value) { const n = Number(value || 0); return n > 0 ? "performance-delta-up" : n < 0 ? "performance-delta-down" : "performance-delta-flat"; }
 function priorityLabel(priority) { return priority === "high" ? "Priorité haute" : priority === "medium" ? "Priorité moyenne" : "À surveiller"; }
+function localIntentLabel(level) { return level === "strong" ? "Intention locale forte" : level === "medium" ? "Intention locale moyenne" : level === "weak" ? "Signal local faible" : "Requête générique"; }
 
 export default function SearchPerformanceClient() {
   const [candidates, setCandidates] = useState({ sites: [] });
@@ -55,6 +56,7 @@ export default function SearchPerformanceClient() {
     try {
       setPerformance(await indexationApi.performance({
         siteUrl,
+        siteSlug: selectedSite.siteSlug,
         pagePrefix: pagePrefixFromSitemap(selectedSite.sitemapUrl),
         days,
         dimensions: dimension,
@@ -90,9 +92,9 @@ export default function SearchPerformanceClient() {
     <main className="indexation-shell">
       <header className="indexation-hero">
         <div>
-          <p className="indexation-eyebrow">MSE-25.22 · File de travail SEO</p>
-          <h1>Performance organique des mini-sites</h1>
-          <p>Mesurez ce que Google génère réellement, priorisez les requêtes puis transformez une recommandation en tâche manuelle traçable. Aucun contenu public n’est modifié automatiquement.</p>
+          <p className="indexation-eyebrow">MSE-25.23 · Référencement local</p>
+          <h1>Performance organique locale des mini-sites</h1>
+          <p>Priorisez les requêtes qui rapprochent réellement chaque agence de ses recherches locales : ville principale, zones cibles et intention commerciale locale.</p>
         </div>
         <div className="indexation-actions"><Link className="indexation-nav-link" href="/indexation/work-queue">File de travail</Link><Link className="indexation-nav-link" href="/indexation">Retour au cockpit</Link></div>
       </header>
@@ -108,6 +110,7 @@ export default function SearchPerformanceClient() {
       {error ? <div className="indexation-message indexation-error">{error}</div> : null}
 
       {performance ? <>
+        {performance.localContext?.primaryCity ? <div className="rollout-safety">Cible locale principale : <strong>{performance.localContext.primaryCity}</strong>{asArray(performance.localContext.targetCities).length ? ` · zones secondaires : ${performance.localContext.targetCities.join(", ")}` : ""}.</div> : null}
         <section className="indexation-metrics performance-metrics">
           <div className="indexation-metric"><strong>{number(performance.totals?.clicks)}</strong><span>clics Google</span><small className={deltaClass(performance.delta?.clicks)}>{deltaText(performance.delta?.clicks)} vs période précédente</small></div>
           <div className="indexation-metric"><strong>{number(performance.totals?.impressions)}</strong><span>impressions</span><small className={deltaClass(performance.delta?.impressions)}>{deltaText(performance.delta?.impressions)} vs période précédente</small></div>
@@ -115,7 +118,7 @@ export default function SearchPerformanceClient() {
           <div className="indexation-metric"><strong>{number(performance.totals?.position, 1)}</strong><span>position moyenne</span><small className={deltaClass(performance.delta?.position)}>{deltaText(performance.delta?.position, (v) => number(v, 1))} positions gagnées</small></div>
         </section>
 
-        {opportunities.length ? <section className="indexation-card performance-opportunities"><div className="indexation-card-head"><div><h2>Opportunités SEO prioritaires</h2><p>Score sur 100 calculé côté backend. Aucune action n’est appliquée automatiquement. Une opportunité peut être ajoutée à la file de travail manuelle ; cette action ne modifie aucune page.</p></div></div><div className="opportunity-grid">{opportunities.map((opportunity) => { const queued = queuedQueries.has(opportunity.query); return <div key={opportunity.query} className="opportunity-card"><strong>{opportunity.query}</strong><span>{priorityLabel(opportunity.priority)} · score {number(opportunity.score)}/100</span><span>{number(opportunity.impressions)} impressions · position {number(opportunity.position, 1)} · CTR {percent(opportunity.ctr)}</span><small><b>{opportunity.action?.label || "À analyser"}</b> — {opportunity.action?.rationale || "Analyser le contenu et le maillage de la page cible."}</small><button type="button" disabled={queued || queueBusy === opportunity.query} onClick={() => addToWorkQueue(opportunity)}>{queued ? "Dans la file SEO" : queueBusy === opportunity.query ? "Ajout…" : "Ajouter à la file SEO"}</button></div>; })}</div></section> : null}
+        {opportunities.length ? <section className="indexation-card performance-opportunities"><div className="indexation-card-head"><div><h2>Opportunités SEO locales prioritaires</h2><p>Le score SEO historique reste intact ; le classement ajoute un signal d’intention locale. Aucune action n’est appliquée automatiquement.</p></div></div><div className="opportunity-grid">{opportunities.map((opportunity) => { const queued = queuedQueries.has(opportunity.query); return <div key={opportunity.query} className="opportunity-card"><strong>{opportunity.query}</strong><span>{priorityLabel(opportunity.priority)} · score SEO {number(opportunity.score)}/100 · score local {number(opportunity.localPriorityScore)}/100</span><span>{localIntentLabel(opportunity.localIntent?.level)} · intention {number(opportunity.localIntent?.score)}/100</span><span>{number(opportunity.impressions)} impressions · position {number(opportunity.position, 1)} · CTR {percent(opportunity.ctr)}</span><small><b>{opportunity.action?.label || "À analyser"}</b> — {opportunity.action?.rationale || "Analyser le contenu et le maillage de la page cible."}</small><button type="button" disabled={queued || queueBusy === opportunity.query} onClick={() => addToWorkQueue(opportunity)}>{queued ? "Dans la file SEO" : queueBusy === opportunity.query ? "Ajout…" : "Ajouter à la file SEO"}</button></div>; })}</div></section> : null}
 
         <section className="indexation-card performance-table-card">
           <div className="indexation-card-head"><div><h2>{dimension === "query" ? "Principales requêtes" : "Pages les plus visibles"}</h2><p>{performance.startDate} → {performance.endDate} · comparaison {performance.previousStartDate} → {performance.previousEndDate} · {performance.rowCount} lignes retournées</p></div></div>
