@@ -6,6 +6,7 @@ const {
   DEFAULT_MAX_PREFLIGHT_AGE_MS,
   assertPreflightReport,
   requireConfirmation,
+  tryWriteRolloutReport,
 } = require("../scripts/mse-25-30-network-apply");
 
 function validReport(now = Date.now()) {
@@ -111,4 +112,31 @@ test("network apply refuse un autre tenant ou backend", () => {
     }),
     (error) => error?.code === "MSE_25_30_NETWORK_ROLLOUT_PREFLIGHT_BACKEND_MISMATCH"
   );
+});
+
+test("une erreur locale de persistance du rapport ne masque pas le succès du rollout", () => {
+  const write = tryWriteRolloutReport(
+    { result: { ok: true, rollbackManifest: [{ agencyId: 1, rollbackVersionId: 10 }] } },
+    () => {
+      const error = new Error("disk full");
+      error.code = "ENOSPC";
+      throw error;
+    }
+  );
+
+  assert.equal(write.persisted, false);
+  assert.equal(write.file, null);
+  assert.equal(write.error.code, "MSE_25_30_ROLLOUT_REPORT_WRITE_FAILED");
+  assert.match(write.error.message, /disk full/);
+});
+
+test("la persistance réussie du rapport reste explicitement tracée", () => {
+  const write = tryWriteRolloutReport(
+    { result: { ok: true } },
+    () => ({ file: "/tmp/mse-25-30-rollout.json" })
+  );
+
+  assert.equal(write.persisted, true);
+  assert.equal(write.file, "/tmp/mse-25-30-rollout.json");
+  assert.equal(write.error, null);
 });
