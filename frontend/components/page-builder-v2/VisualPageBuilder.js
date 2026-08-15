@@ -47,6 +47,7 @@ import {
   FaqEditor,
   FeaturesEditor,
   GalleryEditor,
+  PartnerLogosEditor,
   StringListEditor,
   TeamEditor,
   TestimonialsEditor,
@@ -428,6 +429,26 @@ function BlockPreview({ block, mediaAssetsById = {} }) {
                 <div className={styles.cardImage}>Inspiration</div>
                 <h3>Contenu éditorial publié</h3>
               </article>
+            ))}
+          </div>
+        </section>
+      );
+
+    case "partner-logos":
+      return (
+        <section className={styles.contentPreview}>
+          <h2>{content.title || "Les plus grands voyagistes, un seul conseiller"}</h2>
+          {content.text ? <p>{content.text}</p> : null}
+          <div className={styles.partnerPreview}>
+            {(content.items || []).map((item, index) => (
+              <span key={item.id || item.name || index}>
+                {item.name || item.title}
+              </span>
+            ))}
+            {(content.agencyPartners || []).slice(0, Number(content.maxAgencyPartners) || 3).map((item, index) => (
+              <span key={item.id || item.name || `agency-${index}`}>
+                {item.name || "Partenaire agence"}
+              </span>
             ))}
           </div>
         </section>
@@ -956,6 +977,17 @@ function BlockProperties({
           assets={mediaAssets}
           loading={mediaLoading}
           onChange={(members) => set("members", members)}
+        />
+      ) : null}
+
+      {block.type === "partner-logos" ? (
+        <PartnerLogosEditor
+          networkItems={content.items}
+          agencyPartners={content.agencyPartners}
+          maxAgencyPartners={Number(content.maxAgencyPartners) || 3}
+          onChange={(agencyPartners) =>
+            set("agencyPartners", agencyPartners)
+          }
         />
       ) : null}
 
