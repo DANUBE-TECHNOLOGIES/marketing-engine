@@ -43,6 +43,11 @@ export const indexationApi = Object.freeze({
   status: ({ siteSlug, siteUrl }) => read("status", { siteSlug, siteUrl }),
   performance: ({ siteUrl, pagePrefix, days = 28, dimensions = "query", rowLimit = 50 }) =>
     read("performance", { siteUrl, pagePrefix, days, dimensions, rowLimit }),
+  workQueue: (params = {}) => read("workQueue", params),
+  createWorkItem: ({ siteId, siteSlug, opportunity, createdBy }) =>
+    action("createWorkItem", { siteId, siteSlug, opportunity, createdBy: createdBy || null }),
+  transitionWorkItem: ({ runId, status, actor, measurement }) =>
+    action("transitionWorkItem", { status, actor: actor || null, measurement: measurement || null }, runId),
   preflight: ({ siteSlug, siteUrl }) => action("preflight", { siteSlug, siteUrl }),
   prepare: ({ siteSlug, siteUrl, sitemapUrl, requestedBy }) =>
     action("prepare", { siteSlug, siteUrl, sitemapUrl, requestedBy: requestedBy || null }),
