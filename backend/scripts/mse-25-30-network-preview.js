@@ -89,7 +89,11 @@ async function run({
     similarity: {
       threshold: payload?.similarity?.threshold ?? null,
       conflictCount: payload?.similarity?.conflictCount ?? 0,
+      blockingConflictCount: payload?.similarity?.blockingConflictCount ?? payload?.similarity?.conflictCount ?? 0,
+      advisoryConflictCount: payload?.similarity?.advisoryConflictCount ?? 0,
       conflicts: payload?.similarity?.conflicts || [],
+      blockingConflicts: payload?.similarity?.blockingConflicts || [],
+      advisoryConflicts: payload?.similarity?.advisoryConflicts || [],
     },
     quality: {
       blockingCount: payload?.quality?.blockingCount ?? 0,
