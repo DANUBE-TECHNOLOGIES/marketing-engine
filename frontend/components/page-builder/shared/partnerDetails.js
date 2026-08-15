@@ -11,6 +11,16 @@ const DETAILS = Object.freeze({
     travelTypes: ["Croisière premium", "Expédition", "Voyage polaire"],
     website: "https://www.ponant.com/",
   },
+  "celestyal-cruises": {
+    destinations: ["Grèce", "Îles grecques", "Turquie", "Italie", "Croatie", "Monténégro"],
+    travelTypes: ["Croisière méditerranéenne", "Escales culturelles", "Itinéraire multi-pays"],
+    website: "https://celestyal.com/fr/",
+  },
+  hurtigruten: {
+    destinations: ["Norvège", "Fjords", "Cap Nord", "Arctique"],
+    travelTypes: ["Express côtier", "Voyage d'expédition", "Aurores boréales"],
+    website: "https://www.hurtigruten.com/fr-fr/",
+  },
   "msc-croisieres": {
     destinations: ["Méditerranée", "Caraïbes", "Europe du Nord", "Asie", "Amérique", "Afrique du Sud"],
     travelTypes: ["Croisière familiale", "Croisière internationale", "Tour du monde"],
