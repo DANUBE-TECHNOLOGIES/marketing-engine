@@ -7,10 +7,10 @@
     "build": "next build",
     "start": "next start -H 0.0.0.0",
     "lint": "eslint",
-    "test:indexation": "node --test test/mse-25-17-indexation-cockpit.test.mjs test/mse-25-18-controlled-indexation-rollout.test.mjs test/mse-25-19-search-console-observability.test.mjs test/mse-25-20-search-performance-feedback-loop.test.mjs test/mse-25-21-search-opportunity-prioritization.test.mjs test/mse-25-22-seo-opportunity-work-queue.test.mjs test/mse-25-23-local-seo-intent-scoring.test.mjs test/mse-25-24-local-seo-coverage.test.mjs test/mse-25-25-local-content-uniqueness.test.mjs test/mse-25-26-local-semantic-depth.test.mjs",
+    "test:indexation": "node --test test/mse-25-17-indexation-cockpit.test.mjs test/mse-25-18-controlled-indexation-rollout.test.mjs test/mse-25-19-search-console-observability.test.mjs test/mse-25-20-search-performance-feedback-loop.test.mjs test/mse-25-21-search-opportunity-prioritization.test.mjs test/mse-25-22-seo-opportunity-work-queue.test.mjs test/mse-25-23-local-seo-intent-scoring.test.mjs test/mse-25-24-local-seo-coverage.test.mjs test/mse-25-25-local-content-uniqueness.test.mjs test/mse-25-26-local-semantic-depth.test.mjs test/mse-25-27-local-search-intent-coverage.test.mjs",
     "test:indexation:rollout": "node --test test/mse-25-18-controlled-indexation-rollout.test.mjs",
     "test:indexation:status": "node --test test/mse-25-19-search-console-observability.test.mjs",
-    "test:indexation:performance": "node --test test/mse-25-20-search-performance-feedback-loop.test.mjs test/mse-25-21-search-opportunity-prioritization.test.mjs test/mse-25-22-seo-opportunity-work-queue.test.mjs test/mse-25-23-local-seo-intent-scoring.test.mjs test/mse-25-24-local-seo-coverage.test.mjs test/mse-25-25-local-content-uniqueness.test.mjs test/mse-25-26-local-semantic-depth.test.mjs",
+    "test:indexation:performance": "node --test test/mse-25-20-search-performance-feedback-loop.test.mjs test/mse-25-21-search-opportunity-prioritization.test.mjs test/mse-25-22-seo-opportunity-work-queue.test.mjs test/mse-25-23-local-seo-intent-scoring.test.mjs test/mse-25-24-local-seo-coverage.test.mjs test/mse-25-25-local-content-uniqueness.test.mjs test/mse-25-26-local-semantic-depth.test.mjs test/mse-25-27-local-search-intent-coverage.test.mjs",
     "seo:audit-public": "node scripts/audit-public-seo.mjs",
     "seo:audit-public:strict": "node scripts/audit-public-seo.mjs --strict=true",
     "seo:recommend-public": "node scripts/recommend-public-seo.mjs",
@@ -18,16 +18,6 @@
     "seo:score-public:json": "node scripts/score-public-seo.mjs --json=true",
     "seo:score-public:gate": "node scripts/score-public-seo.mjs --gate=true --minimum-site-score=70"
   },
-  "dependencies": {
-    "google-auth-library": "10.7.0",
-    "next": "16.2.9",
-    "react": "19.2.7",
-    "react-dom": "19.2.7"
-  },
-  "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.9",
-    "tailwindcss": "^4"
-  }
+  "dependencies": { "google-auth-library": "10.7.0", "next": "16.2.9", "react": "19.2.7", "react-dom": "19.2.7" },
+  "devDependencies": { "@tailwindcss/postcss": "^4", "eslint": "^9", "eslint-config-next": "16.2.9", "tailwindcss": "^4" }
 }
