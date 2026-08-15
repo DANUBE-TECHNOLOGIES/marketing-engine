@@ -104,6 +104,28 @@ function buildGeneralSeo(
           "Service",
       };
 
+    case "PARTNERS":
+    case "PARTENAIRES":
+      return {
+        title:
+          truncate(
+            `Tour-opérateurs et partenaires | ${agency.name}`,
+            65
+          ),
+
+        description:
+          truncate(
+            `Découvrez les tour-opérateurs, croisiéristes et spécialistes sélectionnés par ${agency.name} pour vos séjours, circuits, croisières et voyages sur mesure.`,
+            160
+          ),
+
+        h1:
+          `Nos partenaires voyage à ${agency.city}`,
+
+        schemaType:
+          "CollectionPage",
+      };
+
     case "CONTACT":
       return {
         title:
