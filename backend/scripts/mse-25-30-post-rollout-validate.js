@@ -231,9 +231,11 @@ async function validateSite({ origin, tenant, agency }) {
     if (rolloutPage?.changed !== true) continue;
     const page = findPage(contract, rolloutPage.slug);
     const expectedPath = canonicalPagePath(siteSlug, rolloutPage.slug);
-    const changeChecks = (rolloutPage.expectedChanges || []).map((change) => page
+    const expectedChanges = Array.isArray(rolloutPage.expectedChanges) ? rolloutPage.expectedChanges : [];
+    const changeChecks = expectedChanges.map((change) => page
       ? validateExpectedChange(page, change)
       : { ok: false, reason: "page-not-public", expected: change, actual: null });
+    const expectedChangesPresent = expectedChanges.length > 0;
     const sitemapPresent = (indexation.entries || []).some((entry) => entryMatchesPath(entry, expectedPath));
     const sourceOk = page?.contentSource === "website-designer-v2-blocks";
 
@@ -244,10 +246,11 @@ async function validateSite({ origin, tenant, agency }) {
       contentSource: page?.contentSource || null,
       websiteDesignerV2: sourceOk,
       sitemapPresent,
+      expectedChangesPresent,
       expectedChangeCount: changeChecks.length,
       matchedChangeCount: changeChecks.filter((item) => item.ok).length,
       changes: changeChecks,
-      ok: Boolean(page?.published === true) && sourceOk && sitemapPresent && changeChecks.every((item) => item.ok),
+      ok: Boolean(page?.published === true) && sourceOk && sitemapPresent && expectedChangesPresent && changeChecks.every((item) => item.ok),
     });
   }
 
@@ -259,7 +262,7 @@ async function validateSite({ origin, tenant, agency }) {
     entryCount: Number(indexation.entryCount || 0),
     readiness: indexation.readiness || null,
     pages: pageResults,
-    ok: readinessOk && pageResults.every((page) => page.ok),
+    ok: readinessOk && pageResults.length > 0 && pageResults.every((page) => page.ok),
   };
 }
 
@@ -287,6 +290,7 @@ async function run({ rolloutReport, backendOrigin, tenantSlug, output } = {}) {
       pagesChecked: agencies.reduce((sum, item) => sum + item.pages.length, 0),
       pagesOk: agencies.reduce((sum, item) => sum + item.pages.filter((page) => page.ok).length, 0),
       failedChanges: agencies.reduce((sum, item) => sum + item.pages.reduce((pageSum, page) => pageSum + page.changes.filter((change) => !change.ok).length, 0), 0),
+      missingExpectedChangeSets: agencies.reduce((sum, item) => sum + item.pages.filter((page) => page.expectedChangesPresent !== true).length, 0),
       sitesNotReady: agencies.filter((item) => item.readyToSubmit !== true).length,
     },
     agencies,
