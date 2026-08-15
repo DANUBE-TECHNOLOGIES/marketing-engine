@@ -39,6 +39,7 @@ test("Website Designer exposes at most three agency-specific partners", () => {
   const editor = read("components/page-builder-v2/BlockListEditors.js");
   const builder = read("components/page-builder-v2/VisualPageBuilder.js");
   const catalogue = read("lib/page-builder-v2/block-catalog.js");
+  const state = read("lib/page-builder-v2/page-builder-state.js");
   const renderer = read("components/public-site/renderers/PartnersRenderer.js");
 
   assert.match(editor, /export function PartnerLogosEditor/);
@@ -55,6 +56,9 @@ test("Website Designer exposes at most three agency-specific partners", () => {
   assert.match(catalogue, /type: "partner-logos"/);
   assert.match(catalogue, /agencyPartners: \[\]/);
   assert.match(catalogue, /maxAgencyPartners: 3/);
+
+  assert.match(state, /\["logos", "partners", "partner-logos"\]/);
+  assert.match(state, /return "partner-logos"/);
 
   assert.match(renderer, /content\.agencyPartners/);
   assert.match(renderer, /maxAgencyPartners/);
