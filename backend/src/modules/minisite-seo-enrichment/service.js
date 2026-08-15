@@ -9,11 +9,21 @@ const { applyLocalAreaDifferentiation } = require("./local-differentiator");
 const { networkSimilarityReport } = require("./similarity-guard");
 const { preRolloutQualityReport } = require("./pre-rollout-quality");
 const { MiniSiteStructuredDataService } = require("../minisite-structured-data/service");
-const { NOINDEX_SLUGS, canonicalPageSlug } = require("../minisite-structured-data/sitemap");
+const { MANAGED_PAGE_SLUGS, NOINDEX_SLUGS, canonicalPageSlug } = require("../minisite-structured-data/sitemap");
 const PageBuilderPersistenceService = require("../page-builder-persistence/service");
 
 function isNoindexContentPage(page = {}) {
   return NOINDEX_SLUGS.has(canonicalPageSlug(page?.slug));
+}
+
+function isManagedRouteContentPage(page = {}) {
+  return MANAGED_PAGE_SLUGS.has(canonicalPageSlug(page?.slug));
+}
+
+function contentOptimizationExclusionReason(page = {}) {
+  if (isNoindexContentPage(page)) return "noindex-page";
+  if (isManagedRouteContentPage(page)) return "canonical-route-managed";
+  return null;
 }
 
 async function compensateAppliedWrites(appliedWrites = [], { createdBy = "mse-25.30-auto-compensation" } = {}) {
@@ -75,6 +85,7 @@ class MiniSiteSeoEnrichmentService {
       networkRollbackSnapshots: true,
       networkAutomaticCompensation: true,
       noindexContentWriteGuard: true,
+      managedRouteContentWriteGuard: true,
       operations: ["previewNetwork", "previewAgency", "applyAgency", "previewAgencyOptimization", "optimizeAgency", "previewAgencyContentOptimization", "optimizeAgencyContent", "previewNetworkContentOptimization", "optimizeNetworkContent", "normalizeAgencyTitles"],
     };
   }
@@ -145,8 +156,10 @@ class MiniSiteSeoEnrichmentService {
     const persistence = this.requirePageBuilderPersistence();
     const pages = [];
     const pageSummaries = site.pages || [];
-    const optimizablePages = pageSummaries.filter((page) => !isNoindexContentPage(page));
-    const noindexPages = pageSummaries.filter(isNoindexContentPage);
+    const exclusions = pageSummaries.map((page) => ({ page, reason: contentOptimizationExclusionReason(page) }));
+    const optimizablePages = exclusions.filter((item) => !item.reason).map((item) => item.page);
+    const noindexPages = exclusions.filter((item) => item.reason === "noindex-page");
+    const managedRoutePages = exclusions.filter((item) => item.reason === "canonical-route-managed");
     const targetCities = resolvedTargetCities(site, { limit: 5 });
 
     for (const pageSummary of optimizablePages) {
@@ -162,6 +175,7 @@ class MiniSiteSeoEnrichmentService {
         pagesProcessed: pages.length,
         pagesChanged: pages.filter((page) => page.changed).length,
         pagesExcludedNoindex: noindexPages.length,
+        pagesExcludedManagedRoute: managedRoutePages.length,
         blockFieldsChanged: pages.reduce((sum, page) => sum + page.changes.length, 0),
         localAreaCities: targetCities.length,
       },
@@ -219,6 +233,7 @@ class MiniSiteSeoEnrichmentService {
         pagesProcessed: plans.reduce((sum, plan) => sum + plan.summary.pagesProcessed, 0),
         pagesChanged: plans.reduce((sum, plan) => sum + plan.summary.pagesChanged, 0),
         pagesExcludedNoindex: plans.reduce((sum, plan) => sum + (plan.summary.pagesExcludedNoindex || 0), 0),
+        pagesExcludedManagedRoute: plans.reduce((sum, plan) => sum + (plan.summary.pagesExcludedManagedRoute || 0), 0),
         similarityConflicts: similarity.conflictCount,
         similarityBlockingConflicts: similarity.blockingConflictCount,
         similarityAdvisoryConflicts: similarity.advisoryConflictCount,
@@ -337,4 +352,10 @@ class MiniSiteSeoEnrichmentService {
   async previewNetwork() { const sites = await this.repository.listSites(); return buildSeoPlan({ sites, publicOrigin: this.publicOrigin, optimizeExisting: false }); }
 }
 
-module.exports = { MiniSiteSeoEnrichmentService, compensateAppliedWrites, isNoindexContentPage };
+module.exports = {
+  MiniSiteSeoEnrichmentService,
+  compensateAppliedWrites,
+  contentOptimizationExclusionReason,
+  isManagedRouteContentPage,
+  isNoindexContentPage,
+};
