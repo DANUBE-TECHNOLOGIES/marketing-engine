@@ -18,12 +18,13 @@ test("MSE-25.30 network apply command refuses to run without explicit operator c
   assert.doesNotThrow(() => requireConfirmation("YES"));
 });
 
-test("MSE-25.30 network apply summary preserves versioned write and SEO guard results", () => {
+test("MSE-25.30 network apply summary preserves versioned write, guards and rollback manifest", () => {
   const result = summarize({
     operation: "network-content-optimize",
     writes: true,
     versioned: true,
-    summary: { agenciesProcessed: 2, pagesWritten: 7 },
+    rollbackReady: true,
+    summary: { agenciesProcessed: 2, pagesWritten: 7, rollbackSnapshots: 7 },
     similarity: { threshold: 0.78, conflictCount: 0 },
     quality: { blockingCount: 0, warningCount: 3 },
     sitemapReadiness: { blocked: false, readyCount: 2, notReadyCount: 0 },
@@ -32,7 +33,7 @@ test("MSE-25.30 network apply summary preserves versioned write and SEO guard re
         agencyId: 1,
         siteSlug: "gien",
         pages: [
-          { slug: "circuits", changed: true, version: 4 },
+          { slug: "circuits", changed: true, version: 5, rollbackVersion: 4, rollbackVersionId: 104 },
           { slug: "contact", changed: false, version: 2 },
         ],
       },
@@ -41,10 +42,23 @@ test("MSE-25.30 network apply summary preserves versioned write and SEO guard re
 
   assert.equal(result.ok, true);
   assert.equal(result.versioned, true);
+  assert.equal(result.rollbackReady, true);
   assert.equal(result.summary.pagesWritten, 7);
+  assert.equal(result.summary.rollbackSnapshots, 7);
   assert.equal(result.similarity.conflictCount, 0);
   assert.equal(result.quality.warningCount, 3);
   assert.equal(result.sitemapReadiness.notReadyCount, 0);
   assert.equal(result.agencies[0].pagesWritten, 1);
-  assert.equal(result.agencies[0].pages[0].version, 4);
+  assert.equal(result.agencies[0].pages[0].version, 5);
+  assert.equal(result.agencies[0].pages[0].rollbackVersionId, 104);
+  assert.deepEqual(result.rollbackManifest, [
+    {
+      agencyId: 1,
+      siteSlug: "gien",
+      slug: "circuits",
+      appliedVersion: 5,
+      rollbackVersion: 4,
+      rollbackVersionId: 104,
+    },
+  ]);
 });
