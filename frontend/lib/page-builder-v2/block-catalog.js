@@ -99,6 +99,7 @@ export const BLOCK_CATALOG = Object.freeze([
         { id: "salaun-holidays", name: "Salaün Holidays", scope: "network" },
         { id: "exotismes", name: "Exotismes", scope: "network" },
       ],
+      agencyPartners: [],
       maxAgencyPartners: 3,
     },
   },
