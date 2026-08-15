@@ -5,6 +5,16 @@ const STOPWORDS = new Set([
   "agence","agences","voyage","voyages","mondescale","conseil","conseils","equipe",
 ]);
 
+const PAGE_INTENTS = Object.freeze([
+  ["home", ["home", "accueil"]],
+  ["agency", ["agence", "notre-agence", "votre-agence"]],
+  ["cruise", ["croisiere", "croisieres"]],
+  ["circuit", ["circuit", "circuits"]],
+  ["custom", ["voyage-sur-mesure", "voyages-sur-mesure", "sur-mesure"]],
+  ["stay", ["sejour", "sejours", "club", "clubs"]],
+  ["ticketing", ["billetterie", "billetterie-vols", "vol", "vols"]],
+]);
+
 function normalize(value) {
   return String(value || "")
     .normalize("NFD")
@@ -54,7 +64,11 @@ function similarity(left, right, ignored = []) {
 }
 
 function pageKind(page) {
-  return String(page?.slug || page?.pageType || "home").toLocaleLowerCase("fr-FR");
+  const source = normalize(`${page?.slug || ""} ${page?.title || ""} ${page?.pageType || ""}`).replace(/\s+/g, "-");
+  for (const [intent, terms] of PAGE_INTENTS) {
+    if (terms.some((term) => source.includes(term))) return intent;
+  }
+  return normalize(page?.pageType || page?.slug || "other").replace(/\s+/g, "-");
 }
 
 function networkSimilarityReport(plans, { threshold = 0.78, minimumWords = 80 } = {}) {
@@ -99,4 +113,4 @@ function networkSimilarityReport(plans, { threshold = 0.78, minimumWords = 80 } 
   };
 }
 
-module.exports = { normalize, visibleText, similarity, networkSimilarityReport };
+module.exports = { PAGE_INTENTS, normalize, visibleText, similarity, pageKind, networkSimilarityReport };
