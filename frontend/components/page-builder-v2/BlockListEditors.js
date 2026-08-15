@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import styles from "./VisualPageBuilder.module.css";
 import MediaPicker from "./MediaPicker";
 import { fetchPublishedMediaImages } from "../../lib/page-builder-v2/media-library-api";
+import { getCommonPartners } from "../page-builder/shared/commonPartners";
 
 function moveItem(items, index, direction) {
   const target = index + direction;
@@ -50,7 +51,10 @@ export function PartnerLogosEditor({ networkItems, agencyPartners, maxAgencyPart
     return () => { cancelled = true; };
   }, [assets, loading]);
 
-  const locked = Array.isArray(networkItems) ? networkItems.filter((item) => item?.scope !== "agency") : [];
+  const suppliedNetwork = Array.isArray(networkItems)
+    ? networkItems.filter((item) => item?.scope !== "agency")
+    : [];
+  const locked = suppliedNetwork.length ? suppliedNetwork : getCommonPartners();
   const agency = Array.isArray(agencyPartners) ? agencyPartners.slice(0, maxAgencyPartners) : [];
 
   return <div className={styles.partnerEditor}><div className={styles.partnerLockedPanel}><strong>Socle réseau Mondescale</strong><p>Ces partenaires sont communs à tous les mini-sites et ne peuvent pas être modifiés ici.</p><div className={styles.partnerLockedList}>{locked.map((item) => <span key={item.id || item.name}>{item.name || item.title}</span>)}</div></div><div className={styles.partnerAgencyHeader}><strong>Partenaires de l’agence</strong><small>{agency.length}/{maxAgencyPartners} emplacement{maxAgencyPartners > 1 ? "s" : ""}</small></div><ListEditor items={agency} onChange={(items) => onChange(items.slice(0, maxAgencyPartners).map((item) => ({ ...item, scope: "agency" })))} maxItems={maxAgencyPartners} addLabel="Ajouter un partenaire agence" createItem={() => ({ id: `agency-partner-${Date.now()}`, name: "", logoAssetId: "", logoUrl: "", alt: "", href: "", scope: "agency" })}>{({ item, update }) => { const selectedAsset = item.logoAssetId ? partnerAssets.find((asset) => asset.id === item.logoAssetId) || null : null; const previewUrl = selectedAsset?.url || item.logoUrl || item.logo || ""; return <>{previewUrl ? <img className={styles.editorThumbnail} src={previewUrl} alt={item.alt || item.name || "Logo partenaire"} /> : null}<Field label="Nom du partenaire" value={item.name} onChange={(name) => update({ ...item, name, scope: "agency" })} /><MediaPicker assets={partnerAssets} loading={partnerLoading} selectedAssetId={item.logoAssetId || ""} onSelect={(asset) => update({ ...item, logoAssetId: asset.id, logoUrl: asset.url, alt: item.alt || asset.altText || (item.name ? `Logo ${item.name}` : ""), scope: "agency" })} onClear={() => { const { logoAssetId: _assetId, logoUrl: _logoUrl, logo: _logo, ...rest } = item; update({ ...rest, scope: "agency" }); }} /><Field label="Texte alternatif" value={item.alt || ""} onChange={(alt) => update({ ...item, alt, scope: "agency" })} /><Field label="Lien facultatif" value={item.href || ""} onChange={(href) => update({ ...item, href, scope: "agency" })} /><details><summary>URL de logo héritée</summary><Field label="URL du logo" value={item.logoUrl || item.logo || ""} onChange={(logoUrl) => update({ ...item, logoAssetId: "", logoUrl, scope: "agency" })} /></details></>; }}</ListEditor></div>;
