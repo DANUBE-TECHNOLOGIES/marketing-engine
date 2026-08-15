@@ -15,6 +15,16 @@ const PAGE_INTENTS = Object.freeze([
   ["ticketing", ["billetterie", "billetterie-vols", "vol", "vols"]],
 ]);
 
+const BLOCKING_PAGE_KINDS = new Set([
+  "home",
+  "agency",
+  "cruise",
+  "circuit",
+  "custom",
+  "stay",
+  "ticketing",
+]);
+
 function normalize(value) {
   return String(value || "")
     .normalize("NFD")
@@ -28,7 +38,8 @@ function normalize(value) {
 function blockText(block) {
   if (!block || typeof block !== "object") return "";
   const content = block.content && typeof block.content === "object" ? block.content : {};
-  const values = [content.title, content.heading, content.text, content.body, content.description, content.subtitle];
+  const values = [content.title, content.heading, content.text, content.body, content.description, content.subtitle, content.html, content.introduction];
+  if (Array.isArray(content.paragraphs)) values.push(...content.paragraphs);
   if (Array.isArray(content.items)) {
     for (const item of content.items) values.push(item?.title, item?.name, item?.label, item?.text, item?.description, item?.question, item?.answer);
   }
@@ -71,6 +82,10 @@ function pageKind(page) {
   return normalize(page?.pageType || page?.slug || "other").replace(/\s+/g, "-");
 }
 
+function isBlockingPageKind(kind) {
+  return BLOCKING_PAGE_KINDS.has(kind);
+}
+
 function networkSimilarityReport(plans, { threshold = 0.78, minimumWords = 80 } = {}) {
   const candidates = [];
   for (const plan of plans || []) {
@@ -98,19 +113,41 @@ function networkSimilarityReport(plans, { threshold = 0.78, minimumWords = 80 } 
       if (left.siteSlug === right.siteSlug || left.kind !== right.kind) continue;
       const score = similarity(left.text, right.text, [left.city, right.city]);
       if (score < threshold) continue;
-      conflicts.push({ score, pageKind: left.kind, left: { agencyId: left.agencyId, siteSlug: left.siteSlug, slug: left.slug }, right: { agencyId: right.agencyId, siteSlug: right.siteSlug, slug: right.slug } });
+      const blocking = isBlockingPageKind(left.kind);
+      conflicts.push({
+        score,
+        pageKind: left.kind,
+        severity: blocking ? "blocking" : "advisory",
+        left: { agencyId: left.agencyId, siteSlug: left.siteSlug, slug: left.slug },
+        right: { agencyId: right.agencyId, siteSlug: right.siteSlug, slug: right.slug },
+      });
     }
   }
 
   conflicts.sort((a, b) => b.score - a.score);
+  const blockingConflicts = conflicts.filter((item) => item.severity === "blocking");
+  const advisoryConflicts = conflicts.filter((item) => item.severity !== "blocking");
   return {
     threshold,
     minimumWords,
     candidates: candidates.length,
     conflictCount: conflicts.length,
-    blocked: conflicts.length > 0,
+    blockingConflictCount: blockingConflicts.length,
+    advisoryConflictCount: advisoryConflicts.length,
+    blocked: blockingConflicts.length > 0,
     conflicts,
+    blockingConflicts,
+    advisoryConflicts,
   };
 }
 
-module.exports = { PAGE_INTENTS, normalize, visibleText, similarity, pageKind, networkSimilarityReport };
+module.exports = {
+  PAGE_INTENTS,
+  BLOCKING_PAGE_KINDS,
+  normalize,
+  visibleText,
+  similarity,
+  pageKind,
+  isBlockingPageKind,
+  networkSimilarityReport,
+};
