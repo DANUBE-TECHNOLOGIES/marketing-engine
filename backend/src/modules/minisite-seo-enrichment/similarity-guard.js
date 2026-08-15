@@ -7,6 +7,7 @@ const STOPWORDS = new Set([
 
 const PAGE_INTENTS = Object.freeze([
   ["home", ["home", "accueil"]],
+  ["contact", ["contact", "nous-contacter"]],
   ["agency", ["agence", "notre-agence", "votre-agence"]],
   ["cruise", ["croisiere", "croisieres"]],
   ["circuit", ["circuit", "circuits"]],
@@ -75,6 +76,8 @@ function similarity(left, right, ignored = []) {
 }
 
 function pageKind(page) {
+  const slug = normalize(page?.slug || "").replace(/\s+/g, "-");
+  if (["contact", "nous-contacter"].includes(slug)) return "contact";
   const source = normalize(`${page?.slug || ""} ${page?.title || ""} ${page?.pageType || ""}`).replace(/\s+/g, "-");
   for (const [intent, terms] of PAGE_INTENTS) {
     if (terms.some((term) => source.includes(term))) return intent;
