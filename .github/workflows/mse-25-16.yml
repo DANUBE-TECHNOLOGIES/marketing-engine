@@ -10,7 +10,7 @@ on:
       - 'backend/src/modules/minisite-structured-data/**'
       - 'backend/scripts/search-console-readiness-check.js'
       - 'backend/test/search-console-*.test.js'
-      - 'backend/test/minisite-local-seo-*.test.js'
+      - 'backend/test/minisite-local-*.test.js'
       - 'frontend/app/agence/[siteSlug]/sitemap.xml/route.js'
       - 'frontend/app/api/indexation/**'
       - 'frontend/app/indexation/**'
@@ -46,7 +46,7 @@ jobs:
       - name: Run Search Console and local SEO backend tests
         env:
           SEARCH_CONSOLE_ENABLED: 'false'
-        run: node --test test/search-console-*.test.js test/minisite-local-seo-*.test.js
+        run: node --test test/search-console-*.test.js test/minisite-local-*.test.js
 
       - name: Verify Search Console module loads with provider disabled
         env:
