@@ -84,7 +84,7 @@ class SearchConsolePerformanceService {
     return response.json();
   }
 
-  async query({ siteUrl, pagePrefix, days = 28, dimensions = ["query"], rowLimit = 50 } = {}) {
+  async query({ siteUrl, pagePrefix, days = 28, dimensions = ["query"], rowLimit = 50, localContext = null } = {}) {
     const target = String(siteUrl || "").trim();
     if (!target) {
       const error = new Error("La propriété Search Console est obligatoire.");
@@ -123,12 +123,13 @@ class SearchConsolePerformanceService {
     const previousTotals = aggregateFromRows(previousAggregateBody?.rows);
     const rows = normalizeRows(detailBody?.rows, finalDimensions);
     const opportunities = finalDimensions.length === 1 && finalDimensions[0] === "query"
-      ? prioritizeSearchOpportunities(rows)
+      ? prioritizeSearchOpportunities(rows, { localContext })
       : [];
 
     return {
       siteUrl: target,
       pagePrefix: String(pagePrefix || "").trim() || null,
+      localContext: localContext || null,
       ...range,
       previousStartDate: previousRange.startDate,
       previousEndDate: previousRange.endDate,
@@ -140,7 +141,7 @@ class SearchConsolePerformanceService {
       delta: performanceDelta(totals, previousTotals),
       opportunities,
       rows,
-      note: "Les agrégats sont interrogés séparément des lignes détaillées et comparés à la période précédente de même durée. Les opportunités sont classées de façon déterministe à partir des impressions, de la position et du potentiel CTR ; aucune modification éditoriale n’est appliquée automatiquement. Search Console peut omettre certaines requêtes anonymisées et ne garantit pas toutes les lignes de détail.",
+      note: "Les agrégats sont interrogés séparément des lignes détaillées et comparés à la période précédente de même durée. Les opportunités sont classées à partir des impressions, de la position, du potentiel CTR et, lorsqu’un mini-site est identifié, de l’intention SEO locale liée à sa ville et ses zones cibles. Aucune modification éditoriale n’est appliquée automatiquement. Search Console peut omettre certaines requêtes anonymisées et ne garantit pas toutes les lignes de détail.",
     };
   }
 }
