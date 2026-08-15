@@ -2,6 +2,7 @@
 
 const { buildSeoPlan } = require("./planner");
 const { MiniSiteSeoRepository } = require("./repository");
+const { applyOptimizedSeoItems } = require("./optimizer-executor");
 
 class MiniSiteSeoEnrichmentService {
   constructor({ prisma, repository, publicOrigin } = {}) {
@@ -54,7 +55,7 @@ class MiniSiteSeoEnrichmentService {
       throw error;
     }
     const plan = await this.previewAgency({ agencyId });
-    const execution = await this.repository.applySeoItems({ items: plan.items, dryRun: dryRun !== false, allowOverwrite: false });
+    const execution = await this.repository.applySeoItems({ items: plan.items, dryRun: dryRun !== false });
     return { operation: dryRun === false ? "apply" : "preview-apply", destructive: false, overwrite: false, agencyId, planSummary: plan.summary, execution };
   }
 
@@ -66,7 +67,7 @@ class MiniSiteSeoEnrichmentService {
       throw error;
     }
     const plan = await this.previewAgencyOptimization({ agencyId });
-    const execution = await this.repository.applySeoItems({ items: plan.items, dryRun: dryRun !== false, allowOverwrite: true });
+    const execution = await applyOptimizedSeoItems(this.repository, { items: plan.items, dryRun: dryRun !== false });
     return { operation: dryRun === false ? "optimize" : "preview-optimize", destructive: false, overwrite: true, agencyId, planSummary: plan.summary, execution };
   }
 
