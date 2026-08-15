@@ -107,6 +107,11 @@ test("MSE-25.30 ne charge jamais les pages non rendues par V2 mais conserve les 
   assert.equal(plan.summary.pagesProcessed, 2);
   assert.equal(plan.summary.pagesExcludedNoindex, 2);
   assert.equal(plan.summary.pagesExcludedManagedRoute, 1);
+  assert.deepEqual(plan.excludedPages, [
+    { pageId: 102, slug: "mentions-legales", title: "Mentions légales", reason: "noindex-page" },
+    { pageId: 103, slug: "confidentialite", title: "Confidentialité", reason: "noindex-page" },
+    { pageId: 104, slug: "inspiration", title: "Inspirations", reason: "canonical-route-managed" },
+  ]);
 
   const draft = plan.pages.find((page) => page.slug === "circuits");
   assert.ok(draft);
