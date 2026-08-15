@@ -17,6 +17,13 @@ test("MSE-25.25 exposes cross-agency local content uniqueness in the cockpit", (
   assert.match(client, /Risque de duplication/);
 });
 
+test("MSE-25.25 can turn duplicate-content risk into a human SEO task", () => {
+  assert.match(client, /createWorkItem/);
+  assert.match(client, /sourceType: "local-content-uniqueness"/);
+  assert.match(client, /workKey: `local-content-uniqueness:/);
+  assert.match(client, /Créer une tâche SEO/);
+});
+
 test("MSE-25.25 remains a human-controlled audit", () => {
   assert.match(client, /aucune réécriture automatique/i);
   assert.match(client, /aucun contenu publié sans validation humaine/i);
