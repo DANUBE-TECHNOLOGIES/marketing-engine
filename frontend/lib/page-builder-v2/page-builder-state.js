@@ -20,12 +20,23 @@ export function createLocalId(prefix = "block") {
     .slice(2, 10)}`;
 }
 
+function canonicalBlockType(value) {
+  const type = String(value || "rich_text")
+    .replace(/--\d+$/, "")
+    .trim()
+    .toLowerCase();
+
+  if (["logos", "partners", "partner-logos"].includes(type)) {
+    return "partner-logos";
+  }
+
+  return type;
+}
+
 export function normalizeBlock(block, index = 0) {
-  const type =
-    String(block?.type || block?.blockType || block?.sectionType || "rich_text")
-      .replace(/--\d+$/, "")
-      .trim()
-      .toLowerCase();
+  const type = canonicalBlockType(
+    block?.type || block?.blockType || block?.sectionType || "rich_text"
+  );
 
   const definition = getBlockDefinition(type);
   const rawPosition = block?.position ?? block?.displayOrder ?? index;
