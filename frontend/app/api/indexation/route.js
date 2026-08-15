@@ -58,7 +58,7 @@ function performancePath(url) {
   if (!siteUrl) return null;
   const backendUrl = new URL("/search-console-submissions/performance", BACKEND_URL);
   backendUrl.searchParams.set("siteUrl", siteUrl);
-  for (const key of ["pagePrefix", "days", "dimensions", "rowLimit"]) {
+  for (const key of ["siteSlug", "pagePrefix", "days", "dimensions", "rowLimit"]) {
     const value = url.searchParams.get(key);
     if (value) backendUrl.searchParams.set(key, value);
   }
