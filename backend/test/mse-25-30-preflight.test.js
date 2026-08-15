@@ -5,6 +5,8 @@ const assert = require("node:assert/strict");
 const {
   DEFAULT_VALIDATED_BASE_SHA,
   EXPECTED_BRANCH,
+  REQUIRED_HEALTH_FLAGS,
+  assertHealth,
   assertRepositoryState,
 } = require("../scripts/mse-25-30-preflight");
 
@@ -16,6 +18,15 @@ function validState(overrides = {}) {
     validatedBaseSha: DEFAULT_VALIDATED_BASE_SHA,
     baselineAncestor: true,
     protectedChanges: [],
+    ...overrides,
+  };
+}
+
+function validHealth(overrides = {}) {
+  return {
+    status: "ok",
+    capability: "minisite-seo-enrichment",
+    ...Object.fromEntries(REQUIRED_HEALTH_FLAGS.map((flag) => [flag, true])),
     ...overrides,
   };
 }
@@ -57,5 +68,27 @@ test("les gardes branche et working tree restent actives", () => {
   assert.throws(
     () => assertRepositoryState(validState({ dirty: true })),
     (error) => error.code === "MSE_25_30_PREFLIGHT_DIRTY_WORKTREE",
+  );
+});
+
+test("preflight exige toutes les garanties runtime annoncees par health", () => {
+  assert.doesNotThrow(() => assertHealth(validHealth()));
+
+  for (const flag of REQUIRED_HEALTH_FLAGS) {
+    assert.throws(
+      () => assertHealth(validHealth({ [flag]: false })),
+      (error) => {
+        assert.equal(error.code, "MSE_25_30_PREFLIGHT_HEALTH_CAPABILITY_MISSING");
+        assert.deepEqual(error.details.missingCapabilities, [flag]);
+        return true;
+      },
+    );
+  }
+});
+
+test("preflight refuse un endpoint health qui n'est pas MSE-25.30", () => {
+  assert.throws(
+    () => assertHealth(validHealth({ capability: "other-capability" })),
+    (error) => error.code === "MSE_25_30_PREFLIGHT_HEALTH_NOT_READY",
   );
 });
