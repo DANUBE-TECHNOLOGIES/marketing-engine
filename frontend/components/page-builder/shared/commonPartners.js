@@ -7,9 +7,15 @@ export const COMMON_PARTNERS = Object.freeze([
   },
   {
     id: "tui-univers",
-    name: "TUI · Club Lookéa · Club Marmara · Nouvelles Frontières",
-    logoUrl: "/partners/tui-univers.webp",
+    name: "Univers TUI",
     alt: "TUI, Club Lookéa, Club Marmara et Nouvelles Frontières, partenaires de Mondescale Voyages",
+    group: "tui",
+    logoUrl: "/partners/tui.webp",
+    children: [
+      { id: "club-lookea", name: "Club Lookéa", logoUrl: "/partners/club-lookea.webp" },
+      { id: "club-marmara", name: "Club Marmara", logoUrl: "/partners/club-marmara.webp" },
+      { id: "nouvelles-frontieres", name: "Nouvelles Frontières", logoUrl: "/partners/nouvelles-frontieres.webp" },
+    ],
   },
   {
     id: "club-med",
@@ -44,5 +50,9 @@ export const COMMON_PARTNERS = Object.freeze([
 ]);
 
 export function getCommonPartners() {
-  return COMMON_PARTNERS.map((partner) => ({ ...partner, scope: "network" }));
+  return COMMON_PARTNERS.map((partner) => ({
+    ...partner,
+    children: partner.children?.map((child) => ({ ...child })),
+    scope: "network",
+  }));
 }
