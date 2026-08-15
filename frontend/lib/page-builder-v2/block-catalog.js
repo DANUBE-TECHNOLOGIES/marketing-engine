@@ -93,6 +93,17 @@ export const BLOCK_CATALOG = Object.freeze([
     },
   },
   {
+    type: "partner-directory",
+    label: "Annuaire complet des partenaires",
+    category: "Confiance",
+    icon: "▦",
+    singleton: true,
+    defaults: {
+      title: "Tous nos partenaires voyage",
+      text: "Nos conseillers s'appuient sur un large réseau de tour-opérateurs, croisiéristes et spécialistes pour comparer les solutions et construire le voyage le plus adapté à votre projet.",
+    },
+  },
+  {
     type: "gallery",
     label: "Galerie",
     category: "Médias",
