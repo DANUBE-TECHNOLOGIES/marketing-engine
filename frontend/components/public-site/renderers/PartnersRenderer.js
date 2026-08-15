@@ -7,6 +7,32 @@ import {
 } from "../../page-builder/shared/commonPartners";
 import styles from "./PartnersRenderer.module.css";
 
+function TuiLogo() {
+  return (
+    <svg
+      className={styles.tuiMainLogo}
+      viewBox="0 0 170 64"
+      role="img"
+      aria-label="Logo TUI"
+    >
+      <g fill="none" stroke="#d40f24" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M18 20c2 20 13 30 30 30 16 0 27-9 31-26" />
+        <circle cx="66" cy="12" r="5" fill="#d40f24" stroke="none" />
+      </g>
+      <text
+        x="92"
+        y="44"
+        fill="#d40f24"
+        fontFamily="Arial, Helvetica, sans-serif"
+        fontSize="30"
+        fontWeight="700"
+      >
+        TUI
+      </text>
+    </svg>
+  );
+}
+
 function NetworkPartnerGrid() {
   const items = getCommonPartners();
 
@@ -25,14 +51,7 @@ function NetworkPartnerGrid() {
           >
             {isTui ? (
               <>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={item.logoUrl}
-                  alt="Logo TUI"
-                  loading="lazy"
-                  decoding="async"
-                  className={styles.tuiMainLogo}
-                />
+                <TuiLogo />
                 <div className={styles.tuiChildren}>
                   {(item.children || []).map((child) => (
                     <div key={child.id} className={styles.tuiChild}>
