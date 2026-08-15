@@ -73,7 +73,13 @@ function genericLocalParagraph({ name, city, area, profile, variant }) {
     agency: [
       `L’équipe ${name} accueille les voyageurs de ${city}, mais aussi de ${area}. Cette zone de proximité permet de privilégier un échange direct, de mieux comprendre chaque projet et de suivre les réservations avec un interlocuteur identifié.`,
       `À ${city}, ${name} est également une agence de proximité pour les habitants de ${area}. Notre équipe prend le temps d’étudier les dates, le budget et la manière de voyager avant de proposer les solutions adaptées.`,
-      `Les voyageurs de ${area} peuvent s’appuyer sur l’agence ${name} à ${city} pour préparer leur projet. Le conseil reste local tandis que les solutions comparées couvrent un large choix de destinations et de partenaires.`
+      `Les voyageurs de ${area} peuvent s’appuyer sur l’agence ${name} à ${city} pour préparer leur projet. Le conseil reste local tandis que les solutions comparées couvrent un large choix de destinations et de partenaires.`,
+      `Depuis ${city}, ${name} accompagne également les habitants de ${area} qui souhaitent préparer leur voyage avec un conseiller disponible. L’échange en agence permet de hiérarchiser les priorités avant de retenir les prestations réellement utiles.`,
+      `Pour les voyageurs de ${area}, l’agence ${name} à ${city} constitue un point de contact de proximité pour étudier un projet, comparer les possibilités et suivre les différentes étapes de la réservation sans multiplier les interlocuteurs.`,
+      `L’agence ${name} reçoit à ${city} des clients venant aussi de ${area}. Cette implantation locale permet d’organiser un rendez-vous, de reprendre ensemble les détails du projet et de conserver une continuité de suivi jusqu’au départ.`,
+      `Les habitants de ${area} peuvent rencontrer l’équipe ${name} à ${city} pour confronter leurs envies aux contraintes réelles du voyage : calendrier, budget, transports, hébergements et niveau d’accompagnement souhaité.`,
+      `À partir de son implantation à ${city}, ${name} accompagne également les voyageurs de ${area}. L’équipe privilégie une préparation structurée du dossier, depuis la définition du besoin jusqu’aux dernières informations utiles avant le voyage.`,
+      `Pour les clients de ${city} comme de ${area}, ${name} mise sur une relation suivie avec l’agence. Le conseiller peut ainsi connaître le contexte du projet, expliquer les options retenues et rester disponible lorsque le dossier nécessite un ajustement.`,
     ],
     services: [
       `Depuis notre agence de ${city}, nous proposons aux voyageurs de ${area} un accompagnement qui va de la recherche du séjour aux formalités, à la billetterie et au suivi du dossier. Chaque service est mobilisé selon le projet plutôt qu’appliqué comme une formule standard.`,
@@ -108,7 +114,7 @@ function buildLocalAreaContent({ agency = {}, page = {}, targetCities = [] } = {
   if (!city || nearby.length < 2 || !pageSupportsLocalArea(page)) return null;
 
   const area = joinCities(nearby);
-  const variant = stableVariant(`${name}|${city}|${page.slug || page.title || profile.key}`, 3);
+  const variant = stableVariant(`${agency.id || ""}|${name}|${city}|${page.slug || page.title || profile.key}`, 9);
   const commercial = ["cruise", "circuit", "custom", "stay", "ticketing"].includes(profile.key);
 
   if (commercial) {
@@ -119,7 +125,7 @@ function buildLocalAreaContent({ agency = {}, page = {}, targetCities = [] } = {
     ];
     return {
       title: `Vos ${profile.service} avec une agence proche de chez vous`,
-      html: `<p>${escapeHtml(texts[variant])}</p>`,
+      html: `<p>${escapeHtml(texts[variant % texts.length])}</p>`,
       alignment: "left",
     };
   }
