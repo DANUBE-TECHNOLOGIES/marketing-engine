@@ -16,6 +16,7 @@ const READ_RESOURCES = Object.freeze({
   properties: "/search-console-submissions/properties",
   workQueue: "/seo-opportunity-work-queue",
   localSeoCoverage: "/minisite-structured-data/local-seo-coverage",
+  localContentUniqueness: "/minisite-structured-data/local-content-uniqueness",
 });
 
 function jsonError(message, status = 500, details = null) {
