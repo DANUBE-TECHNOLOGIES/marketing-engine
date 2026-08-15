@@ -2,12 +2,13 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { networkSimilarityReport, similarity } = require("../src/modules/minisite-seo-enrichment/similarity-guard");
+const { networkSimilarityReport, similarity, pageKind } = require("../src/modules/minisite-seo-enrichment/similarity-guard");
 const { MiniSiteSeoEnrichmentService } = require("../src/modules/minisite-seo-enrichment/service");
 
-function richText(slug, text) {
+function richText(slug, text, title = "") {
   return {
     slug,
+    title,
     optimizedBlocks: [
       { type: "rich_text", content: { title: `Conseils ${slug}`, text } },
     ],
@@ -24,6 +25,20 @@ test("MSE-25.30 similarity ignores city names but detects duplicated page copy",
   assert.equal(report.blocked, true);
   assert.equal(report.conflictCount, 1);
   assert.ok(report.conflicts[0].score >= 0.78);
+});
+
+test("MSE-25.30 compares equivalent commercial intents even when slugs differ", () => {
+  assert.equal(pageKind({ slug: "voyages-sur-mesure", title: "Voyages sur mesure" }), "custom");
+  assert.equal(pageKind({ slug: "sur-mesure", title: "Votre voyage personnalisé" }), "custom");
+
+  const common = "Notre équipe construit un itinéraire personnalisé avec sélection des étapes, hébergements, transports, expériences et conseils pratiques afin d'adapter chaque proposition au rythme et au budget du voyageur. ".repeat(8);
+  const plans = [
+    { agencyId: 1, siteSlug: "gien", city: "Gien", pages: [richText("voyages-sur-mesure", `${common} Gien`, "Voyages sur mesure")] },
+    { agencyId: 2, siteSlug: "nevers", city: "Nevers", pages: [richText("sur-mesure", `${common} Nevers`, "Votre voyage personnalisé")] },
+  ];
+  const report = networkSimilarityReport(plans, { threshold: 0.78, minimumWords: 40 });
+  assert.equal(report.blocked, true);
+  assert.equal(report.conflicts[0].pageKind, "custom");
 });
 
 test("MSE-25.30 differentiated copy stays below the blocking threshold", () => {
