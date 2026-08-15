@@ -226,12 +226,18 @@ export default function DestinationPage({ data }) {
       <JsonLd data={breadcrumbSchema} />
       {destinationFaqSchema?.mainEntity?.length ? <JsonLd data={destinationFaqSchema} /> : null}
 
-      <section
-        className={styles["de-hero"]}
-        style={{
-          backgroundImage: `linear-gradient(90deg,rgba(9,25,37,.88),rgba(9,25,37,.28)),url("${d.heroImageUrl || ""}")`,
-        }}
-      >
+      <section className={styles["de-hero"]}>
+        {d.heroImageUrl ? (
+          <img
+            className={styles["de-hero-media"]}
+            src={d.heroImageUrl}
+            alt=""
+            aria-hidden="true"
+            fetchPriority="high"
+            loading="eager"
+            decoding="async"
+          />
+        ) : null}
         <div className={styles["de-shell"]}>
           <nav aria-label="Fil d’Ariane">
             <Link href={siteRoot}>Accueil de {site.name}</Link>
