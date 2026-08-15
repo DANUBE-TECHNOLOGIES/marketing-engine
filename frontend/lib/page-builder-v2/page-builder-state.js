@@ -20,6 +20,32 @@ export function createLocalId(prefix = "block") {
     .slice(2, 10)}`;
 }
 
+function protectedPartnerContent(content = {}, definition = null) {
+  const defaults = definition?.defaults || {};
+  const networkItems = Array.isArray(defaults.items)
+    ? deepClone(defaults.items)
+    : [];
+  const maxAgencyPartners = Number(defaults.maxAgencyPartners) || 3;
+  const agencyPartners = Array.isArray(content.agencyPartners)
+    ? content.agencyPartners
+        .filter((item) => item && typeof item === "object")
+        .slice(0, maxAgencyPartners)
+        .map((item) => ({
+          ...deepClone(item),
+          scope: "agency",
+        }))
+    : [];
+
+  return {
+    ...content,
+    sprite: defaults.sprite || content.sprite,
+    spriteAlt: defaults.spriteAlt || content.spriteAlt,
+    items: networkItems,
+    agencyPartners,
+    maxAgencyPartners,
+  };
+}
+
 export function normalizeBlock(block, index = 0) {
   const type =
     String(block?.type || block?.blockType || block?.sectionType || "rich_text")
@@ -29,6 +55,14 @@ export function normalizeBlock(block, index = 0) {
 
   const definition = getBlockDefinition(type);
   const rawPosition = block?.position ?? block?.displayOrder ?? index;
+  const mergedContent = {
+    ...(definition?.defaults ? deepClone(definition.defaults) : {}),
+    ...(block?.content && typeof block.content === "object"
+      ? deepClone(block.content)
+      : block?.jsonContent && typeof block.jsonContent === "object"
+        ? deepClone(block.jsonContent)
+        : {}),
+  };
 
   return {
     id: String(block?.id || createLocalId()),
@@ -37,14 +71,10 @@ export function normalizeBlock(block, index = 0) {
     position: Number.isFinite(Number(rawPosition))
       ? Number(rawPosition)
       : index,
-    content: {
-      ...(definition?.defaults ? deepClone(definition.defaults) : {}),
-      ...(block?.content && typeof block.content === "object"
-        ? deepClone(block.content)
-        : block?.jsonContent && typeof block.jsonContent === "object"
-          ? deepClone(block.jsonContent)
-          : {}),
-    },
+    content:
+      type === "partner-logos"
+        ? protectedPartnerContent(mergedContent, definition)
+        : mergedContent,
     settings:
       block?.settings && typeof block.settings === "object"
         ? deepClone(block.settings)
@@ -150,13 +180,21 @@ export function serializePage(page) {
           : page.published === true,
     seoTitle: page.seoTitle,
     seoDescription: page.seoDescription,
-    blocks: page.blocks.map((block) => ({
-      id: block.id,
-      type: block.type,
-      status: block.status,
-      position: Number.isFinite(Number(block.position)) ? Number(block.position) : 0,
-      content: deepClone(block.content),
-      settings: deepClone(block.settings || {}),
-    })),
+    blocks: page.blocks.map((block) => {
+      const definition = getBlockDefinition(block.type);
+      const content =
+        block.type === "partner-logos"
+          ? protectedPartnerContent(deepClone(block.content), definition)
+          : deepClone(block.content);
+
+      return {
+        id: block.id,
+        type: block.type,
+        status: block.status,
+        position: Number.isFinite(Number(block.position)) ? Number(block.position) : 0,
+        content,
+        settings: deepClone(block.settings || {}),
+      };
+    }),
   };
 }
