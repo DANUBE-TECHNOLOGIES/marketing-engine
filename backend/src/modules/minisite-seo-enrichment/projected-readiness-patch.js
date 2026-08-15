@@ -13,13 +13,15 @@ function clean(value) {
 }
 
 function projectedLocalState(coverageItem = {}) {
-  const blockingGaps = (coverageItem.gaps || []).filter((gap) => gap?.severity === "critical" || gap?.severity === "high");
+  const gaps = Array.isArray(coverageItem.gaps) ? coverageItem.gaps : [];
+  const blockingGaps = gaps.filter((gap) => gap?.severity === "critical" || gap?.severity === "high");
   const localSeoReady = Number(coverageItem.score || 0) >= 85 && blockingGaps.length === 0;
   const core = (coverageItem.intentTargetQuality?.intents || []).find((intent) => intent?.key === "agency");
   const coreTargetWeak = Boolean(core?.mapped && core?.qualityStatus === "weak");
   return {
     localSeoReady,
     localSeoScore: Number(coverageItem.score || 0),
+    gaps,
     blockingGaps,
     coreTargetWeak,
     coreTarget: core || null,
@@ -47,6 +49,8 @@ function projectedReadiness(current = {}, coverage = {}) {
       projectedLocalSeo: {
         score: state.localSeoScore,
         ready: state.localSeoReady,
+        gapCount: state.gaps.length,
+        gaps: state.gaps,
         blockingGapCount: state.blockingGaps.length,
         blockingGaps: state.blockingGaps,
       },
