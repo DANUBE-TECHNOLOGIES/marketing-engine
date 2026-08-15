@@ -124,6 +124,36 @@ test(
       partners.section.displayOrder,
       60
     );
+
+    assert.equal(
+      partners.section.content.sprite,
+      "/partners/common-partners-sprite.webp"
+    );
+
+    assert.equal(
+      partners.section.content.items.length,
+      7
+    );
+
+    assert.deepEqual(
+      partners.section.content.items.map(
+        item => item.id
+      ),
+      [
+        "fram",
+        "tui-universe",
+        "club-med",
+        "msc-croisieres",
+        "costa-croisieres",
+        "salaun-holidays",
+        "exotismes",
+      ]
+    );
+
+    assert.equal(
+      partners.section.content.maxAgencyPartners,
+      3
+    );
   }
 );
 
