@@ -49,6 +49,13 @@ const {
     "./generators/contact"
   );
 
+const {
+  partnersSections,
+} =
+  require(
+    "./generators/partners"
+  );
+
 class DefaultContentBuilder {
   context(
     agency,
@@ -107,6 +114,14 @@ class DefaultContentBuilder {
       case "CONTACT":
         sections =
           contactSections(
+            context
+          );
+        break;
+
+      case "PARTNERS":
+      case "PARTENAIRES":
+        sections =
+          partnersSections(
             context
           );
         break;
