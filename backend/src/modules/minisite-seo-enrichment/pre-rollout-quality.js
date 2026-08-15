@@ -102,7 +102,13 @@ function pageQuality(plan, page, { minimumWords = 120 } = {}) {
   };
 }
 
-function orphanIssues(rows) {
+/*
+ * This graph deliberately measures editorial/block-level linking only.
+ * It MUST NOT decide crawlability: the public renderer adds site-wide header/footer
+ * links that are not represented inside Website Designer blocks. Crawlability and
+ * true orphan blocking belong to minisite-structured-data/crawlability-audit.
+ */
+function editorialLinkingIssues(rows) {
   const publishedPaths = new Map(rows.filter((row) => row.published).map((row) => [row.expectedCanonicalPath, row]));
   const incoming = new Map([...publishedPaths.keys()].map((path) => [path, 0]));
 
@@ -117,7 +123,15 @@ function orphanIssues(rows) {
   for (const [path, count] of incoming.entries()) {
     const row = publishedPaths.get(path);
     if (!row || row.pageKind === "home") continue;
-    if (count === 0) issues.push({ code: "ORPHAN_PAGE", severity: "blocking", siteSlug: row.siteSlug, slug: row.slug, path });
+    if (count === 0) {
+      issues.push({
+        code: "EDITORIAL_INTERNAL_LINK_MISSING",
+        severity: "warning",
+        siteSlug: row.siteSlug,
+        slug: row.slug,
+        path,
+      });
+    }
   }
   return issues;
 }
@@ -127,7 +141,7 @@ function preRolloutQualityReport(plans, options = {}) {
   for (const plan of plans || []) {
     for (const page of plan.pages || []) pages.push(pageQuality(plan, page, options));
   }
-  const networkIssues = orphanIssues(pages);
+  const networkIssues = editorialLinkingIssues(pages);
   const pageIssues = pages.flatMap((page) => page.issues.map((issue) => ({ ...issue, siteSlug: page.siteSlug, slug: page.slug, path: page.expectedCanonicalPath })));
   const allIssues = [...networkIssues, ...pageIssues];
   const blocking = allIssues.filter((issue) => issue.severity === "blocking");
@@ -139,10 +153,11 @@ function preRolloutQualityReport(plans, options = {}) {
     blockingCount: blocking.length,
     warningCount: warnings.length,
     blocked: blocking.length > 0,
+    crawlabilityAuthority: "minisite-structured-data/crawlability-audit",
     blocking,
     warnings,
     pages,
   };
 }
 
-module.exports = { collectLinks, imageIssues, pageKind, pageQuality, preRolloutQualityReport };
+module.exports = { collectLinks, editorialLinkingIssues, imageIssues, pageKind, pageQuality, preRolloutQualityReport };
