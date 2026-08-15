@@ -41,7 +41,10 @@ test("full partner directory exposes the network categories and supplier invento
   assert.match(renderer, /getPartnerDirectoryCategories/);
   assert.match(renderer, /categoryNav/);
   assert.match(renderer, /partner\.summary/);
-  assert.match(renderer, /partner\.tags/);
+  assert.match(renderer, /partner\.tags\.slice\(0, 2\)/);
+  assert.match(renderer, /<details className=\{styles\.details\}>/);
+  assert.match(renderer, /Découvrir ses spécialités/);
+  assert.match(renderer, /getPartnerDetails/);
   assert.match(registry, /"partner-directory":\s*PartnerDirectoryRenderer/);
   assert.match(blockCatalogue, /type: "partner-directory"/);
   assert.match(blockCatalogue, /singleton: true/);
