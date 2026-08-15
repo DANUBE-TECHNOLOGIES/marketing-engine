@@ -165,6 +165,8 @@ class MiniSiteSeoEnrichmentService {
         pagesProcessed: plans.reduce((sum, plan) => sum + plan.summary.pagesProcessed, 0),
         pagesChanged: plans.reduce((sum, plan) => sum + plan.summary.pagesChanged, 0),
         similarityConflicts: similarity.conflictCount,
+        similarityBlockingConflicts: similarity.blockingConflictCount,
+        similarityAdvisoryConflicts: similarity.advisoryConflictCount,
         qualityBlockingIssues: quality.blockingCount,
         qualityWarnings: quality.warningCount,
         sitemapSitesNotReady: sitemapReadiness.notReadyCount,
@@ -213,7 +215,7 @@ class MiniSiteSeoEnrichmentService {
     const plan = await this.buildNetworkContentOptimization({ similarityThreshold, minimumWords, qualityMinimumWords });
     if (dryRun !== false) return { operation: "preview-network-content-optimize", destructive: false, writes: false, summary: plan.summary, similarity: plan.similarity, quality: plan.quality, sitemapReadiness: plan.sitemapReadiness };
 
-    if (plan.similarity.blocked) { const error = new Error(`Rollout bloqué : ${plan.similarity.conflictCount} conflit(s) de similarité inter-agences au-dessus du seuil.`); error.code = "MINISITE_SEO_NETWORK_SIMILARITY_BLOCKED"; error.status = 409; error.details = plan.similarity; throw error; }
+    if (plan.similarity.blocked) { const error = new Error(`Rollout bloqué : ${plan.similarity.blockingConflictCount} conflit(s) de similarité SEO stratégique au-dessus du seuil.`); error.code = "MINISITE_SEO_NETWORK_SIMILARITY_BLOCKED"; error.status = 409; error.details = plan.similarity; throw error; }
     if (plan.quality.blocked) { const error = new Error(`Rollout bloqué : ${plan.quality.blockingCount} anomalie(s) SEO pré-rollout bloquante(s).`); error.code = "MINISITE_SEO_NETWORK_QUALITY_BLOCKED"; error.status = 409; error.details = plan.quality; throw error; }
     if (plan.sitemapReadiness.blocked) { const error = new Error(`Rollout bloqué : ${plan.sitemapReadiness.notReadyCount} mini-site(s) ne sont pas prêts pour l'indexation sitemap.`); error.code = "MINISITE_SEO_NETWORK_SITEMAP_READINESS_BLOCKED"; error.status = 409; error.details = plan.sitemapReadiness; throw error; }
 
