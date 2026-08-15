@@ -4,6 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const {
   optimizePageContent,
+  buildLocalIntroduction,
   buildLocalSectionTitle,
   buildLocalSectionText,
 } = require("../src/modules/minisite-seo-enrichment/content-optimizer");
@@ -33,6 +34,23 @@ test("preserves an existing manual hero subtitle", () => {
   assert.equal(result.blocks[0].content.title, "Votre agence de voyages à Maurepas");
   assert.equal(result.blocks[0].content.subtitle, "Texte éditorial validé manuellement.");
   assert.equal(result.changes.length, 1);
+});
+
+test("diversifies generated home and agency copy deterministically between agencies", () => {
+  const home = { slug: "home", title: "Accueil" };
+  const agencyPage = { slug: "notre-agence", title: "Notre agence" };
+  const gien = { name: "Mondescale Gien", city: "Gien" };
+  const dax = { name: "Mondescale Dax", city: "Dax" };
+
+  const gienHomeIntro = buildLocalIntroduction({ agency: gien, page: home });
+  const daxHomeIntro = buildLocalIntroduction({ agency: dax, page: home });
+  const gienAgencyText = buildLocalSectionText({ agency: gien, page: agencyPage });
+  const daxAgencyText = buildLocalSectionText({ agency: dax, page: agencyPage });
+
+  assert.equal(gienHomeIntro, buildLocalIntroduction({ agency: gien, page: home }));
+  assert.equal(gienAgencyText, buildLocalSectionText({ agency: gien, page: agencyPage }));
+  assert.notEqual(gienHomeIntro.replaceAll("Gien", "VILLE"), daxHomeIntro.replaceAll("Dax", "VILLE"));
+  assert.notEqual(gienAgencyText.replaceAll("Gien", "VILLE"), daxAgencyText.replaceAll("Dax", "VILLE"));
 });
 
 test("optimizes commercial service pages around service plus city", () => {
