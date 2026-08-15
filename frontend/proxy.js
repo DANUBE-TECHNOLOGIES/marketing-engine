@@ -70,6 +70,8 @@ export function proxy(request) {
     pathname.startsWith("/media/") ||
     pathname === "/brand" ||
     pathname.startsWith("/brand/") ||
+    pathname === "/partners" ||
+    pathname.startsWith("/partners/") ||
     pathname.startsWith("/_next/") ||
     pathname === "/favicon.ico" ||
     pathname === "/robots.txt" ||
@@ -80,7 +82,6 @@ export function proxy(request) {
   if (isPublicRoute) {
     return NextResponse.next();
   }
-
 
   /*
    * agences.mondescale.com est exclusivement le domaine public
