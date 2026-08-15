@@ -33,6 +33,21 @@ function routes({ prisma, service } = {}) {
     } catch (error) { sendError(response, error); }
   });
 
+  router.post("/minisite-seo-enrichment/agencies/:agencyId/content-optimize/preview", async (request, response) => {
+    try { response.json(await seoService.previewAgencyContentOptimization({ agencyId: request.params.agencyId })); } catch (error) { sendError(response, error); }
+  });
+
+  router.post("/minisite-seo-enrichment/agencies/:agencyId/content-optimize", async (request, response) => {
+    try {
+      response.json(await seoService.optimizeAgencyContent({
+        agencyId: request.params.agencyId,
+        dryRun: request.body?.dryRun !== false,
+        confirm: request.body?.confirm === true,
+        createdBy: request.body?.createdBy || "minisite-seo-optimizer",
+      }));
+    } catch (error) { sendError(response, error); }
+  });
+
   router.post("/minisite-seo-enrichment/network/preview", async (_request, response) => {
     try { response.json(await seoService.previewNetwork()); } catch (error) { sendError(response, error); }
   });
