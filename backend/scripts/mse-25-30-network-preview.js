@@ -30,13 +30,21 @@ async function jsonRequest(url, options = {}) {
 
 function agencySummary(plan = {}) {
   const pages = Array.isArray(plan.pages) ? plan.pages : [];
+  const excludedPages = Array.isArray(plan.excludedPages) ? plan.excludedPages : [];
   return {
     agencyId: plan.agencyId,
     siteSlug: plan.siteSlug,
     city: plan.city || null,
     pagesProcessed: plan.summary?.pagesProcessed ?? pages.length,
     pagesChanged: plan.summary?.pagesChanged ?? pages.filter((page) => page.changed).length,
+    pagesExcludedNoindex: plan.summary?.pagesExcludedNoindex ?? excludedPages.filter((page) => page.reason === "noindex-page").length,
+    pagesExcludedManagedRoute: plan.summary?.pagesExcludedManagedRoute ?? excludedPages.filter((page) => page.reason === "canonical-route-managed").length,
     targetCities: Array.isArray(plan.targetCities) ? plan.targetCities : [],
+    excludedPages: excludedPages.map((page) => ({
+      slug: page?.slug ?? null,
+      title: page?.title ?? null,
+      reason: page?.reason ?? null,
+    })),
     changedPages: pages
       .filter((page) => page.changed)
       .map((page) => ({
