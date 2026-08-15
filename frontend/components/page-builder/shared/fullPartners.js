@@ -67,6 +67,7 @@ export const FULL_PARTNERS = Object.freeze([
   P("asia", "Asia", "sur-mesure", "Voyages sur mesure, circuits et séjours en Asie, avec une offre allant des grands classiques aux itinéraires personnalisés.", ["Asie", "sur mesure"]),
   P("asiam", "ASIAM", "sur-mesure", "Spécialiste des voyages en Asie avec des itinéraires culturels, des circuits et des séjours personnalisables.", ["Asie", "culture"]),
   P("austral-lagons", "Austral Lagons", "sur-mesure", "Voyages dans les îles de l'océan Indien et du Pacifique, avec une forte expertise des séjours balnéaires long-courriers.", ["océan Indien", "Pacifique", "îles"]),
+  P("kuoni", "KUONI", "sur-mesure", "Circuits, séjours, autotours, croisières et voyages sur mesure dans le monde, avec un positionnement haut de gamme et une forte expertise destination.", ["circuits", "sur mesure", "haut de gamme"], "/partners/kuoni-official.webp"),
   P("jetset-voyages", "JetSet Voyages", "sur-mesure", "Voyages long-courriers, combinés et séjours personnalisables dans de nombreuses destinations internationales.", ["long-courrier", "combiné"]),
   P("luxair-tours", "LuxairTours", "sur-mesure", "Séjours et packages aériens au départ du Luxembourg vers de nombreuses destinations de vacances.", ["séjours", "aérien"]),
   P("gaeland-ashling", "Gaeland Ashling", "sur-mesure", "Voyages personnalisés vers des destinations de caractère, avec une approche experte et thématique.", ["sur mesure", "expertise"]),
