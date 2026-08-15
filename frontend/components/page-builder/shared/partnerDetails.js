@@ -42,6 +42,11 @@ const DETAILS = Object.freeze({
     travelTypes: ["Voyage sur mesure", "Petit groupe", "Immersion locale", "Trek & randonnée", "Voyage solidaire"],
     website: "https://www.doublesens.fr/",
   },
+  "la-francaise-des-circuits": {
+    destinations: ["Europe", "Amériques", "Asie", "Afrique", "Moyen-Orient", "Océan Indien"],
+    travelTypes: ["Circuit accompagné", "Autotour", "Petit groupe", "Circuit privatif", "Combiné"],
+    website: "https://www.lafrancaisedescircuits.fr/",
+  },
   "top-of-travel": {
     destinations: ["Albanie", "Croatie", "Italie", "Portugal", "Madère", "Malte", "Monténégro", "Jordanie", "Cap-Vert"],
     travelTypes: ["Circuit accompagné", "Autotour", "Séjour", "Top Clubs", "Voyage à la carte"],
@@ -93,6 +98,11 @@ const DETAILS = Object.freeze({
     travelTypes: ["Séjour", "Club", "Circuit", "Autotour", "Périple d'île en île", "Croisière"],
     website: "https://www.heliades.fr/",
   },
+  "pacha-tours": {
+    destinations: ["Turquie", "Istanbul", "Cappadoce", "Mer Égée", "Méditerranée orientale"],
+    travelTypes: ["Circuit", "Petit groupe", "Séjour", "Autotour", "Croisière", "Voyage à la carte"],
+    website: "https://www.pachatours.fr/",
+  },
   exotismes: {
     destinations: ["Caraïbes", "Océan Indien", "Polynésie", "Maurice", "Seychelles", "Maldives", "Tahiti"],
     travelTypes: ["Séjour", "Combiné d'îles", "Circuit", "Croisière", "Voyage de noces"],
@@ -113,16 +123,31 @@ const DETAILS = Object.freeze({
     destinations: ["Maurice", "Seychelles", "Maldives", "Dubaï", "Abu Dhabi", "Oman"],
     travelTypes: ["Séjour haut de gamme", "Voyage de noces", "Famille", "Golf", "Multi-centres"],
   },
+  kuoni: {
+    destinations: ["Europe", "Afrique", "Amériques", "Asie", "Océan Indien", "Océanie", "Grand Nord & Antarctique"],
+    travelTypes: ["Circuit accompagné", "Circuit privé", "Séjour", "Autotour", "Croisière", "Voyage sur mesure"],
+    website: "https://www.kuoni.fr/",
+  },
   worldia: {
     destinations: ["Europe", "Asie", "Amérique du Nord", "Amérique du Sud", "Moyen-Orient", "Afrique", "Îles"],
     travelTypes: ["Voyage sur mesure", "Road trip", "City break", "Expédition", "Itinéraire multi-destinations"],
     website: "https://corp.worldia.com/fr/",
+  },
+  ollandini: {
+    destinations: ["Corse", "Ajaccio", "Balagne", "Golfe de Porto", "Sud Corse", "Sardaigne"],
+    travelTypes: ["Séjour", "Circuit en voiture", "Circuit en autocar", "Sur mesure", "Location", "Hôtel-club"],
+    website: "https://www.ollandini.fr/",
   },
 
   lagrange: {
     destinations: ["France", "Europe", "Mer", "Montagne", "Campagne"],
     travelTypes: ["Résidence de vacances", "Location", "Villa", "Chalet", "Camping", "Séjour bien-être"],
     website: "https://www.vacances-lagrange.com/",
+  },
+  mmv: {
+    destinations: ["Alpes françaises", "Savoie", "Haute-Savoie", "Isère", "Hautes-Alpes", "Alpes-Maritimes"],
+    travelTypes: ["Club", "Résidence Club", "Séjour ski", "Montagne été", "Pension complète", "Demi-pension"],
+    website: "https://www.mmv.fr/",
   },
   "thalasso-n1": {
     destinations: ["France", "Atlantique", "Bretagne", "Nouvelle-Aquitaine", "Méditerranée"],
