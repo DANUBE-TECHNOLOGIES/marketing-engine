@@ -7,7 +7,7 @@
 
 .networkCard {
   min-height: 168px;
-  padding: 8px 10px;
+  padding: 4px 6px;
   border: 1px solid rgba(7, 29, 48, 0.07);
   border-radius: 24px;
   background: #fff;
@@ -20,54 +20,54 @@
 
 .networkLogo {
   display: block;
-  width: 92%;
-  height: 132px;
+  width: 98%;
+  height: 146px;
   object-fit: contain;
   object-position: center;
   transform-origin: center;
 }
 
 .networkCard[data-partner-id="fram"] .networkLogo {
-  transform: scale(1.18);
+  transform: scale(1.28);
 }
 
 .networkCard[data-partner-id="club-med"] .networkLogo {
-  width: 94%;
-  height: 128px;
-  transform: none;
+  width: 100%;
+  height: 142px;
+  transform: scale(1.08);
 }
 
 .networkCard[data-partner-id="msc-croisieres"] .networkLogo {
-  transform: scale(1.30);
+  transform: scale(1.42);
 }
 
 .networkCard[data-partner-id="costa-croisieres"] .networkLogo {
-  transform: scale(1.20);
+  transform: scale(1.30);
 }
 
 .networkCard[data-partner-id="kuoni"] .networkLogo {
-  width: 94%;
-  height: 126px;
-  transform: none;
+  width: 100%;
+  height: 142px;
+  transform: scale(1.14);
 }
 
 .networkCard[data-partner-id="exotismes"] .networkLogo {
-  transform: scale(1.22);
+  transform: scale(1.32);
 }
 
 .tuiCard {
   grid-column: span 1;
   min-height: 168px;
-  padding: 6px 6px 8px;
+  padding: 4px 4px 6px;
   flex-direction: column;
   gap: 0;
 }
 
 .tuiMainLogo {
   display: block;
-  width: 68%;
-  max-width: 190px;
-  height: 52px;
+  width: 80%;
+  max-width: 220px;
+  height: 60px;
   object-fit: contain;
   object-position: center;
   flex: 0 0 auto;
@@ -85,7 +85,7 @@
 
 .tuiChild {
   min-width: 0;
-  min-height: 104px;
+  min-height: 106px;
   padding: 0;
   display: flex;
   align-items: center;
@@ -99,11 +99,11 @@
 
 .tuiChildLogo {
   display: block;
-  width: 122%;
-  height: 102px;
+  width: 132%;
+  height: 106px;
   object-fit: contain;
   object-position: center;
-  transform: scale(1.58);
+  transform: scale(1.72);
   transform-origin: center;
 }
 
@@ -173,12 +173,12 @@
   }
 
   .networkLogo {
-    height: 120px;
+    height: 132px;
   }
 
   .tuiMainLogo {
-    width: 64%;
-    height: 48px;
+    width: 76%;
+    height: 54px;
   }
 
   .tuiChildren {
@@ -186,12 +186,12 @@
   }
 
   .tuiChild {
-    min-height: 92px;
+    min-height: 94px;
   }
 
   .tuiChildLogo {
-    width: 116%;
-    height: 90px;
-    transform: scale(1.46);
+    width: 124%;
+    height: 94px;
+    transform: scale(1.58);
   }
 }
