@@ -2,8 +2,11 @@
 
 const express = require("express");
 const { MiniSiteSeoEnrichmentService } = require("./service");
+const { installProjectedReadiness } = require("./projected-readiness-patch");
 const PageBuilderPersistenceService = require("../page-builder-persistence/service");
 const { MiniSiteStructuredDataService } = require("../minisite-structured-data/service");
+
+installProjectedReadiness(MiniSiteSeoEnrichmentService);
 
 function sendError(response, error) {
   response.status(Number(error?.status || error?.statusCode || 500)).json({
