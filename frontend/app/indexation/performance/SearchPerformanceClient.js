@@ -22,6 +22,8 @@ export default function SearchPerformanceClient() {
   const [performance, setPerformance] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [queueBusy, setQueueBusy] = useState("");
+  const [queuedQueries, setQueuedQueries] = useState(() => new Set());
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -58,10 +60,25 @@ export default function SearchPerformanceClient() {
         dimensions: dimension,
         rowLimit: 50,
       }));
+      setQueuedQueries(new Set());
     } catch (readError) {
       setError(readError.message || "Impossible de lire les performances Search Console.");
     } finally {
       setBusy(false);
+    }
+  };
+
+  const addToWorkQueue = async (opportunity) => {
+    if (!selectedSite?.siteSlug || !opportunity?.query) return;
+    setQueueBusy(opportunity.query);
+    setError("");
+    try {
+      await indexationApi.createWorkItem({ siteSlug: selectedSite.siteSlug, opportunity });
+      setQueuedQueries((current) => new Set([...current, opportunity.query]));
+    } catch (queueError) {
+      setError(queueError.message || "Impossible d’ajouter cette opportunité à la file SEO.");
+    } finally {
+      setQueueBusy("");
     }
   };
 
@@ -73,11 +90,11 @@ export default function SearchPerformanceClient() {
     <main className="indexation-shell">
       <header className="indexation-hero">
         <div>
-          <p className="indexation-eyebrow">MSE-25.21 · Priorisation SEO</p>
+          <p className="indexation-eyebrow">MSE-25.22 · File de travail SEO</p>
           <h1>Performance organique des mini-sites</h1>
-          <p>Mesurez ce que Google génère réellement puis priorisez les requêtes à travailler selon leur potentiel, sans modification éditoriale automatique.</p>
+          <p>Mesurez ce que Google génère réellement, priorisez les requêtes puis transformez une recommandation en tâche manuelle traçable. Aucun contenu public n’est modifié automatiquement.</p>
         </div>
-        <Link className="indexation-nav-link" href="/indexation">Retour au cockpit</Link>
+        <div className="indexation-actions"><Link className="indexation-nav-link" href="/indexation/work-queue">File de travail</Link><Link className="indexation-nav-link" href="/indexation">Retour au cockpit</Link></div>
       </header>
 
       <section className="indexation-controls performance-controls">
@@ -98,7 +115,7 @@ export default function SearchPerformanceClient() {
           <div className="indexation-metric"><strong>{number(performance.totals?.position, 1)}</strong><span>position moyenne</span><small className={deltaClass(performance.delta?.position)}>{deltaText(performance.delta?.position, (v) => number(v, 1))} positions gagnées</small></div>
         </section>
 
-        {opportunities.length ? <section className="indexation-card performance-opportunities"><div className="indexation-card-head"><div><h2>Opportunités SEO prioritaires</h2><p>Score sur 100 calculé côté backend à partir des impressions, de la position et du potentiel CTR. Aucune action n’est appliquée automatiquement.</p></div></div><div className="opportunity-grid">{opportunities.map((opportunity) => <div key={opportunity.query} className="opportunity-card"><strong>{opportunity.query}</strong><span>{priorityLabel(opportunity.priority)} · score {number(opportunity.score)}/100</span><span>{number(opportunity.impressions)} impressions · position {number(opportunity.position, 1)} · CTR {percent(opportunity.ctr)}</span><small><b>{opportunity.action?.label || "À analyser"}</b> — {opportunity.action?.rationale || "Analyser le contenu et le maillage de la page cible."}</small></div>)}</div></section> : null}
+        {opportunities.length ? <section className="indexation-card performance-opportunities"><div className="indexation-card-head"><div><h2>Opportunités SEO prioritaires</h2><p>Score sur 100 calculé côté backend. Une opportunité peut être ajoutée à la file de travail manuelle ; cette action ne modifie aucune page.</p></div></div><div className="opportunity-grid">{opportunities.map((opportunity) => { const queued = queuedQueries.has(opportunity.query); return <div key={opportunity.query} className="opportunity-card"><strong>{opportunity.query}</strong><span>{priorityLabel(opportunity.priority)} · score {number(opportunity.score)}/100</span><span>{number(opportunity.impressions)} impressions · position {number(opportunity.position, 1)} · CTR {percent(opportunity.ctr)}</span><small><b>{opportunity.action?.label || "À analyser"}</b> — {opportunity.action?.rationale || "Analyser le contenu et le maillage de la page cible."}</small><button type="button" disabled={queued || queueBusy === opportunity.query} onClick={() => addToWorkQueue(opportunity)}>{queued ? "Dans la file SEO" : queueBusy === opportunity.query ? "Ajout…" : "Ajouter à la file SEO"}</button></div>; })}</div></section> : null}
 
         <section className="indexation-card performance-table-card">
           <div className="indexation-card-head"><div><h2>{dimension === "query" ? "Principales requêtes" : "Pages les plus visibles"}</h2><p>{performance.startDate} → {performance.endDate} · comparaison {performance.previousStartDate} → {performance.previousEndDate} · {performance.rowCount} lignes retournées</p></div></div>
