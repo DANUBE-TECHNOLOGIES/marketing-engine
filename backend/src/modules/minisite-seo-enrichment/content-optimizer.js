@@ -17,6 +17,15 @@ function escapeHtml(value) {
     .replace(/'/g, "&#39;");
 }
 
+function stableVariant(value, count) {
+  const source = normalize(value);
+  let hash = 0;
+  for (let index = 0; index < source.length; index += 1) {
+    hash = ((hash * 31) + source.charCodeAt(index)) >>> 0;
+  }
+  return count > 0 ? hash % count : 0;
+}
+
 function agencyLabel(agency = {}) {
   const city = clean(agency.city);
   const name = clean(agency.name);
@@ -57,12 +66,31 @@ function buildLocalIntroduction({ agency, page }) {
   const { city, name } = agencyLabel(agency);
   const intent = pageIntent(page);
   if (!city) return "";
+
+  const variant = stableVariant(`${name}|${city}|${page.slug || page.title || intent.key}|intro`, 5);
+
   if (intent.key === "home") {
-    return `${name} vous accompagne à ${city} pour imaginer et réserver vos voyages, séjours, circuits, croisières et projets sur mesure, avec les conseils d’une équipe de proximité.`;
+    const variants = [
+      `${name} vous accompagne à ${city} pour imaginer et réserver vos voyages, séjours, circuits, croisières et projets sur mesure, avec les conseils d’une équipe de proximité.`,
+      `À ${city}, ${name} vous aide à passer de l’idée au voyage concret : choix de la destination, comparaison des formules, réservation et suivi restent réunis auprès de la même équipe.`,
+      `Depuis ${city}, l’équipe ${name} construit avec vous des voyages adaptés à vos dates, à votre budget et à votre façon de partir, du premier échange jusqu’au suivi avant le départ.`,
+      `Votre agence ${name} à ${city} met le conseil humain au centre du projet : nous comparons les options utiles, expliquons les différences et suivons votre dossier jusqu’au voyage.`,
+      `À ${city}, ${name} réunit dans une même agence conseil, sélection de partenaires et accompagnement pour vos séjours, circuits, croisières, billets et voyages personnalisés.`,
+    ];
+    return variants[variant];
   }
+
   if (intent.key === "agency") {
-    return `Retrouvez l’équipe ${name} à ${city} pour préparer votre prochain voyage, comparer les solutions adaptées à votre projet et bénéficier d’un accompagnement avant, pendant et après votre départ.`;
+    const variants = [
+      `Retrouvez l’équipe ${name} à ${city} pour préparer votre prochain voyage, comparer les solutions adaptées à votre projet et bénéficier d’un accompagnement avant, pendant et après votre départ.`,
+      `Dans votre agence ${name} à ${city}, le projet commence par un échange sur vos priorités : dates, rythme, budget et envies servent ensuite à sélectionner les solutions réellement pertinentes.`,
+      `L’équipe ${name} vous accueille à ${city} pour étudier votre voyage dans son ensemble, vérifier les options disponibles et garder un interlocuteur identifié pour le suivi de la réservation.`,
+      `À ${city}, ${name} privilégie un conseil personnalisé : nous prenons le temps de comparer les offres, de préciser les conditions et d’accompagner chaque dossier jusqu’au retour.`,
+      `Votre agence ${name} à ${city} vous aide à construire un voyage cohérent avec vos attentes, puis reste disponible pour les formalités, le suivi et les ajustements utiles avant le départ.`,
+    ];
+    return variants[variant];
   }
+
   if (intent.key !== "generic") {
     return `Vous recherchez des ${intent.service} à ${city} ? L’équipe ${name} vous conseille, compare les solutions adaptées à vos envies et à votre budget, puis vous accompagne jusqu’à votre retour.`;
   }
@@ -89,12 +117,31 @@ function buildLocalSectionText({ agency, page }) {
   const { city, name } = agencyLabel(agency);
   const intent = pageIntent(page);
   if (!city) return "";
+
+  const variant = stableVariant(`${name}|${city}|${page.slug || page.title || intent.key}|section`, 5);
+
   if (intent.key === "home") {
-    return `À ${city}, l’équipe ${name} prend le temps de comprendre votre projet avant de comparer les destinations, les voyagistes et les formules disponibles. Vous bénéficiez d’un interlocuteur de proximité pour construire, réserver et suivre votre voyage.`;
+    const variants = [
+      `À ${city}, l’équipe ${name} prend le temps de comprendre votre projet avant de comparer les destinations, les voyagistes et les formules disponibles. Vous bénéficiez d’un interlocuteur de proximité pour construire, réserver et suivre votre voyage.`,
+      `Chaque projet confié à ${name} à ${city} est étudié à partir de vos contraintes réelles : période de départ, durée, budget et niveau de confort. L’équipe sélectionne ensuite les solutions à comparer et assure le suivi de la réservation.`,
+      `Notre agence de ${city} ne se limite pas à proposer un catalogue. L’équipe ${name} met en perspective les itinéraires, les hébergements et les conditions de voyage pour construire une recommandation adaptée à votre façon de partir.`,
+      `À ${city}, ${name} combine connaissance des partenaires et accompagnement de proximité. Nous vous aidons à arbitrer entre plusieurs possibilités, puis nous restons disponibles pour les documents, formalités et informations utiles avant le départ.`,
+      `L’équipe ${name} à ${city} accompagne aussi bien les projets simples que les voyages nécessitant plusieurs prestations. Le même conseiller peut suivre le dossier de la première recherche jusqu’aux dernières vérifications avant votre départ.`,
+    ];
+    return variants[variant];
   }
+
   if (intent.key === "agency") {
-    return `Notre équipe à ${city} vous accueille pour étudier votre projet, comparer les solutions et sécuriser chaque étape de votre réservation. Conseils, formalités, suivi du dossier et assistance : vous gardez un interlocuteur identifié jusqu’à votre retour.`;
+    const variants = [
+      `Notre équipe à ${city} vous accueille pour étudier votre projet, comparer les solutions et sécuriser chaque étape de votre réservation. Conseils, formalités, suivi du dossier et assistance : vous gardez un interlocuteur identifié jusqu’à votre retour.`,
+      `Chez ${name} à ${city}, le conseil commence par l’écoute du projet avant toute recherche. Nous clarifions ensemble les priorités, comparons les propositions pertinentes puis suivons les étapes de réservation et les informations de départ.`,
+      `Votre agence ${name} à ${city} vous accompagne avec une méthode simple : comprendre le besoin, sélectionner les options cohérentes, expliquer les différences puis assurer la continuité du dossier jusqu’au voyage.`,
+      `À ${city}, l’équipe ${name} reste votre point de contact pour la préparation du voyage. Elle peut vous aider à vérifier les prestations, les conditions, les formalités et les échéances utiles tout au long du dossier.`,
+      `L’agence ${name} à ${city} privilégie une relation suivie plutôt qu’une succession d’interlocuteurs. Le conseiller qui connaît votre projet peut ainsi vous guider dans les choix et rester disponible lorsque la réservation évolue.`,
+    ];
+    return variants[variant];
   }
+
   if (intent.key !== "generic") {
     return `Pour vos ${intent.service} à ${city}, ${name} sélectionne avec vous les solutions adaptées à votre budget, à vos dates et à votre façon de voyager. Notre équipe vous aide à comparer les offres et reste disponible pour le suivi de votre dossier.`;
   }
@@ -419,11 +466,12 @@ module.exports = {
   buildLocalSectionTitle,
   buildLocalSectionText,
   buildCommercialProofs,
-  buildCommercialCta,
   buildCommercialFaq,
+  buildCommercialCta,
   commercialPages,
   relatedCommercialPage,
-  ensureCommercialPageStructure,
+  isCommercialIntent,
   optimizePageContent,
   pageIntent,
+  stableVariant,
 };
