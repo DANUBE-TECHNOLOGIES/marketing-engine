@@ -7,6 +7,10 @@ import {
   buildTravelAgencySchema,
 } from "../../lib/seo/json-ld";
 import { resolvedTargetCities } from "../../lib/seo/local-area-config";
+import {
+  destinationLocalCopy,
+  rotateCommercialLinks,
+} from "../../lib/seo/destination-local-differentiation";
 import styles from "./DestinationPage.module.css";
 
 function paragraphs(content) {
@@ -14,13 +18,6 @@ function paragraphs(content) {
   if (Array.isArray(content.paragraphs)) return content.paragraphs.filter(Boolean);
   const text = content.text || content.body || content.content || null;
   return text ? [text] : [];
-}
-
-function joinCities(values) {
-  if (!values.length) return "";
-  if (values.length === 1) return values[0];
-  if (values.length === 2) return `${values[0]} et ${values[1]}`;
-  return `${values.slice(0, -1).join(", ")} et ${values[values.length - 1]}`;
 }
 
 function normalize(value) {
@@ -189,25 +186,17 @@ export default function DestinationPage({ data }) {
   const contactPath = `${root}/contact`;
   const city = site?.agency?.city || null;
   const nearby = resolvedTargetCities(site, { limit: 4 });
-  const commercialLinks = commercialPageLinks(site);
+  const localCopy = destinationLocalCopy({ site, destination: d, nearby });
+  const commercialLinks = rotateCommercialLinks(commercialPageLinks(site), site, d);
   const destinationHeading = city ? `Voyage à ${d.name} depuis ${city}` : `Voyage à ${d.name}`;
 
   const destinationSchema = buildDestinationSchema(data);
   const destinationWebPageSchema = buildDestinationWebPageSchema(data);
   const agencySchema = buildTravelAgencySchema(site);
   const breadcrumbSchema = buildBreadcrumbSchema([
-    {
-      name: "Accueil",
-      path: siteRoot,
-    },
-    {
-      name: "Destinations",
-      path: destinationsPath,
-    },
-    {
-      name: d.name,
-      path: data.canonicalPath,
-    },
+    { name: "Accueil", path: siteRoot },
+    { name: "Destinations", path: destinationsPath },
+    { name: d.name, path: data.canonicalPath },
   ]);
   const destinationFaqSchema = faqSchema(faqs);
 
@@ -247,22 +236,13 @@ export default function DestinationPage({ data }) {
             <span>{d.name}</span>
           </nav>
 
-          <p className={styles["de-kicker"]}>
-            {[d.country, d.region, d.type].filter(Boolean).join(" · ")}
-          </p>
-
+          <p className={styles["de-kicker"]}>{[d.country, d.region, d.type].filter(Boolean).join(" · ")}</p>
           <h1>{destinationHeading}</h1>
-
           {d.tagline && <p>{d.tagline}</p>}
 
           <div className={styles["de-actions"]}>
-            <Link href={data.quotePath}>
-              Construire mon voyage
-            </Link>
-
-            <a href="#decouvrir">
-              Découvrir {d.name}
-            </a>
+            <Link href={data.quotePath}>Construire mon voyage</Link>
+            <a href="#decouvrir">Découvrir {d.name}</a>
           </div>
         </div>
       </section>
@@ -271,12 +251,7 @@ export default function DestinationPage({ data }) {
         <section className={styles["de-facts"]} aria-label={`Informations pratiques sur ${d.name}`}>
           <div className={styles["de-shell"]}>
             {facts.map(([label, value]) => (
-              <div key={label}>
-                <div>
-                  <span>{label}</span>
-                  <strong>{value}</strong>
-                </div>
-              </div>
+              <div key={label}><div><span>{label}</span><strong>{value}</strong></div></div>
             ))}
           </div>
         </section>
@@ -286,20 +261,11 @@ export default function DestinationPage({ data }) {
         <div className={styles["de-shell"]}>
           <p className={styles["de-kicker"]}>L’inspiration Mondescale</p>
           <h2>{d.tagline || `Découvrez ${d.name} autrement`}</h2>
-          {city ? (
-            <div className={styles["de-prose"]}>
-              <p>
-                Votre agence {site.name} à {city} vous accompagne pour préparer un voyage à {d.name}
-                adapté à votre rythme, à vos envies et à votre budget.
-              </p>
-              {nearby.length ? (
-                <p>
-                  Nos conseillers accompagnent également les voyageurs de {joinCities(nearby)}
-                  qui souhaitent construire leur séjour à {d.name} avec un interlocuteur local.
-                </p>
-              ) : null}
-            </div>
-          ) : null}
+          <div className={styles["de-prose"]}>
+            {localCopy.opening ? <p>{localCopy.opening}</p> : null}
+            {localCopy.area ? <p>{localCopy.area}</p> : null}
+            <p>{localCopy.value}</p>
+          </div>
           {d.summary ? <div className={styles["de-prose"]}><p>{d.summary}</p></div> : null}
           {Array.isArray(d.highlights) && d.highlights.length ? (
             <div className={styles["de-pills"]}>
@@ -309,9 +275,7 @@ export default function DestinationPage({ data }) {
         </div>
       </section>
 
-      {sections.map((section) => (
-        <SectionContent key={section.id || section.key} section={section} />
-      ))}
+      {sections.map((section) => <SectionContent key={section.id || section.key} section={section} />)}
 
       {faqs.length ? (
         <section className={styles["de-faq"]}>
@@ -330,35 +294,20 @@ export default function DestinationPage({ data }) {
 
       <section className={styles["de-final"]}>
         <div className={styles["de-shell"]}>
-          <p className={styles["de-kicker"]}>
-            Un voyage conçu pour vous
-          </p>
-
+          <p className={styles["de-kicker"]}>Un voyage conçu pour vous</p>
           <h2>Prêt à découvrir {d.name} ?</h2>
-
-          <p>
-            Votre agence {site.name} construit un séjour adapté à
-            vos envies, à votre rythme et à votre budget.
-          </p>
+          <p>{localCopy.value}</p>
 
           <div className={styles["de-actions"]}>
-            <Link href={data.quotePath}>
-              Demander mon devis personnalisé
-            </Link>
+            <Link href={data.quotePath}>Demander mon devis personnalisé</Link>
             {commercialLinks.map((item) => (
               <Link key={item.key} href={item.href}>
                 Découvrir nos {item.label} {city ? `à ${city}` : ""}
               </Link>
             ))}
-            <Link href={servicesPath}>
-              Découvrir nos services voyage
-            </Link>
-            <Link href={inspirationsPath}>
-              Voir les conseils et inspirations voyage
-            </Link>
-            <Link href={contactPath}>
-              Contacter {site.name}
-            </Link>
+            <Link href={servicesPath}>Découvrir nos services voyage</Link>
+            <Link href={inspirationsPath}>Voir les conseils et inspirations voyage</Link>
+            <Link href={contactPath}>Contacter {site.name}</Link>
           </div>
         </div>
       </section>
