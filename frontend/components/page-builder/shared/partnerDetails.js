@@ -36,11 +36,28 @@ const DETAILS = Object.freeze({
     travelTypes: ["Croisière", "Mini-croisière", "Vol + croisière", "Tour du monde"],
     website: "https://www.costacroisieres.fr/",
   },
+
   "double-sens": {
     destinations: ["Europe", "Afrique", "Asie", "Amérique du Sud", "Caraïbes"],
     travelTypes: ["Voyage sur mesure", "Petit groupe", "Immersion locale", "Trek & randonnée", "Voyage solidaire"],
     website: "https://www.doublesens.fr/",
   },
+  "top-of-travel": {
+    destinations: ["Albanie", "Croatie", "Italie", "Portugal", "Madère", "Malte", "Monténégro", "Jordanie", "Cap-Vert"],
+    travelTypes: ["Circuit accompagné", "Autotour", "Séjour", "Top Clubs", "Voyage à la carte"],
+    website: "https://www.topoftravel.fr/",
+  },
+  "visit-europe": {
+    destinations: ["Italie", "Portugal", "Espagne", "Norvège", "Écosse", "Autriche", "Oman", "Géorgie", "Europe & Orient"],
+    travelTypes: ["Circuit", "Autotour", "Croisière", "Week-end", "Voyage en train", "Slow tourisme"],
+    website: "https://www.visiteurope.fr/",
+  },
+  "voyages-internationaux": {
+    destinations: ["Europe", "Amériques", "Afrique", "Asie", "Océanie"],
+    travelTypes: ["Circuit accompagné", "Voyage en autocar", "Voyage en avion", "Découverte culturelle"],
+    website: "https://www.voyages-internationaux.fr/",
+  },
+
   fram: {
     destinations: ["Méditerranée", "Canaries", "Caraïbes", "Océan Indien", "Asie", "Amériques"],
     travelTypes: ["Club Framissima", "Séjour", "Circuit", "Autotour", "City break"],
@@ -55,6 +72,16 @@ const DETAILS = Object.freeze({
     destinations: ["France", "Europe", "Méditerranée", "Caraïbes", "Océan Indien", "Montagne"],
     travelTypes: ["Resort tout compris", "Séjour famille", "Soleil", "Ski & montagne", "Premium"],
     website: "https://www.clubmed.fr/",
+  },
+  boomerang: {
+    destinations: ["Caraïbes", "Océan Indien", "Afrique", "Asie", "Méditerranée", "Moyen-Orient"],
+    travelTypes: ["Kappa Club", "Club Coralia", "Club Eldorador", "Circuit", "Autotour", "Kappa City"],
+    website: "https://www.boomerang-voyages.com/",
+  },
+  "mondial-tourisme": {
+    destinations: ["Tunisie", "Turquie", "Grèce", "Canaries", "Maroc", "Égypte", "République dominicaine", "Thaïlande", "Laponie"],
+    travelTypes: ["Mondi Club", "Séjour tout inclus", "Circuit", "Croisière", "Combiné", "City break"],
+    website: "https://www.mondialtourisme.fr/",
   },
   "salaun-holidays": {
     destinations: ["Europe", "Asie", "Amériques", "Afrique", "Océan Indien"],
@@ -71,6 +98,7 @@ const DETAILS = Object.freeze({
     travelTypes: ["Séjour", "Combiné d'îles", "Circuit", "Croisière", "Voyage de noces"],
     website: "https://www.exotismes.fr/",
   },
+
   asia: {
     destinations: ["Japon", "Thaïlande", "Vietnam", "Inde", "Indonésie", "Asie du Sud-Est"],
     travelTypes: ["Voyage sur mesure", "Circuit privé", "Circuit accompagné", "Combiné"],
@@ -90,6 +118,7 @@ const DETAILS = Object.freeze({
     travelTypes: ["Voyage sur mesure", "Road trip", "City break", "Expédition", "Itinéraire multi-destinations"],
     website: "https://corp.worldia.com/fr/",
   },
+
   lagrange: {
     destinations: ["France", "Europe", "Mer", "Montagne", "Campagne"],
     travelTypes: ["Résidence de vacances", "Location", "Villa", "Chalet", "Camping", "Séjour bien-être"],
