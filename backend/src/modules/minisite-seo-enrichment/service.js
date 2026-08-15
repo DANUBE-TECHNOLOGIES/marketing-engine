@@ -6,6 +6,7 @@ const { applyOptimizedSeoItems } = require("./optimizer-executor");
 const { optimizePageContent } = require("./content-optimizer");
 const { resolvedTargetCities } = require("./local-area-context");
 const { applyLocalAreaDifferentiation } = require("./local-differentiator");
+const { networkSimilarityReport } = require("./similarity-guard");
 const PageBuilderPersistenceService = require("../page-builder-persistence/service");
 
 class MiniSiteSeoEnrichmentService {
@@ -22,7 +23,8 @@ class MiniSiteSeoEnrichmentService {
       persistence: true,
       deterministic: true,
       versionedContentWrites: true,
-      operations: ["previewNetwork", "previewAgency", "applyAgency", "previewAgencyOptimization", "optimizeAgency", "previewAgencyContentOptimization", "optimizeAgencyContent", "normalizeAgencyTitles"],
+      networkSimilarityGuard: true,
+      operations: ["previewNetwork", "previewAgency", "applyAgency", "previewAgencyOptimization", "optimizeAgency", "previewAgencyContentOptimization", "optimizeAgencyContent", "previewNetworkContentOptimization", "optimizeNetworkContent", "normalizeAgencyTitles"],
     };
   }
 
@@ -127,6 +129,7 @@ class MiniSiteSeoEnrichmentService {
       agencyId,
       siteId: site.id,
       siteSlug: site.slug,
+      city: site.agency?.city || "",
       targetCities,
       pages,
       summary: {
@@ -210,6 +213,116 @@ class MiniSiteSeoEnrichmentService {
         pagesWritten: results.filter((item) => item.changed).length,
       },
       pages: results,
+    };
+  }
+
+  async buildNetworkContentOptimization({ similarityThreshold = 0.78, minimumWords = 80 } = {}) {
+    const sites = await this.repository.listSites();
+    const plans = [];
+    for (const site of sites || []) {
+      const agencyId = site.agencyId || site.agency?.id;
+      if (!agencyId) continue;
+      plans.push(await this.buildAgencyContentOptimization({ agencyId }));
+    }
+    const similarity = networkSimilarityReport(plans, { threshold: similarityThreshold, minimumWords });
+    return {
+      version: "mse-25.30",
+      plans,
+      similarity,
+      summary: {
+        agenciesProcessed: plans.length,
+        pagesProcessed: plans.reduce((sum, plan) => sum + plan.summary.pagesProcessed, 0),
+        pagesChanged: plans.reduce((sum, plan) => sum + plan.summary.pagesChanged, 0),
+        similarityConflicts: similarity.conflictCount,
+        rolloutBlocked: similarity.blocked,
+      },
+    };
+  }
+
+  async previewNetworkContentOptimization(options = {}) {
+    const plan = await this.buildNetworkContentOptimization(options);
+    return {
+      operation: "preview-network-content-optimize",
+      destructive: false,
+      writes: false,
+      ...plan,
+      plans: plan.plans.map((agencyPlan) => ({
+        ...agencyPlan,
+        pages: agencyPlan.pages.map(({ page, currentBlocks, optimizedBlocks, ...item }) => ({ ...item, before: currentBlocks, after: optimizedBlocks })),
+      })),
+    };
+  }
+
+  async optimizeNetworkContent({ dryRun = true, confirm = false, createdBy = "minisite-seo-network-rollout", similarityThreshold = 0.78, minimumWords = 80 } = {}) {
+    if (dryRun === false && confirm !== true) {
+      const error = new Error("Une confirmation explicite est obligatoire pour le rollout SEO réseau.");
+      error.code = "MINISITE_SEO_NETWORK_ROLLOUT_CONFIRMATION_REQUIRED";
+      error.status = 400;
+      throw error;
+    }
+
+    const plan = await this.buildNetworkContentOptimization({ similarityThreshold, minimumWords });
+    if (dryRun !== false) {
+      return {
+        operation: "preview-network-content-optimize",
+        destructive: false,
+        writes: false,
+        summary: plan.summary,
+        similarity: plan.similarity,
+      };
+    }
+
+    if (plan.similarity.blocked) {
+      const error = new Error(`Rollout bloqué : ${plan.similarity.conflictCount} conflit(s) de similarité inter-agences au-dessus du seuil.`);
+      error.code = "MINISITE_SEO_NETWORK_SIMILARITY_BLOCKED";
+      error.status = 409;
+      error.details = plan.similarity;
+      throw error;
+    }
+
+    const persistence = this.requirePageBuilderPersistence();
+    const agencies = [];
+    let pagesWritten = 0;
+    for (const agencyPlan of plan.plans) {
+      const results = [];
+      for (const item of agencyPlan.pages) {
+        if (!item.changed) {
+          results.push({ pageId: item.pageId, slug: item.slug, changed: false, version: item.page.version || null });
+          continue;
+        }
+        const saved = await persistence.save({
+          agencyId: agencyPlan.agencyId,
+          pageSlug: item.slug,
+          body: {
+            page: {
+              title: item.page.title,
+              slug: item.page.slug,
+              status: item.page.status,
+              seoTitle: item.page.seoTitle,
+              metaDescription: item.page.metaDescription,
+              published: item.page.published,
+            },
+            blocks: item.optimizedBlocks,
+          },
+          metadata: {
+            reason: "mse-25.30-network-local-content-rollout",
+            createdBy,
+          },
+        });
+        pagesWritten += 1;
+        results.push({ pageId: saved.id, slug: saved.slug, changed: true, version: saved.version, changes: item.changes });
+      }
+      agencies.push({ agencyId: agencyPlan.agencyId, siteSlug: agencyPlan.siteSlug, pages: results });
+    }
+
+    return {
+      operation: "network-content-optimize",
+      destructive: false,
+      writes: true,
+      versioned: true,
+      similarity: plan.similarity,
+      summary: { ...plan.summary, pagesWritten },
+      agencies,
     };
   }
 
