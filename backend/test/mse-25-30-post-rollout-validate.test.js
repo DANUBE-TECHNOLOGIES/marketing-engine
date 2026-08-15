@@ -92,13 +92,26 @@ test("post-rollout vérifie les chemins canoniques dans les entrées sitemap", (
   assert.equal(entryMatchesPath({ url: "https://agences.mondescale.com/agence/gien/croisieres" }, "/agence/gien/circuits"), false);
 });
 
-test("post-rollout utilise uniquement GET et valide état public plus indexation", async () => {
+test("post-rollout utilise uniquement GET et valide backend, sitemap et HTML public", async () => {
   const previousFetch = global.fetch;
   const calls = [];
+  const canonicalUrl = "https://agences.mondescale.com/agence/gien/circuits";
   global.fetch = async (url, options = {}) => {
-    calls.push({ url: String(url), method: options.method || "GET" });
-    const isPublic = String(url).includes("/api/public-site-read/");
-    const body = isPublic
+    const requestUrl = String(url);
+    calls.push({ url: requestUrl, method: options.method || "GET" });
+
+    if (requestUrl === canonicalUrl) {
+      const html = `<!doctype html><html><head><link rel="canonical" href="${canonicalUrl}" /><meta name="robots" content="index,follow" /></head><body><section class="public-site-hero"><h1>Circuits à Gien</h1></section></body></html>`;
+      return {
+        ok: true,
+        status: 200,
+        headers: { get: () => "text/html; charset=utf-8" },
+        text: async () => html,
+      };
+    }
+
+    const isPublicContract = requestUrl.includes("/api/public-site-read/");
+    const body = isPublicContract
       ? {
           pages: [{
             slug: "circuits",
@@ -114,7 +127,7 @@ test("post-rollout utilise uniquement GET et valide état public plus indexation
       : {
           readyToSubmit: true,
           entryCount: 1,
-          entries: [{ siteSlug: "gien", url: "https://agences.mondescale.com/agence/gien/circuits" }],
+          entries: [{ siteSlug: "gien", url: canonicalUrl }],
           readiness: { readyToSubmit: true },
         };
     return {
@@ -143,9 +156,11 @@ test("post-rollout utilise uniquement GET et valide état public plus indexation
     assert.equal(result.ok, true);
     assert.equal(result.readyToSubmit, true);
     assert.equal(result.pages[0].sitemapPresent, true);
+    assert.equal(result.pages[0].htmlProof.ok, true);
+    assert.equal(result.pages[0].htmlProof.h1.actual, "Circuits à Gien");
     assert.equal(result.pages[0].matchedChangeCount, 1);
-    assert.equal(calls.length, 2);
-    assert.deepEqual(calls.map((call) => call.method), ["GET", "GET"]);
+    assert.equal(calls.length, 3);
+    assert.deepEqual(calls.map((call) => call.method), ["GET", "GET", "GET"]);
   } finally {
     global.fetch = previousFetch;
   }
@@ -175,6 +190,7 @@ test("post-rollout échoue si la page n'est plus prête à l'indexation", async 
     assert.equal(result.ok, false);
     assert.equal(result.readyToSubmit, false);
     assert.equal(result.pages[0].sitemapPresent, false);
+    assert.equal(result.pages[0].htmlProof.skipped, true);
   } finally {
     global.fetch = previousFetch;
   }
