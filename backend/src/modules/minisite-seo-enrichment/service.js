@@ -9,7 +9,12 @@ const { applyLocalAreaDifferentiation } = require("./local-differentiator");
 const { networkSimilarityReport } = require("./similarity-guard");
 const { preRolloutQualityReport } = require("./pre-rollout-quality");
 const { MiniSiteStructuredDataService } = require("../minisite-structured-data/service");
+const { NOINDEX_SLUGS, canonicalPageSlug } = require("../minisite-structured-data/sitemap");
 const PageBuilderPersistenceService = require("../page-builder-persistence/service");
+
+function isNoindexContentPage(page = {}) {
+  return NOINDEX_SLUGS.has(canonicalPageSlug(page?.slug));
+}
 
 async function compensateAppliedWrites(appliedWrites = [], { createdBy = "mse-25.30-auto-compensation" } = {}) {
   const compensated = [];
@@ -69,6 +74,7 @@ class MiniSiteSeoEnrichmentService {
       sitemapReadinessGate: Boolean(this.structuredDataService),
       networkRollbackSnapshots: true,
       networkAutomaticCompensation: true,
+      noindexContentWriteGuard: true,
       operations: ["previewNetwork", "previewAgency", "applyAgency", "previewAgencyOptimization", "optimizeAgency", "previewAgencyContentOptimization", "optimizeAgencyContent", "previewNetworkContentOptimization", "optimizeNetworkContent", "normalizeAgencyTitles"],
     };
   }
@@ -138,18 +144,27 @@ class MiniSiteSeoEnrichmentService {
     const site = await this.requireAgencySite(agencyId);
     const persistence = this.requirePageBuilderPersistence();
     const pages = [];
+    const pageSummaries = site.pages || [];
+    const optimizablePages = pageSummaries.filter((page) => !isNoindexContentPage(page));
+    const noindexPages = pageSummaries.filter(isNoindexContentPage);
     const targetCities = resolvedTargetCities(site, { limit: 5 });
 
-    for (const pageSummary of site.pages || []) {
+    for (const pageSummary of optimizablePages) {
       const page = await persistence.get({ agencyId, pageSlug: pageSummary.slug });
-      const baseResult = optimizePageContent({ agency: site.agency || {}, page, blocks: page.blocks || [], availablePages: site.pages || [], siteSlug: site.slug || "" });
+      const baseResult = optimizePageContent({ agency: site.agency || {}, page, blocks: page.blocks || [], availablePages: optimizablePages, siteSlug: site.slug || "" });
       const result = applyLocalAreaDifferentiation({ blocks: baseResult.blocks, changes: baseResult.changes, agency: site.agency || {}, page, targetCities });
       pages.push({ pageId: page.id, slug: page.slug, title: page.title, published: page.published === true, changed: result.changed, changes: result.changes, currentBlocks: page.blocks || [], optimizedBlocks: result.blocks, page });
     }
 
     return {
       version: "mse-25.30", agencyId, siteId: site.id, siteSlug: site.slug, city: site.agency?.city || "", targetCities, pages,
-      summary: { pagesProcessed: pages.length, pagesChanged: pages.filter((page) => page.changed).length, blockFieldsChanged: pages.reduce((sum, page) => sum + page.changes.length, 0), localAreaCities: targetCities.length },
+      summary: {
+        pagesProcessed: pages.length,
+        pagesChanged: pages.filter((page) => page.changed).length,
+        pagesExcludedNoindex: noindexPages.length,
+        blockFieldsChanged: pages.reduce((sum, page) => sum + page.changes.length, 0),
+        localAreaCities: targetCities.length,
+      },
     };
   }
 
@@ -203,6 +218,7 @@ class MiniSiteSeoEnrichmentService {
         agenciesProcessed: plans.length,
         pagesProcessed: plans.reduce((sum, plan) => sum + plan.summary.pagesProcessed, 0),
         pagesChanged: plans.reduce((sum, plan) => sum + plan.summary.pagesChanged, 0),
+        pagesExcludedNoindex: plans.reduce((sum, plan) => sum + (plan.summary.pagesExcludedNoindex || 0), 0),
         similarityConflicts: similarity.conflictCount,
         similarityBlockingConflicts: similarity.blockingConflictCount,
         similarityAdvisoryConflicts: similarity.advisoryConflictCount,
@@ -321,4 +337,4 @@ class MiniSiteSeoEnrichmentService {
   async previewNetwork() { const sites = await this.repository.listSites(); return buildSeoPlan({ sites, publicOrigin: this.publicOrigin, optimizeExisting: false }); }
 }
 
-module.exports = { MiniSiteSeoEnrichmentService, compensateAppliedWrites };
+module.exports = { MiniSiteSeoEnrichmentService, compensateAppliedWrites, isNoindexContentPage };
