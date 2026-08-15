@@ -7,7 +7,7 @@
 
 .networkCard {
   min-height: 168px;
-  padding: 10px 12px;
+  padding: 8px 10px;
   border: 1px solid rgba(7, 29, 48, 0.07);
   border-radius: 24px;
   background: #fff;
@@ -20,7 +20,7 @@
 
 .networkLogo {
   display: block;
-  width: 100%;
+  width: 92%;
   height: 132px;
   object-fit: contain;
   object-position: center;
@@ -28,41 +28,48 @@
 }
 
 .networkCard[data-partner-id="fram"] .networkLogo {
-  transform: scale(1.34);
+  transform: scale(1.18);
 }
 
 .networkCard[data-partner-id="club-med"] .networkLogo {
-  transform: scale(1.28);
+  width: 88%;
+  height: 118px;
+  transform: none;
 }
 
 .networkCard[data-partner-id="msc-croisieres"] .networkLogo {
-  transform: scale(1.48);
+  transform: scale(1.30);
 }
 
 .networkCard[data-partner-id="costa-croisieres"] .networkLogo {
-  transform: scale(1.34);
+  transform: scale(1.20);
 }
 
 .networkCard[data-partner-id="salaun-holidays"] .networkLogo {
-  transform: scale(1.42);
+  width: 88%;
+  height: 116px;
+  transform: none;
 }
 
 .networkCard[data-partner-id="exotismes"] .networkLogo {
-  transform: scale(1.38);
+  transform: scale(1.22);
 }
 
 .tuiCard {
   grid-column: span 1;
   min-height: 168px;
-  padding: 10px 12px 12px;
+  padding: 8px 10px 10px;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .tuiMainLogo {
   display: block;
-  width: 132px;
-  height: 50px;
+  width: 58%;
+  max-width: 170px;
+  height: 48px;
+  object-fit: contain;
+  object-position: center;
   flex: 0 0 auto;
 }
 
@@ -70,16 +77,16 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   width: 100%;
-  gap: 2px;
+  gap: 0;
   align-items: stretch;
   border-top: 1px solid rgba(7, 29, 48, 0.07);
-  padding-top: 6px;
+  padding-top: 4px;
 }
 
 .tuiChild {
   min-width: 0;
-  min-height: 80px;
-  padding: 0 2px;
+  min-height: 92px;
+  padding: 0 1px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -92,10 +99,10 @@
 .tuiChildLogo {
   display: block;
   width: 100%;
-  height: 76px;
+  height: 88px;
   object-fit: contain;
   object-position: center;
-  transform: scale(1.22);
+  transform: scale(1.34);
   transform-origin: center;
 }
 
@@ -169,16 +176,20 @@
   }
 
   .tuiMainLogo {
-    width: 118px;
-    height: 46px;
+    width: 54%;
+    height: 44px;
   }
 
   .tuiChildren {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
+  .tuiChild {
+    min-height: 82px;
+  }
+
   .tuiChildLogo {
-    height: 66px;
-    transform: scale(1.16);
+    height: 78px;
+    transform: scale(1.26);
   }
 }
