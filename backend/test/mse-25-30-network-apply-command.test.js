@@ -18,7 +18,7 @@ test("MSE-25.30 network apply command refuses to run without explicit operator c
   assert.doesNotThrow(() => requireConfirmation("YES"));
 });
 
-test("MSE-25.30 network apply summary preserves versioned write, guards, expected public changes and rollback manifest", () => {
+test("MSE-25.30 network apply summary preserves versioned write, guards, exclusions, expected public changes and rollback manifest", () => {
   const result = summarize({
     operation: "network-content-optimize",
     writes: true,
@@ -32,6 +32,20 @@ test("MSE-25.30 network apply summary preserves versioned write, guards, expecte
       {
         agencyId: 1,
         siteSlug: "gien",
+        excludedPages: [
+          {
+            pageId: 102,
+            slug: "mentions-legales",
+            title: "Mentions légales",
+            reason: "noindex-page",
+          },
+          {
+            pageId: 104,
+            slug: "inspiration",
+            title: "Inspirations",
+            reason: "canonical-route-managed",
+          },
+        ],
         pages: [
           {
             slug: "circuits",
@@ -59,6 +73,19 @@ test("MSE-25.30 network apply summary preserves versioned write, guards, expecte
   assert.equal(result.quality.warningCount, 3);
   assert.equal(result.sitemapReadiness.notReadyCount, 0);
   assert.equal(result.agencies[0].pagesWritten, 1);
+  assert.deepEqual(result.agencies[0].excludedPages, [
+    {
+      slug: "mentions-legales",
+      title: "Mentions légales",
+      reason: "noindex-page",
+    },
+    {
+      slug: "inspiration",
+      title: "Inspirations",
+      reason: "canonical-route-managed",
+    },
+  ]);
+  assert.equal(Object.hasOwn(result.agencies[0].excludedPages[0], "pageId"), false);
   assert.equal(result.agencies[0].pages[0].version, 5);
   assert.equal(result.agencies[0].pages[0].rollbackVersionId, 104);
   assert.deepEqual(result.agencies[0].pages[0].expectedChanges, [
