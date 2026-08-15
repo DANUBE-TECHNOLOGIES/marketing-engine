@@ -32,6 +32,7 @@ test("full partner directory exposes the network categories and supplier invento
     "Exotismes",
     "Asia",
     "Austral Lagons",
+    "KUONI",
     "Salaün Holidays",
     "Worldia",
     "Thalasso N°1",
@@ -45,15 +46,24 @@ test("full partner directory exposes the network categories and supplier invento
     "voyages-internationaux",
     "boomerang",
     "mondial-tourisme",
+    "la-francaise-des-circuits",
+    "pacha-tours",
+    "kuoni",
+    "ollandini",
+    "mmv",
   ]) {
     assert.match(details, new RegExp(`(?:^|\\n)\\s*"?${enrichedId}"?\\s*:`));
   }
 
+  assert.match(catalogue, /\/partners\/kuoni-official\.webp/);
   assert.match(details, /Top Clubs/);
   assert.match(details, /Kappa Club/);
   assert.match(details, /Mondi Club/);
   assert.match(details, /Voyage en train/);
   assert.match(details, /Circuit accompagné/);
+  assert.match(details, /Circuit privatif/);
+  assert.match(details, /Méditerranée orientale/);
+  assert.match(details, /Alpes françaises/);
 
   assert.match(renderer, /getPartnerDirectoryCategories/);
   assert.match(renderer, /categoryNav/);
