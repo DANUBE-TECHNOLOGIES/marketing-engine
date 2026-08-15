@@ -92,7 +92,12 @@ class MiniSiteSeoEnrichmentService {
 
     for (const pageSummary of site.pages || []) {
       const page = await persistence.get({ agencyId, pageSlug: pageSummary.slug });
-      const result = optimizePageContent({ agency: site.agency || {}, page, blocks: page.blocks || [] });
+      const result = optimizePageContent({
+        agency: site.agency || {},
+        page,
+        blocks: page.blocks || [],
+        availablePages: site.pages || [],
+      });
       pages.push({
         pageId: page.id,
         slug: page.slug,
