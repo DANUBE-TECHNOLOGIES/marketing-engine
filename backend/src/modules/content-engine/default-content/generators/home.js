@@ -16,13 +16,13 @@ const {
   );
 
 const COMMON_HOME_PARTNERS = Object.freeze([
-  { id: "fram", name: "FRAM", scope: "network" },
-  { id: "tui-universe", name: "TUI · Club Lookéa · Club Marmara · Nouvelles Frontières", scope: "network" },
-  { id: "club-med", name: "Club Med", scope: "network" },
-  { id: "msc-croisieres", name: "MSC Croisières", scope: "network" },
-  { id: "costa-croisieres", name: "Costa Croisières", scope: "network" },
-  { id: "salaun-holidays", name: "Salaün Holidays", scope: "network" },
-  { id: "exotismes", name: "Exotismes", scope: "network" },
+  { id: "fram", name: "FRAM", logoUrl: "/partners/fram.webp", scope: "network" },
+  { id: "tui-univers", name: "TUI · Club Lookéa · Club Marmara · Nouvelles Frontières", logoUrl: "/partners/tui-univers.webp", scope: "network" },
+  { id: "club-med", name: "Club Med", logoUrl: "/partners/club-med.webp", scope: "network" },
+  { id: "msc-croisieres", name: "MSC Croisières", logoUrl: "/partners/msc-croisieres.webp", scope: "network" },
+  { id: "costa-croisieres", name: "Costa Croisières", logoUrl: "/partners/costa-croisieres.webp", scope: "network" },
+  { id: "salaun-holidays", name: "Salaün Holidays", logoUrl: "/partners/salaun-holidays.webp", scope: "network" },
+  { id: "exotismes", name: "Exotismes", logoUrl: "/partners/exotismes.webp", scope: "network" },
 ]);
 
 const HOME_TEMPLATE = {
@@ -51,8 +51,6 @@ const HOME_TEMPLATE = {
   partners: {
     title: "Les plus grands voyagistes, un seul conseiller",
     text: "Nous sélectionnons parmi des partenaires reconnus les vacances qui correspondent vraiment à vos envies.",
-    sprite: "/partners/common-partners-sprite.webp",
-    spriteAlt: "Partenaires Mondescale : FRAM, TUI, Club Lookéa, Club Marmara, Nouvelles Frontières, Club Med, MSC Croisières, Costa Croisières, Salaün Holidays et Exotismes",
   },
   contact: {
     title: "Un projet de voyage ?",
