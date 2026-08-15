@@ -7,7 +7,21 @@ function normalize(value) { return String(value || "").normalize("NFD").replace(
 function contentText(value) { if (value == null) return ""; if (typeof value === "string") return value; if (Array.isArray(value)) return value.map(contentText).join(" "); if (typeof value === "object") return Object.values(value).map(contentText).join(" "); return String(value); }
 function containsAny(value, terms) { const text = ` ${normalize(value)} `; return (terms || []).some((term) => text.includes(` ${normalize(term)} `)); }
 function containsCity(value, city) { const needle = normalize(city); return Boolean(needle) && ` ${normalize(value)} `.includes(` ${needle} `); }
-function firstHeading(blocks) { for (const block of blocks || []) { const content = block?.content || {}; const heading = [content.h1, content.heading, content.title, content.headline].find((value) => typeof value === "string" && value.trim()); if (heading) return heading.trim(); } return ""; }
+function blockType(block = {}) { return normalize(block.blockType || block.type).replace(/\s+/g, "-"); }
+function headingFromContent(content = {}) { return [content.h1, content.heading, content.title, content.headline].find((value) => typeof value === "string" && value.trim())?.trim() || ""; }
+function firstHeading(blocks) {
+  const items = Array.isArray(blocks) ? blocks : [];
+  const hero = items.find((block) => blockType(block) === "hero");
+  if (hero) {
+    const heading = headingFromContent(hero.content || {});
+    if (heading) return heading;
+  }
+  for (const block of items) {
+    const heading = headingFromContent(block?.content || {});
+    if (heading) return heading;
+  }
+  return "";
+}
 function wordCount(value) { return normalize(value).split(/\s+/).filter(Boolean).length; }
 function publishedPages(site) { return (site?.pages || []).filter((page) => page?.published === true || String(page?.status || "").toLowerCase() === "published"); }
 
@@ -51,4 +65,4 @@ function auditLocalIntentTargetQuality(site) {
   return { city: city || null, score: averageScore, status: averageScore >= 80 ? "strong" : averageScore >= 60 ? "partial" : "weak", coreTargetQuality: core?.bestTarget || null, coreTargetStrong: core?.qualityStatus === "strong", intents, gaps };
 }
 
-module.exports = { auditLocalIntentTargetQuality, qualityForTarget, wordCount };
+module.exports = { auditLocalIntentTargetQuality, qualityForTarget, wordCount, firstHeading };
