@@ -1,8 +1,22 @@
 import { getSectionContent, getSectionTitle } from "./helpers";
 import { getPartnerDirectoryCategories } from "../../page-builder/shared/fullPartners";
+import { getPartnerDetails } from "../../page-builder/shared/partnerDetails";
 import styles from "./PartnerDirectoryRenderer.module.css";
 
+function MetadataGroup({ label, values }) {
+  if (!Array.isArray(values) || !values.length) return null;
+
+  return (
+    <div className={styles.metadataGroup}>
+      <strong>{label}</strong>
+      <span>{values.join(" · ")}</span>
+    </div>
+  );
+}
+
 function PartnerCard({ partner }) {
+  const details = getPartnerDetails(partner.id);
+
   return (
     <article className={styles.card} data-partner-id={partner.id}>
       <div className={styles.logoFrame}>
@@ -22,6 +36,14 @@ function PartnerCard({ partner }) {
       <div className={styles.cardBody}>
         <h3>{partner.name}</h3>
         <p>{partner.summary}</p>
+
+        {details ? (
+          <div className={styles.metadata}>
+            <MetadataGroup label="Destinations" values={details.destinations} />
+            <MetadataGroup label="Types de voyages" values={details.travelTypes} />
+          </div>
+        ) : null}
+
         {partner.tags?.length ? (
           <div className={styles.tags} aria-label={`Spécialités de ${partner.name}`}>
             {partner.tags.map((tag) => (
