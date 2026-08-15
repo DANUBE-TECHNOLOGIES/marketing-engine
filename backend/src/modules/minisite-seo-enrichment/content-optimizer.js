@@ -8,6 +8,15 @@ function normalize(value) {
   return clean(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
 
+function escapeHtml(value) {
+  return clean(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function agencyLabel(agency = {}) {
   const city = clean(agency.city);
   const name = clean(agency.name);
@@ -24,6 +33,10 @@ function pageIntent(page = {}) {
   if (source.includes("sejour") || source.includes("club")) return { key: "stay", label: "Séjours", service: "séjours" };
   if (source.includes("billet") || source.includes("vol")) return { key: "ticketing", label: "Billetterie et vols", service: "billetterie et vols" };
   return { key: "generic", label: clean(page.title) || "Voyages", service: clean(page.title).toLowerCase() || "voyages" };
+}
+
+function isCommercialIntent(intent) {
+  return ["cruise", "circuit", "custom", "stay", "ticketing"].includes(intent?.key);
 }
 
 function blockType(block = {}) {
@@ -88,13 +101,46 @@ function buildLocalSectionText({ agency, page }) {
   return `À ${city}, ${name} vous accompagne avec des conseils personnalisés et un suivi de proximité pour préparer votre prochain voyage.`;
 }
 
+function buildCommercialProofs({ agency, page }) {
+  const { city } = agencyLabel(agency);
+  const intent = pageIntent(page);
+  if (!city || !isCommercialIntent(intent)) return [];
+
+  const first = {
+    cruise: ["Un itinéraire adapté", "Nous vous aidons à choisir l’itinéraire, la durée et le rythme de croisière adaptés à votre projet."],
+    circuit: ["Un circuit adapté", "Nous étudions le rythme, les étapes et les prestations du circuit selon votre manière de voyager."],
+    custom: ["Un projet vraiment personnalisé", "Nous partons de vos dates, de vos envies et de votre budget pour construire un voyage cohérent."],
+    stay: ["Une formule adaptée", "Nous comparons destinations, hébergements et formules pour sélectionner un séjour cohérent avec vos attentes."],
+    ticketing: ["Un itinéraire aérien étudié", "Nous vous aidons à comparer les itinéraires, horaires et conditions tarifaires utiles à votre voyage."],
+  }[intent.key];
+
+  return [
+    { title: first[0], text: first[1] },
+    { title: "Des solutions comparées", text: `Votre conseiller à ${city} met en perspective les solutions disponibles pour faciliter votre choix.` },
+    { title: "Un suivi jusqu’au départ", text: "Votre agence reste votre interlocuteur pour le suivi du dossier et les informations utiles avant le voyage." },
+  ];
+}
+
+function buildCommercialCta({ agency, page }) {
+  const { city } = agencyLabel(agency);
+  const intent = pageIntent(page);
+  if (!city || !isCommercialIntent(intent)) return null;
+  return {
+    title: `Parlons de votre projet de ${intent.service} à ${city}`,
+    text: `Expliquez-nous vos envies, vos dates et votre budget : votre conseiller vous aide à préparer une solution adaptée à votre projet.`,
+    primaryCta: { label: "Demander un devis", href: "contact" },
+    secondaryCta: null,
+    style: "primary",
+  };
+}
+
 function commercialPages(availablePages = []) {
   const seen = new Set();
   return (availablePages || [])
     .map((candidate) => ({ candidate, intent: pageIntent(candidate) }))
     .filter(({ candidate, intent }) => {
       const slug = clean(candidate.slug);
-      if (!slug || !["cruise", "circuit", "custom", "stay", "ticketing"].includes(intent.key) || seen.has(intent.key)) return false;
+      if (!slug || !isCommercialIntent(intent) || seen.has(intent.key)) return false;
       seen.add(intent.key);
       return true;
     })
@@ -111,8 +157,28 @@ function hasEditorialCopy(content = {}) {
     clean(content.text) ||
     clean(content.description) ||
     clean(content.html) ||
+    clean(content.introduction) ||
     (Array.isArray(content.paragraphs) && content.paragraphs.some((value) => clean(value)))
   );
+}
+
+function nextBlockPosition(blocks = []) {
+  return (blocks || []).reduce((max, block, index) => {
+    const numeric = Number(block.position ?? block.displayOrder ?? index);
+    return Number.isFinite(numeric) ? Math.max(max, numeric) : max;
+  }, -1) + 1;
+}
+
+function addGeneratedBlock(nextBlocks, block, changes) {
+  nextBlocks.push(block);
+  changes.push({
+    blockId: null,
+    blockType: blockType(block),
+    field: "block",
+    previous: null,
+    next: block.content,
+    generated: true,
+  });
 }
 
 function optimizeEditorialBlock(nextBlocks, { agency, page, changes }) {
@@ -133,8 +199,13 @@ function optimizeEditorialBlock(nextBlocks, { agency, page, changes }) {
   if (!hasEditorialCopy(block.content)) {
     const nextText = buildLocalSectionText({ agency, page });
     if (nextText) {
-      block.content.text = nextText;
-      changes.push({ blockId: block.id || null, blockType: blockType(block), field: "text", previous: "", next: nextText });
+      if (["rich-text", "richtext"].includes(blockType(block))) {
+        block.content.html = `<p>${escapeHtml(nextText)}</p>`;
+        changes.push({ blockId: block.id || null, blockType: blockType(block), field: "html", previous: "", next: block.content.html });
+      } else {
+        block.content.text = nextText;
+        changes.push({ blockId: block.id || null, blockType: blockType(block), field: "text", previous: "", next: nextText });
+      }
     }
   }
 }
@@ -144,7 +215,7 @@ function optimizeCommercialLinks(nextBlocks, { page, availablePages, changes }) 
   const links = commercialPages(availablePages).filter((link) => normalize(link.href) !== normalize(page.slug));
   if (!links.length) return;
 
-  const index = nextBlocks.findIndex((block) => ["cards", "services"].includes(blockType(block)));
+  const index = nextBlocks.findIndex((block) => ["cards", "services", "features"].includes(blockType(block)));
   if (index < 0) return;
   const block = nextBlocks[index];
   const field = Array.isArray(block.content.items) ? "items" : Array.isArray(block.content.cards) ? "cards" : null;
@@ -169,6 +240,64 @@ function optimizeCommercialLinks(nextBlocks, { page, availablePages, changes }) 
     }
   }
   if (changed) block.content[field] = items;
+}
+
+function ensureCommercialPageStructure(nextBlocks, { agency, page, changes }) {
+  const intent = pageIntent(page);
+  const { city } = agencyLabel(agency);
+  if (!city || !isCommercialIntent(intent)) return;
+
+  const hasEditorial = nextBlocks.some((block) =>
+    ["rich-text", "richtext", "image-text", "agency"].includes(blockType(block)) && hasEditorialCopy(block.content)
+  );
+  const hasProofs = nextBlocks.some((block) => ["features", "services", "cards"].includes(blockType(block)));
+  const hasCta = nextBlocks.some((block) => blockType(block).includes("cta"));
+
+  let position = nextBlockPosition(nextBlocks);
+
+  if (!hasEditorial) {
+    const title = buildLocalSectionTitle({ agency, page });
+    const text = buildLocalSectionText({ agency, page });
+    addGeneratedBlock(nextBlocks, {
+      type: "rich_text",
+      status: "draft",
+      position: position++,
+      settings: {},
+      seo: { generatedBy: "mse-25.30", purpose: "local-commercial-depth" },
+      content: {
+        title,
+        html: `<p>${escapeHtml(text)}</p>`,
+        alignment: "left",
+      },
+    }, changes);
+  }
+
+  if (!hasProofs) {
+    addGeneratedBlock(nextBlocks, {
+      type: "features",
+      status: "draft",
+      position: position++,
+      settings: {},
+      seo: { generatedBy: "mse-25.30", purpose: "commercial-proof" },
+      content: {
+        title: `Pourquoi préparer vos ${intent.service} avec notre agence à ${city} ?`,
+        introduction: `Notre équipe vous accompagne pour comparer les options et préparer votre projet avec un interlocuteur de proximité.`,
+        items: buildCommercialProofs({ agency, page }),
+        columns: 3,
+      },
+    }, changes);
+  }
+
+  if (!hasCta) {
+    addGeneratedBlock(nextBlocks, {
+      type: "cta",
+      status: "draft",
+      position: position++,
+      settings: {},
+      seo: { generatedBy: "mse-25.30", purpose: "commercial-conversion" },
+      content: buildCommercialCta({ agency, page }),
+    }, changes);
+  }
 }
 
 function optimizePageContent({ agency = {}, page = {}, blocks = [], availablePages = [] } = {}) {
@@ -197,6 +326,7 @@ function optimizePageContent({ agency = {}, page = {}, blocks = [], availablePag
 
   optimizeEditorialBlock(nextBlocks, { agency, page, changes });
   optimizeCommercialLinks(nextBlocks, { page, availablePages, changes });
+  ensureCommercialPageStructure(nextBlocks, { agency, page, changes });
 
   return {
     changed: changes.length > 0,
@@ -210,7 +340,10 @@ module.exports = {
   buildLocalIntroduction,
   buildLocalSectionTitle,
   buildLocalSectionText,
+  buildCommercialProofs,
+  buildCommercialCta,
   commercialPages,
+  ensureCommercialPageStructure,
   optimizePageContent,
   pageIntent,
 };
