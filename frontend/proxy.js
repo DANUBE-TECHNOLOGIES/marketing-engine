@@ -70,6 +70,8 @@ export function proxy(request) {
     pathname.startsWith("/media/") ||
     pathname === "/brand" ||
     pathname.startsWith("/brand/") ||
+    pathname === "/partners" ||
+    pathname.startsWith("/partners/") ||
     pathname.startsWith("/_next/") ||
     pathname === "/favicon.ico" ||
     pathname === "/robots.txt" ||
