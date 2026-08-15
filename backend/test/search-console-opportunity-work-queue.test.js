@@ -7,6 +7,10 @@ test("MSE-25.22 builds a stable per-site opportunity key", () => {
   assert.equal(opportunityKey({ siteSlug: "Gien", query: " Agence Voyage Gien " }), "gien::agence voyage gien");
 });
 
+test("MSE-25.24 supports deterministic local SEO audit work keys without pretending they are search queries", () => {
+  assert.equal(opportunityKey({ siteSlug: "Gien", workKey: " local-seo:nap-incomplete:global " }), "gien::local-seo:nap-incomplete:global");
+});
+
 test("MSE-25.22 uses a dedicated manual work queue mode", () => {
   assert.equal(MODE, "seo-opportunity-work-queue");
   assert.equal(ACTION_TYPE, "seo-opportunity-work-item");
