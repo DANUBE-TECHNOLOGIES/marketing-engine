@@ -10,6 +10,7 @@ const read = (relativePath) => fs.readFileSync(path.join(frontendRoot, relativeP
 
 test("full partner directory exposes the network categories and supplier inventory", () => {
   const catalogue = read("components/page-builder/shared/fullPartners.js");
+  const details = read("components/page-builder/shared/partnerDetails.js");
   const renderer = read("components/public-site/renderers/PartnerDirectoryRenderer.js");
   const registry = read("components/public-site/renderers/registry.js");
   const blockCatalogue = read("lib/page-builder-v2/block-catalog.js");
@@ -37,6 +38,22 @@ test("full partner directory exposes the network categories and supplier invento
   ]) {
     assert.match(catalogue, new RegExp(supplier.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
+
+  for (const enrichedId of [
+    "top-of-travel",
+    "visit-europe",
+    "voyages-internationaux",
+    "boomerang",
+    "mondial-tourisme",
+  ]) {
+    assert.match(details, new RegExp(`(?:^|\\n)\\s*"?${enrichedId}"?\\s*:`));
+  }
+
+  assert.match(details, /Top Clubs/);
+  assert.match(details, /Kappa Club/);
+  assert.match(details, /Mondi Club/);
+  assert.match(details, /Voyage en train/);
+  assert.match(details, /Circuit accompagné/);
 
   assert.match(renderer, /getPartnerDirectoryCategories/);
   assert.match(renderer, /categoryNav/);
