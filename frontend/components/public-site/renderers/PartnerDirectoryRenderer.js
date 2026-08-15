@@ -16,6 +16,7 @@ function MetadataGroup({ label, values }) {
 
 function PartnerCard({ partner }) {
   const details = getPartnerDetails(partner.id);
+  const visibleTags = Array.isArray(partner.tags) ? partner.tags.slice(0, 2) : [];
 
   return (
     <article className={styles.card} data-partner-id={partner.id}>
@@ -37,19 +38,22 @@ function PartnerCard({ partner }) {
         <h3>{partner.name}</h3>
         <p>{partner.summary}</p>
 
-        {details ? (
-          <div className={styles.metadata}>
-            <MetadataGroup label="Destinations" values={details.destinations} />
-            <MetadataGroup label="Types de voyages" values={details.travelTypes} />
-          </div>
-        ) : null}
-
-        {partner.tags?.length ? (
+        {visibleTags.length ? (
           <div className={styles.tags} aria-label={`Spécialités de ${partner.name}`}>
-            {partner.tags.map((tag) => (
+            {visibleTags.map((tag) => (
               <span key={tag}>{tag}</span>
             ))}
           </div>
+        ) : null}
+
+        {details ? (
+          <details className={styles.details}>
+            <summary>Découvrir ses spécialités</summary>
+            <div className={styles.metadata}>
+              <MetadataGroup label="Destinations" values={details.destinations} />
+              <MetadataGroup label="Types de voyages" values={details.travelTypes} />
+            </div>
+          </details>
         ) : null}
       </div>
     </article>
@@ -68,7 +72,7 @@ export default function PartnerDirectoryRenderer({ section }) {
           <h2>{getSectionTitle(section, "Tous nos partenaires voyage")}</h2>
           <p>
             {content.text ||
-              "Nos conseillers s'appuient sur un large réseau de tour-opérateurs, croisiéristes et spécialistes pour comparer les solutions et construire le voyage le plus adapté à votre projet."}
+              "Retrouvez les principaux tour-opérateurs, croisiéristes et spécialistes avec lesquels nos conseillers peuvent construire votre voyage. Choisissez simplement un univers pour parcourir les partenaires correspondants."}
           </p>
         </header>
 
