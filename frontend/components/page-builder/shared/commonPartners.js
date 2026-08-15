@@ -10,7 +10,7 @@ export const COMMON_PARTNERS = Object.freeze([
     name: "Univers TUI",
     alt: "TUI, Club Lookéa, Club Marmara et Nouvelles Frontières, partenaires de Mondescale Voyages",
     group: "tui",
-    logoUrl: "/partners/tui.webp",
+    logoUrl: "/partners/tui-official.svg",
     children: [
       { id: "club-lookea", name: "Club Lookéa", logoUrl: "/partners/club-lookea.webp" },
       { id: "club-marmara", name: "Club Marmara", logoUrl: "/partners/club-marmara.webp" },
@@ -20,7 +20,7 @@ export const COMMON_PARTNERS = Object.freeze([
   {
     id: "club-med",
     name: "Club Med",
-    logoUrl: "/partners/club-med.webp",
+    logoUrl: "/partners/club-med-official.svg",
     alt: "Club Med, partenaire de Mondescale Voyages",
   },
   {
@@ -36,10 +36,10 @@ export const COMMON_PARTNERS = Object.freeze([
     alt: "Costa Croisières, partenaire de Mondescale Voyages",
   },
   {
-    id: "salaun-holidays",
-    name: "Salaün Holidays",
-    logoUrl: "/partners/salaun-holidays.webp",
-    alt: "Salaün Holidays, partenaire de Mondescale Voyages",
+    id: "kuoni",
+    name: "KUONI",
+    logoUrl: "/partners/kuoni-official.svg",
+    alt: "KUONI, partenaire de Mondescale Voyages",
   },
   {
     id: "exotismes",
