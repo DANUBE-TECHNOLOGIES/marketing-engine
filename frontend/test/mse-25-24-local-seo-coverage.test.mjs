@@ -13,7 +13,15 @@ test("MSE-25.24 exposes the published local coverage audit in the cockpit", () =
   assert.match(api, /localSeoCoverage/);
   assert.match(client, /Couverture SEO locale/);
   assert.match(client, /Ville principale, title, meta, H1, contenu publié, NAP, TravelAgency\/LocalBusiness/);
-  assert.match(client, /schemas locaux complets/);
+  assert.match(client, /sans page orpheline/);
+  assert.match(client, /Maillage interne/);
+});
+
+test("MSE-25.24 can turn a local coverage gap into a human SEO work item", () => {
+  assert.match(client, /createWorkItem/);
+  assert.match(client, /sourceType: "local-seo-coverage"/);
+  assert.match(client, /workKey: `local-seo:/);
+  assert.match(client, /Ajouter à la file SEO/);
 });
 
 test("MSE-25.24 remains diagnostic and does not create local doorway pages", () => {
