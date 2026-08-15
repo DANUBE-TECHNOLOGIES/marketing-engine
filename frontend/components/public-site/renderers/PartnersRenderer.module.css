@@ -7,7 +7,7 @@
 
 .networkCard {
   min-height: 168px;
-  padding: 14px 16px;
+  padding: 10px 12px;
   border: 1px solid rgba(7, 29, 48, 0.07);
   border-radius: 24px;
   background: #fff;
@@ -20,42 +20,66 @@
 
 .networkLogo {
   display: block;
-  width: min(82%, 300px);
-  height: 118px;
+  width: 100%;
+  height: 132px;
   object-fit: contain;
   object-position: center;
+  transform-origin: center;
+}
+
+.networkCard[data-partner-id="fram"] .networkLogo {
+  transform: scale(1.34);
+}
+
+.networkCard[data-partner-id="club-med"] .networkLogo {
+  transform: scale(1.28);
+}
+
+.networkCard[data-partner-id="msc-croisieres"] .networkLogo {
+  transform: scale(1.48);
+}
+
+.networkCard[data-partner-id="costa-croisieres"] .networkLogo {
+  transform: scale(1.34);
+}
+
+.networkCard[data-partner-id="salaun-holidays"] .networkLogo {
+  transform: scale(1.42);
+}
+
+.networkCard[data-partner-id="exotismes"] .networkLogo {
+  transform: scale(1.38);
 }
 
 .tuiCard {
   grid-column: span 1;
   min-height: 168px;
-  padding: 12px 14px 14px;
+  padding: 10px 12px 12px;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .tuiMainLogo {
   display: block;
-  width: min(52%, 150px);
-  height: 48px;
-  object-fit: contain;
-  object-position: center;
+  width: 132px;
+  height: 50px;
+  flex: 0 0 auto;
 }
 
 .tuiChildren {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   width: 100%;
-  gap: 4px;
+  gap: 2px;
   align-items: stretch;
   border-top: 1px solid rgba(7, 29, 48, 0.07);
-  padding-top: 8px;
+  padding-top: 6px;
 }
 
 .tuiChild {
   min-width: 0;
-  min-height: 76px;
-  padding: 2px 4px;
+  min-height: 80px;
+  padding: 0 2px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -67,10 +91,12 @@
 
 .tuiChildLogo {
   display: block;
-  width: 94%;
-  height: 68px;
+  width: 100%;
+  height: 76px;
   object-fit: contain;
   object-position: center;
+  transform: scale(1.22);
+  transform-origin: center;
 }
 
 .agencyWrap {
@@ -99,7 +125,7 @@
 
 .agencyCard {
   min-height: 96px;
-  padding: 14px 16px;
+  padding: 12px 14px;
   border: 1px solid rgba(7, 29, 48, 0.08);
   border-radius: 18px;
   background: rgba(255,255,255,.88);
@@ -111,8 +137,8 @@
 .agencyLogo {
   display: block;
   width: 100%;
-  max-width: 170px;
-  max-height: 64px;
+  max-width: 190px;
+  max-height: 72px;
   object-fit: contain;
 }
 
@@ -138,11 +164,21 @@
     min-height: 154px;
   }
 
+  .networkLogo {
+    height: 120px;
+  }
+
+  .tuiMainLogo {
+    width: 118px;
+    height: 46px;
+  }
+
   .tuiChildren {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .tuiChildLogo {
-    height: 58px;
+    height: 66px;
+    transform: scale(1.16);
   }
 }
