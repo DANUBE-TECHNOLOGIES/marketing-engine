@@ -26,6 +26,11 @@ const DETAILS = Object.freeze({
     travelTypes: ["Croisière familiale", "Croisière internationale", "Tour du monde"],
     website: "https://www.msccroisieres.fr/",
   },
+  "costa-croisieres": {
+    destinations: ["Méditerranée", "Caraïbes & Antilles", "Europe du Nord & fjords", "Moyen-Orient", "Asie", "Canaries", "Amérique du Sud"],
+    travelTypes: ["Croisière", "Mini-croisière", "Vol + croisière", "Tour du monde"],
+    website: "https://www.costacroisieres.fr/",
+  },
   fram: {
     destinations: ["Méditerranée", "Canaries", "Caraïbes", "Océan Indien", "Asie", "Amériques"],
     travelTypes: ["Club Framissima", "Séjour", "Circuit", "Autotour", "City break"],
@@ -51,6 +56,11 @@ const DETAILS = Object.freeze({
     travelTypes: ["Séjour", "Club", "Circuit", "Autotour", "Périple d'île en île", "Croisière"],
     website: "https://www.heliades.fr/",
   },
+  exotismes: {
+    destinations: ["Caraïbes", "Océan Indien", "Polynésie", "Maurice", "Seychelles", "Maldives", "Tahiti"],
+    travelTypes: ["Séjour", "Combiné d'îles", "Circuit", "Croisière", "Voyage de noces"],
+    website: "https://www.exotismes.fr/",
+  },
   asia: {
     destinations: ["Japon", "Thaïlande", "Vietnam", "Inde", "Indonésie", "Asie du Sud-Est"],
     travelTypes: ["Voyage sur mesure", "Circuit privé", "Circuit accompagné", "Combiné"],
@@ -64,6 +74,16 @@ const DETAILS = Object.freeze({
   "beachcomber-tours": {
     destinations: ["Maurice", "Seychelles", "Maldives", "Dubaï", "Abu Dhabi", "Oman"],
     travelTypes: ["Séjour haut de gamme", "Voyage de noces", "Famille", "Golf", "Multi-centres"],
+  },
+  worldia: {
+    destinations: ["Europe", "Asie", "Amérique du Nord", "Amérique du Sud", "Moyen-Orient", "Afrique", "Îles"],
+    travelTypes: ["Voyage sur mesure", "Road trip", "City break", "Expédition", "Itinéraire multi-destinations"],
+    website: "https://corp.worldia.com/fr/",
+  },
+  lagrange: {
+    destinations: ["France", "Europe", "Mer", "Montagne", "Campagne"],
+    travelTypes: ["Résidence de vacances", "Location", "Villa", "Chalet", "Camping", "Séjour bien-être"],
+    website: "https://www.vacances-lagrange.com/",
   },
   "thalasso-n1": {
     destinations: ["France", "Atlantique", "Bretagne", "Nouvelle-Aquitaine", "Méditerranée"],
