@@ -155,11 +155,20 @@ function normalizeExpectedChanges(changes = []) {
   }));
 }
 
+function normalizeExcludedPages(pages = []) {
+  return (Array.isArray(pages) ? pages : []).map((page) => ({
+    slug: page?.slug ?? null,
+    title: page?.title ?? null,
+    reason: page?.reason ?? null,
+  }));
+}
+
 function summarize(payload = {}) {
   const agencies = (payload?.agencies || []).map((agency) => ({
     agencyId: agency.agencyId,
     siteSlug: agency.siteSlug,
     pagesWritten: (agency.pages || []).filter((page) => page.changed).length,
+    excludedPages: normalizeExcludedPages(agency.excludedPages),
     pages: (agency.pages || []).map((page) => ({
       slug: page.slug,
       changed: page.changed === true,
@@ -334,6 +343,7 @@ module.exports = {
   assertPreflightReport,
   jsonRequest,
   loadPreflightReport,
+  normalizeExcludedPages,
   normalizeExpectedChanges,
   normalizeOrigin,
   requireConfirmation,
