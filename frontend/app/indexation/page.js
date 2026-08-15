@@ -12,6 +12,7 @@ export default function IndexationPage() {
     <>
       <div className="indexation-page-tools">
         <Link href="/indexation/local-seo">Couverture SEO locale</Link>
+        <Link href="/indexation/local-content">Unicité des contenus locaux</Link>
         <Link href="/indexation/performance">Performance Search Console</Link>
         <Link href="/indexation/status">Suivre les sitemaps</Link>
         <Link href="/indexation/rollout">Préparer une vague d’indexation contrôlée</Link>
