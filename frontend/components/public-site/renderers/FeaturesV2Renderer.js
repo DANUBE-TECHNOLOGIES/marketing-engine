@@ -35,6 +35,13 @@ function localCity(site) {
   return String(site?.agency?.city || site?.city || "").trim();
 }
 
+function featureHref(root, value) {
+  const href = String(value || "").trim();
+  if (!href) return null;
+  if (/^(https?:|mailto:|tel:|\/)/i.test(href)) return href;
+  return `${root}/${href.replace(/^\/+|\/+$/g, "")}`;
+}
+
 function defaultFeaturesTitle(site) {
   const city = localCity(site);
   return city ? `Nos services voyage à ${city}` : "Nos services voyage";
@@ -98,25 +105,29 @@ export default function FeaturesV2Renderer({
                 `repeat(auto-fit, minmax(min(100%, ${minimum}px), 1fr))`,
             }}
           >
-            {items.map((item, index) => (
-              <article
-                className="public-site-card public-site-feature-card"
-                key={item.id || item.title || index}
-              >
-                {item.icon ? (
-                  <span className="public-site-feature-icon" aria-hidden="true">
-                    {item.icon}
-                  </span>
-                ) : null}
+            {items.map((item, index) => {
+              const href = featureHref(root, item.href);
+              const heading = item.title || item.label;
+              return (
+                <article
+                  className="public-site-card public-site-feature-card"
+                  key={item.id || item.title || index}
+                >
+                  {item.icon ? (
+                    <span className="public-site-feature-icon" aria-hidden="true">
+                      {item.icon}
+                    </span>
+                  ) : null}
 
-                <h3>{item.title || item.label}</h3>
+                  <h3>{href ? <Link href={href}>{heading}</Link> : heading}</h3>
 
-                {item.text ? <p>{item.text}</p> : null}
-                {item.description ? (
-                  <p>{item.description}</p>
-                ) : null}
-              </article>
-            ))}
+                  {item.text ? <p>{item.text}</p> : null}
+                  {item.description ? (
+                    <p>{item.description}</p>
+                  ) : null}
+                </article>
+              );
+            })}
           </div>
         ) : null}
 
@@ -142,6 +153,7 @@ export default function FeaturesV2Renderer({
 export {
   defaultFeaturesIntroduction,
   defaultFeaturesTitle,
+  featureHref,
   joinCities,
   localCity,
   siteRoot,
