@@ -97,6 +97,7 @@ class MiniSiteSeoEnrichmentService {
         page,
         blocks: page.blocks || [],
         availablePages: site.pages || [],
+        siteSlug: site.slug || "",
       });
       pages.push({
         pageId: page.id,
