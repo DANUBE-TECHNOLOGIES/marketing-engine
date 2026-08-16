@@ -9,6 +9,7 @@ export const PARTNER_LOGO_BACKLOG = Object.freeze([
   { id: "cfc", category: "croisieres", priority: 1, state: "source-pending", sourceType: "official-site" },
   { id: "hurtigruten", category: "croisieres", priority: 1, state: "source-pending", sourceType: "official-site" },
 
+  { id: "double-sens", category: "circuits", priority: 2, state: "source-pending", sourceType: "official-site" },
   { id: "destination-aventure", category: "circuits", priority: 2, state: "source-pending", sourceType: "official-site" },
   { id: "la-francaise-des-circuits", category: "circuits", priority: 2, state: "source-pending", sourceType: "official-site" },
   { id: "salaun-holidays", category: "circuits", priority: 2, state: "source-pending", sourceType: "official-site" },
