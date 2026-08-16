@@ -20,7 +20,9 @@ test("partner readiness separates content readiness from logo completeness", () 
   assert.match(profile, /contentReady/);
   assert.match(profile, /assetReady/);
   assert.match(profile, /readyForPublication/);
+  assert.match(profile, /identityConfirmed/);
   assert.match(profile, /getPartnerCompletenessSummary/);
+  assert.match(profile, /partner\?\.publishable && partner\?\.readyForPublication/);
 
   assert.match(report, /content-first-logo-fallback-allowed/);
   assert.match(report, /ready-with-logo-fallback/);
