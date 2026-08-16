@@ -26,7 +26,6 @@ export const PARTNER_LOGO_BACKLOG = Object.freeze([
   { id: "jet-tours", category: "sejours", priority: 2, state: "source-pending", sourceType: "official-site", note: "Use only the Jet tours masterbrand from an official source; do not substitute Club Jet tours or another sub-brand." },
   { id: "hotels-lagons", category: "sejours", priority: 2, state: "source-pending", sourceType: "official-site", note: "Official Hôtels & Lagons B2B site confirmed; use only the masterbrand." },
   { id: "lmx-voyages", category: "sejours", priority: 2, state: "source-pending", sourceType: "official-site", note: "Official French LMX Voyages site confirmed; use the French-market masterbrand." },
-  { id: "mega-vacances", category: "sejours", priority: 3, state: "verification-pending", sourceType: "identity-check" },
   { id: "mondial-tourisme", category: "sejours", priority: 2, state: "source-pending", sourceType: "official-site" },
   { id: "plein-vent", category: "sejours", priority: 2, state: "source-pending", sourceType: "official-group-brand" },
   { id: "solea", category: "sejours", priority: 2, state: "source-pending", sourceType: "official-site" },
