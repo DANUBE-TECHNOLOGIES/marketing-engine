@@ -15,7 +15,10 @@ const DETAILS = Object.freeze({
   },
   "pierre-vacances-center-parcs": {
     destinations: ["France", "Espagne", "Pays-Bas", "Belgique", "Allemagne", "Europe"],
-    travelTypes: ["Résidence", "Village nature", "Center Parcs", "Location", "Séjour famille"],
+    travelTypes: ["Résidence", "Village nature", "Domaine de loisirs", "Location", "Séjour famille"],
+    displayMode: "brand-cluster",
+    brands: ["Pierre & Vacances", "Center Parcs", "maeva"],
+    note: "Trois marques distinctes sont regroupées dans cette entrée pour garder une lecture simple de l'annuaire public ; chacune conserve sa propre identité de marque.",
   },
   ollandini: {
     destinations: ["Corse", "Ajaccio", "Balagne", "Golfe de Porto", "Sud Corse", "Sardaigne"],
