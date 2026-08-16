@@ -65,7 +65,6 @@ export const FULL_PARTNERS = Object.freeze([
   P("jetset-voyages", "JetSet Voyages", "sur-mesure", "Voyages long-courriers, combinés et séjours personnalisables dans de nombreuses destinations internationales.", ["long-courrier", "combiné"]),
   P("luxair-tours", "LuxairTours", "sur-mesure", "Séjours et packages aériens au départ du Luxembourg vers de nombreuses destinations de vacances.", ["séjours", "aérien"]),
   P("gaeland-ashling", "Gaeland Ashling", "sur-mesure", "Voyages personnalisés vers des destinations de caractère, avec une approche experte et thématique.", ["sur mesure", "expertise"]),
-  P("ollandini", "Ollandini", "sur-mesure", "Séjours et circuits en Corse, avec une expertise historique de l'île et de ses différentes régions.", ["Corse", "séjours"]),
   P("planete-production", "Planète Production", "sur-mesure", "Voyages et programmes construits autour de destinations et expériences sélectionnées pour les agences partenaires.", ["voyage organisé", "expérience"]),
   P("travel-evasion", "Travel Evasion", "sur-mesure", "Séjours et voyages distribués par les agences, avec une approche orientée loisirs et évasion.", ["loisirs", "séjours"]),
 
@@ -73,6 +72,7 @@ export const FULL_PARTNERS = Object.freeze([
   P("lagrange", "Lagrange Vacances", "france-europe", "Résidences, locations et séjours à la mer, à la montagne et à la campagne, principalement en France et en Europe.", ["résidence", "France"]),
   P("mmv", "MMV Vacances Club", "france-europe", "Clubs et résidences de vacances à la montagne, particulièrement adaptés aux séjours en famille.", ["montagne", "famille"]),
   P("pierre-vacances-center-parcs", "Pierre & Vacances / Center Parcs / maeva", "france-europe", "Résidences, villages nature, domaines de loisirs et locations de vacances en France et en Europe.", ["résidence", "famille", "France"]),
+  P("ollandini", "Ollandini", "france-europe", "Spécialiste de la Corse, avec des séjours, circuits, locations et hôtels-clubs pour découvrir les différentes régions de l'île.", ["Corse", "spécialiste"]),
   P("rev-vacances", "Rev'Vacances", "france-europe", "Séjours et solutions de vacances distribués par le réseau, notamment pour des escapades et vacances accessibles.", ["vacances", "séjours"]),
   P("odalys", "Odalys Voyages", "france-europe", "Résidences, locations et séjours en France et en Europe, à la mer, à la montagne et en ville.", ["résidence", "France", "Europe"]),
   P("thalasso-n1", "Thalasso N°1", "france-europe", "Séjours bien-être, thalassothérapie et escapades détente en France et à l'étranger.", ["bien-être", "thalasso"]),
