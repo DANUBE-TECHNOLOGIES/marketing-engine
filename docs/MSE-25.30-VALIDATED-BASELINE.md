@@ -5,14 +5,14 @@ Ce document enregistre la baseline MSE-25.30 actuellement validée par GitHub Ac
 ## Baseline validée
 
 ```text
-MSE_25_30_VALIDATED_BASE_SHA=a3a8bb9fca2a41479230135f5cd94782c22821bc
+MSE_25_30_VALIDATED_BASE_SHA=a560c26174ca310a7fd41aa741eecfca112f9d11
 ```
 
 Validation associée :
 
 ```text
 Workflow   : MSE-25 Search Console and indexation checks
-Run        : 31955455549
+Run        : 31955547623
 Event      : push
 Conclusion : success
 ```
@@ -34,7 +34,8 @@ La baseline inclut notamment les durcissements éditoriaux et opératoires suiva
 - attestation GitHub Actions de la baseline : le preflight exige un run `push` terminé avec `conclusion=success` sur le workflow MSE-25 et la branche attendue ;
 - l'apply ré-atteste la même baseline auprès de GitHub Actions avant toute écriture et compare cette preuve à celle du preflight ;
 - cette attestation est conservée dans `repository`, `preflight` et `result.preflight` ; le checker offline, le rollback et le post-rollout recalculent `baselineAttestationAudit` ;
-- **suppression du bypass rollback legacy dans le chemin npm sécurisé** : `npm run mse-25.30:network-rollback` exige désormais obligatoirement le rapport contextuel complet issu de l'apply. `MSE_25_30_ALLOW_LEGACY_ROLLBACK_MANIFEST` n'est plus accepté par ce wrapper ;
+- l'origine de l'attestation est **verrouillée sur `https://api.github.com`** dans le chemin opérateur : une variable d'environnement ne peut pas rediriger la vérification vers un serveur tiers ;
+- suppression du bypass rollback legacy dans le chemin npm sécurisé : `npm run mse-25.30:network-rollback` exige obligatoirement le rapport contextuel complet issu de l'apply ;
 - protection de `backend/package.json`, du module `backend/src/modules/minisite-seo-enrichment` et des scripts MSE-25.30 via `RUNTIME_PROTECTED_PATHS`.
 
 ## Utilisation sur la machine d'administration
@@ -42,11 +43,11 @@ La baseline inclut notamment les durcissements éditoriaux et opératoires suiva
 Après synchronisation de la branche et redémarrage du backend avec le nouveau runtime :
 
 ```bash
-export MSE_25_30_VALIDATED_BASE_SHA=a3a8bb9fca2a41479230135f5cd94782c22821bc
+export MSE_25_30_VALIDATED_BASE_SHA=a560c26174ca310a7fd41aa741eecfca112f9d11
 npm run mse-25.30:preflight
 ```
 
-Le preflight doit pouvoir joindre l'API GitHub. Pour limiter les risques de rate-limit, `GITHUB_TOKEN` ou `GH_TOKEN` peut être défini ; aucun token n'est requis pour un dépôt public tant que la limite anonyme GitHub n'est pas atteinte. Une indisponibilité de l'attestation bloque volontairement le preflight avec `MSE_25_30_PREFLIGHT_BASELINE_CI_ATTESTATION_UNAVAILABLE`.
+Le preflight doit pouvoir joindre `https://api.github.com`. Pour limiter les risques de rate-limit, `GITHUB_TOKEN` ou `GH_TOKEN` peut être défini ; aucun token n'est requis pour un dépôt public tant que la limite anonyme GitHub n'est pas atteinte. `MSE_25_30_GITHUB_API_ORIGIN` n'est pas un paramètre opérateur supporté et ne permet pas de modifier la destination de l'attestation. Une indisponibilité de l'attestation bloque volontairement le preflight avec `MSE_25_30_PREFLIGHT_BASELINE_CI_ATTESTATION_UNAVAILABLE`.
 
 Le HEAD peut être plus récent que cette baseline uniquement si les commits intermédiaires ne modifient aucun chemin runtime protégé. Le preflight vérifie cette propriété localement puis vérifie que la SHA de baseline possède réellement une exécution GitHub Actions réussie.
 
