@@ -5,10 +5,6 @@ const REVIEW_REQUIRED = Object.freeze({
     status: "identity-review",
     reason: "Brand identity and official source still need confirmation before final publication.",
   },
-  aerosun: {
-    status: "identity-review",
-    reason: "Commercial identity and relationship with Voyamar still need confirmation before final publication.",
-  },
   asiam: {
     status: "identity-review",
     reason: "Official brand identity/source still needs confirmation before final publication.",
@@ -19,6 +15,10 @@ const CATALOGUE_EXCLUSIONS = Object.freeze({
   worldia: {
     status: "catalogue-excluded",
     reason: "Explicitly excluded from the Mondescale public partner catalogue.",
+  },
+  aerosun: {
+    status: "catalogue-excluded",
+    reason: "AEROSUN VOYAGES SAS is the legal operator behind the VOYAMAR public brands; keeping Aerosun as a separate public partner would duplicate Voyamar rather than identify a distinct consumer-facing brand.",
   },
 });
 
