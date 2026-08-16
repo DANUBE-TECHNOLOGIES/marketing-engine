@@ -43,6 +43,13 @@ const REVIEW_REQUIRED = Object.freeze({
   },
 });
 
+const CATALOGUE_EXCLUSIONS = Object.freeze({
+  worldia: {
+    status: "catalogue-excluded",
+    reason: "Explicitly excluded from the Mondescale public partner catalogue.",
+  },
+});
+
 const ASSET_RESTRICTIONS = Object.freeze({
   ponant: {
     status: "asset-permission-review",
@@ -72,13 +79,15 @@ const ASSET_RESTRICTIONS = Object.freeze({
 
 export function getPartnerVerification(partnerId) {
   const id = String(partnerId || "").trim();
+  if (CATALOGUE_EXCLUSIONS[id]) return CATALOGUE_EXCLUSIONS[id];
   if (REVIEW_REQUIRED[id]) return REVIEW_REQUIRED[id];
   if (ASSET_RESTRICTIONS[id]) return ASSET_RESTRICTIONS[id];
   return { status: "confirmed", reason: "Partner identity accepted for catalogue publication." };
 }
 
 export function isPartnerPublicationConfirmed(partnerId) {
-  return getPartnerVerification(partnerId).status !== "identity-review";
+  const status = getPartnerVerification(partnerId).status;
+  return status !== "identity-review" && status !== "catalogue-excluded";
 }
 
 export function getPartnerVerificationSummary(partners = []) {
@@ -89,6 +98,6 @@ export function getPartnerVerificationSummary(partners = []) {
       summary[status] = (summary[status] || 0) + 1;
       return summary;
     },
-    { total: 0, confirmed: 0, "identity-review": 0, "asset-permission-review": 0 }
+    { total: 0, confirmed: 0, "identity-review": 0, "asset-permission-review": 0, "catalogue-excluded": 0 }
   );
 }
