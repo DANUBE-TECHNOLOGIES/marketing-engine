@@ -56,6 +56,10 @@ const ASSET_RESTRICTIONS = Object.freeze({
     status: "asset-permission-review",
     reason: "Partner identity is known, but logo use requires permission review.",
   },
+  cfc: {
+    status: "asset-permission-review",
+    reason: "Partner identity is known, but CFC logo reproduction is held until an authorised asset source or written permission is confirmed.",
+  },
 });
 
 export function getPartnerVerification(partnerId) {
