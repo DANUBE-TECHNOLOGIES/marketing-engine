@@ -33,6 +33,19 @@ function readRolloutReport(filePath) {
   return { report, reportPath: resolvedPath };
 }
 
+function assertContextualRolloutReport(report) {
+  if (Array.isArray(report) || report?.type !== legacyRollback.ROLLOUT_REPORT_TYPE) {
+    const error = new Error("Le rollback sécurisé MSE-25.30 exige le rapport de rollout contextuel complet ; les manifestes legacy ne sont plus acceptés par la commande npm.");
+    error.code = "MSE_25_30_NETWORK_ROLLBACK_CONTEXT_REQUIRED";
+    error.details = {
+      reportType: Array.isArray(report) ? "legacy-array" : report?.type || null,
+      legacyBypassSupported: false,
+    };
+    throw error;
+  }
+  return report;
+}
+
 function rollbackEntryKey(item = {}) {
   return [
     String(item?.agencyId ?? ""),
@@ -103,16 +116,7 @@ function assertRollbackManifestIntegrity(report = {}) {
 async function run(options = {}) {
   const configuredPath = options.manifestPath || process.env.MSE_25_30_ROLLBACK_MANIFEST;
   const loaded = readRolloutReport(configuredPath);
-  const legacyAllowed = String(process.env.MSE_25_30_ALLOW_LEGACY_ROLLBACK_MANIFEST || "").trim().toUpperCase() === "YES";
-
-  if (Array.isArray(loaded.report) || loaded.report?.type !== legacyRollback.ROLLOUT_REPORT_TYPE) {
-    if (!legacyAllowed) {
-      const error = new Error("Le rollback audité exige un rapport de rollout MSE-25.30 contextuel.");
-      error.code = "MSE_25_30_NETWORK_ROLLBACK_CONTEXT_REQUIRED";
-      throw error;
-    }
-    return legacyRollback.run({ ...options, manifestPath: loaded.reportPath });
-  }
+  assertContextualRolloutReport(loaded.report);
 
   const rolloutReportIntegrity = assertRolloutReportIntegrity(loaded.report);
   const baselineAttestationAudit = assertBaselineAttestation(loaded.report);
@@ -144,6 +148,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  assertContextualRolloutReport,
   assertRollbackManifestIntegrity,
   auditRollbackManifest,
   expectedRollbackEntries,
