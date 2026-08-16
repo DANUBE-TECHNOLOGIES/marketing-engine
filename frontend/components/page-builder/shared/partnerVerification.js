@@ -17,19 +17,7 @@ const REVIEW_REQUIRED = Object.freeze({
     status: "identity-review",
     reason: "Commercial identity and relationship with Voyamar still need confirmation before final publication.",
   },
-  amerigo: {
-    status: "identity-review",
-    reason: "Official brand identity/source still needs confirmation before final publication.",
-  },
   asiam: {
-    status: "identity-review",
-    reason: "Official brand identity/source still needs confirmation before final publication.",
-  },
-  "gaeland-ashling": {
-    status: "identity-review",
-    reason: "Official brand identity/source still needs confirmation before final publication.",
-  },
-  "planete-production": {
     status: "identity-review",
     reason: "Official brand identity/source still needs confirmation before final publication.",
   },
