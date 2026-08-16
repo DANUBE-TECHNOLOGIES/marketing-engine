@@ -69,7 +69,19 @@ const rows = FULL_PARTNERS.map((partner) => {
   const detail = getters.map((getter) => getter(partner.id)).find(Boolean) || null;
   const summaryLength = String(partner.summary || "").trim().length;
   const tagCount = Array.isArray(partner.tags) ? partner.tags.length : 0;
+  const destinations = Array.isArray(detail?.destinations) ? detail.destinations.filter(Boolean) : [];
+  const travelTypes = Array.isArray(detail?.travelTypes) ? detail.travelTypes.filter(Boolean) : [];
   const verification = getPartnerVerification(partner.id);
+  const hasLogo = Boolean(String(partner.logoUrl || "").trim());
+  const identityConfirmed = verification.status !== "identity-review";
+  const contentReady = identityConfirmed && summaryLength >= 45 && tagCount >= 2 && destinations.length >= 2 && travelTypes.length >= 2;
+  const assetReady = hasLogo || verification.status === "asset-permission-review";
+  const completenessScore =
+    (identityConfirmed ? 30 : 0) +
+    (summaryLength >= 45 ? 20 : 0) +
+    (tagCount >= 2 ? 10 : 0) +
+    (destinations.length >= 2 && travelTypes.length >= 2 ? 25 : 0) +
+    (hasLogo ? 15 : 0);
 
   return {
     id: partner.id,
@@ -77,8 +89,12 @@ const rows = FULL_PARTNERS.map((partner) => {
     category: partner.category,
     verificationStatus: verification.status,
     verificationReason: verification.reason || null,
-    hasLogo: Boolean(String(partner.logoUrl || "").trim()),
+    hasLogo,
     hasDetails: Boolean(detail),
+    contentReady,
+    assetReady,
+    readyForPublication: contentReady,
+    completenessScore,
     hasLogoBacklog: backlogIds.has(partner.id),
     summaryLength,
     tagCount,
@@ -106,6 +122,8 @@ const editorialWarnings = rows.filter((row) => row.warnings.length);
 const identityReview = rows.filter((row) => row.verificationStatus === "identity-review");
 const assetPermissionReview = rows.filter((row) => row.verificationStatus === "asset-permission-review");
 const publicationConfirmed = rows.filter((row) => row.verificationStatus !== "identity-review");
+const contentReady = rows.filter((row) => row.contentReady);
+const needsContent = rows.filter((row) => !row.contentReady);
 
 const byCategory = Object.fromEntries(
   [...categories].map((category) => {
@@ -114,6 +132,11 @@ const byCategory = Object.fromEntries(
       total: categoryRows.length,
       withLogo: categoryRows.filter((row) => row.hasLogo).length,
       withDetails: categoryRows.filter((row) => row.hasDetails).length,
+      contentReady: categoryRows.filter((row) => row.contentReady).length,
+      assetReady: categoryRows.filter((row) => row.assetReady).length,
+      averageCompletenessScore: categoryRows.length
+        ? Math.round(categoryRows.reduce((sum, row) => sum + row.completenessScore, 0) / categoryRows.length)
+        : 100,
       publicationConfirmed: categoryRows.filter((row) => row.verificationStatus !== "identity-review").length,
       identityReview: categoryRows.filter((row) => row.verificationStatus === "identity-review").length,
       assetPermissionReview: categoryRows.filter((row) => row.verificationStatus === "asset-permission-review").length,
@@ -127,16 +150,23 @@ const payload = {
     publicUx: "simple-first-progressive-details",
     logos: "individual-assets-only",
     identity: "confirm-before-final-publication",
+    publicationReadiness: "content-ready-with-logo-fallback-allowed",
     maxVisibleTags: 2,
   },
   summary: {
     partners: rows.length,
     categories: categories.size,
     publicationConfirmed: publicationConfirmed.length,
+    contentReady: contentReady.length,
+    needsContent: needsContent.length,
     identityReview: identityReview.length,
     assetPermissionReview: assetPermissionReview.length,
     withDetails: rows.filter((row) => row.hasDetails).length,
     withLogo: rows.filter((row) => row.hasLogo).length,
+    assetReady: rows.filter((row) => row.assetReady).length,
+    averageCompletenessScore: rows.length
+      ? Math.round(rows.reduce((sum, row) => sum + row.completenessScore, 0) / rows.length)
+      : 100,
     trackedMissingLogos: rows.filter((row) => !row.hasLogo && row.hasLogoBacklog).length,
     editorialWarnings: editorialWarnings.length,
   },
@@ -144,6 +174,10 @@ const payload = {
   verification: {
     identityReview,
     assetPermissionReview,
+  },
+  readiness: {
+    contentReady,
+    needsContent,
   },
   byCategory,
   editorialWarnings,
