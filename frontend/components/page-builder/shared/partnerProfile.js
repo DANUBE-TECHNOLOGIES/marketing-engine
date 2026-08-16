@@ -68,13 +68,15 @@ export function getPartnerProfile(partner) {
   const details = getResolvedPartnerDetails(partner.id);
   const verification = getPartnerVerification(partner.id);
   const completeness = scorePartnerCompleteness(partner, details, verification);
+  const identityConfirmed = verification.status !== "identity-review";
 
   return {
     ...partner,
     details,
     verification,
     completeness,
-    publishable: verification.status !== "identity-review",
+    identityConfirmed,
+    publishable: identityConfirmed,
     readyForPublication: completeness.contentReady,
     hasLogo: Boolean(String(partner.logoUrl || "").trim()),
     hasDetails: Boolean(details),
@@ -85,7 +87,7 @@ export function getPartnerProfile(partner) {
 export function getPublishablePartnerProfiles(partners = []) {
   return partners
     .map(getPartnerProfile)
-    .filter((partner) => partner?.publishable);
+    .filter((partner) => partner?.publishable && partner?.readyForPublication);
 }
 
 export function getPartnerCompletenessSummary(partners = []) {
