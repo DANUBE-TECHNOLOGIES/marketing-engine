@@ -37,7 +37,15 @@ class ContentFactoryV2Repair {
     this.prisma = prisma;
   }
 
-  async plan({ siteSlug, destinationSlug } = {}) {
+  async plan({ tenantId, siteSlug, destinationSlug } = {}) {
+    const scopedTenantId = String(tenantId || "").trim();
+    if (!scopedTenantId) {
+      const error = new Error("tenantId est obligatoire.");
+      error.code = "CONTENT_FACTORY_V2_REPAIR_TENANT_REQUIRED";
+      error.statusCode = 400;
+      throw error;
+    }
+
     const normalizedSiteSlug = normalize(siteSlug);
     if (!normalizedSiteSlug) {
       const error = new Error("siteSlug est obligatoire.");
@@ -47,7 +55,12 @@ class ContentFactoryV2Repair {
     }
 
     const site = await this.prisma.agencySite.findUnique({
-      where: { slug: normalizedSiteSlug },
+      where: {
+        tenantId_slug: {
+          tenantId: scopedTenantId,
+          slug: normalizedSiteSlug,
+        },
+      },
       select: {
         id: true,
         slug: true,
@@ -81,7 +94,7 @@ class ContentFactoryV2Repair {
     });
 
     if (!site) {
-      const error = new Error("Mini-site introuvable.");
+      const error = new Error("Mini-site introuvable dans ce tenant.");
       error.code = "CONTENT_FACTORY_V2_REPAIR_SITE_NOT_FOUND";
       error.statusCode = 404;
       throw error;
@@ -104,6 +117,7 @@ class ContentFactoryV2Repair {
     return {
       ok: true,
       mode: "preview",
+      tenantId: scopedTenantId,
       site: { id: site.id, slug: site.slug, name: site.name },
       destinationSlug: normalize(destinationSlug) || null,
       pagesScanned: site.pages.length,
@@ -113,7 +127,7 @@ class ContentFactoryV2Repair {
     };
   }
 
-  async apply({ siteSlug, destinationSlug, confirm } = {}) {
+  async apply({ tenantId, siteSlug, destinationSlug, confirm } = {}) {
     if (confirm !== true) {
       const error = new Error("confirm=true est obligatoire pour appliquer la réparation V2.");
       error.code = "CONTENT_FACTORY_V2_REPAIR_CONFIRM_REQUIRED";
@@ -121,7 +135,7 @@ class ContentFactoryV2Repair {
       throw error;
     }
 
-    const preview = await this.plan({ siteSlug, destinationSlug });
+    const preview = await this.plan({ tenantId, siteSlug, destinationSlug });
     if (!preview.candidateCount) {
       return { ...preview, mode: "apply", repairedPages: 0, createdBlocks: 0 };
     }
@@ -131,8 +145,6 @@ class ContentFactoryV2Repair {
       let createdBlocks = 0;
 
       for (const candidate of preview.candidates) {
-        // Re-check inside the transaction to keep the operation idempotent and
-        // avoid overwriting a page that acquired V2 blocks after the preview.
         const currentBlockCount = await tx.pageBlock.count({
           where: { pageId: candidate.pageId },
         });
