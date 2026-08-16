@@ -5,30 +5,44 @@ Ce document enregistre la baseline MSE-25.30 actuellement validée par GitHub Ac
 ## Baseline validée
 
 ```text
-MSE_25_30_VALIDATED_BASE_SHA=f923297093f3e4426c33671e9536c0f87f9ad501
+MSE_25_30_VALIDATED_BASE_SHA=fb62c0aaffae1c0e24cec3532e0591b4907b2e04
 ```
 
 Validation associée :
 
 ```text
-Workflow : MSE-25 Search Console and indexation checks
-Run      : 31935366303
-Event    : push
+Workflow   : MSE-25 Search Console and indexation checks
+Run        : 31942029411
+Event      : push
 Conclusion : success
 ```
 
-Cette exécution couvre notamment les tests backend `test/mse-25-30-*.test.js` sous Node 22, dont le test qui vérifie que `backend/scripts/mse-25-30-preflight.js` reste lui-même dans `RUNTIME_PROTECTED_PATHS` et qu'une dérive de ce chemin déclenche `MSE_25_30_PREFLIGHT_RUNTIME_CHANGED`.
+Cette exécution valide sous Node 22 l'ensemble des tests backend MSE-25.30, le chargement réel des modules SEO, les tests d'indexation frontend et les lints associés.
+
+La baseline inclut notamment les durcissements éditoriaux suivants :
+
+- promotion d'une page publiée sans contenu visible en blocage `EMPTY_INDEXABLE_CONTENT`, tout en conservant les contenus simplement courts au niveau warning ;
+- naturalisation déterministe des formulations locales et des métadonnées projetées, notamment les contractions françaises et la suppression des répétitions de type `TUI STORE Amilly à Amilly` ;
+- ajout d'une différenciation éditoriale déterministe sur les pages `services`, `engagements` et `destinations`, sans inventer de communes ;
+- exclusion réseau explicite et auditable, avec `tui-store-melun` exclu par défaut et surcharge possible via `MSE_25_30_EXCLUDED_SITE_SLUGS` ;
+- exclusion du même périmètre dans le gate sitemap projeté ;
+- exposition des agences exclues dans le preview réseau ;
+- exigence des nouvelles capacités de durcissement dans le health check du préflight.
+
+Le répertoire complet `backend/src/modules/minisite-seo-enrichment` ainsi que les scripts de rollout MSE-25.30 restent protégés par `RUNTIME_PROTECTED_PATHS`. Toute dérive de ces chemins après cette baseline doit provoquer `MSE_25_30_PREFLIGHT_RUNTIME_CHANGED`.
 
 ## Utilisation sur la machine d'administration
 
-Après avoir synchronisé la branche, utiliser cette baseline explicitement avant le préflight :
+Après avoir synchronisé la branche et redémarré le backend avec le nouveau runtime, utiliser cette baseline explicitement avant le préflight :
 
 ```bash
-export MSE_25_30_VALIDATED_BASE_SHA=f923297093f3e4426c33671e9536c0f87f9ad501
+export MSE_25_30_VALIDATED_BASE_SHA=fb62c0aaffae1c0e24cec3532e0591b4907b2e04
 npm run mse-25.30:preflight
 ```
 
 Le HEAD peut être plus récent que cette baseline uniquement si les commits intermédiaires ne modifient aucun chemin runtime protégé. Le préflight vérifie cette propriété avant tout appel réseau de preview.
+
+Le preview doit désormais rendre explicites `excludedSiteSlugs` et `excludedAgencies`. Par défaut, `tui-store-melun` ne fait donc pas partie du plan de rollout. Pour modifier volontairement ce périmètre, définir `MSE_25_30_EXCLUDED_SITE_SLUGS` avant de relancer le préflight ; tout changement du plan produit un nouveau fingerprint et rend un ancien rapport impropre à l'apply.
 
 ## Règle de promotion
 
