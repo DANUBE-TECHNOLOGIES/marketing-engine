@@ -17,7 +17,22 @@ test("MSE-25.30 network preview command summarizes changed pages by agency", () 
     summary: { pagesProcessed: 3, pagesChanged: 1 },
     pages: [
       { slug: "home", title: "Accueil", changed: false, changes: [] },
-      { slug: "circuits", title: "Circuits", changed: true, changes: [{ blockType: "faq", field: "block", generated: true }] },
+      {
+        slug: "circuits",
+        title: "Circuits",
+        changed: true,
+        changes: [
+          {
+            blockId: 31,
+            blockType: "faq",
+            field: "block",
+            previous: null,
+            next: { type: "faq", title: "Questions sur les circuits à Gien" },
+            generated: true,
+            purpose: "local-seo-faq",
+          },
+        ],
+      },
     ],
   });
   assert.equal(summary.pagesProcessed, 3);
@@ -28,7 +43,17 @@ test("MSE-25.30 network preview command summarizes changed pages by agency", () 
       slug: "circuits",
       title: "Circuits",
       changeCount: 1,
-      changes: [{ blockType: "faq", field: "block", generated: true }],
+      changes: [
+        {
+          blockId: 31,
+          blockType: "faq",
+          field: "block",
+          previous: null,
+          next: { type: "faq", title: "Questions sur les circuits à Gien" },
+          generated: true,
+          purpose: "local-seo-faq",
+        },
+      ],
     },
   ]);
 });
