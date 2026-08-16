@@ -2,8 +2,10 @@
 
 const {
   EXPECTED_BRANCH,
+  EXPECTED_GITHUB_WORKFLOW_BLOB_SHA,
   GITHUB_WORKFLOW_ID,
   GITHUB_WORKFLOW_NAME,
+  GITHUB_WORKFLOW_PATH,
 } = require("../../../scripts/mse-25-30-preflight");
 
 function normalizeSha(value) {
@@ -24,6 +26,16 @@ function attestationIssues(attestation, expectedSha, source) {
       source,
       workflowId: attestation.workflowId ?? null,
       workflowName: attestation.workflowName ?? null,
+    });
+  }
+  if (attestation.workflowPath !== GITHUB_WORKFLOW_PATH || normalizeSha(attestation.workflowBlobSha) !== EXPECTED_GITHUB_WORKFLOW_BLOB_SHA) {
+    issues.push({
+      code: `${source}-workflow-definition-mismatch`,
+      source,
+      expectedPath: GITHUB_WORKFLOW_PATH,
+      actualPath: attestation.workflowPath ?? null,
+      expectedBlobSha: EXPECTED_GITHUB_WORKFLOW_BLOB_SHA,
+      actualBlobSha: attestation.workflowBlobSha ?? null,
     });
   }
   if (attestation.headBranch !== EXPECTED_BRANCH) {
@@ -82,6 +94,8 @@ function auditBaselineAttestation(report = {}) {
     validatedBaseSha: repositorySha || null,
     workflowId: GITHUB_WORKFLOW_ID,
     workflowName: GITHUB_WORKFLOW_NAME,
+    workflowPath: GITHUB_WORKFLOW_PATH,
+    workflowBlobSha: EXPECTED_GITHUB_WORKFLOW_BLOB_SHA,
     runId: runIds.length === attestations.length && new Set(runIds).size === 1 ? runIds[0] : null,
     issues,
   };
@@ -90,7 +104,7 @@ function auditBaselineAttestation(report = {}) {
 function assertBaselineAttestation(report = {}) {
   const audit = auditBaselineAttestation(report);
   if (!audit.ok) {
-    const error = new Error("Le rapport de rollout ne contient pas une attestation CI cohérente de sa baseline MSE-25.30.");
+    const error = new Error("Le rapport de rollout ne contient pas une attestation CI cohérente de sa baseline MSE-25.30 et de la définition du workflow qui l'a validée.");
     error.code = "MSE_25_30_ROLLOUT_BASELINE_CI_ATTESTATION_MISMATCH";
     error.details = audit;
     throw error;
