@@ -12,6 +12,7 @@ const {
 } = require("../scripts/mse-25-30-preflight");
 
 const PREFLIGHT_PATH = "backend/scripts/mse-25-30-preflight.js";
+const PACKAGE_PATH = "backend/package.json";
 
 function validState(overrides = {}) {
   return {
@@ -74,6 +75,22 @@ test("preflight protege aussi sa propre chaine de securite contre une derive de 
     (error) => {
       assert.equal(error.code, "MSE_25_30_PREFLIGHT_RUNTIME_CHANGED");
       assert.deepEqual(error.details.protectedChanges, [PREFLIGHT_PATH]);
+      return true;
+    },
+  );
+});
+
+test("preflight protege les commandes npm qui choisissent les wrappers operateur", () => {
+  assert.ok(
+    RUNTIME_PROTECTED_PATHS.includes(PACKAGE_PATH),
+    `${PACKAGE_PATH} doit rester protege par le preflight`,
+  );
+
+  assert.throws(
+    () => assertRepositoryState(validState({ protectedChanges: [PACKAGE_PATH] })),
+    (error) => {
+      assert.equal(error.code, "MSE_25_30_PREFLIGHT_RUNTIME_CHANGED");
+      assert.deepEqual(error.details.protectedChanges, [PACKAGE_PATH]);
       return true;
     },
   );
