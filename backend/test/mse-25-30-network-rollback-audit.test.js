@@ -3,6 +3,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const {
+  assertContextualRolloutReport,
   assertRollbackManifestIntegrity,
   auditRollbackManifest,
   expectedRollbackEntries,
@@ -86,4 +87,24 @@ test("MSE-25.30 refuse une entrée de rollback dupliquée", () => {
   const audit = auditRollbackManifest(report);
   assert.equal(audit.ok, false);
   assert.equal(audit.duplicateKeys.length, 1);
+});
+
+test("MSE-25.30 n'accepte plus les manifestes legacy dans le chemin de rollback sécurisé", () => {
+  const legacy = [{ agencyId: 9, slug: "home", rollbackVersionId: 101 }];
+
+  assert.throws(() => assertContextualRolloutReport(legacy), (error) => {
+    assert.equal(error.code, "MSE_25_30_NETWORK_ROLLBACK_CONTEXT_REQUIRED");
+    assert.equal(error.details.reportType, "legacy-array");
+    assert.equal(error.details.legacyBypassSupported, false);
+    return true;
+  });
+
+  assert.throws(() => assertContextualRolloutReport({
+    type: "old-rollout-report",
+    rollbackManifest: legacy,
+  }), (error) => {
+    assert.equal(error.code, "MSE_25_30_NETWORK_ROLLBACK_CONTEXT_REQUIRED");
+    assert.equal(error.details.legacyBypassSupported, false);
+    return true;
+  });
 });
