@@ -18,7 +18,7 @@ test("partner verification distinguishes identity review from logo permission re
   const staySources = read("components/page-builder/shared/partnerStayLogoSources.js");
   const backlog = read("components/page-builder/shared/partnerLogoBacklog.js");
 
-  for (const id of ["mega-vacances", "aerosun", "asiam"]) {
+  for (const id of ["mega-vacances", "asiam"]) {
     assert.match(verification, new RegExp(`"?${id}"?\\s*:`));
   }
 
@@ -32,6 +32,9 @@ test("partner verification distinguishes identity review from logo permission re
   assert.match(catalogue, /P\("travel-evasion",\s*"Travel Evasion",\s*"sejours"/);
   assert.doesNotMatch(catalogue, /P\("travel-evasion",\s*"Travel Evasion",\s*"sur-mesure"/);
   assert.match(backlog, /travel-evasion[\s\S]*category:\s*"sejours"[\s\S]*state:\s*"source-pending"/);
+
+  assert.match(verification, /aerosun[\s\S]*status:\s*"catalogue-excluded"/);
+  assert.match(backlog, /aerosun[\s\S]*priority:\s*99[\s\S]*state:\s*"catalogue-excluded"/);
 
   for (const id of ["amerigo", "gaeland-ashling", "planete-production"]) {
     const escaped = id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
