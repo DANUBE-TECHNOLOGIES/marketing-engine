@@ -16,6 +16,7 @@ test("full partner directory exposes the network categories and supplier invento
   const stayDetails = read("components/page-builder/shared/partnerStayDetails.js");
   const longHaulDetails = read("components/page-builder/shared/partnerLongHaulDetails.js");
   const franceEuropeDetails = read("components/page-builder/shared/partnerFranceEuropeDetails.js");
+  const profile = read("components/page-builder/shared/partnerProfile.js");
   const assetCoverage = read("components/page-builder/shared/partnerAssetCoverage.js");
   const logoBacklog = read("components/page-builder/shared/partnerLogoBacklog.js");
   const renderer = read("components/public-site/renderers/PartnerDirectoryRenderer.js");
@@ -66,7 +67,6 @@ test("full partner directory exposes the network categories and supplier invento
   assert.match(cruiseDetails, /cfc:/);
   assert.match(cruiseDetails, /Croisière à la cabine/);
   assert.match(cruiseDetails, /Départ de Marseille/);
-  assert.match(renderer, /getCruisePartnerDetails/);
 
   assert.match(circuitDetails, /"destination-aventure"/);
   assert.match(circuitDetails, /nordiska:/);
@@ -74,7 +74,6 @@ test("full partner directory exposes the network categories and supplier invento
   assert.match(circuitDetails, /Voyage Signature/);
   assert.match(circuitDetails, /Circuit accompagné/);
   assert.match(circuitDetails, /Laponie/);
-  assert.match(renderer, /getCircuitPartnerDetails/);
 
   assert.match(stayDetails, /belambra:/);
   assert.match(stayDetails, /voyamar:/);
@@ -82,7 +81,6 @@ test("full partner directory exposes the network categories and supplier invento
   assert.match(stayDetails, /Naya Club/);
   assert.match(stayDetails, /Pension complète/);
   assert.match(stayDetails, /Circuit privatif/);
-  assert.match(renderer, /getStayPartnerDetails/);
 
   assert.match(longHaulDetails, /"alma-latina"/);
   assert.match(longHaulDetails, /"australie-tours"/);
@@ -90,7 +88,6 @@ test("full partner directory exposes the network categories and supplier invento
   assert.match(longHaulDetails, /"jetset-voyages"/);
   assert.match(longHaulDetails, /"luxair-tours"/);
   assert.match(longHaulDetails, /Voyage sur mesure/);
-  assert.match(renderer, /getLongHaulPartnerDetails/);
 
   assert.match(franceEuropeDetails, /"campings-com"/);
   assert.match(franceEuropeDetails, /lagrange:/);
@@ -99,7 +96,21 @@ test("full partner directory exposes the network categories and supplier invento
   assert.match(franceEuropeDetails, /odalys:/);
   assert.match(franceEuropeDetails, /"thalasso-n1"/);
   assert.match(franceEuropeDetails, /"villages-clubs-soleil"/);
-  assert.match(renderer, /getFranceEuropePartnerDetails/);
+
+  for (const resolver of [
+    "getPartnerDetails",
+    "getCruisePartnerDetails",
+    "getCircuitPartnerDetails",
+    "getStayPartnerDetails",
+    "getLongHaulPartnerDetails",
+    "getFranceEuropePartnerDetails",
+  ]) {
+    assert.match(profile, new RegExp(resolver));
+  }
+  assert.match(profile, /getResolvedPartnerDetails/);
+  assert.match(profile, /getPublishablePartnerProfiles/);
+  assert.match(profile, /publishable:\s*verification\.status !== "identity-review"/);
+  assert.match(profile, /visibleTags:\s*Array\.isArray\(partner\.tags\) \? partner\.tags\.slice\(0, 2\)/);
 
   assert.match(catalogue, /\/partners\/kuoni-official\.webp/);
   assert.match(details, /Top Clubs/);
@@ -136,12 +147,13 @@ test("full partner directory exposes the network categories and supplier invento
   assert.match(logoBacklog, /verification-pending/);
 
   assert.match(renderer, /getPartnerDirectoryCategories/);
+  assert.match(renderer, /getPartnerProfile/);
+  assert.match(renderer, /getPublishablePartnerProfiles/);
   assert.match(renderer, /categoryNav/);
-  assert.match(renderer, /partner\.summary/);
-  assert.match(renderer, /partner\.tags\.slice\(0, 2\)/);
+  assert.match(renderer, /profile\.summary/);
+  assert.match(renderer, /profile\.visibleTags/);
   assert.match(renderer, /<details className=\{styles\.details\}>/);
   assert.match(renderer, /Découvrir ses spécialités/);
-  assert.match(renderer, /getPartnerDetails/);
   assert.match(registry, /"partner-directory":\s*PartnerDirectoryRenderer/);
   assert.match(blockCatalogue, /type: "partner-directory"/);
   assert.match(blockCatalogue, /singleton: true/);
