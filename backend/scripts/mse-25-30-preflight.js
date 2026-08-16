@@ -173,7 +173,7 @@ async function jsonRequest(url, options = {}) {
 }
 
 function baselineWorkflowRunsUrl(validatedBaseSha, {
-  githubApiOrigin = process.env.MSE_25_30_GITHUB_API_ORIGIN || DEFAULT_GITHUB_API_ORIGIN,
+  githubApiOrigin = DEFAULT_GITHUB_API_ORIGIN,
   repository = GITHUB_REPOSITORY,
   workflowId = GITHUB_WORKFLOW_ID,
 } = {}) {
