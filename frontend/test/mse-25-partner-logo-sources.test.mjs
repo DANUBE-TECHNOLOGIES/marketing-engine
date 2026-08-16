@@ -43,12 +43,15 @@ test("partner logo sourcing keeps vetted assets separate from press and permissi
   assert.match(staySources, /"jet-tours"[\s\S]*jettours\.com/);
   assert.match(staySources, /"plein-vent"[\s\S]*official-source-page/);
   assert.match(staySources, /mondial-tourisme[\s\S]*official-source-page/);
+  assert.match(staySources, /"travel-evasion"[\s\S]*official-source-page/);
+  assert.match(staySources, /"travel-evasion"[\s\S]*travelevasion\.fr/);
   assert.match(staySources, /heliades[\s\S]*permission-review/);
   assert.match(staySources, /voyamar[\s\S]*permission-review/);
   assert.match(staySources, /getStayLogoSource/);
 
   assert.match(longHaulSources, /alma-latina[\s\S]*official-source-page/);
   assert.doesNotMatch(longHaulSources, /ollandini/);
+  assert.doesNotMatch(longHaulSources, /travel-evasion/);
 
   assert.match(franceEuropeSources, /campings-com[\s\S]*official-source-page/);
   assert.match(franceEuropeSources, /ollandini[\s\S]*official-source-page/);
@@ -61,15 +64,19 @@ test("partner logo sourcing keeps vetted assets separate from press and permissi
 
   assert.match(catalogue, /P\("jet-tours",\s*"Jet tours",\s*"sejours"/);
   assert.match(catalogue, /P\("plein-vent",\s*"Plein Vent",\s*"sejours"/);
+  assert.match(catalogue, /P\("travel-evasion",\s*"Travel Evasion",\s*"sejours"/);
   assert.match(catalogue, /P\("ollandini",\s*"Ollandini",\s*"france-europe"/);
   assert.match(stayDetails, /"jet-tours"[\s\S]*Club Jet tours/);
   assert.match(stayDetails, /"plein-vent"[\s\S]*Club Jumbo/);
+  assert.match(stayDetails, /"travel-evasion"[\s\S]*Croisière sur le Nil/);
 
   for (const id of ["belambra", "heliades", "voyamar"]) {
     assert.match(verification, new RegExp(`${id}[\\s\\S]*asset-permission-review`));
     assert.match(backlog, new RegExp(`${id}[\\s\\S]*permission-required`));
   }
   assert.match(backlog, /worldia[\s\S]*catalogue-excluded/);
+  assert.match(backlog, /aerosun[\s\S]*catalogue-excluded/);
+  assert.match(backlog, /travel-evasion[\s\S]*sejours[\s\S]*source-pending/);
   assert.match(backlog, /ollandini[\s\S]*france-europe/);
 
   assert.match(queue, /official-individual-assets-webp-or-vetted-svg/);
