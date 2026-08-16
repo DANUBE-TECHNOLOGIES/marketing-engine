@@ -3,6 +3,7 @@ const createAgencySeoModule = require("./agency-seo");
 const miniSite = require("./mini-site");
 const seoFactory = require("./seo-factory");
 const contentComposer = require("./content-composer");
+const contentFactory = require("./content-factory");
 const destinationEngine = require("./destination-engine");
 
 const platformCore = require("./platform-core");
@@ -109,6 +110,11 @@ module.exports = function registerModules(app, { prisma }) {
   if (contentComposer.routes) {
     app.use(contentComposer.routes({ prisma }));
   }
+
+  if (contentFactory.routes) {
+    app.use(contentFactory.routes({ prisma }));
+  }
+
   // Knowledge Graph — Sprint 006
   if (knowledgeGraph.routes) {
     app.use(knowledgeGraph.routes({ prisma }));
