@@ -19,7 +19,6 @@ const modules = [
   ["stay", "partnerStayDetails.js"],
   ["long-haul", "partnerLongHaulDetails.js"],
   ["france-europe", "partnerFranceEuropeDetails.js"],
-  ["fallback", "partnerDetails.js"],
 ];
 
 const loaded = await Promise.all(modules.map(async ([sourceName, fileName]) => {
@@ -39,7 +38,7 @@ const duplicates = rows.filter((row) => row.sources.length > 1);
 const missing = rows.filter((row) => row.sources.length === 0);
 
 console.log(JSON.stringify({
-  policy: "one-editorial-detail-source-per-partner",
+  policy: "one-specialized-editorial-detail-source-per-partner",
   summary: {
     total: rows.length,
     singleSource: rows.filter((row) => row.sources.length === 1).length,
