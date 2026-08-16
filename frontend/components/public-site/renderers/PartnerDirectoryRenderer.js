@@ -1,12 +1,6 @@
 import { getSectionContent, getSectionTitle } from "./helpers";
 import { getPartnerDirectoryCategories } from "../../page-builder/shared/fullPartners";
-import { getPartnerDetails } from "../../page-builder/shared/partnerDetails";
-import { getCruisePartnerDetails } from "../../page-builder/shared/partnerCruiseDetails";
-import { getCircuitPartnerDetails } from "../../page-builder/shared/partnerCircuitDetails";
-import { getStayPartnerDetails } from "../../page-builder/shared/partnerStayDetails";
-import { getLongHaulPartnerDetails } from "../../page-builder/shared/partnerLongHaulDetails";
-import { getFranceEuropePartnerDetails } from "../../page-builder/shared/partnerFranceEuropeDetails";
-import { isPartnerPublicationConfirmed } from "../../page-builder/shared/partnerVerification";
+import { getPartnerProfile, getPublishablePartnerProfiles } from "../../page-builder/shared/partnerProfile";
 import styles from "./PartnerDirectoryRenderer.module.css";
 
 function MetadataGroup({ label, values }) {
@@ -21,49 +15,43 @@ function MetadataGroup({ label, values }) {
 }
 
 function PartnerCard({ partner }) {
-  const details =
-    getPartnerDetails(partner.id) ||
-    getCruisePartnerDetails(partner.id) ||
-    getCircuitPartnerDetails(partner.id) ||
-    getStayPartnerDetails(partner.id) ||
-    getLongHaulPartnerDetails(partner.id) ||
-    getFranceEuropePartnerDetails(partner.id);
-  const visibleTags = Array.isArray(partner.tags) ? partner.tags.slice(0, 2) : [];
+  const profile = getPartnerProfile(partner);
+  if (!profile) return null;
 
   return (
-    <article className={styles.card} data-partner-id={partner.id}>
+    <article className={styles.card} data-partner-id={profile.id}>
       <div className={styles.logoFrame}>
-        {partner.logoUrl ? (
+        {profile.logoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={partner.logoUrl}
-            alt={`Logo ${partner.name}`}
+            src={profile.logoUrl}
+            alt={`Logo ${profile.name}`}
             loading="lazy"
             decoding="async"
           />
         ) : (
-          <span aria-hidden="true">{partner.name.slice(0, 2).toUpperCase()}</span>
+          <span aria-hidden="true">{profile.name.slice(0, 2).toUpperCase()}</span>
         )}
       </div>
 
       <div className={styles.cardBody}>
-        <h3>{partner.name}</h3>
-        <p>{partner.summary}</p>
+        <h3>{profile.name}</h3>
+        <p>{profile.summary}</p>
 
-        {visibleTags.length ? (
-          <div className={styles.tags} aria-label={`Spécialités de ${partner.name}`}>
-            {visibleTags.map((tag) => (
+        {profile.visibleTags.length ? (
+          <div className={styles.tags} aria-label={`Spécialités de ${profile.name}`}>
+            {profile.visibleTags.map((tag) => (
               <span key={tag}>{tag}</span>
             ))}
           </div>
         ) : null}
 
-        {details ? (
+        {profile.details ? (
           <details className={styles.details}>
             <summary>Découvrir ses spécialités</summary>
             <div className={styles.metadata}>
-              <MetadataGroup label="Destinations" values={details.destinations} />
-              <MetadataGroup label="Types de voyages" values={details.travelTypes} />
+              <MetadataGroup label="Destinations" values={profile.details.destinations} />
+              <MetadataGroup label="Types de voyages" values={profile.details.travelTypes} />
             </div>
           </details>
         ) : null}
@@ -77,7 +65,7 @@ export default function PartnerDirectoryRenderer({ section }) {
   const categories = getPartnerDirectoryCategories()
     .map((category) => ({
       ...category,
-      partners: category.partners.filter((partner) => isPartnerPublicationConfirmed(partner.id)),
+      partners: getPublishablePartnerProfiles(category.partners),
     }))
     .filter((category) => category.partners.length);
 
