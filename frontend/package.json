@@ -18,6 +18,7 @@
     "partners:readiness": "node scripts/partner-publication-readiness.mjs",
     "partners:readiness:strict": "node scripts/partner-publication-readiness.mjs --strict-content=true",
     "partners:content:queue": "node scripts/partner-content-work-queue.mjs",
+    "partners:preflight": "npm run test:partners && npm run partners:details:audit && npm run partners:readiness:strict && npm run partners:logos:audit && npm run partners:catalog:audit",
     "seo:audit-public": "node scripts/audit-public-seo.mjs",
     "seo:audit-public:strict": "node scripts/audit-public-seo.mjs --strict=true",
     "seo:recommend-public": "node scripts/recommend-public-seo.mjs",
