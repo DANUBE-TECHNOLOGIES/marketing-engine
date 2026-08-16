@@ -37,10 +37,6 @@ const REVIEW_REQUIRED = Object.freeze({
     status: "identity-review",
     reason: "Official brand identity/source still needs confirmation before final publication.",
   },
-  "rev-vacances": {
-    status: "identity-review",
-    reason: "Official brand identity/source still needs confirmation before final publication.",
-  },
 });
 
 const CATALOGUE_EXCLUSIONS = Object.freeze({
