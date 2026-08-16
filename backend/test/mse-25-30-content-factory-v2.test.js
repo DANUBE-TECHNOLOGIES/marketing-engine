@@ -15,16 +15,17 @@ test("content factory converts generated sections to Website Designer V2 blocks"
     },
   });
 
-  assert.equal(block.blockType, "overview");
+  assert.equal(block.blockType, "rich_text");
   assert.equal(block.displayOrder, 20);
   assert.equal(block.status, "draft");
   assert.equal(block.visibleDesktop, true);
   assert.equal(block.visibleMobile, true);
   assert.equal(block.name, "L'essentiel pour un week-end à Budapest");
-  assert.deepEqual(block.content.paragraphs, ["Un contenu réellement visible par le renderer public."]);
+  assert.match(block.content.html, /Un contenu réellement visible par le renderer public\./);
+  assert.equal(block.seo.legacySectionType, "overview");
 });
 
-test("content factory persists legacy sections and V2 blocks atomically on replace", async () => {
+test("content factory persists legacy sections and valid V2 blocks atomically on replace", async () => {
   const calls = {
     legacy: [],
     deleteBlocks: [],
@@ -99,7 +100,7 @@ test("content factory persists legacy sections and V2 blocks atomically on repla
   assert.equal(calls.createBlocks[0].data.length, 2);
   assert.deepEqual(
     calls.createBlocks[0].data.map((entry) => entry.blockType),
-    ["hero", "overview"]
+    ["hero", "rich_text"]
   );
   assert.ok(calls.createBlocks[0].data.every((entry) => entry.pageId === "page-1"));
 });
