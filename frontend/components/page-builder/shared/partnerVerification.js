@@ -56,6 +56,18 @@ const ASSET_RESTRICTIONS = Object.freeze({
     status: "asset-permission-review",
     reason: "Partner identity is known, but CFC logo reproduction is held until an authorised asset source or written permission is confirmed.",
   },
+  "salaun-holidays": {
+    status: "asset-permission-review",
+    reason: "Partner identity is confirmed, but Salaün Holidays' legal notice prohibits reproduction/exploitation of its protected marks without authorisation.",
+  },
+  nordiska: {
+    status: "asset-permission-review",
+    reason: "Partner identity is confirmed, but Nordiska is listed as a protected Salaün mark whose reproduction/exploitation is prohibited without authorisation.",
+  },
+  "pouchkine-tours": {
+    status: "asset-permission-review",
+    reason: "Partner identity is confirmed by Salaün Holidays, but Pouchkine Tours is listed as a protected mark whose reproduction/exploitation is prohibited without authorisation.",
+  },
 });
 
 export function getPartnerVerification(partnerId) {
