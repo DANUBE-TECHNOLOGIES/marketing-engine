@@ -7,99 +7,94 @@ const PARTNERS = Object.freeze([
 ]);
 
 const timeoutMs = 12000;
-const maxCandidates = 12;
+const maxCandidates = 16;
 
-function unique(values) {
-  return [...new Set(values.filter(Boolean))];
+function unique(values) { return [...new Set(values.filter(Boolean))]; }
+function decodeHtml(value) {
+  return String(value || "")
+    .replaceAll("&amp;", "&")
+    .replaceAll("&#38;", "&")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&#39;", "'");
 }
-
-function assetScore(value, partner) {
-  const lower = value.toLowerCase();
+function normalizedTokens(partner) {
+  return unique([partner.id, partner.name]
+    .flatMap((value) => value.toLowerCase().split(/[^a-z0-9]+/))
+    .filter((token) => token.length >= 4 && !["compagnie", "francaise", "croisieres", "journeys", "catamarans"].includes(token)));
+}
+function assetScore(value, partner, context = "") {
+  const lower = `${value} ${context}`.toLowerCase();
   let score = 0;
-  if (lower.includes("logo")) score += 50;
-  if (lower.includes(partner.id.replaceAll("-", ""))) score += 20;
-  for (const token of partner.name.toLowerCase().split(/[^a-z0-9]+/).filter((token) => token.length >= 4)) {
-    if (lower.includes(token)) score += 8;
-  }
-  if (/\.svg(?:$|[?#])/.test(lower)) score += 12;
-  if (/\.webp(?:$|[?#])/.test(lower)) score += 10;
-  if (/\.png(?:$|[?#])/.test(lower)) score += 6;
-  if (/footer|header|brand|navbar|nav-logo/.test(lower)) score += 4;
-  if (/favicon|icon|sprite|payment|social|flag/.test(lower)) score -= 35;
+  if (/logo|wordmark|logotype/.test(lower)) score += 60;
+  if (/brand|header|navbar|nav-logo|site-logo/.test(lower)) score += 18;
+  if (/press|media|kit/.test(lower)) score += 10;
+  for (const token of normalizedTokens(partner)) if (lower.includes(token)) score += 16;
+  if (/\.svg(?:$|[?#])/.test(value.toLowerCase())) score += 16;
+  if (/\.webp(?:$|[?#])/.test(value.toLowerCase())) score += 10;
+  if (/\.png(?:$|[?#])/.test(value.toLowerCase())) score += 6;
+  if (/favicon|icon|sprite|payment|social|flag|award|email|phone|quote|brochure/.test(lower)) score -= 55;
   return score;
 }
-
+function pushCandidate(raw, value, context = "") {
+  if (!value) return;
+  raw.push({ value: decodeHtml(value), context: decodeHtml(context) });
+}
 function extractCandidates(html, baseUrl, partner) {
   const raw = [];
-  const attributeRegex = /(?:src|href|content|data-src|data-lazy-src)=["']([^"']+)["']/gi;
   let match;
-  while ((match = attributeRegex.exec(html))) raw.push(match[1]);
-
+  const tagRegex = /<(?:img|source|link|meta)\b[^>]*>/gi;
+  while ((match = tagRegex.exec(html))) {
+    const tag = match[0];
+    const context = [
+      tag.match(/(?:alt|title|class|id|rel|property|name)=["']([^"']+)["']/i)?.[1],
+      tag,
+    ].filter(Boolean).join(" ");
+    for (const attr of ["src", "href", "content", "data-src", "data-lazy-src"]) {
+      const value = tag.match(new RegExp(`${attr}=["']([^"']+)["']`, "i"))?.[1];
+      pushCandidate(raw, value, context);
+    }
+    const srcset = tag.match(/srcset=["']([^"']+)["']/i)?.[1];
+    if (srcset) for (const item of srcset.split(",")) pushCandidate(raw, item.trim().split(/\s+/)[0], context);
+  }
   const cssUrlRegex = /url\((?:["']?)([^)"']+)(?:["']?)\)/gi;
-  while ((match = cssUrlRegex.exec(html))) raw.push(match[1]);
+  while ((match = cssUrlRegex.exec(html))) pushCandidate(raw, match[1], "css-url");
+  const absoluteAssetRegex = /https?:\\?\/\\?\/[^\s"'<>]+?\.(?:svg|png|webp)(?:\?[^\s"'<>]*)?/gi;
+  while ((match = absoluteAssetRegex.exec(html))) pushCandidate(raw, match[0].replaceAll("\\/", "/"), "embedded-asset-url");
 
-  return unique(raw)
-    .map((value) => {
-      try { return new URL(value, baseUrl).href; } catch { return null; }
-    })
-    .filter((value) => value && /\.(?:svg|png|webp)(?:$|[?#])/i.test(value))
-    .map((url) => ({ url, score: assetScore(url, partner) }))
-    .filter((item) => item.score > 0)
+  const deduped = new Map();
+  for (const item of raw) {
+    try {
+      const url = new URL(item.value, baseUrl).href;
+      if (!/\.(?:svg|png|webp)(?:$|[?#])/i.test(url)) continue;
+      const score = assetScore(url, partner, item.context);
+      if (score <= 0) continue;
+      const existing = deduped.get(url);
+      if (!existing || score > existing.score) deduped.set(url, { url, score, context: item.context.slice(0, 220) });
+    } catch {}
+  }
+  return [...deduped.values()]
     .sort((a, b) => b.score - a.score || a.url.localeCompare(b.url))
     .slice(0, maxCandidates);
 }
-
 async function fetchText(url) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetch(url, {
-      redirect: "follow",
-      signal: controller.signal,
-      headers: {
-        "user-agent": "Mozilla/5.0 (compatible; MondescalePartnerAssetAudit/1.0)",
-        accept: "text/html,application/xhtml+xml",
-      },
-    });
-    return {
-      ok: response.ok,
-      status: response.status,
-      finalUrl: response.url,
-      contentType: response.headers.get("content-type"),
-      text: response.ok ? await response.text() : "",
-    };
+    const response = await fetch(url, { redirect: "follow", signal: controller.signal, headers: { "user-agent": "Mozilla/5.0 (compatible; MondescalePartnerAssetAudit/1.1)", accept: "text/html,application/xhtml+xml" } });
+    return { ok: response.ok, status: response.status, finalUrl: response.url, contentType: response.headers.get("content-type"), text: response.ok ? await response.text() : "" };
   } catch (error) {
     return { ok: false, status: 0, finalUrl: url, contentType: null, text: "", error: error?.message || String(error) };
-  } finally {
-    clearTimeout(timer);
-  }
+  } finally { clearTimeout(timer); }
 }
-
 async function probeAsset(url) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetch(url, {
-      method: "GET",
-      redirect: "follow",
-      signal: controller.signal,
-      headers: {
-        "user-agent": "Mozilla/5.0 (compatible; MondescalePartnerAssetAudit/1.0)",
-        range: "bytes=0-1023",
-      },
-    });
-    return {
-      ok: response.ok || response.status === 206,
-      status: response.status,
-      finalUrl: response.url,
-      contentType: response.headers.get("content-type"),
-      contentLength: response.headers.get("content-length"),
-    };
+    const response = await fetch(decodeHtml(url), { method: "GET", redirect: "follow", signal: controller.signal, headers: { "user-agent": "Mozilla/5.0 (compatible; MondescalePartnerAssetAudit/1.1)", range: "bytes=0-2047" } });
+    return { ok: response.ok || response.status === 206, status: response.status, finalUrl: response.url, contentType: response.headers.get("content-type"), contentLength: response.headers.get("content-length") };
   } catch (error) {
     return { ok: false, status: 0, finalUrl: url, contentType: null, contentLength: null, error: error?.message || String(error) };
-  } finally {
-    clearTimeout(timer);
-  }
+  } finally { clearTimeout(timer); }
 }
 
 const rows = [];
@@ -107,25 +102,7 @@ for (const partner of PARTNERS) {
   const page = await fetchText(partner.website);
   const candidates = page.ok ? extractCandidates(page.text, page.finalUrl, partner) : [];
   const probed = [];
-  for (const candidate of candidates.slice(0, 6)) {
-    probed.push({ ...candidate, probe: await probeAsset(candidate.url) });
-  }
-  rows.push({
-    ...partner,
-    page: {
-      ok: page.ok,
-      status: page.status,
-      finalUrl: page.finalUrl,
-      contentType: page.contentType,
-      error: page.error || null,
-    },
-    candidates: probed,
-  });
+  for (const candidate of candidates.slice(0, 8)) probed.push({ ...candidate, probe: await probeAsset(candidate.url) });
+  rows.push({ ...partner, page: { ok: page.ok, status: page.status, finalUrl: page.finalUrl, contentType: page.contentType, error: page.error || null }, candidates: probed });
 }
-
-console.log(JSON.stringify({
-  policy: "discover-only-no-write",
-  category: "croisieres",
-  targetFormat: "individual-webp",
-  partners: rows,
-}, null, 2));
+console.log(JSON.stringify({ policy: "discover-only-no-write", category: "croisieres", targetFormat: "individual-webp", partners: rows }, null, 2));
