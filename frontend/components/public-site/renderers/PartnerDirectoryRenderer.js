@@ -1,6 +1,7 @@
 import { getSectionContent, getSectionTitle } from "./helpers";
 import { getPartnerDirectoryCategories } from "../../page-builder/shared/fullPartners";
 import { getPartnerDetails } from "../../page-builder/shared/partnerDetails";
+import { getCruisePartnerDetails } from "../../page-builder/shared/partnerCruiseDetails";
 import styles from "./PartnerDirectoryRenderer.module.css";
 
 function MetadataGroup({ label, values }) {
@@ -15,7 +16,7 @@ function MetadataGroup({ label, values }) {
 }
 
 function PartnerCard({ partner }) {
-  const details = getPartnerDetails(partner.id);
+  const details = getPartnerDetails(partner.id) || getCruisePartnerDetails(partner.id);
   const visibleTags = Array.isArray(partner.tags) ? partner.tags.slice(0, 2) : [];
 
   return (
