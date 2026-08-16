@@ -12,7 +12,12 @@ async function loadModule(fileName) {
   return import(dataUrl);
 }
 
-const { FULL_PARTNERS } = await loadModule("fullPartners.js");
+const [{ FULL_PARTNERS }, verificationModule] = await Promise.all([
+  loadModule("fullPartners.js"),
+  loadModule("partnerVerification.js"),
+]);
+const getPartnerVerification = verificationModule.getPartnerVerification;
+
 const modules = [
   ["cruise", "partnerCruiseDetails.js"],
   ["circuit", "partnerCircuitDetails.js"],
@@ -28,25 +33,31 @@ const loaded = await Promise.all(modules.map(async ([sourceName, fileName]) => {
 }));
 
 const rows = FULL_PARTNERS.map((partner) => {
+  const verification = getPartnerVerification(partner.id);
   const sources = loaded
     .filter(({ getter }) => getter?.(partner.id))
     .map(({ sourceName, fileName }) => ({ sourceName, fileName }));
-  return { id: partner.id, name: partner.name, category: partner.category, sources };
+  return { id: partner.id, name: partner.name, category: partner.category, verificationStatus: verification.status, sources };
 });
 
 const duplicates = rows.filter((row) => row.sources.length > 1);
 const missing = rows.filter((row) => row.sources.length === 0);
+const missingConfirmed = missing.filter((row) => row.verificationStatus !== "identity-review");
+const heldForIdentityReview = missing.filter((row) => row.verificationStatus === "identity-review");
 
 console.log(JSON.stringify({
-  policy: "one-specialized-editorial-detail-source-per-partner",
+  policy: "one-specialized-editorial-source-per-confirmed-partner",
   summary: {
     total: rows.length,
     singleSource: rows.filter((row) => row.sources.length === 1).length,
     duplicateSources: duplicates.length,
     missingSources: missing.length,
+    missingConfirmed: missingConfirmed.length,
+    heldForIdentityReview: heldForIdentityReview.length,
   },
   duplicates,
-  missing,
+  missingConfirmed,
+  heldForIdentityReview,
 }, null, 2));
 
-if (duplicates.length) process.exitCode = 2;
+if (duplicates.length || missingConfirmed.length) process.exitCode = 2;
