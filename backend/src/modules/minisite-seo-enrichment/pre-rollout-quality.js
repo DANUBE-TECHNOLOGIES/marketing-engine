@@ -1,6 +1,7 @@
 "use strict";
 
 const { visibleText, normalize } = require("./similarity-guard");
+const { persistenceValidationIssues } = require("./persistence-preflight");
 
 function words(value) {
   return normalize(value).split(/\s+/).filter(Boolean).length;
@@ -143,13 +144,16 @@ function preRolloutQualityReport(plans, options = {}) {
   }
   const networkIssues = editorialLinkingIssues(pages);
   const pageIssues = pages.flatMap((page) => page.issues.map((issue) => ({ ...issue, siteSlug: page.siteSlug, slug: page.slug, path: page.expectedCanonicalPath })));
-  const allIssues = [...networkIssues, ...pageIssues];
+  const persistenceIssues = persistenceValidationIssues(plans);
+  const allIssues = [...networkIssues, ...pageIssues, ...persistenceIssues];
   const blocking = allIssues.filter((issue) => issue.severity === "blocking");
   const warnings = allIssues.filter((issue) => issue.severity !== "blocking");
 
   return {
     minimumWords: Number(options.minimumWords || 120),
     pagesChecked: pages.length,
+    persistencePagesChecked: (plans || []).reduce((sum, plan) => sum + (plan?.pages || []).length, 0),
+    persistenceBlockingCount: persistenceIssues.length,
     blockingCount: blocking.length,
     warningCount: warnings.length,
     blocked: blocking.length > 0,
