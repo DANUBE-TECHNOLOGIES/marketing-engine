@@ -34,6 +34,78 @@ function validateExpectedChange(page, expectedChange = {}) {
   };
 }
 
+function isPublicSiteNotPublishedError(error) {
+  return String(error?.code || "").trim() === "PUBLIC_SITE_NOT_PUBLISHED";
+}
+
+async function persistedPageProof({ origin, tenant, agency, rolloutPage }) {
+  const headers = { "x-tenant-slug": tenant };
+  const expectedChanges = Array.isArray(rolloutPage?.expectedChanges) ? rolloutPage.expectedChanges : [];
+  const expectedChangesPresent = expectedChanges.length > 0;
+  const persistedResult = await legacy.readOnlyRequest(
+    `${origin}/agencies/${encodeURIComponent(agency.agencyId)}/site/pages/${encodeURIComponent(legacy.pageBuilderSlug(rolloutPage.slug))}/blocks`,
+    { headers }
+  );
+  const persistedPage = persistedResult.payload || {};
+  const persistedChanges = expectedChanges.map((change) => validateExpectedChange(persistedPage, change));
+  return {
+    persistedPage,
+    expectedChanges,
+    expectedChangesPresent,
+    persistedProof: {
+      ok: expectedChangesPresent && persistedChanges.every((item) => item.ok),
+      expectedChangeCount: persistedChanges.length,
+      matchedChangeCount: persistedChanges.filter((item) => item.ok).length,
+      published: persistedPage?.published === true,
+      status: persistedPage?.status || null,
+      changes: persistedChanges,
+    },
+  };
+}
+
+async function validateDraftSite({ origin, tenant, agency, siteSlug }) {
+  const pages = [];
+  for (const rolloutPage of agency?.pages || []) {
+    if (rolloutPage?.changed !== true) continue;
+    const proof = await persistedPageProof({ origin, tenant, agency, rolloutPage });
+    pages.push({
+      slug: legacy.normalizeSlug(rolloutPage.slug),
+      rawSlug: String(rolloutPage.slug ?? ""),
+      expectedPath: legacy.canonicalPagePath(siteSlug, rolloutPage.slug),
+      mode: "site-draft",
+      exclusion: { reason: "site-not-published", pageSlug: String(rolloutPage.slug ?? "") },
+      sitemapPresent: false,
+      canonicalUrl: null,
+      expectedChangesPresent: proof.expectedChangesPresent,
+      persistedProof: proof.persistedProof,
+      publicProof: {
+        present: false,
+        published: false,
+        contentSource: null,
+        websiteDesignerV2: false,
+        matchedChangeCount: 0,
+        changes: [],
+        skipped: true,
+        reason: "site-not-published",
+      },
+      htmlProof: { ok: true, skipped: true, reason: "site-not-published" },
+      ok: proof.persistedProof.ok,
+    });
+  }
+
+  return {
+    siteSlug,
+    agencyId: agency?.agencyId ?? null,
+    publiclyExpected: false,
+    siteMode: "draft",
+    readyToSubmit: false,
+    entryCount: 0,
+    readiness: { status: "site-not-published" },
+    pages,
+    ok: pages.length > 0 && pages.every((page) => page.ok),
+  };
+}
+
 async function validateSite({ origin, tenant, agency, sitemapExcluded = [], publicOrigin = "" }) {
   const siteSlug = String(agency?.siteSlug || "").trim();
   if (!siteSlug) {
@@ -41,10 +113,19 @@ async function validateSite({ origin, tenant, agency, sitemapExcluded = [], publ
   }
 
   const headers = { "x-tenant-slug": tenant };
-  const publicResult = await legacy.readOnlyRequest(
-    `${origin}/api/public-site-read/sites/${encodeURIComponent(siteSlug)}`,
-    { headers }
-  );
+  let publicResult;
+  try {
+    publicResult = await legacy.readOnlyRequest(
+      `${origin}/api/public-site-read/sites/${encodeURIComponent(siteSlug)}`,
+      { headers }
+    );
+  } catch (error) {
+    if (isPublicSiteNotPublishedError(error)) {
+      return validateDraftSite({ origin, tenant, agency, siteSlug });
+    }
+    throw error;
+  }
+
   const indexationResult = await legacy.readOnlyRequest(
     `${origin}/minisite-structured-data/sites/${encodeURIComponent(siteSlug)}/indexation`,
     { headers }
@@ -57,22 +138,11 @@ async function validateSite({ origin, tenant, agency, sitemapExcluded = [], publ
     if (rolloutPage?.changed !== true) continue;
 
     const expectedPath = legacy.canonicalPagePath(siteSlug, rolloutPage.slug);
-    const expectedChanges = Array.isArray(rolloutPage.expectedChanges) ? rolloutPage.expectedChanges : [];
-    const expectedChangesPresent = expectedChanges.length > 0;
-    const persistedResult = await legacy.readOnlyRequest(
-      `${origin}/agencies/${encodeURIComponent(agency.agencyId)}/site/pages/${encodeURIComponent(legacy.pageBuilderSlug(rolloutPage.slug))}/blocks`,
-      { headers }
-    );
-    const persistedPage = persistedResult.payload || {};
-    const persistedChanges = expectedChanges.map((change) => validateExpectedChange(persistedPage, change));
-    const persistedProof = {
-      ok: expectedChangesPresent && persistedChanges.every((item) => item.ok),
-      expectedChangeCount: persistedChanges.length,
-      matchedChangeCount: persistedChanges.filter((item) => item.ok).length,
-      published: persistedPage?.published === true,
-      status: persistedPage?.status || null,
-      changes: persistedChanges,
-    };
+    const proof = await persistedPageProof({ origin, tenant, agency, rolloutPage });
+    const expectedChanges = proof.expectedChanges;
+    const expectedChangesPresent = proof.expectedChangesPresent;
+    const persistedPage = proof.persistedPage;
+    const persistedProof = proof.persistedProof;
 
     const page = legacy.findPage(contract, rolloutPage.slug);
     const publicChanges = expectedChanges.map((change) => page
@@ -151,6 +221,8 @@ async function validateSite({ origin, tenant, agency, sitemapExcluded = [], publ
   return {
     siteSlug,
     agencyId: agency?.agencyId ?? null,
+    publiclyExpected: true,
+    siteMode: "published",
     readyToSubmit: readinessOk,
     entryCount: Number(indexation.entryCount || 0),
     readiness: indexation.readiness || null,
@@ -190,17 +262,20 @@ async function run({ rolloutReport, backendOrigin, tenantSlug, output } = {}) {
     summary: {
       agenciesChecked: agencies.length,
       agenciesOk: agencies.filter((item) => item.ok).length,
+      publishedSitesChecked: agencies.filter((item) => item.publiclyExpected !== false).length,
+      draftSitesChecked: agencies.filter((item) => item.publiclyExpected === false).length,
       pagesChecked: pages.length,
       pagesOk: pages.filter((page) => page.ok).length,
       indexablePages: pages.filter((page) => page.mode === "indexable").length,
       noindexPages: pages.filter((page) => page.mode === "noindex").length,
       unpublishedPages: pages.filter((page) => page.mode === "unpublished").length,
+      draftSitePages: pages.filter((page) => page.mode === "site-draft").length,
       invalidSitemapStates: pages.filter((page) => page.mode === "invalid-sitemap-state").length,
       htmlPagesOk: pages.filter((page) => page.htmlProof?.skipped !== true && page.htmlProof?.ok === true).length,
       failedPersistedChanges: pages.reduce((sum, page) => sum + (page.persistedProof?.changes || []).filter((change) => !change.ok).length, 0),
       failedPublicChanges: pages.reduce((sum, page) => sum + (page.publicProof?.changes || []).filter((change) => !change.ok).length, 0),
       missingExpectedChangeSets: pages.filter((page) => page.expectedChangesPresent !== true).length,
-      sitesNotReady: agencies.filter((item) => item.readyToSubmit !== true).length,
+      sitesNotReady: agencies.filter((item) => item.publiclyExpected !== false && item.readyToSubmit !== true).length,
     },
     agencies,
   };
@@ -228,8 +303,11 @@ if (require.main === module) {
 
 module.exports = {
   isPageLevelChange,
+  isPublicSiteNotPublishedError,
   pageFieldValue,
+  persistedPageProof,
   run,
+  validateDraftSite,
   validateExpectedChange,
   validateSite,
 };
