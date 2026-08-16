@@ -15,7 +15,7 @@
     "search-console:check": "node scripts/search-console-readiness-check.js",
     "mse-25.30:preflight": "node scripts/mse-25-30-preflight.js",
     "mse-25.30:network-preview": "node scripts/mse-25-30-network-preview.js",
-    "mse-25.30:network-apply": "node scripts/mse-25-30-network-apply.js",
+    "mse-25.30:network-apply": "node src/modules/minisite-seo-enrichment/network-apply-audit.js",
     "mse-25.30:network-rollback": "node scripts/mse-25-30-network-rollback.js",
     "mse-25.30:post-rollout-validate": "node src/modules/minisite-seo-enrichment/post-rollout-validator.js"
   },
