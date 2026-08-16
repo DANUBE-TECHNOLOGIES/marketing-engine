@@ -22,15 +22,12 @@ const [
   loadModule("partnerVerification.js"),
 ]);
 
-// Same resolution contract as partnerProfile.js and publication readiness:
-// specialized detail layers win; the generic catalogue is a legacy fallback only.
 const detailModules = await Promise.all([
   loadModule("partnerCruiseDetails.js"),
   loadModule("partnerCircuitDetails.js"),
   loadModule("partnerStayDetails.js"),
   loadModule("partnerLongHaulDetails.js"),
   loadModule("partnerFranceEuropeDetails.js"),
-  loadModule("partnerDetails.js"),
 ]);
 
 const getters = detailModules
@@ -153,7 +150,7 @@ const payload = {
     logos: "individual-assets-only",
     identity: "confirm-before-final-publication",
     publicationReadiness: "content-ready-with-logo-fallback-allowed",
-    detailPrecedence: "specialized-before-generic-fallback",
+    editorialSources: "category-specialized-only",
     maxVisibleTags: 2,
   },
   summary: {
@@ -174,24 +171,14 @@ const payload = {
     editorialWarnings: editorialWarnings.length,
   },
   structuralErrors,
-  verification: {
-    identityReview,
-    assetPermissionReview,
-  },
-  readiness: {
-    contentReady,
-    needsContent,
-  },
+  verification: { identityReview, assetPermissionReview },
+  readiness: { contentReady, needsContent },
   byCategory,
   editorialWarnings,
 };
 
 console.log(JSON.stringify(payload, null, 2));
 
-if (
-  structuralErrors.duplicateIds.length ||
-  structuralErrors.duplicateNames.length ||
-  structuralErrors.unknownCategories.length
-) {
+if (structuralErrors.duplicateIds.length || structuralErrors.duplicateNames.length || structuralErrors.unknownCategories.length) {
   process.exitCode = 2;
 }
