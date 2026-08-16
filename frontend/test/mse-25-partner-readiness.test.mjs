@@ -25,9 +25,16 @@ test("partner readiness separates content readiness from logo completeness", () 
   assert.match(profile, /getPartnerCompletenessSummary/);
   assert.match(profile, /partner\?\.publishable && partner\?\.readyForPublication/);
 
-  const specializedIndex = profile.indexOf("getCruisePartnerDetails,");
-  const genericIndex = profile.indexOf("getPartnerDetails,", specializedIndex + 1);
-  assert.ok(specializedIndex >= 0 && genericIndex > specializedIndex, "specialized details must precede generic fallback");
+  const specializedGetters = [
+    "getCruisePartnerDetails",
+    "getCircuitPartnerDetails",
+    "getStayPartnerDetails",
+    "getLongHaulPartnerDetails",
+    "getFranceEuropePartnerDetails",
+  ];
+  for (const getter of specializedGetters) assert.match(profile, new RegExp(getter));
+  assert.doesNotMatch(profile, /getPartnerDetails/);
+  assert.match(profile, /const DETAIL_GETTERS = Object\.freeze\(\[/);
 
   assert.match(report, /content-first-logo-fallback-allowed/);
   assert.match(report, /ready-with-logo-fallback/);
@@ -35,9 +42,23 @@ test("partner readiness separates content readiness from logo completeness", () 
   assert.match(report, /--strict-content=true/);
   assert.match(report, /identity-review/);
   assert.match(report, /blockers/);
-  assert.match(report, /partnerCruiseDetails\.js[\s\S]*partnerDetails\.js/);
+  for (const fileName of [
+    "partnerCruiseDetails.js",
+    "partnerCircuitDetails.js",
+    "partnerStayDetails.js",
+    "partnerLongHaulDetails.js",
+    "partnerFranceEuropeDetails.js",
+  ]) assert.match(report, new RegExp(fileName.replace(".", "\\.")));
+  assert.doesNotMatch(report, /partnerDetails\.js/);
   assert.match(report, /process\.exitCode = 2/);
 
-  assert.match(audit, /detailPrecedence: "specialized-before-generic-fallback"/);
-  assert.match(audit, /partnerCruiseDetails\.js[\s\S]*partnerDetails\.js/);
+  assert.match(audit, /editorialSources:\s*"category-specialized-only"/);
+  for (const fileName of [
+    "partnerCruiseDetails.js",
+    "partnerCircuitDetails.js",
+    "partnerStayDetails.js",
+    "partnerLongHaulDetails.js",
+    "partnerFranceEuropeDetails.js",
+  ]) assert.match(audit, new RegExp(fileName.replace(".", "\\.")));
+  assert.doesNotMatch(audit, /partnerDetails\.js/);
 });
