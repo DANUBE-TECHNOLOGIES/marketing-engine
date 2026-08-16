@@ -18,9 +18,11 @@ test("partner verification distinguishes identity review from logo permission re
   const staySources = read("components/page-builder/shared/partnerStayLogoSources.js");
   const backlog = read("components/page-builder/shared/partnerLogoBacklog.js");
 
-  for (const id of ["mega-vacances", "asiam"]) {
-    assert.match(verification, new RegExp(`"?${id}"?\\s*:`));
-  }
+  assert.match(verification, /asiam[\s\S]*identity-review/);
+
+  assert.doesNotMatch(catalogue, /mega-vacances|Mega Vacances/);
+  assert.doesNotMatch(verification, /mega-vacances|Mega Vacances/);
+  assert.doesNotMatch(backlog, /mega-vacances|Mega Vacances/);
 
   for (const id of ["hotels-lagons", "lmx-voyages", "travel-evasion"]) {
     const escaped = id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
