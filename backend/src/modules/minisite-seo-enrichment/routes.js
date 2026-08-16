@@ -4,6 +4,7 @@ const express = require("express");
 const { MiniSiteSeoEnrichmentService } = require("./service");
 const { installProjectedReadiness } = require("./projected-readiness-patch");
 const { installEditorialHardening } = require("./editorial-hardening-patch");
+const { installPublishedSiteScope } = require("./published-site-scope-patch");
 const { installPlanFingerprintGuard } = require("./plan-fingerprint-patch");
 const { installSummaryConsistency } = require("./summary-consistency-patch");
 const PageBuilderPersistenceService = require("../page-builder-persistence/service");
@@ -11,6 +12,7 @@ const { MiniSiteStructuredDataService } = require("../minisite-structured-data/s
 
 installProjectedReadiness(MiniSiteSeoEnrichmentService);
 installEditorialHardening(MiniSiteSeoEnrichmentService);
+installPublishedSiteScope(MiniSiteSeoEnrichmentService);
 installPlanFingerprintGuard(MiniSiteSeoEnrichmentService);
 installSummaryConsistency(MiniSiteSeoEnrichmentService);
 
