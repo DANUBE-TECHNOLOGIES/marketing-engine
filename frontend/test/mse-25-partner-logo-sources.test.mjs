@@ -11,6 +11,9 @@ const read = (relativePath) => fs.readFileSync(path.join(frontendRoot, relativeP
 test("partner logo sourcing keeps vetted assets separate from press and permission reviews", () => {
   const cruiseSources = read("components/page-builder/shared/partnerCruiseLogoSources.js");
   const circuitSources = read("components/page-builder/shared/partnerCircuitLogoSources.js");
+  const staySources = read("components/page-builder/shared/partnerStayLogoSources.js");
+  const verification = read("components/page-builder/shared/partnerVerification.js");
+  const backlog = read("components/page-builder/shared/partnerLogoBacklog.js");
   const queue = read("scripts/partner-logo-work-queue.mjs");
   const assetTest = read("test/mse-25-partner-assets.test.mjs");
 
@@ -28,6 +31,19 @@ test("partner logo sourcing keeps vetted assets separate from press and permissi
   assert.match(circuitSources, /nordiska[\s\S]*permission-review/);
   assert.match(circuitSources, /pouchkine-tours[\s\S]*permission-review/);
   assert.match(circuitSources, /getCircuitLogoSource/);
+
+  assert.match(staySources, /belambra[\s\S]*permission-review/);
+  assert.match(staySources, /boomerang[\s\S]*official-source-page/);
+  assert.match(staySources, /mondial-tourisme[\s\S]*official-source-page/);
+  assert.match(staySources, /heliades[\s\S]*permission-review/);
+  assert.match(staySources, /voyamar[\s\S]*permission-review/);
+  assert.match(staySources, /getStayLogoSource/);
+
+  for (const id of ["belambra", "heliades", "voyamar"]) {
+    assert.match(verification, new RegExp(`${id}[\\s\\S]*asset-permission-review`));
+    assert.match(backlog, new RegExp(`${id}[\\s\\S]*permission-required`));
+  }
+  assert.match(backlog, /worldia[\s\S]*catalogue-excluded/);
 
   assert.match(queue, /official-individual-assets-webp-or-vetted-svg/);
   assert.match(queue, /acceptedFormats:\s*\["webp", "svg"\]/);
