@@ -4,10 +4,20 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const {
   DEFAULT_MAX_PREFLIGHT_AGE_MS,
+  assertParameterOverridesMatch,
   assertPreflightReport,
+  normalizeApprovedFingerprint,
+  normalizeApprovedParameters,
   requireConfirmation,
   tryWriteRolloutReport,
 } = require("../scripts/mse-25-30-network-apply");
+
+const VALID_PLAN_FINGERPRINT = "a".repeat(64);
+const VALID_PARAMETERS = Object.freeze({
+  similarityThreshold: 0.78,
+  minimumWords: 120,
+  qualityMinimumWords: 180,
+});
 
 function validReport(now = Date.now()) {
   return {
@@ -24,6 +34,8 @@ function validReport(now = Date.now()) {
       ok: true,
       rolloutBlocked: false,
       summary: { rolloutBlocked: false },
+      planFingerprint: VALID_PLAN_FINGERPRINT,
+      parameters: { ...VALID_PARAMETERS },
     },
   };
 }
@@ -46,6 +58,80 @@ test("network apply accepte un preflight récent pour le même HEAD, tenant et b
   });
   assert.equal(result.ageMs, 60_000);
   assert.equal(result.maxAgeMs, DEFAULT_MAX_PREFLIGHT_AGE_MS);
+  assert.equal(result.planFingerprint, VALID_PLAN_FINGERPRINT);
+  assert.deepEqual(result.parameters, VALID_PARAMETERS);
+});
+
+test("network apply refuse un preflight sans empreinte de plan approuvée", () => {
+  const now = Date.now();
+  const report = validReport(now);
+  delete report.preview.planFingerprint;
+
+  assert.throws(
+    () => assertPreflightReport(report, {
+      origin: "http://127.0.0.1:4000",
+      tenant: "mondescale",
+      repository: { head: "abc123" },
+      now,
+    }),
+    (error) => error?.code === "MSE_25_30_NETWORK_ROLLOUT_PREFLIGHT_FINGERPRINT_INVALID"
+  );
+});
+
+test("network apply refuse un preflight sans paramètres de garde approuvés", () => {
+  const now = Date.now();
+  const report = validReport(now);
+  delete report.preview.parameters.qualityMinimumWords;
+
+  assert.throws(
+    () => assertPreflightReport(report, {
+      origin: "http://127.0.0.1:4000",
+      tenant: "mondescale",
+      repository: { head: "abc123" },
+      now,
+    }),
+    (error) => error?.code === "MSE_25_30_NETWORK_ROLLOUT_PREFLIGHT_PARAMETERS_INVALID"
+  );
+});
+
+test("network apply normalise une empreinte SHA-256 approuvée sans modifier sa valeur", () => {
+  assert.equal(normalizeApprovedFingerprint(`  ${VALID_PLAN_FINGERPRINT.toUpperCase()}  `), VALID_PLAN_FINGERPRINT);
+  assert.throws(
+    () => normalizeApprovedFingerprint("abc123"),
+    (error) => error?.code === "MSE_25_30_NETWORK_ROLLOUT_PREFLIGHT_FINGERPRINT_INVALID"
+  );
+});
+
+test("network apply exige trois paramètres numériques approuvés", () => {
+  assert.deepEqual(normalizeApprovedParameters({
+    similarityThreshold: "0.78",
+    minimumWords: "120",
+    qualityMinimumWords: "180",
+  }), VALID_PARAMETERS);
+
+  assert.throws(
+    () => normalizeApprovedParameters({ similarityThreshold: 0.78, minimumWords: 120 }),
+    (error) => error?.code === "MSE_25_30_NETWORK_ROLLOUT_PREFLIGHT_PARAMETERS_INVALID"
+  );
+});
+
+test("network apply refuse toute surcharge de paramètre différente du preflight approuvé", () => {
+  assert.doesNotThrow(() => assertParameterOverridesMatch(VALID_PARAMETERS, {
+    similarityThreshold: "0.78",
+    minimumWords: "120",
+    qualityMinimumWords: "180",
+  }));
+
+  assert.throws(
+    () => assertParameterOverridesMatch(VALID_PARAMETERS, { minimumWords: 121 }),
+    (error) => {
+      assert.equal(error?.code, "MSE_25_30_NETWORK_ROLLOUT_PREFLIGHT_PARAMETER_MISMATCH");
+      assert.deepEqual(error?.details?.mismatches, [
+        { key: "minimumWords", approved: 120, requested: 121 },
+      ]);
+      return true;
+    }
+  );
 });
 
 test("network apply refuse un preflight bloqué", () => {
