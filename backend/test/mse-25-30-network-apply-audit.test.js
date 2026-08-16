@@ -10,6 +10,7 @@ const {
   assertExcludedScopeRespected,
   excludedScopeAudit,
   persistApprovedScope,
+  persistRolloutReportIntegrity,
 } = require("../src/modules/minisite-seo-enrichment/network-apply-audit");
 
 test("MSE-25.30 normalise le périmètre d'exclusion approuvé par le preflight", () => {
@@ -135,6 +136,37 @@ test("MSE-25.30 n'enrichit pas un rapport contradictoire avec un faux périmètr
     const report = JSON.parse(fs.readFileSync(rolloutPath, "utf8"));
     assert.equal(report.approvedScope, undefined);
     assert.equal(report.approvedScopeAudit, undefined);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("MSE-25.30 certifie et persiste l'intégrité du rapport immédiatement après apply", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "mse-25-30-apply-integrity-"));
+  const rolloutPath = path.join(dir, "rollout.json");
+  const fingerprint = "a".repeat(64);
+  const parameters = { similarityThreshold: 0.82, minimumWords: 40, qualityMinimumWords: 60 };
+
+  fs.writeFileSync(rolloutPath, JSON.stringify({
+    type: "mse-25.30-network-rollout-report",
+    repository: { head: "abc123" },
+    preflight: { repositoryHead: "abc123", planFingerprint: fingerprint, parameters },
+    result: {
+      ok: true,
+      writes: true,
+      approvedPlanFingerprint: fingerprint,
+      parameters: { ...parameters },
+      preflight: { repositoryHead: "abc123", planFingerprint: fingerprint, parameters: { ...parameters } },
+    },
+  }), "utf8");
+
+  try {
+    const persisted = persistRolloutReportIntegrity(rolloutPath);
+    const report = JSON.parse(fs.readFileSync(rolloutPath, "utf8"));
+
+    assert.equal(persisted.rolloutReportIntegrity.ok, true);
+    assert.deepEqual(report.rolloutReportIntegrity, persisted.rolloutReportIntegrity);
+    assert.deepEqual(report.result.rolloutReportIntegrity, persisted.rolloutReportIntegrity);
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }
