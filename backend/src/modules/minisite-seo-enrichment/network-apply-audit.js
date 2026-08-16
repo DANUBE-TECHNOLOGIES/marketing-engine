@@ -5,8 +5,10 @@ const path = require("node:path");
 const legacyApply = require("../../../scripts/mse-25-30-network-apply");
 const {
   EXPECTED_BRANCH,
+  EXPECTED_GITHUB_WORKFLOW_BLOB_SHA,
   GITHUB_WORKFLOW_ID,
   GITHUB_WORKFLOW_NAME,
+  GITHUB_WORKFLOW_PATH,
   attestValidatedBaseline,
   repositoryState,
 } = require("../../../scripts/mse-25-30-preflight");
@@ -135,6 +137,15 @@ function assertPreflightBaselineAttestation(preflight = {}, repository = {}, liv
         workflowName: attestation.workflowName ?? null,
       });
     }
+    if (attestation.workflowPath !== GITHUB_WORKFLOW_PATH || String(attestation.workflowBlobSha || "").trim().toLowerCase() !== EXPECTED_GITHUB_WORKFLOW_BLOB_SHA) {
+      issues.push({
+        code: `${source}-attestation-workflow-definition-mismatch`,
+        expectedPath: GITHUB_WORKFLOW_PATH,
+        actualPath: attestation.workflowPath ?? null,
+        expectedBlobSha: EXPECTED_GITHUB_WORKFLOW_BLOB_SHA,
+        actualBlobSha: attestation.workflowBlobSha ?? null,
+      });
+    }
     if (attestation.headBranch !== EXPECTED_BRANCH || attestation.event !== "push" || attestation.status !== "completed" || attestation.conclusion !== "success") {
       issues.push({
         code: `${source}-attestation-result-mismatch`,
@@ -146,8 +157,16 @@ function assertPreflightBaselineAttestation(preflight = {}, repository = {}, liv
     }
   }
 
+  if (recorded?.runId !== liveAttestation?.runId) {
+    issues.push({
+      code: "attestation-run-mismatch",
+      preflightRunId: recorded?.runId ?? null,
+      liveRunId: liveAttestation?.runId ?? null,
+    });
+  }
+
   if (issues.length > 0) {
-    const error = new Error("L'attestation CI de la baseline du preflight ne correspond pas à la baseline Git courante certifiée par GitHub Actions.");
+    const error = new Error("L'attestation CI de la baseline du preflight ne correspond pas à la baseline Git courante ni à la définition CI certifiée par GitHub Actions.");
     error.code = "MSE_25_30_NETWORK_ROLLOUT_BASELINE_CI_ATTESTATION_MISMATCH";
     error.details = { baselineSha: baselineSha || null, issues };
     throw error;
@@ -156,10 +175,12 @@ function assertPreflightBaselineAttestation(preflight = {}, repository = {}, liv
   return {
     ok: true,
     validatedBaseSha: baselineSha,
-    preflightRunId: recorded.runId ?? null,
-    liveRunId: liveAttestation.runId ?? null,
+    preflightRunId: recorded.runId,
+    liveRunId: liveAttestation.runId,
     workflowId: liveAttestation.workflowId,
     workflowName: liveAttestation.workflowName,
+    workflowPath: liveAttestation.workflowPath,
+    workflowBlobSha: liveAttestation.workflowBlobSha,
     headSha: liveAttestation.headSha,
     headBranch: liveAttestation.headBranch,
     event: liveAttestation.event,
