@@ -31,6 +31,21 @@ export const PARTNER_LOGO_BACKLOG = Object.freeze([
   { id: "heliades", category: "sejours", priority: 2, state: "source-pending", sourceType: "official-site" },
   { id: "voyamar", category: "sejours", priority: 2, state: "source-pending", sourceType: "official-site" },
   { id: "aerosun", category: "sejours", priority: 3, state: "verification-pending", sourceType: "identity-check" },
+
+  { id: "alma-latina", category: "sur-mesure", priority: 2, state: "source-pending", sourceType: "official-site" },
+  { id: "australie-tours", category: "sur-mesure", priority: 2, state: "source-pending", sourceType: "official-site" },
+  { id: "amerigo", category: "sur-mesure", priority: 3, state: "verification-pending", sourceType: "identity-check" },
+  { id: "beachcomber-tours", category: "sur-mesure", priority: 2, state: "source-pending", sourceType: "official-site" },
+  { id: "climats-du-monde", category: "sur-mesure", priority: 2, state: "source-pending", sourceType: "official-site" },
+  { id: "asia", category: "sur-mesure", priority: 2, state: "source-pending", sourceType: "official-site" },
+  { id: "asiam", category: "sur-mesure", priority: 3, state: "verification-pending", sourceType: "identity-check" },
+  { id: "austral-lagons", category: "sur-mesure", priority: 2, state: "source-pending", sourceType: "official-site" },
+  { id: "jetset-voyages", category: "sur-mesure", priority: 2, state: "source-pending", sourceType: "official-site" },
+  { id: "luxair-tours", category: "sur-mesure", priority: 2, state: "source-pending", sourceType: "official-site" },
+  { id: "gaeland-ashling", category: "sur-mesure", priority: 3, state: "verification-pending", sourceType: "identity-check" },
+  { id: "ollandini", category: "sur-mesure", priority: 2, state: "source-pending", sourceType: "official-site" },
+  { id: "planete-production", category: "sur-mesure", priority: 3, state: "verification-pending", sourceType: "identity-check" },
+  { id: "travel-evasion", category: "sur-mesure", priority: 3, state: "verification-pending", sourceType: "identity-check" },
 ]);
 
 export function getPartnerLogoBacklog(category = "") {
