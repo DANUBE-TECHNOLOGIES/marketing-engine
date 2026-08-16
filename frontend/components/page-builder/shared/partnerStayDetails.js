@@ -16,6 +16,7 @@ const DETAILS = Object.freeze({
   "pacha-tours": { destinations: ["Turquie", "Istanbul", "Cappadoce", "Mer Égée", "Méditerranée orientale"], travelTypes: ["Circuit", "Petit groupe", "Séjour", "Autotour", "Croisière", "Voyage à la carte"], website: "https://www.pachatours.fr/" },
   heliades: { destinations: ["Grèce", "Chypre", "Cap-Vert", "Portugal", "Albanie", "Caraïbes", "Amérique latine"], travelTypes: ["Séjour", "Club", "Circuit", "Autotour", "Périple d'île en île", "Croisière"], website: "https://www.heliades.fr/" },
   voyamar: { destinations: ["Tunisie", "Portugal", "Italie", "Malte", "États-Unis", "Canada", "Afrique du Sud", "Kenya", "Thaïlande", "Méditerranée"], travelTypes: ["Séjour", "Naya Club", "Circuit accompagné", "Autotour", "Croisière", "Circuit privatif"], website: "https://www.voyamar-vacances.com/" },
+  "travel-evasion": { destinations: ["Égypte", "Crète", "Grèce", "Chypre", "Espagne", "Portugal", "Méditerranée", "Afrique", "Asie", "Océan Indien"], travelTypes: ["Séjour", "Club francophone", "Circuit", "Croisière sur le Nil", "Autotour", "Package vol + hôtel"], website: "https://www.travelevasion.fr/" },
 });
 
 export function getStayPartnerDetails(partnerId) {
