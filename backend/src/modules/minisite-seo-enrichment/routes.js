@@ -3,11 +3,13 @@
 const express = require("express");
 const { MiniSiteSeoEnrichmentService } = require("./service");
 const { installProjectedReadiness } = require("./projected-readiness-patch");
+const { installEditorialHardening } = require("./editorial-hardening-patch");
 const { installPlanFingerprintGuard } = require("./plan-fingerprint-patch");
 const PageBuilderPersistenceService = require("../page-builder-persistence/service");
 const { MiniSiteStructuredDataService } = require("../minisite-structured-data/service");
 
 installProjectedReadiness(MiniSiteSeoEnrichmentService);
+installEditorialHardening(MiniSiteSeoEnrichmentService);
 installPlanFingerprintGuard(MiniSiteSeoEnrichmentService);
 
 function sendError(response, error) {
