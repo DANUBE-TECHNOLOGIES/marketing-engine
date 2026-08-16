@@ -5,14 +5,14 @@ Ce document enregistre la baseline MSE-25.30 actuellement validée par GitHub Ac
 ## Baseline validée
 
 ```text
-MSE_25_30_VALIDATED_BASE_SHA=f2bc860dfaf3887560ae0da7a18ea884a1dce1ad
+MSE_25_30_VALIDATED_BASE_SHA=c3e8845eb603e8685151e783c826083fec836ec0
 ```
 
 Validation associée :
 
 ```text
 Workflow   : MSE-25 Search Console and indexation checks
-Run        : 31952176736
+Run        : 31955370833
 Event      : push
 Conclusion : success
 ```
@@ -23,53 +23,47 @@ La baseline inclut notamment les durcissements éditoriaux et opératoires suiva
 
 - promotion d'une page publiée sans contenu visible en blocage `EMPTY_INDEXABLE_CONTENT`, tout en conservant les contenus simplement courts au niveau warning ;
 - naturalisation déterministe des formulations locales et des métadonnées projetées, notamment les contractions françaises et la suppression des répétitions de type `TUI STORE Amilly à Amilly` ;
-- ajout d'une différenciation éditoriale déterministe sur les pages `services`, `engagements` et `destinations`, sans inventer de communes ;
-- exclusion réseau explicite et auditable, avec `tui-store-melun` exclu par défaut et surcharge possible via `MSE_25_30_EXCLUDED_SITE_SLUGS` ;
-- exclusion du même périmètre dans le gate sitemap projeté ;
-- exposition des agences exclues dans le preview réseau ;
-- verrouillage du périmètre d'exclusion dans le fingerprint approuvé afin qu'un changement d'environnement entre preview et apply interdise toute écriture ;
-- validation post-rollout renforcée pour traiter correctement les changements de niveau page `seoTitle` et `metaDescription`, tout en conservant la validation historique des blocs Website Designer V2 ;
-- conservation dans le rapport de rollout du périmètre d'exclusion approuvé (`excludedSiteSlugs` et `excludedAgencies`) afin de prouver après coup les agences volontairement hors lot ;
-- audit croisé de ce périmètre contre les agences réellement écrites et le `rollbackManifest` : une agence exclue réapparue provoque `MSE_25_30_ROLLOUT_EXCLUDED_SCOPE_VIOLATION` et le rapport n'est pas certifié ;
-- exigence de `approvedScopeAudit.ok=true` avant toute validation post-rollout, avec recalcul indépendant de la preuve pour empêcher la réutilisation d'un rapport ancien ou incohérent ;
-- persistance de `approvedScope` et `approvedScopeAudit` jusque dans le rapport post-rollout final afin que la chaîne de preuve reste complète ;
-- audit d'intégrité du rollback : chaque entrée du manifeste doit correspondre exactement à une page `changed=true` du rapport d'apply avec les mêmes `agencyId`, `siteSlug`, `slug` et `rollbackVersionId`, sans entrée ajoutée, manquante ou dupliquée ;
-- le rollback contextuel exige également la preuve `approvedScopeAudit` avant toute restauration, sauf activation volontaire du mode legacy déjà explicitement protégé ;
-- audit transversal du rapport d'apply : `repository.head`, HEAD du preflight, fingerprint du plan approuvé et paramètres appliqués doivent rester strictement cohérents entre les différentes sections du rapport ; toute désynchronisation provoque `MSE_25_30_ROLLOUT_REPORT_INTEGRITY_MISMATCH` ;
-- certification immédiate de cette intégrité au moment de l'apply : le rapport de rollout persiste `rolloutReportIntegrity` dès sa création, en plus de `approvedScope` et `approvedScopeAudit` ; si la certification échoue après des écritures, le wrapper force `operatorAttentionRequired=true` au lieu de présenter le rollout comme proprement finalisé ;
-- le rollback et la validation post-rollout recalculent ensuite cet audit transversal avant toute restauration ou lecture de validation, et le rapport post-rollout persiste également `rolloutReportIntegrity` ;
-- ajout d'un contrôle hors ligne `mse-25.30:rollout-report-check` qui vérifie, sans appel réseau ni écriture, l'intégrité générale du rapport, la preuve d'exclusion et la correspondance exacte du manifeste de rollback ;
-- protection de `backend/package.json` dans `RUNTIME_PROTECTED_PATHS`, car les commandes npm sélectionnent les wrappers opérateur sécurisés d'apply, contrôle hors ligne, rollback et validation ;
-- exigence des capacités de durcissement dans le health check du preflight.
-
-Le répertoire complet `backend/src/modules/minisite-seo-enrichment`, `backend/package.json` ainsi que les scripts de rollout MSE-25.30 restent protégés par `RUNTIME_PROTECTED_PATHS`. Toute dérive de ces chemins après cette baseline doit provoquer `MSE_25_30_PREFLIGHT_RUNTIME_CHANGED`.
+- différenciation éditoriale déterministe sur les pages `services`, `engagements` et `destinations`, sans inventer de communes ;
+- exclusion réseau explicite et auditable, avec `tui-store-melun` exclu par défaut et verrouillé dans le fingerprint approuvé ;
+- audit croisé des agences exclues contre les écritures réelles et le manifeste de rollback ;
+- validation post-rollout des changements Website Designer V2, métadonnées, HTML public, sitemap et indexabilité ;
+- audit d'intégrité du manifeste de rollback : aucune entrée ajoutée, manquante ou dupliquée n'est acceptée ;
+- audit transversal du rapport d'apply : HEAD Git, fingerprint et paramètres doivent rester cohérents entre toutes les sections de preuve ;
+- certification immédiate de `approvedScope`, `approvedScopeAudit` et `rolloutReportIntegrity` au moment de l'apply ;
+- contrôle hors ligne `mse-25.30:rollout-report-check` avant toute opération aval ;
+- **attestation GitHub Actions de la baseline** : le preflight n'accepte plus une SHA uniquement parce qu'elle est fournie par `MSE_25_30_VALIDATED_BASE_SHA` ; il exige un run `push` terminé avec `conclusion=success` sur le workflow MSE-25 et la branche attendue ;
+- l'apply ré-atteste la même baseline auprès de GitHub Actions avant toute écriture et compare cette preuve à celle du preflight ;
+- cette attestation est conservée dans les sections `repository`, `preflight` et `result.preflight` du rapport de rollout ; le checker offline, le rollback et le post-rollout recalculent ensuite `baselineAttestationAudit` et refusent toute preuve incohérente ;
+- protection de `backend/package.json`, du module `backend/src/modules/minisite-seo-enrichment` et des scripts MSE-25.30 via `RUNTIME_PROTECTED_PATHS`.
 
 ## Utilisation sur la machine d'administration
 
-Après avoir synchronisé la branche et redémarré le backend avec le nouveau runtime, utiliser cette baseline explicitement avant le preflight :
+Après synchronisation de la branche et redémarrage du backend avec le nouveau runtime :
 
 ```bash
-export MSE_25_30_VALIDATED_BASE_SHA=f2bc860dfaf3887560ae0da7a18ea884a1dce1ad
+export MSE_25_30_VALIDATED_BASE_SHA=c3e8845eb603e8685151e783c826083fec836ec0
 npm run mse-25.30:preflight
 ```
 
-Le HEAD peut être plus récent que cette baseline uniquement si les commits intermédiaires ne modifient aucun chemin runtime protégé. Le preflight vérifie cette propriété avant tout appel réseau de preview.
+Le preflight doit pouvoir joindre l'API GitHub. Pour limiter les risques de rate-limit, `GITHUB_TOKEN` ou `GH_TOKEN` peut être défini ; aucun token n'est requis pour un dépôt public tant que la limite anonyme GitHub n'est pas atteinte. Une indisponibilité de l'attestation bloque volontairement le preflight avec `MSE_25_30_PREFLIGHT_BASELINE_CI_ATTESTATION_UNAVAILABLE`.
 
-Le preview doit rendre explicites `excludedSiteSlugs` et `excludedAgencies`. Par défaut, `tui-store-melun` ne fait donc pas partie du plan de rollout. Pour modifier volontairement ce périmètre, définir `MSE_25_30_EXCLUDED_SITE_SLUGS` avant de relancer le preflight ; tout changement du plan produit un nouveau fingerprint et rend un ancien rapport impropre à l'apply.
+Le HEAD peut être plus récent que cette baseline uniquement si les commits intermédiaires ne modifient aucun chemin runtime protégé. Le preflight vérifie cette propriété localement puis vérifie que la SHA de baseline possède réellement une exécution GitHub Actions réussie.
 
-Après un apply réussi, le rapport de rollout doit contenir `approvedScope`, `approvedScopeAudit` et `rolloutReportIntegrity`, tous certifiés au moment de l'apply. L'audit d'exclusion doit confirmer qu'aucun `siteSlug` exclu n'apparaît ni dans `result.agencies`, ni dans le manifeste de rollback. L'audit transversal doit confirmer que le HEAD Git, le fingerprint et les paramètres restent cohérents dans toutes les sections de preuve.
+Le preview doit rendre explicites `excludedSiteSlugs` et `excludedAgencies`. Par défaut, `tui-store-melun` ne fait pas partie du plan de rollout. Tout changement du périmètre produit un nouveau fingerprint et rend un ancien rapport impropre à l'apply.
 
-Avant toute opération aval, le rapport peut être contrôlé localement sans backend :
+L'apply doit être lancé uniquement à partir du rapport de preflight correspondant. Avant les écritures, il ré-atteste la baseline sur GitHub et refuse une substitution de SHA ou une attestation contradictoire avec `MSE_25_30_NETWORK_ROLLOUT_BASELINE_CI_ATTESTATION_MISMATCH`.
+
+Après un apply réussi, le rapport de rollout doit contenir `approvedScope`, `approvedScopeAudit`, `rolloutReportIntegrity` ainsi que la preuve de baseline dans `repository.validatedBaselineAttestation`, `preflight.baselineAttestation` et `result.preflight.baselineAttestation`.
+
+Avant toute opération aval, contrôler localement le rapport :
 
 ```bash
 npm run mse-25.30:rollout-report-check -- /chemin/vers/mse-25-30-rollout-....json
 ```
 
-Cette commande est strictement read-only et offline. Elle exécute `rolloutReportIntegrity`, `approvedScopeAudit` et `rollbackManifestAudit` et doit retourner `ok: true` avant d'utiliser le rapport comme preuve opératoire.
+Cette commande est strictement read-only et offline. Elle vérifie `rolloutReportIntegrity`, `baselineAttestationAudit`, `approvedScopeAudit` et `rollbackManifestAudit` et doit retourner `ok: true`.
 
-Le rollback doit être lancé via `npm run mse-25.30:network-rollback`. Avant le premier POST de restauration, le wrapper vérifie l'intégrité générale du rapport, la preuve d'exclusion et recoupe le manifeste contre les pages réellement modifiées par le rollout. Toute divergence bloque le rollback avant la première écriture.
-
-La validation post-rollout doit être lancée via `npm run mse-25.30:post-rollout-validate`. Elle refuse un rapport d'apply dont la chaîne de preuve interne ou l'exclusion auditée est incohérente, puis persiste `approvedScope`, `approvedScopeAudit` et `rolloutReportIntegrity` dans son propre rapport final en plus des preuves Website Designer V2, métadonnées, HTML public, sitemap et indexabilité.
+Le rollback doit être lancé via `npm run mse-25.30:network-rollback`. Avant le premier POST de restauration, le wrapper vérifie les quatre chaînes de preuve. La validation post-rollout via `npm run mse-25.30:post-rollout-validate` exige les mêmes garanties avant ses lectures de validation.
 
 ## Règle de promotion
 
