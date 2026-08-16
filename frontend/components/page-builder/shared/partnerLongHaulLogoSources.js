@@ -53,12 +53,6 @@ export const PARTNER_LONG_HAUL_LOGO_SOURCES = Object.freeze({
     assetUrl: "",
     note: "Official LuxairTours source; do not substitute the Luxair airline-only mark for the tour-operator identity.",
   },
-  ollandini: {
-    status: "official-source-page",
-    sourceUrl: "https://www.ollandini.fr/",
-    assetUrl: "",
-    note: "Official Ollandini source; masterbrand asset still requires vetting.",
-  },
 });
 
 export function getLongHaulLogoSource(partnerId) {
