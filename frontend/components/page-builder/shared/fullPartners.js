@@ -8,14 +8,7 @@ export const PARTNER_DIRECTORY_CATEGORIES = Object.freeze([
   { id: "france-europe", label: "France, Europe, résidences & bien-être", eyebrow: "France & Europe" },
 ]);
 
-const P = (id, name, category, summary, tags = [], logoUrl = "") => ({
-  id,
-  name,
-  category,
-  summary,
-  tags,
-  logoUrl,
-});
+const P = (id, name, category, summary, tags = [], logoUrl = "") => ({ id, name, category, summary, tags, logoUrl });
 
 // Inventaire initial reconstitué à partir des captures réseau transmises.
 // Les fiches sont volontairement éditoriales et concises : elles seront enrichies
@@ -48,6 +41,7 @@ export const FULL_PARTNERS = Object.freeze([
   P("belambra", "Belambra Clubs", "sejours", "Clubs et résidences de vacances en France, adaptés aux familles, aux séjours balnéaires et à la montagne.", ["France", "club", "famille"]),
   P("boomerang", "Boomerang Voyages", "sejours", "Séjours balnéaires, clubs et packages vers de nombreuses destinations soleil et long-courrier.", ["soleil", "package"]),
   P("exotismes", "Exotismes", "sejours", "Séjours et voyages vers les îles et destinations tropicales, avec une forte expertise du long-courrier balnéaire.", ["îles", "tropical", "long-courrier"], "/partners/exotismes.webp"),
+  P("jet-tours", "Jet tours", "sejours", "Séjours, clubs, circuits et voyages personnalisés, avec une offre allant des vacances soleil aux itinéraires long-courriers.", ["clubs", "séjours", "circuits"]),
   P("hotels-lagons", "Hôtels & Lagons", "sejours", "Séjours balnéaires et voyages dans les îles, centrés sur l'hôtellerie et les expériences au bord de l'eau.", ["îles", "hôtellerie"]),
   P("lmx-voyages", "LMX Voyages", "sejours", "Séjours packagés et vacances loisirs avec une offre large d'hôtels et de destinations accessibles.", ["séjours", "hôtels"]),
   P("mega-vacances", "Mega Vacances", "sejours", "Séjours loisirs et packages vacances vers différentes destinations balnéaires et urbaines.", ["séjours", "loisirs"]),
