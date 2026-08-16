@@ -6,6 +6,7 @@ const legacyRollback = require("../../../scripts/mse-25-30-network-rollback");
 const { assertApprovedScopeAudit } = require("./post-rollout-audit");
 const { normalizeSiteSlug } = require("./network-apply-audit");
 const { assertRolloutReportIntegrity } = require("./rollout-report-integrity");
+const { assertBaselineAttestation } = require("./baseline-attestation-audit");
 
 function normalizePageSlug(value) {
   const slug = String(value ?? "").trim().replace(/^\/+|\/+$/g, "").toLowerCase();
@@ -114,6 +115,7 @@ async function run(options = {}) {
   }
 
   const rolloutReportIntegrity = assertRolloutReportIntegrity(loaded.report);
+  const baselineAttestationAudit = assertBaselineAttestation(loaded.report);
   const approvedScopeAudit = assertApprovedScopeAudit(loaded.report);
   const rollbackManifestAudit = assertRollbackManifestIntegrity(loaded.report);
   const result = await legacyRollback.run({
@@ -123,6 +125,7 @@ async function run(options = {}) {
   return {
     ...result,
     rolloutReportIntegrity,
+    baselineAttestationAudit,
     approvedScopeAudit,
     rollbackManifestAudit,
   };
