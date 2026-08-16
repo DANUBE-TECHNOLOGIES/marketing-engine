@@ -5,9 +5,11 @@ const assert = require("node:assert/strict");
 const {
   DEFAULT_VALIDATED_BASE_SHA,
   EXPECTED_BRANCH,
+  EXPECTED_GITHUB_WORKFLOW_BLOB_SHA,
   GITHUB_REPOSITORY,
   GITHUB_WORKFLOW_ID,
   GITHUB_WORKFLOW_NAME,
+  GITHUB_WORKFLOW_PATH,
   REQUIRED_HEALTH_FLAGS,
   RUNTIME_PROTECTED_PATHS,
   assertHealth,
@@ -20,7 +22,7 @@ const {
 
 const PREFLIGHT_PATH = "backend/scripts/mse-25-30-preflight.js";
 const PACKAGE_PATH = "backend/package.json";
-const VALIDATED_SHA = "a560c26174ca310a7fd41aa741eecfca112f9d11";
+const VALIDATED_SHA = "6cfc1dde265ad3f4ae376b467133ece612ff8343";
 
 function validState(overrides = {}) {
   return {
@@ -28,6 +30,8 @@ function validState(overrides = {}) {
     head: "1627cfca69ae02a7ea5c3a356cd3ebb6762a4bd4",
     dirty: false,
     validatedBaseSha: VALIDATED_SHA,
+    workflowPath: GITHUB_WORKFLOW_PATH,
+    workflowBlobSha: EXPECTED_GITHUB_WORKFLOW_BLOB_SHA,
     baselineAncestor: true,
     protectedChanges: [],
     ...overrides,
@@ -45,16 +49,16 @@ function validHealth(overrides = {}) {
 
 function successfulWorkflowRun(overrides = {}) {
   return {
-    id: 31955547623,
+    id: 31955664054,
     name: GITHUB_WORKFLOW_NAME,
     head_sha: VALIDATED_SHA,
     head_branch: EXPECTED_BRANCH,
     event: "push",
     status: "completed",
     conclusion: "success",
-    html_url: "https://github.com/DANUBE-TECHNOLOGIES/marketing-engine/actions/runs/31955547623",
-    created_at: "2026-08-16T15:24:24Z",
-    updated_at: "2026-08-16T15:25:00Z",
+    html_url: "https://github.com/DANUBE-TECHNOLOGIES/marketing-engine/actions/runs/31955664054",
+    created_at: "2026-08-16T15:26:41Z",
+    updated_at: "2026-08-16T15:27:30Z",
     ...overrides,
   };
 }
@@ -102,13 +106,25 @@ test("preflight refuse un runtime MSE-25.30 modifie depuis la baseline validee",
   );
 });
 
-test("preflight protege aussi sa propre chaine de securite contre une derive de baseline", () => {
+test("preflight protège sa propre chaîne de sécurité et la définition du workflow CI", () => {
   assert.ok(RUNTIME_PROTECTED_PATHS.includes(PREFLIGHT_PATH), `${PREFLIGHT_PATH} doit rester protege par le preflight`);
+  assert.ok(RUNTIME_PROTECTED_PATHS.includes(GITHUB_WORKFLOW_PATH), `${GITHUB_WORKFLOW_PATH} doit rester protege par le preflight`);
+
   assert.throws(
-    () => assertRepositoryState(validState({ protectedChanges: [PREFLIGHT_PATH] })),
+    () => assertRepositoryState(validState({ workflowBlobSha: "0".repeat(40) })),
+    (error) => {
+      assert.equal(error.code, "MSE_25_30_PREFLIGHT_CI_WORKFLOW_CHANGED");
+      assert.equal(error.details.workflowPath, GITHUB_WORKFLOW_PATH);
+      assert.equal(error.details.expectedBlobSha, EXPECTED_GITHUB_WORKFLOW_BLOB_SHA);
+      return true;
+    },
+  );
+
+  assert.throws(
+    () => assertRepositoryState(validState({ protectedChanges: [GITHUB_WORKFLOW_PATH] })),
     (error) => {
       assert.equal(error.code, "MSE_25_30_PREFLIGHT_RUNTIME_CHANGED");
-      assert.deepEqual(error.details.protectedChanges, [PREFLIGHT_PATH]);
+      assert.deepEqual(error.details.protectedChanges, [GITHUB_WORKFLOW_PATH]);
       return true;
     },
   );
@@ -160,11 +176,13 @@ test("preflight construit la requête GitHub uniquement avec une baseline explic
 test("preflight accepte uniquement le run push reussi exact de la baseline", () => {
   const attestation = selectSuccessfulBaselineRun({ workflow_runs: [successfulWorkflowRun()] }, VALIDATED_SHA);
   assert.equal(attestation.ok, true);
-  assert.equal(attestation.runId, 31955547623);
+  assert.equal(attestation.runId, 31955664054);
   assert.equal(attestation.headSha, VALIDATED_SHA);
   assert.equal(attestation.headBranch, EXPECTED_BRANCH);
   assert.equal(attestation.event, "push");
   assert.equal(attestation.conclusion, "success");
+  assert.equal(attestation.workflowPath, GITHUB_WORKFLOW_PATH);
+  assert.equal(attestation.workflowBlobSha, EXPECTED_GITHUB_WORKFLOW_BLOB_SHA);
 });
 
 test("preflight refuse une baseline seulement validee manuellement, sur une autre branche ou en echec", () => {
@@ -217,5 +235,7 @@ test("preflight construit et conserve l'attestation GitHub Actions certifiee", a
   assert.equal(attestation.repository, GITHUB_REPOSITORY);
   assert.equal(attestation.workflowId, GITHUB_WORKFLOW_ID);
   assert.equal(attestation.workflowName, GITHUB_WORKFLOW_NAME);
-  assert.equal(attestation.runId, 31955547623);
+  assert.equal(attestation.runId, 31955664054);
+  assert.equal(attestation.workflowPath, GITHUB_WORKFLOW_PATH);
+  assert.equal(attestation.workflowBlobSha, EXPECTED_GITHUB_WORKFLOW_BLOB_SHA);
 });
