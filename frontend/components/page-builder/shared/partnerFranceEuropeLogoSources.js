@@ -26,7 +26,27 @@ export const PARTNER_FRANCE_EUROPE_LOGO_SOURCES = Object.freeze({
     status: "multi-brand-review",
     sourceUrl: "https://www.pierreetvacances.com/",
     assetUrl: "",
-    note: "Catalogue entry groups Pierre & Vacances, Center Parcs and maeva; logo treatment must not imply that one masterbrand represents all three without validation.",
+    brands: Object.freeze({
+      "pierre-vacances": {
+        name: "Pierre & Vacances",
+        sourceUrl: "https://www.pierreetvacances.com/",
+        assetUrl: "",
+        status: "source-pending",
+      },
+      "center-parcs": {
+        name: "Center Parcs",
+        sourceUrl: "https://www.centerparcs.fr/",
+        assetUrl: "",
+        status: "source-pending",
+      },
+      maeva: {
+        name: "maeva",
+        sourceUrl: "https://www.maeva.com/",
+        assetUrl: "",
+        status: "source-pending",
+      },
+    }),
+    note: "Public catalogue keeps one compact group entry, but each of the three brands must retain its own vetted logo asset. Never use one brand logo as a proxy for the other two.",
   },
   ollandini: {
     status: "official-source-page",
