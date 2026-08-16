@@ -9,6 +9,11 @@ const { run: runPreview } = require("./mse-25-30-network-preview");
 const DEFAULT_BACKEND_ORIGIN = "http://127.0.0.1:4000";
 const EXPECTED_BRANCH = "feature/mse-25-30-local-seo-optimizer";
 const DEFAULT_VALIDATED_BASE_SHA = "04c869acf5d813f899689670da69a70c3ee4e2e0";
+const GITHUB_REPOSITORY = "DANUBE-TECHNOLOGIES/marketing-engine";
+const GITHUB_WORKFLOW_ID = 334395003;
+const GITHUB_WORKFLOW_NAME = "MSE-25 Search Console and indexation checks";
+const DEFAULT_GITHUB_API_ORIGIN = "https://api.github.com";
+const COMMIT_SHA_PATTERN = /^[0-9a-f]{40}$/i;
 const RUNTIME_PROTECTED_PATHS = Object.freeze([
   "backend/package.json",
   "backend/src/modules/minisite-seo-enrichment",
@@ -40,6 +45,10 @@ const DEFAULT_REPORT_DIR = path.join(os.homedir(), "mse-25-30-reports");
 
 function normalizeOrigin(value) {
   return String(value || DEFAULT_BACKEND_ORIGIN).trim().replace(/\/+$/g, "");
+}
+
+function normalizeGithubApiOrigin(value) {
+  return String(value || DEFAULT_GITHUB_API_ORIGIN).trim().replace(/\/+$/g, "");
 }
 
 function gitValue(args) {
@@ -163,6 +172,104 @@ async function jsonRequest(url, options = {}) {
   return payload;
 }
 
+function baselineWorkflowRunsUrl(validatedBaseSha, {
+  githubApiOrigin = process.env.MSE_25_30_GITHUB_API_ORIGIN || DEFAULT_GITHUB_API_ORIGIN,
+  repository = GITHUB_REPOSITORY,
+  workflowId = GITHUB_WORKFLOW_ID,
+} = {}) {
+  const sha = String(validatedBaseSha || "").trim().toLowerCase();
+  if (!COMMIT_SHA_PATTERN.test(sha)) {
+    const error = new Error("La baseline MSE-25.30 doit être une SHA Git complète de 40 caractères.");
+    error.code = "MSE_25_30_PREFLIGHT_BASELINE_SHA_INVALID";
+    error.details = { validatedBaseSha: validatedBaseSha || null };
+    throw error;
+  }
+  const apiOrigin = normalizeGithubApiOrigin(githubApiOrigin);
+  return `${apiOrigin}/repos/${repository}/actions/workflows/${workflowId}/runs?head_sha=${encodeURIComponent(sha)}&status=success&per_page=10`;
+}
+
+function selectSuccessfulBaselineRun(payload, validatedBaseSha, {
+  expectedBranch = EXPECTED_BRANCH,
+  workflowName = GITHUB_WORKFLOW_NAME,
+} = {}) {
+  const sha = String(validatedBaseSha || "").trim().toLowerCase();
+  const runs = Array.isArray(payload?.workflow_runs) ? payload.workflow_runs : [];
+  const run = runs.find((item) =>
+    String(item?.head_sha || "").trim().toLowerCase() === sha
+    && item?.status === "completed"
+    && item?.conclusion === "success"
+    && item?.name === workflowName
+    && item?.event === "push"
+    && item?.head_branch === expectedBranch
+  );
+
+  if (!run) {
+    const error = new Error(`Aucune exécution GitHub Actions réussie ne certifie la baseline ${sha || "(inconnue)"}.`);
+    error.code = "MSE_25_30_PREFLIGHT_BASELINE_CI_NOT_ATTESTED";
+    error.details = {
+      validatedBaseSha: sha || null,
+      expectedBranch,
+      workflowName,
+      candidateRuns: runs.map((item) => ({
+        id: item?.id ?? null,
+        name: item?.name ?? null,
+        headSha: item?.head_sha ?? null,
+        headBranch: item?.head_branch ?? null,
+        event: item?.event ?? null,
+        status: item?.status ?? null,
+        conclusion: item?.conclusion ?? null,
+      })),
+    };
+    throw error;
+  }
+
+  return {
+    ok: true,
+    repository: GITHUB_REPOSITORY,
+    workflowId: GITHUB_WORKFLOW_ID,
+    workflowName: run.name,
+    runId: run.id,
+    headSha: String(run.head_sha).toLowerCase(),
+    headBranch: run.head_branch,
+    event: run.event,
+    status: run.status,
+    conclusion: run.conclusion,
+    htmlUrl: run.html_url || null,
+    createdAt: run.created_at || null,
+    updatedAt: run.updated_at || null,
+  };
+}
+
+async function attestValidatedBaseline(validatedBaseSha, {
+  request = jsonRequest,
+  githubToken = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || "",
+  githubApiOrigin,
+  expectedBranch = EXPECTED_BRANCH,
+} = {}) {
+  const url = baselineWorkflowRunsUrl(validatedBaseSha, { githubApiOrigin });
+  let payload;
+  try {
+    payload = await request(url, {
+      headers: {
+        Accept: "application/vnd.github+json",
+        "User-Agent": "mondescale-mse-25-30-preflight",
+        ...(githubToken ? { Authorization: `Bearer ${githubToken}` } : {}),
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+    });
+  } catch (cause) {
+    const error = new Error("Impossible de vérifier auprès de GitHub Actions que la baseline MSE-25.30 a été validée par la CI.");
+    error.code = "MSE_25_30_PREFLIGHT_BASELINE_CI_ATTESTATION_UNAVAILABLE";
+    error.details = {
+      validatedBaseSha: String(validatedBaseSha || "").trim().toLowerCase() || null,
+      cause: cause?.message || String(cause),
+      causeCode: cause?.code || null,
+    };
+    throw error;
+  }
+  return selectSuccessfulBaselineRun(payload, validatedBaseSha, { expectedBranch });
+}
+
 function reportPath(value) {
   if (value) return path.resolve(value);
   const directory = path.resolve(process.env.MSE_25_30_REPORT_DIR || DEFAULT_REPORT_DIR);
@@ -173,7 +280,12 @@ function reportPath(value) {
 
 async function run({ backendOrigin, tenantSlug, output, expectedBranch, allowDirty = false } = {}) {
   const repo = repositoryState();
-  assertRepositoryState(repo, { expectedBranch: expectedBranch || process.env.MSE_25_30_EXPECTED_BRANCH || EXPECTED_BRANCH, allowDirty });
+  const resolvedExpectedBranch = expectedBranch || process.env.MSE_25_30_EXPECTED_BRANCH || EXPECTED_BRANCH;
+  assertRepositoryState(repo, { expectedBranch: resolvedExpectedBranch, allowDirty });
+  const validatedBaselineAttestation = await attestValidatedBaseline(repo.validatedBaseSha, {
+    expectedBranch: resolvedExpectedBranch,
+  });
+  repo.validatedBaselineAttestation = validatedBaselineAttestation;
 
   const origin = normalizeOrigin(backendOrigin || process.env.BACKEND_ORIGIN);
   const tenant = String(tenantSlug || process.env.TENANT_SLUG || "mondescale").trim();
@@ -222,18 +334,27 @@ if (require.main === module) {
 }
 
 module.exports = {
+  COMMIT_SHA_PATTERN,
+  DEFAULT_GITHUB_API_ORIGIN,
   DEFAULT_REPORT_DIR,
   DEFAULT_VALIDATED_BASE_SHA,
   EXPECTED_BRANCH,
+  GITHUB_REPOSITORY,
+  GITHUB_WORKFLOW_ID,
+  GITHUB_WORKFLOW_NAME,
   REQUIRED_HEALTH_FLAGS,
   RUNTIME_PROTECTED_PATHS,
   assertHealth,
   assertRepositoryState,
+  attestValidatedBaseline,
+  baselineWorkflowRunsUrl,
   gitSucceeds,
   jsonRequest,
+  normalizeGithubApiOrigin,
   normalizeOrigin,
   protectedChangesSince,
   repositoryState,
   reportPath,
+  selectSuccessfulBaselineRun,
   run,
 };
