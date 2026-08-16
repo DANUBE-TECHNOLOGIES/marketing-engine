@@ -17,6 +17,12 @@ export const PARTNER_LONG_HAUL_LOGO_SOURCES = Object.freeze({
     assetUrl: "",
     note: "Official Australie Tours site confirmed; retain only the masterbrand identity.",
   },
+  amerigo: {
+    status: "official-source-page",
+    sourceUrl: "https://www.amerigo.fr/",
+    assetUrl: "",
+    note: "Official Amérigo specialist tour-operator site confirmed; use only its masterbrand identity.",
+  },
   "beachcomber-tours": {
     status: "official-source-page",
     sourceUrl: "https://www.beachcombertours.fr/",
@@ -52,6 +58,18 @@ export const PARTNER_LONG_HAUL_LOGO_SOURCES = Object.freeze({
     sourceUrl: "https://www.luxairtours.lu/",
     assetUrl: "",
     note: "Official LuxairTours source; do not substitute the Luxair airline-only mark for the tour-operator identity.",
+  },
+  "gaeland-ashling": {
+    status: "official-source-page",
+    sourceUrl: "https://www.gaeland-ashling.com/",
+    assetUrl: "",
+    note: "Official Gaeland Ashling source confirmed; use only the Celtic-destinations specialist masterbrand.",
+  },
+  "planete-production": {
+    status: "official-source-page",
+    sourceUrl: "https://planeteproduction.fr/",
+    assetUrl: "",
+    note: "Official Planète Production site confirms the B2B travel-production identity; masterbrand asset still requires vetting.",
   },
 });
 
