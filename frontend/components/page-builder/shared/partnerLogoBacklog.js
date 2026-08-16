@@ -17,6 +17,7 @@ export const PARTNER_LOGO_BACKLOG = Object.freeze([
   { id: "top-of-travel", category: "circuits", priority: 2, state: "source-pending", sourceType: "official-site" },
   { id: "visit-europe", category: "circuits", priority: 2, state: "source-pending", sourceType: "official-site" },
   { id: "voyages-internationaux", category: "circuits", priority: 2, state: "source-pending", sourceType: "official-site" },
+  { id: "rev-vacances", category: "circuits", priority: 2, state: "source-pending", sourceType: "official-site", note: "Official Rev Vacances site confirmed; use only the REV VACANCES masterbrand from a vetted source." },
   { id: "worldia", category: "circuits", priority: 99, state: "catalogue-excluded", sourceType: "none", note: "Explicitly excluded from the public catalogue; do not source or ingest a logo." },
   { id: "pouchkine-tours", category: "circuits", priority: 2, state: "permission-required", sourceType: "brand-permission", note: "Pouchkine Tours identity is confirmed by Salaün Holidays, but the mark is protected and logo reproduction is held until authorisation." },
 
@@ -53,7 +54,6 @@ export const PARTNER_LOGO_BACKLOG = Object.freeze([
   { id: "mmv", category: "france-europe", priority: 2, state: "source-pending", sourceType: "official-site" },
   { id: "pierre-vacances-center-parcs", category: "france-europe", priority: 2, state: "source-pending", sourceType: "official-site" },
   { id: "ollandini", category: "france-europe", priority: 2, state: "source-pending", sourceType: "official-site", note: "Corsica specialist; source only the Ollandini masterbrand from its official site." },
-  { id: "rev-vacances", category: "france-europe", priority: 3, state: "verification-pending", sourceType: "identity-check" },
   { id: "odalys", category: "france-europe", priority: 2, state: "source-pending", sourceType: "official-site" },
   { id: "thalasso-n1", category: "france-europe", priority: 2, state: "source-pending", sourceType: "official-site" },
   { id: "villages-clubs-soleil", category: "france-europe", priority: 2, state: "source-pending", sourceType: "official-site" },
