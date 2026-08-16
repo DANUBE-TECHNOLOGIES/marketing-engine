@@ -81,7 +81,11 @@ Le préflight :
 7. calcule et archive l'empreinte du plan effectivement prévisualisé avec les paramètres qui ont servi à le produire ;
 8. archive un rapport JSON horodaté, par défaut sous `~/mse-25-30-reports/`.
 
+Le script `backend/scripts/mse-25-30-preflight.js` fait lui-même partie des chemins runtime protégés. Une modification de la chaîne de sécurité du préflight après la baseline validée doit donc provoquer `MSE_25_30_PREFLIGHT_RUNTIME_CHANGED`, au même titre qu'une modification du service d'enrichissement, du preview, de l'apply, du rollback ou de la validation post-rollout.
+
 La sortie contient le chemin exact `reportPath`. Le conserver : l'apply exigera ce même fichier.
+
+Une erreur `MSE_25_30_PREFLIGHT_RUNTIME_CHANGED` n'est pas un défaut à contourner : elle signifie que le code de rollout ou sa chaîne de sécurité a changé depuis la dernière baseline réellement validée. Ne jamais résoudre cette erreur en pointant arbitrairement `MSE_25_30_VALIDATED_BASE_SHA` vers un commit plus récent. La baseline ne doit avancer qu'après validation CI de la nouvelle chaîne runtime et de ses tests de sécurité.
 
 ## 6. Conditions obligatoires avant rollout
 
@@ -226,6 +230,8 @@ Après un rollback, refaire les contrôles publics et d'indexation appropriés a
 - Ne jamais réutiliser un préflight d'un autre HEAD, tenant ou backend.
 - Ne jamais appliquer un plan dont l'empreinte diffère de celle du preview approuvé.
 - Ne jamais modifier les paramètres du plan entre preview et apply ; toute modification impose un nouveau preview.
+- Ne jamais retirer le script de préflight de la liste des chemins runtime protégés.
+- Ne jamais faire avancer `MSE_25_30_VALIDATED_BASE_SHA` sans preuve de validation CI du runtime et des tests de sécurité concernés.
 - Lire les pages exclues et leur raison au même titre que les pages modifiées.
 - Ne jamais abaisser le seuil de similarité pour forcer un rollout sans analyse.
 - Ne jamais supprimer les versions Website Designer V2 référencées par un rapport de rollout encore actif.
