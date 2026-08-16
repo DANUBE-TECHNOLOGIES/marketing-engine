@@ -76,8 +76,13 @@ test("full partner directory exposes the network categories and supplier invento
   assert.match(circuitDetails, /Laponie/);
 
   assert.match(stayDetails, /belambra:/);
+  assert.match(stayDetails, /"plein-vent"/);
+  assert.match(stayDetails, /solea:/);
   assert.match(stayDetails, /voyamar:/);
   assert.match(stayDetails, /Club vacances/);
+  assert.match(stayDetails, /Club Jumbo/);
+  assert.match(stayDetails, /Océan Indien/);
+  assert.match(stayDetails, /Safari & plage/);
   assert.match(stayDetails, /Naya Club/);
   assert.match(stayDetails, /Pension complète/);
   assert.match(stayDetails, /Circuit privatif/);
