@@ -5,14 +5,14 @@ Ce document enregistre la baseline MSE-25.30 actuellement validée par GitHub Ac
 ## Baseline validée
 
 ```text
-MSE_25_30_VALIDATED_BASE_SHA=da16421f64e441abb081fef87b7d9a2c6dd449c6
+MSE_25_30_VALIDATED_BASE_SHA=97fb0e0bf78ed144201cdff57bbc1119aa0d9dbd
 ```
 
 Validation associée :
 
 ```text
 Workflow   : MSE-25 Search Console and indexation checks
-Run        : 31951938175
+Run        : 31952052520
 Event      : push
 Conclusion : success
 ```
@@ -36,7 +36,8 @@ La baseline inclut notamment les durcissements éditoriaux et opératoires suiva
 - audit d'intégrité du rollback : chaque entrée du manifeste doit correspondre exactement à une page `changed=true` du rapport d'apply avec les mêmes `agencyId`, `siteSlug`, `slug` et `rollbackVersionId`, sans entrée ajoutée, manquante ou dupliquée ;
 - le rollback contextuel exige également la preuve `approvedScopeAudit` avant toute restauration, sauf activation volontaire du mode legacy déjà explicitement protégé ;
 - audit transversal du rapport d'apply : `repository.head`, HEAD du preflight, fingerprint du plan approuvé et paramètres appliqués doivent rester strictement cohérents entre les différentes sections du rapport ; toute désynchronisation provoque `MSE_25_30_ROLLOUT_REPORT_INTEGRITY_MISMATCH` ;
-- le rollback et la validation post-rollout exécutent cet audit transversal avant toute restauration ou lecture de validation et le rapport post-rollout persiste aussi le résultat `rolloutReportIntegrity` ;
+- certification immédiate de cette intégrité au moment de l'apply : le rapport de rollout persiste désormais `rolloutReportIntegrity` dès sa création, en plus de `approvedScope` et `approvedScopeAudit` ; si la certification échoue après des écritures, le wrapper force `operatorAttentionRequired=true` au lieu de présenter le rollout comme proprement finalisé ;
+- le rollback et la validation post-rollout recalculent ensuite cet audit transversal avant toute restauration ou lecture de validation, et le rapport post-rollout persiste également `rolloutReportIntegrity` ;
 - protection de `backend/package.json` dans `RUNTIME_PROTECTED_PATHS`, car les commandes npm sélectionnent les wrappers opérateur sécurisés d'apply, rollback et validation ;
 - exigence des capacités de durcissement dans le health check du preflight.
 
@@ -47,7 +48,7 @@ Le répertoire complet `backend/src/modules/minisite-seo-enrichment`, `backend/p
 Après avoir synchronisé la branche et redémarré le backend avec le nouveau runtime, utiliser cette baseline explicitement avant le preflight :
 
 ```bash
-export MSE_25_30_VALIDATED_BASE_SHA=da16421f64e441abb081fef87b7d9a2c6dd449c6
+export MSE_25_30_VALIDATED_BASE_SHA=97fb0e0bf78ed144201cdff57bbc1119aa0d9dbd
 npm run mse-25.30:preflight
 ```
 
@@ -55,7 +56,7 @@ Le HEAD peut être plus récent que cette baseline uniquement si les commits int
 
 Le preview doit rendre explicites `excludedSiteSlugs` et `excludedAgencies`. Par défaut, `tui-store-melun` ne fait donc pas partie du plan de rollout. Pour modifier volontairement ce périmètre, définir `MSE_25_30_EXCLUDED_SITE_SLUGS` avant de relancer le preflight ; tout changement du plan produit un nouveau fingerprint et rend un ancien rapport impropre à l'apply.
 
-Après un apply réussi, le rapport de rollout doit contenir `approvedScope` et `approvedScopeAudit` avec le même périmètre exclu que le preflight approuvé. L'audit doit confirmer qu'aucun `siteSlug` exclu n'apparaît ni dans `result.agencies`, ni dans le manifeste de rollback. Les champs de preuve internes du rapport doivent également passer `rolloutReportIntegrity.ok=true` lorsqu'ils sont recalculés par les wrappers aval.
+Après un apply réussi, le rapport de rollout doit contenir `approvedScope`, `approvedScopeAudit` et `rolloutReportIntegrity`, tous certifiés au moment de l'apply. L'audit d'exclusion doit confirmer qu'aucun `siteSlug` exclu n'apparaît ni dans `result.agencies`, ni dans le manifeste de rollback. L'audit transversal doit confirmer que le HEAD Git, le fingerprint et les paramètres restent cohérents dans toutes les sections de preuve.
 
 Le rollback doit être lancé via `npm run mse-25.30:network-rollback`. Avant le premier POST de restauration, le wrapper vérifie l'intégrité générale du rapport, la preuve d'exclusion et recoupe le manifeste contre les pages réellement modifiées par le rollout. Toute divergence bloque le rollback avant la première écriture.
 
