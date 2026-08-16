@@ -12,6 +12,7 @@ test("full partner directory exposes the network categories and supplier invento
   const catalogue = read("components/page-builder/shared/fullPartners.js");
   const details = read("components/page-builder/shared/partnerDetails.js");
   const cruiseDetails = read("components/page-builder/shared/partnerCruiseDetails.js");
+  const circuitDetails = read("components/page-builder/shared/partnerCircuitDetails.js");
   const assetCoverage = read("components/page-builder/shared/partnerAssetCoverage.js");
   const logoBacklog = read("components/page-builder/shared/partnerLogoBacklog.js");
   const renderer = read("components/public-site/renderers/PartnerDirectoryRenderer.js");
@@ -64,6 +65,14 @@ test("full partner directory exposes the network categories and supplier invento
   assert.match(cruiseDetails, /Départ de Marseille/);
   assert.match(renderer, /getCruisePartnerDetails/);
 
+  assert.match(circuitDetails, /"destination-aventure"/);
+  assert.match(circuitDetails, /nordiska:/);
+  assert.match(circuitDetails, /Trek & randonnée/);
+  assert.match(circuitDetails, /Voyage Signature/);
+  assert.match(circuitDetails, /Circuit accompagné/);
+  assert.match(circuitDetails, /Laponie/);
+  assert.match(renderer, /getCircuitPartnerDetails/);
+
   assert.match(catalogue, /\/partners\/kuoni-official\.webp/);
   assert.match(details, /Top Clubs/);
   assert.match(details, /Kappa Club/);
@@ -85,6 +94,10 @@ test("full partner directory exposes the network categories and supplier invento
   assert.match(logoBacklog, /permission-required/);
   assert.match(logoBacklog, /official-press-request/);
   assert.match(logoBacklog, /brand-permission/);
+  assert.match(logoBacklog, /"destination-aventure"/);
+  assert.match(logoBacklog, /"nordiska"/);
+  assert.match(logoBacklog, /"pouchkine-tours"/);
+  assert.match(logoBacklog, /verification-pending/);
 
   assert.match(renderer, /getPartnerDirectoryCategories/);
   assert.match(renderer, /categoryNav/);
