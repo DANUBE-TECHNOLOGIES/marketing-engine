@@ -12,9 +12,14 @@ async function loadModule(fileName) {
   return import(dataUrl);
 }
 
-const [{ FULL_PARTNERS, PARTNER_DIRECTORY_CATEGORIES }, logoBacklogModule] = await Promise.all([
+const [
+  { FULL_PARTNERS, PARTNER_DIRECTORY_CATEGORIES },
+  logoBacklogModule,
+  verificationModule,
+] = await Promise.all([
   loadModule("fullPartners.js"),
   loadModule("partnerLogoBacklog.js"),
+  loadModule("partnerVerification.js"),
 ]);
 
 const detailModules = await Promise.all([
@@ -30,6 +35,10 @@ const getters = detailModules
   .flatMap((module) => Object.entries(module))
   .filter(([name, value]) => /^get.*PartnerDetails$/.test(name) && typeof value === "function")
   .map(([, value]) => value);
+
+const getPartnerVerification = typeof verificationModule.getPartnerVerification === "function"
+  ? verificationModule.getPartnerVerification
+  : () => ({ status: "confirmed" });
 
 const categories = new Set(PARTNER_DIRECTORY_CATEGORIES.map((item) => item.id));
 const backlog = Array.isArray(logoBacklogModule.PARTNER_LOGO_BACKLOG)
@@ -60,11 +69,14 @@ const rows = FULL_PARTNERS.map((partner) => {
   const detail = getters.map((getter) => getter(partner.id)).find(Boolean) || null;
   const summaryLength = String(partner.summary || "").trim().length;
   const tagCount = Array.isArray(partner.tags) ? partner.tags.length : 0;
+  const verification = getPartnerVerification(partner.id);
 
   return {
     id: partner.id,
     name: partner.name,
     category: partner.category,
+    verificationStatus: verification.status,
+    verificationReason: verification.reason || null,
     hasLogo: Boolean(String(partner.logoUrl || "").trim()),
     hasDetails: Boolean(detail),
     hasLogoBacklog: backlogIds.has(partner.id),
@@ -78,6 +90,8 @@ const rows = FULL_PARTNERS.map((partner) => {
       tagCount > 3 ? "too-many-tags" : null,
       !detail ? "details-missing" : null,
       !partner.logoUrl && !backlogIds.has(partner.id) ? "logo-not-tracked" : null,
+      verification.status === "identity-review" ? "identity-review" : null,
+      verification.status === "asset-permission-review" ? "asset-permission-review" : null,
     ].filter(Boolean),
   };
 });
@@ -89,6 +103,10 @@ const structuralErrors = {
 };
 
 const editorialWarnings = rows.filter((row) => row.warnings.length);
+const identityReview = rows.filter((row) => row.verificationStatus === "identity-review");
+const assetPermissionReview = rows.filter((row) => row.verificationStatus === "asset-permission-review");
+const publicationConfirmed = rows.filter((row) => row.verificationStatus !== "identity-review");
+
 const byCategory = Object.fromEntries(
   [...categories].map((category) => {
     const categoryRows = rows.filter((row) => row.category === category);
@@ -96,6 +114,9 @@ const byCategory = Object.fromEntries(
       total: categoryRows.length,
       withLogo: categoryRows.filter((row) => row.hasLogo).length,
       withDetails: categoryRows.filter((row) => row.hasDetails).length,
+      publicationConfirmed: categoryRows.filter((row) => row.verificationStatus !== "identity-review").length,
+      identityReview: categoryRows.filter((row) => row.verificationStatus === "identity-review").length,
+      assetPermissionReview: categoryRows.filter((row) => row.verificationStatus === "asset-permission-review").length,
       warnings: categoryRows.reduce((sum, row) => sum + row.warnings.length, 0),
     }];
   })
@@ -105,17 +126,25 @@ const payload = {
   policy: {
     publicUx: "simple-first-progressive-details",
     logos: "individual-assets-only",
+    identity: "confirm-before-final-publication",
     maxVisibleTags: 2,
   },
   summary: {
     partners: rows.length,
     categories: categories.size,
+    publicationConfirmed: publicationConfirmed.length,
+    identityReview: identityReview.length,
+    assetPermissionReview: assetPermissionReview.length,
     withDetails: rows.filter((row) => row.hasDetails).length,
     withLogo: rows.filter((row) => row.hasLogo).length,
     trackedMissingLogos: rows.filter((row) => !row.hasLogo && row.hasLogoBacklog).length,
     editorialWarnings: editorialWarnings.length,
   },
   structuralErrors,
+  verification: {
+    identityReview,
+    assetPermissionReview,
+  },
   byCategory,
   editorialWarnings,
 };
