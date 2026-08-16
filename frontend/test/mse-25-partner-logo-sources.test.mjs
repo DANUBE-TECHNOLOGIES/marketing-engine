@@ -12,6 +12,8 @@ test("partner logo sourcing keeps vetted assets separate from press and permissi
   const cruiseSources = read("components/page-builder/shared/partnerCruiseLogoSources.js");
   const circuitSources = read("components/page-builder/shared/partnerCircuitLogoSources.js");
   const staySources = read("components/page-builder/shared/partnerStayLogoSources.js");
+  const stayDetails = read("components/page-builder/shared/partnerStayDetails.js");
+  const catalogue = read("components/page-builder/shared/fullPartners.js");
   const verification = read("components/page-builder/shared/partnerVerification.js");
   const backlog = read("components/page-builder/shared/partnerLogoBacklog.js");
   const queue = read("scripts/partner-logo-work-queue.mjs");
@@ -34,10 +36,18 @@ test("partner logo sourcing keeps vetted assets separate from press and permissi
 
   assert.match(staySources, /belambra[\s\S]*permission-review/);
   assert.match(staySources, /boomerang[\s\S]*official-source-page/);
+  assert.match(staySources, /"jet-tours"[\s\S]*official-source-page/);
+  assert.match(staySources, /"jet-tours"[\s\S]*jettours\.com/);
+  assert.match(staySources, /"plein-vent"[\s\S]*official-source-page/);
   assert.match(staySources, /mondial-tourisme[\s\S]*official-source-page/);
   assert.match(staySources, /heliades[\s\S]*permission-review/);
   assert.match(staySources, /voyamar[\s\S]*permission-review/);
   assert.match(staySources, /getStayLogoSource/);
+
+  assert.match(catalogue, /P\("jet-tours",\s*"Jet tours",\s*"sejours"/);
+  assert.match(catalogue, /P\("plein-vent",\s*"Plein Vent",\s*"sejours"/);
+  assert.match(stayDetails, /"jet-tours"[\s\S]*Club Jet tours/);
+  assert.match(stayDetails, /"plein-vent"[\s\S]*Club Jumbo/);
 
   for (const id of ["belambra", "heliades", "voyamar"]) {
     assert.match(verification, new RegExp(`${id}[\\s\\S]*asset-permission-review`));
