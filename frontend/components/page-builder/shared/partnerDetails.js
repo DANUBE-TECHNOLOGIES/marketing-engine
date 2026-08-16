@@ -1,5 +1,7 @@
 "use strict";
 
+// Transitional fallback for verified profiles that have not yet moved into a
+// category-specific detail module. Specialized modules are the source of truth.
 const DETAILS = Object.freeze({
   croisieurope: {
     destinations: ["Rhin", "Danube", "Seine", "Loire", "Douro", "Adriatique"],
@@ -107,52 +109,6 @@ const DETAILS = Object.freeze({
     destinations: ["Caraïbes", "Océan Indien", "Polynésie", "Maurice", "Seychelles", "Maldives", "Tahiti"],
     travelTypes: ["Séjour", "Combiné d'îles", "Circuit", "Croisière", "Voyage de noces"],
     website: "https://www.exotismes.fr/",
-  },
-
-  asia: {
-    destinations: ["Japon", "Thaïlande", "Vietnam", "Inde", "Indonésie", "Asie du Sud-Est"],
-    travelTypes: ["Voyage sur mesure", "Circuit privé", "Circuit accompagné", "Combiné"],
-    website: "https://www.asia.fr/",
-  },
-  "austral-lagons": {
-    destinations: ["Tahiti", "Seychelles", "Maurice", "Réunion", "Maldives", "Zanzibar", "Afrique australe"],
-    travelTypes: ["Voyage sur mesure", "Séjour haut de gamme", "Voyage de noces", "Safari", "Combiné"],
-    website: "https://australlagons.com/",
-  },
-  "beachcomber-tours": {
-    destinations: ["Maurice", "Seychelles", "Maldives", "Dubaï", "Abu Dhabi", "Oman"],
-    travelTypes: ["Séjour haut de gamme", "Voyage de noces", "Famille", "Golf", "Multi-centres"],
-  },
-  kuoni: {
-    destinations: ["Europe", "Afrique", "Amériques", "Asie", "Océan Indien", "Océanie", "Grand Nord & Antarctique"],
-    travelTypes: ["Circuit accompagné", "Circuit privé", "Séjour", "Autotour", "Croisière", "Voyage sur mesure"],
-    website: "https://www.kuoni.fr/",
-  },
-  worldia: {
-    destinations: ["Europe", "Asie", "Amérique du Nord", "Amérique du Sud", "Moyen-Orient", "Afrique", "Îles"],
-    travelTypes: ["Voyage sur mesure", "Road trip", "City break", "Expédition", "Itinéraire multi-destinations"],
-    website: "https://corp.worldia.com/fr/",
-  },
-  ollandini: {
-    destinations: ["Corse", "Ajaccio", "Balagne", "Golfe de Porto", "Sud Corse", "Sardaigne"],
-    travelTypes: ["Séjour", "Circuit en voiture", "Circuit en autocar", "Sur mesure", "Location", "Hôtel-club"],
-    website: "https://www.ollandini.fr/",
-  },
-
-  lagrange: {
-    destinations: ["France", "Europe", "Mer", "Montagne", "Campagne"],
-    travelTypes: ["Résidence de vacances", "Location", "Villa", "Chalet", "Camping", "Séjour bien-être"],
-    website: "https://www.vacances-lagrange.com/",
-  },
-  mmv: {
-    destinations: ["Alpes françaises", "Savoie", "Haute-Savoie", "Isère", "Hautes-Alpes", "Alpes-Maritimes"],
-    travelTypes: ["Club", "Résidence Club", "Séjour ski", "Montagne été", "Pension complète", "Demi-pension"],
-    website: "https://www.mmv.fr/",
-  },
-  "thalasso-n1": {
-    destinations: ["France", "Atlantique", "Bretagne", "Nouvelle-Aquitaine", "Méditerranée"],
-    travelTypes: ["Thalassothérapie", "Spa", "Bien-être", "Court séjour"],
-    website: "https://www.thalassonumero1.com/",
   },
 });
 
