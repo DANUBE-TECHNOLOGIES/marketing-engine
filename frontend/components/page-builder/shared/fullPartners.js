@@ -53,6 +53,7 @@ export const FULL_PARTNERS = Object.freeze([
   P("heliades", "Vacances Héliades", "sejours", "Séjours et circuits tournés vers la Méditerranée et les îles, avec une forte identité grecque et insulaire.", ["Grèce", "îles", "Méditerranée"]),
   P("voyamar", "Voyamar", "sejours", "Séjours, clubs et circuits avec une offre généraliste de destinations soleil et découvertes.", ["clubs", "circuits"]),
   P("aerosun", "Aérosun", "sejours", "Offres de séjours loisirs et balnéaires distribuées dans l'univers Voyamar.", ["séjours", "soleil"]),
+  P("travel-evasion", "Travel Evasion", "sejours", "Séjours, clubs francophones, circuits et croisières, avec une expertise forte de l'Égypte et du bassin méditerranéen.", ["Égypte", "séjours", "circuits"]),
 
   P("alma-latina", "Alma Latina", "sur-mesure", "Voyages à la carte et circuits dédiés aux cultures, paysages et grands itinéraires d'Amérique latine.", ["Amérique latine", "sur mesure"]),
   P("australie-tours", "Australie Tours", "sur-mesure", "Voyages sur mesure en Australie et dans le Pacifique, des grandes villes aux espaces naturels.", ["Australie", "Pacifique"]),
@@ -67,7 +68,6 @@ export const FULL_PARTNERS = Object.freeze([
   P("luxair-tours", "LuxairTours", "sur-mesure", "Séjours et packages aériens au départ du Luxembourg vers de nombreuses destinations de vacances.", ["séjours", "aérien"]),
   P("gaeland-ashling", "Gaeland Ashling", "sur-mesure", "Voyages personnalisés vers des destinations de caractère, avec une approche experte et thématique.", ["sur mesure", "expertise"]),
   P("planete-production", "Planète Production", "sur-mesure", "Voyages et programmes construits autour de destinations et expériences sélectionnées pour les agences partenaires.", ["voyage organisé", "expérience"]),
-  P("travel-evasion", "Travel Evasion", "sur-mesure", "Séjours et voyages distribués par les agences, avec une approche orientée loisirs et évasion.", ["loisirs", "séjours"]),
 
   P("campings-com", "Campings.com", "france-europe", "Séjours en camping et hébergements de plein air en France et en Europe, du mobil-home aux villages de vacances.", ["camping", "plein air"]),
   P("lagrange", "Lagrange Vacances", "france-europe", "Résidences, locations et séjours à la mer, à la montagne et à la campagne, principalement en France et en Europe.", ["résidence", "France"]),
