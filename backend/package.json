@@ -17,7 +17,7 @@
     "mse-25.30:network-preview": "node scripts/mse-25-30-network-preview.js",
     "mse-25.30:network-apply": "node scripts/mse-25-30-network-apply.js",
     "mse-25.30:network-rollback": "node scripts/mse-25-30-network-rollback.js",
-    "mse-25.30:post-rollout-validate": "node scripts/mse-25-30-post-rollout-validate.js"
+    "mse-25.30:post-rollout-validate": "node src/modules/minisite-seo-enrichment/post-rollout-validator.js"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",
