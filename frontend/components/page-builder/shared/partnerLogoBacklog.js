@@ -52,6 +52,71 @@ export const PARTNER_LOGO_BACKLOG = Object.freeze([
     state: "source-pending",
     sourceType: "official-site",
   },
+
+  {
+    id: "destination-aventure",
+    category: "circuits",
+    priority: 2,
+    state: "source-pending",
+    sourceType: "official-site",
+  },
+  {
+    id: "la-francaise-des-circuits",
+    category: "circuits",
+    priority: 2,
+    state: "source-pending",
+    sourceType: "official-site",
+  },
+  {
+    id: "salaun-holidays",
+    category: "circuits",
+    priority: 2,
+    state: "source-pending",
+    sourceType: "official-site",
+  },
+  {
+    id: "nordiska",
+    category: "circuits",
+    priority: 2,
+    state: "source-pending",
+    sourceType: "official-site",
+  },
+  {
+    id: "top-of-travel",
+    category: "circuits",
+    priority: 2,
+    state: "source-pending",
+    sourceType: "official-site",
+  },
+  {
+    id: "visit-europe",
+    category: "circuits",
+    priority: 2,
+    state: "source-pending",
+    sourceType: "official-site",
+  },
+  {
+    id: "voyages-internationaux",
+    category: "circuits",
+    priority: 2,
+    state: "source-pending",
+    sourceType: "official-site",
+  },
+  {
+    id: "worldia",
+    category: "circuits",
+    priority: 2,
+    state: "source-pending",
+    sourceType: "official-site",
+  },
+  {
+    id: "pouchkine-tours",
+    category: "circuits",
+    priority: 3,
+    state: "verification-pending",
+    sourceType: "identity-check",
+    note: "Ne pas intégrer de logo tant que la marque et sa source officielle ne sont pas confirmées.",
+  },
 ]);
 
 export function getPartnerLogoBacklog(category = "") {
