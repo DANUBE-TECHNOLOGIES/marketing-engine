@@ -29,6 +29,10 @@ const REQUIRED_HEALTH_FLAGS = Object.freeze([
   "networkAutomaticCompensation",
   "noindexContentWriteGuard",
   "managedRouteContentWriteGuard",
+  "editorialHardening",
+  "emptyIndexableContentGuard",
+  "networkAgencyExclusionGuard",
+  "deterministicAgencyDifferentiation",
   "approvedPlanFingerprintGuard",
 ]);
 const DEFAULT_REPORT_DIR = path.join(os.homedir(), "mse-25-30-reports");
