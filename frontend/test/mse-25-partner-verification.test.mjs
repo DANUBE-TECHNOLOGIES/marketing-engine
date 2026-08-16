@@ -13,7 +13,6 @@ test("partner verification distinguishes identity review from logo permission re
   const audit = read("scripts/partner-catalog-quality.mjs");
 
   for (const id of [
-    "pouchkine-tours",
     "hotels-lagons",
     "lmx-voyages",
     "mega-vacances",
@@ -29,8 +28,19 @@ test("partner verification distinguishes identity review from logo permission re
   }
 
   assert.match(verification, /status: "identity-review"/);
-  assert.match(verification, /ponant:[\s\S]*status: "asset-permission-review"/);
-  assert.match(verification, /"celestyal-cruises":[\s\S]*status: "asset-permission-review"/);
+
+  for (const id of [
+    "ponant",
+    "celestyal-cruises",
+    "cfc",
+    "salaun-holidays",
+    "nordiska",
+    "pouchkine-tours",
+  ]) {
+    const escaped = id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    assert.match(verification, new RegExp(`"?${escaped}"?:[\\s\\S]*?status: "asset-permission-review"`));
+  }
+
   assert.match(verification, /status: "confirmed"/);
   assert.match(verification, /isPartnerPublicationConfirmed/);
 
