@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const frontendRoot = path.resolve(here, "..");
 
-test("every partner has at most one editorial detail source", () => {
+test("confirmed partners have exactly one specialized editorial detail source", () => {
   const result = spawnSync(process.execPath, ["scripts/partner-detail-source-audit.mjs"], {
     cwd: frontendRoot,
     encoding: "utf8",
@@ -15,6 +15,8 @@ test("every partner has at most one editorial detail source", () => {
 
   assert.equal(result.status, 0, result.stdout || result.stderr);
   const payload = JSON.parse(result.stdout);
-  assert.equal(payload.policy, "one-editorial-detail-source-per-partner");
+  assert.equal(payload.policy, "one-specialized-editorial-source-per-confirmed-partner");
   assert.equal(payload.summary.duplicateSources, 0);
+  assert.equal(payload.summary.missingConfirmed, 0);
+  assert.ok(Array.isArray(payload.heldForIdentityReview));
 });
