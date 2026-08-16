@@ -5,6 +5,7 @@ import { getCruisePartnerDetails } from "../../page-builder/shared/partnerCruise
 import { getCircuitPartnerDetails } from "../../page-builder/shared/partnerCircuitDetails";
 import { getStayPartnerDetails } from "../../page-builder/shared/partnerStayDetails";
 import { getLongHaulPartnerDetails } from "../../page-builder/shared/partnerLongHaulDetails";
+import { getFranceEuropePartnerDetails } from "../../page-builder/shared/partnerFranceEuropeDetails";
 import styles from "./PartnerDirectoryRenderer.module.css";
 
 function MetadataGroup({ label, values }) {
@@ -24,7 +25,8 @@ function PartnerCard({ partner }) {
     getCruisePartnerDetails(partner.id) ||
     getCircuitPartnerDetails(partner.id) ||
     getStayPartnerDetails(partner.id) ||
-    getLongHaulPartnerDetails(partner.id);
+    getLongHaulPartnerDetails(partner.id) ||
+    getFranceEuropePartnerDetails(partner.id);
   const visibleTags = Array.isArray(partner.tags) ? partner.tags.slice(0, 2) : [];
 
   return (
