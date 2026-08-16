@@ -12,6 +12,7 @@ export const PARTNER_STAY_LOGO_SOURCES = Object.freeze({
   "pacha-tours": { status: "official-source-page", sourceType: "official-site", sourcePage: "https://www.pachatours.fr/", preferredSource: null, targetAsset: "/partners/pacha-tours.webp", note: "Official brand site confirmed. Master logo asset still needs vetting before ingestion." },
   heliades: { status: "permission-review", sourceType: "brand-permission", sourcePage: "https://www.heliades.fr/vacances/conditions-generales-utilisations", preferredSource: null, targetAsset: "/partners/heliades.webp", note: "Héliades' official terms prohibit reproduction of its marks and logos without express authorisation. Do not ingest automatically." },
   voyamar: { status: "permission-review", sourceType: "brand-permission", sourcePage: "https://www.voyamar-vacances.com/vacances/conditions-generales-utilisations", preferredSource: null, targetAsset: "/partners/voyamar.webp", note: "Voyamar's official terms prohibit reproduction of its marks and logos without express authorisation. Do not ingest automatically." },
+  "travel-evasion": { status: "official-source-page", sourceType: "official-site", sourcePage: "https://www.travelevasion.fr/", preferredSource: null, targetAsset: "/partners/travel-evasion.webp", note: "Official Travel Evasion site and B2B portal confirm the tour-operator identity. Source only the Travel Evasion masterbrand, not Mon French Club or product artwork." },
 });
 
 export function getStayLogoSource(partnerId) {
