@@ -10,9 +10,6 @@ export const PARTNER_DIRECTORY_CATEGORIES = Object.freeze([
 
 const P = (id, name, category, summary, tags = [], logoUrl = "") => ({ id, name, category, summary, tags, logoUrl });
 
-// Inventaire initial reconstitué à partir des captures réseau transmises.
-// Les fiches sont volontairement éditoriales et concises : elles seront enrichies
-// progressivement avec les destinations fortes, les styles de voyage et les logos officiels.
 export const FULL_PARTNERS = Object.freeze([
   P("catlante-catamarans", "Catlante Catamarans", "croisieres", "Croisières en catamaran et séjours nautiques, avec une approche centrée sur la mer et les mouillages.", ["catamaran", "navigation"]),
   P("croisieurope", "CroisiEurope", "croisieres", "Croisières fluviales, maritimes et itinéraires culturels au fil des grands fleuves et régions d'Europe.", ["fluvial", "Europe"]),
@@ -45,7 +42,6 @@ export const FULL_PARTNERS = Object.freeze([
   P("jet-tours", "Jet tours", "sejours", "Séjours, clubs, circuits et voyages personnalisés, avec une offre allant des vacances soleil aux itinéraires long-courriers.", ["clubs", "séjours", "circuits"]),
   P("hotels-lagons", "Hôtels & Lagons", "sejours", "Séjours balnéaires et voyages dans les îles, centrés sur l'hôtellerie et les expériences au bord de l'eau.", ["îles", "hôtellerie"]),
   P("lmx-voyages", "LMX Voyages", "sejours", "Séjours packagés et vacances loisirs avec une offre large d'hôtels et de destinations accessibles.", ["séjours", "hôtels"]),
-  P("mega-vacances", "Mega Vacances", "sejours", "Séjours loisirs et packages vacances vers différentes destinations balnéaires et urbaines.", ["séjours", "loisirs"]),
   P("mondial-tourisme", "Mondial Tourisme", "sejours", "Séjours et clubs dans les destinations soleil, particulièrement adaptés aux vacances balnéaires et familiales.", ["clubs", "soleil"]),
   P("plein-vent", "Plein Vent", "sejours", "Séjours, clubs et circuits à prix accessibles, notamment sur les destinations méditerranéennes et soleil.", ["séjours", "clubs"]),
   P("solea", "Solea", "sejours", "Séjours balnéaires et voyages soleil, avec une sélection d'hôtels dans les destinations tropicales et insulaires.", ["soleil", "îles"]),
