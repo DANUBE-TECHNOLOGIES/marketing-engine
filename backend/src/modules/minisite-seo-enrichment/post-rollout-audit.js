@@ -8,6 +8,7 @@ const {
   normalizeSiteSlug,
 } = require("./network-apply-audit");
 const { assertRolloutReportIntegrity } = require("./rollout-report-integrity");
+const { assertBaselineAttestation } = require("./baseline-attestation-audit");
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(path.resolve(filePath), "utf8"));
@@ -74,7 +75,7 @@ function assertApprovedScopeAudit(report = {}) {
   };
 }
 
-function persistValidationScopeAudit({ postRolloutReportPath, rolloutReport, approvedScopeAudit, rolloutReportIntegrity } = {}) {
+function persistValidationScopeAudit({ postRolloutReportPath, rolloutReport, approvedScopeAudit, rolloutReportIntegrity, baselineAttestationAudit } = {}) {
   if (!postRolloutReportPath) {
     const error = new Error("Le rapport post-rollout est obligatoire pour persister la preuve de périmètre.");
     error.code = "MSE_25_30_POST_ROLLOUT_OUTPUT_REQUIRED";
@@ -92,14 +93,16 @@ function persistValidationScopeAudit({ postRolloutReportPath, rolloutReport, app
     approvedScope,
     approvedScopeAudit,
     rolloutReportIntegrity,
+    baselineAttestationAudit,
   };
   fs.writeFileSync(resolvedPath, JSON.stringify(enriched, null, 2) + "\n", "utf8");
-  return { reportPath: resolvedPath, approvedScope, approvedScopeAudit, rolloutReportIntegrity };
+  return { reportPath: resolvedPath, approvedScope, approvedScopeAudit, rolloutReportIntegrity, baselineAttestationAudit };
 }
 
 async function run(options = {}) {
   const loaded = readRolloutReport(options.rolloutReport);
   const rolloutReportIntegrity = assertRolloutReportIntegrity(loaded.report);
+  const baselineAttestationAudit = assertBaselineAttestation(loaded.report);
   const approvedScopeAudit = assertApprovedScopeAudit(loaded.report);
   const result = await validator.run({
     ...options,
@@ -110,12 +113,14 @@ async function run(options = {}) {
     rolloutReport: loaded.report,
     approvedScopeAudit,
     rolloutReportIntegrity,
+    baselineAttestationAudit,
   });
   return {
     ...result,
     approvedScope: persisted.approvedScope,
     approvedScopeAudit,
     rolloutReportIntegrity,
+    baselineAttestationAudit,
   };
 }
 
