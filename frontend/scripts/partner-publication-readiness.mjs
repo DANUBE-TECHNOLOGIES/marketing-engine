@@ -12,23 +12,17 @@ async function loadModule(fileName) {
   return import(dataUrl);
 }
 
-const [
-  { FULL_PARTNERS },
-  verificationModule,
-] = await Promise.all([
+const [{ FULL_PARTNERS }, verificationModule] = await Promise.all([
   loadModule("fullPartners.js"),
   loadModule("partnerVerification.js"),
 ]);
 
-// Keep the same precedence as partnerProfile.js: specialized layers are authoritative,
-// partnerDetails.js is only the compatibility fallback.
 const detailModules = await Promise.all([
   loadModule("partnerCruiseDetails.js"),
   loadModule("partnerCircuitDetails.js"),
   loadModule("partnerStayDetails.js"),
   loadModule("partnerLongHaulDetails.js"),
   loadModule("partnerFranceEuropeDetails.js"),
-  loadModule("partnerDetails.js"),
 ]);
 
 const detailGetters = detailModules
