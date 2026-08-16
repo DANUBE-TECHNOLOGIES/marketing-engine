@@ -51,6 +51,22 @@ function normalizeGithubApiOrigin(value) {
   return String(value || DEFAULT_GITHUB_API_ORIGIN).trim().replace(/\/+$/g, "");
 }
 
+function resolveValidatedBaseSha(value = process.env.MSE_25_30_VALIDATED_BASE_SHA) {
+  const sha = String(value || "").trim().toLowerCase();
+  if (!sha) {
+    const error = new Error("MSE_25_30_VALIDATED_BASE_SHA est obligatoire. Utilisez uniquement la baseline publiée dans docs/MSE-25.30-VALIDATED-BASELINE.md.");
+    error.code = "MSE_25_30_PREFLIGHT_VALIDATED_BASE_REQUIRED";
+    throw error;
+  }
+  if (!COMMIT_SHA_PATTERN.test(sha)) {
+    const error = new Error("MSE_25_30_VALIDATED_BASE_SHA doit être une SHA Git complète de 40 caractères.");
+    error.code = "MSE_25_30_PREFLIGHT_BASELINE_SHA_INVALID";
+    error.details = { validatedBaseSha: sha };
+    throw error;
+  }
+  return sha;
+}
+
 function gitValue(args) {
   return execFileSync("git", args, { encoding: "utf8" }).trim();
 }
@@ -77,22 +93,23 @@ function protectedChangesSince(validatedBaseSha, protectedPaths = RUNTIME_PROTEC
 }
 
 function repositoryState({
-  validatedBaseSha = process.env.MSE_25_30_VALIDATED_BASE_SHA || DEFAULT_VALIDATED_BASE_SHA,
+  validatedBaseSha,
   protectedPaths = RUNTIME_PROTECTED_PATHS,
 } = {}) {
+  const resolvedValidatedBaseSha = resolveValidatedBaseSha(validatedBaseSha);
   const branch = gitValue(["branch", "--show-current"]);
   const head = gitValue(["rev-parse", "HEAD"]);
   const dirty = Boolean(gitValue(["status", "--porcelain"]));
-  const baselineAncestor = gitSucceeds(["merge-base", "--is-ancestor", validatedBaseSha, "HEAD"]);
+  const baselineAncestor = gitSucceeds(["merge-base", "--is-ancestor", resolvedValidatedBaseSha, "HEAD"]);
   const protectedChanges = baselineAncestor
-    ? protectedChangesSince(validatedBaseSha, protectedPaths)
+    ? protectedChangesSince(resolvedValidatedBaseSha, protectedPaths)
     : [];
 
   return {
     branch,
     head,
     dirty,
-    validatedBaseSha,
+    validatedBaseSha: resolvedValidatedBaseSha,
     baselineAncestor,
     protectedChanges,
   };
@@ -177,13 +194,7 @@ function baselineWorkflowRunsUrl(validatedBaseSha, {
   repository = GITHUB_REPOSITORY,
   workflowId = GITHUB_WORKFLOW_ID,
 } = {}) {
-  const sha = String(validatedBaseSha || "").trim().toLowerCase();
-  if (!COMMIT_SHA_PATTERN.test(sha)) {
-    const error = new Error("La baseline MSE-25.30 doit être une SHA Git complète de 40 caractères.");
-    error.code = "MSE_25_30_PREFLIGHT_BASELINE_SHA_INVALID";
-    error.details = { validatedBaseSha: validatedBaseSha || null };
-    throw error;
-  }
+  const sha = resolveValidatedBaseSha(validatedBaseSha);
   const apiOrigin = normalizeGithubApiOrigin(githubApiOrigin);
   return `${apiOrigin}/repos/${repository}/actions/workflows/${workflowId}/runs?head_sha=${encodeURIComponent(sha)}&status=success&per_page=10`;
 }
@@ -192,7 +203,7 @@ function selectSuccessfulBaselineRun(payload, validatedBaseSha, {
   expectedBranch = EXPECTED_BRANCH,
   workflowName = GITHUB_WORKFLOW_NAME,
 } = {}) {
-  const sha = String(validatedBaseSha || "").trim().toLowerCase();
+  const sha = resolveValidatedBaseSha(validatedBaseSha);
   const runs = Array.isArray(payload?.workflow_runs) ? payload.workflow_runs : [];
   const run = runs.find((item) =>
     String(item?.head_sha || "").trim().toLowerCase() === sha
@@ -204,10 +215,10 @@ function selectSuccessfulBaselineRun(payload, validatedBaseSha, {
   );
 
   if (!run) {
-    const error = new Error(`Aucune exécution GitHub Actions réussie ne certifie la baseline ${sha || "(inconnue)"}.`);
+    const error = new Error(`Aucune exécution GitHub Actions réussie ne certifie la baseline ${sha}.`);
     error.code = "MSE_25_30_PREFLIGHT_BASELINE_CI_NOT_ATTESTED";
     error.details = {
-      validatedBaseSha: sha || null,
+      validatedBaseSha: sha,
       expectedBranch,
       workflowName,
       candidateRuns: runs.map((item) => ({
@@ -246,7 +257,8 @@ async function attestValidatedBaseline(validatedBaseSha, {
   githubApiOrigin,
   expectedBranch = EXPECTED_BRANCH,
 } = {}) {
-  const url = baselineWorkflowRunsUrl(validatedBaseSha, { githubApiOrigin });
+  const sha = resolveValidatedBaseSha(validatedBaseSha);
+  const url = baselineWorkflowRunsUrl(sha, { githubApiOrigin });
   let payload;
   try {
     payload = await request(url, {
@@ -261,13 +273,13 @@ async function attestValidatedBaseline(validatedBaseSha, {
     const error = new Error("Impossible de vérifier auprès de GitHub Actions que la baseline MSE-25.30 a été validée par la CI.");
     error.code = "MSE_25_30_PREFLIGHT_BASELINE_CI_ATTESTATION_UNAVAILABLE";
     error.details = {
-      validatedBaseSha: String(validatedBaseSha || "").trim().toLowerCase() || null,
+      validatedBaseSha: sha,
       cause: cause?.message || String(cause),
       causeCode: cause?.code || null,
     };
     throw error;
   }
-  return selectSuccessfulBaselineRun(payload, validatedBaseSha, { expectedBranch });
+  return selectSuccessfulBaselineRun(payload, sha, { expectedBranch });
 }
 
 function reportPath(value) {
@@ -355,6 +367,7 @@ module.exports = {
   protectedChangesSince,
   repositoryState,
   reportPath,
+  resolveValidatedBaseSha,
   selectSuccessfulBaselineRun,
   run,
 };
