@@ -22,6 +22,7 @@ export const PARTNER_LOGO_BACKLOG = Object.freeze([
 
   { id: "belambra", category: "sejours", priority: 2, state: "permission-required", sourceType: "brand-permission", note: "Belambra legal notice requires prior written authorisation for use or reproduction of logos and marks." },
   { id: "boomerang", category: "sejours", priority: 2, state: "source-pending", sourceType: "official-site" },
+  { id: "jet-tours", category: "sejours", priority: 2, state: "source-pending", sourceType: "official-site", note: "Use only the Jet tours masterbrand from an official source; do not substitute Club Jet tours or another sub-brand." },
   { id: "hotels-lagons", category: "sejours", priority: 3, state: "verification-pending", sourceType: "identity-check" },
   { id: "lmx-voyages", category: "sejours", priority: 3, state: "verification-pending", sourceType: "identity-check" },
   { id: "mega-vacances", category: "sejours", priority: 3, state: "verification-pending", sourceType: "identity-check" },
