@@ -17,6 +17,10 @@ const DETAILS = Object.freeze({
     destinations: ["France", "Espagne", "Pays-Bas", "Belgique", "Allemagne", "Europe"],
     travelTypes: ["Résidence", "Village nature", "Center Parcs", "Location", "Séjour famille"],
   },
+  ollandini: {
+    destinations: ["Corse", "Ajaccio", "Balagne", "Golfe de Porto", "Sud Corse", "Sardaigne"],
+    travelTypes: ["Séjour", "Circuit en voiture", "Circuit en autocar", "Sur mesure", "Location", "Hôtel-club"],
+  },
   odalys: {
     destinations: ["France", "Espagne", "Italie", "Corse", "Mer", "Montagne"],
     travelTypes: ["Résidence", "Location", "City break", "Camping", "Séjour ski"],
