@@ -1,18 +1,18 @@
 # MSE-25.30 — Baseline runtime validée
 
-Ce document enregistre la baseline MSE-25.30 actuellement validée par GitHub Actions. Il est volontairement séparé des scripts runtime protégés afin qu'une promotion de baseline ne modifie pas elle-même la chaîne de sécurité contrôlée par le préflight.
+Ce document enregistre la baseline MSE-25.30 actuellement validée par GitHub Actions. Il est volontairement séparé des scripts runtime protégés afin qu'une promotion de baseline ne modifie pas elle-même la chaîne de sécurité contrôlée par le preflight.
 
 ## Baseline validée
 
 ```text
-MSE_25_30_VALIDATED_BASE_SHA=c2b3d65e51aeeacfce54b2f4e3d482beb0a193ed
+MSE_25_30_VALIDATED_BASE_SHA=f9f3092e17daf039cae1092297979b867593c7ac
 ```
 
 Validation associée :
 
 ```text
 Workflow   : MSE-25 Search Console and indexation checks
-Run        : 31946871177
+Run        : 31951714143
 Event      : push
 Conclusion : success
 ```
@@ -30,16 +30,20 @@ La baseline inclut notamment les durcissements éditoriaux et opératoires suiva
 - verrouillage du périmètre d'exclusion dans le fingerprint approuvé afin qu'un changement d'environnement entre preview et apply interdise toute écriture ;
 - validation post-rollout renforcée pour traiter correctement les changements de niveau page `seoTitle` et `metaDescription`, tout en conservant la validation historique des blocs Website Designer V2 ;
 - conservation dans le rapport de rollout du périmètre d'exclusion approuvé (`excludedSiteSlugs` et `excludedAgencies`) afin de prouver après coup les agences volontairement hors lot ;
+- audit croisé de ce périmètre contre les agences réellement écrites et le `rollbackManifest` : une agence exclue réapparue provoque `MSE_25_30_ROLLOUT_EXCLUDED_SCOPE_VIOLATION` et le rapport n'est pas certifié ;
+- exigence de `approvedScopeAudit.ok=true` avant toute validation post-rollout, avec recalcul indépendant de la preuve pour empêcher la réutilisation d'un rapport ancien ou incohérent ;
+- persistance de `approvedScope` et `approvedScopeAudit` jusque dans le rapport post-rollout final afin que la chaîne de preuve reste complète ;
+- protection de `backend/package.json` dans `RUNTIME_PROTECTED_PATHS`, car les commandes npm sélectionnent les wrappers opérateur sécurisés d'apply et de validation ;
 - exigence des capacités de durcissement dans le health check du preflight.
 
-Le répertoire complet `backend/src/modules/minisite-seo-enrichment` ainsi que les scripts de rollout MSE-25.30 restent protégés par `RUNTIME_PROTECTED_PATHS`. Toute dérive de ces chemins après cette baseline doit provoquer `MSE_25_30_PREFLIGHT_RUNTIME_CHANGED`.
+Le répertoire complet `backend/src/modules/minisite-seo-enrichment`, `backend/package.json` ainsi que les scripts de rollout MSE-25.30 restent protégés par `RUNTIME_PROTECTED_PATHS`. Toute dérive de ces chemins après cette baseline doit provoquer `MSE_25_30_PREFLIGHT_RUNTIME_CHANGED`.
 
 ## Utilisation sur la machine d'administration
 
 Après avoir synchronisé la branche et redémarré le backend avec le nouveau runtime, utiliser cette baseline explicitement avant le preflight :
 
 ```bash
-export MSE_25_30_VALIDATED_BASE_SHA=c2b3d65e51aeeacfce54b2f4e3d482beb0a193ed
+export MSE_25_30_VALIDATED_BASE_SHA=f9f3092e17daf039cae1092297979b867593c7ac
 npm run mse-25.30:preflight
 ```
 
@@ -47,7 +51,9 @@ Le HEAD peut être plus récent que cette baseline uniquement si les commits int
 
 Le preview doit rendre explicites `excludedSiteSlugs` et `excludedAgencies`. Par défaut, `tui-store-melun` ne fait donc pas partie du plan de rollout. Pour modifier volontairement ce périmètre, définir `MSE_25_30_EXCLUDED_SITE_SLUGS` avant de relancer le preflight ; tout changement du plan produit un nouveau fingerprint et rend un ancien rapport impropre à l'apply.
 
-Après un apply réussi, le rapport de rollout doit également contenir `approvedScope` avec le même périmètre exclu que le preflight approuvé. La validation post-rollout doit être lancée via `npm run mse-25.30:post-rollout-validate`, qui utilise le validateur renforcé des métadonnées de page.
+Après un apply réussi, le rapport de rollout doit contenir `approvedScope` et `approvedScopeAudit` avec le même périmètre exclu que le preflight approuvé. L'audit doit confirmer qu'aucun `siteSlug` exclu n'apparaît ni dans `result.agencies`, ni dans le manifeste de rollback.
+
+La validation post-rollout doit être lancée via `npm run mse-25.30:post-rollout-validate`. Elle refuse un rapport d'apply sans preuve d'exclusion auditée, recalcule cette preuve avant les lectures publiques, puis persiste `approvedScope` et `approvedScopeAudit` dans son propre rapport final en plus des preuves Website Designer V2, métadonnées, HTML public, sitemap et indexabilité.
 
 ## Règle de promotion
 
