@@ -6,9 +6,12 @@ const {
   DEFAULT_VALIDATED_BASE_SHA,
   EXPECTED_BRANCH,
   REQUIRED_HEALTH_FLAGS,
+  RUNTIME_PROTECTED_PATHS,
   assertHealth,
   assertRepositoryState,
 } = require("../scripts/mse-25-30-preflight");
+
+const PREFLIGHT_PATH = "backend/scripts/mse-25-30-preflight.js";
 
 function validState(overrides = {}) {
   return {
@@ -55,6 +58,22 @@ test("preflight refuse un runtime MSE-25.30 modifie depuis la baseline validee",
     (error) => {
       assert.equal(error.code, "MSE_25_30_PREFLIGHT_RUNTIME_CHANGED");
       assert.deepEqual(error.details.protectedChanges, protectedChanges);
+      return true;
+    },
+  );
+});
+
+test("preflight protege aussi sa propre chaine de securite contre une derive de baseline", () => {
+  assert.ok(
+    RUNTIME_PROTECTED_PATHS.includes(PREFLIGHT_PATH),
+    `${PREFLIGHT_PATH} doit rester protege par le preflight`,
+  );
+
+  assert.throws(
+    () => assertRepositoryState(validState({ protectedChanges: [PREFLIGHT_PATH] })),
+    (error) => {
+      assert.equal(error.code, "MSE_25_30_PREFLIGHT_RUNTIME_CHANGED");
+      assert.deepEqual(error.details.protectedChanges, [PREFLIGHT_PATH]);
       return true;
     },
   );
