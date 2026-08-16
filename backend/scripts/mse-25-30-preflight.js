@@ -10,6 +10,7 @@ const DEFAULT_BACKEND_ORIGIN = "http://127.0.0.1:4000";
 const EXPECTED_BRANCH = "feature/mse-25-30-local-seo-optimizer";
 const DEFAULT_VALIDATED_BASE_SHA = "04c869acf5d813f899689670da69a70c3ee4e2e0";
 const RUNTIME_PROTECTED_PATHS = Object.freeze([
+  "backend/package.json",
   "backend/src/modules/minisite-seo-enrichment",
   "backend/scripts/mse-25-30-preflight.js",
   "backend/scripts/mse-25-30-network-preview.js",
