@@ -1,6 +1,7 @@
 "use strict";
 
 const { validatePagePayload } = require("../page-builder-persistence/validation");
+const { validateAndMigratePagePayload } = require("../page-builder-persistence/core-payload-adapter");
 
 function persistencePayloadFor(page = {}) {
   const source = page?.page && typeof page.page === "object" ? page.page : {};
@@ -20,7 +21,12 @@ function persistencePayloadFor(page = {}) {
 
 function persistenceValidationIssue(plan = {}, page = {}) {
   try {
-    validatePagePayload(persistencePayloadFor(page));
+    // Mirror PageBuilderPersistenceService.save() exactly: historical block
+    // contracts must be migrated by the Core before strict V2 validation.
+    // This keeps the preflight predictive of the actual rollout path instead
+    // of rejecting payloads that persistence would safely migrate.
+    const coreResult = validateAndMigratePagePayload(persistencePayloadFor(page));
+    validatePagePayload(coreResult.payload);
     return null;
   } catch (error) {
     return {
