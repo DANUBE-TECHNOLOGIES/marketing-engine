@@ -5,14 +5,14 @@ Ce document enregistre la baseline MSE-25.30 actuellement validée par GitHub Ac
 ## Baseline validée
 
 ```text
-MSE_25_30_VALIDATED_BASE_SHA=c3e8845eb603e8685151e783c826083fec836ec0
+MSE_25_30_VALIDATED_BASE_SHA=a3a8bb9fca2a41479230135f5cd94782c22821bc
 ```
 
 Validation associée :
 
 ```text
 Workflow   : MSE-25 Search Console and indexation checks
-Run        : 31955370833
+Run        : 31955455549
 Event      : push
 Conclusion : success
 ```
@@ -22,7 +22,7 @@ Cette exécution valide sous Node 22 l'ensemble des tests backend MSE-25.30, le 
 La baseline inclut notamment les durcissements éditoriaux et opératoires suivants :
 
 - promotion d'une page publiée sans contenu visible en blocage `EMPTY_INDEXABLE_CONTENT`, tout en conservant les contenus simplement courts au niveau warning ;
-- naturalisation déterministe des formulations locales et des métadonnées projetées, notamment les contractions françaises et la suppression des répétitions de type `TUI STORE Amilly à Amilly` ;
+- naturalisation déterministe des formulations locales et des métadonnées projetées ;
 - différenciation éditoriale déterministe sur les pages `services`, `engagements` et `destinations`, sans inventer de communes ;
 - exclusion réseau explicite et auditable, avec `tui-store-melun` exclu par défaut et verrouillé dans le fingerprint approuvé ;
 - audit croisé des agences exclues contre les écritures réelles et le manifeste de rollback ;
@@ -31,9 +31,10 @@ La baseline inclut notamment les durcissements éditoriaux et opératoires suiva
 - audit transversal du rapport d'apply : HEAD Git, fingerprint et paramètres doivent rester cohérents entre toutes les sections de preuve ;
 - certification immédiate de `approvedScope`, `approvedScopeAudit` et `rolloutReportIntegrity` au moment de l'apply ;
 - contrôle hors ligne `mse-25.30:rollout-report-check` avant toute opération aval ;
-- **attestation GitHub Actions de la baseline** : le preflight n'accepte plus une SHA uniquement parce qu'elle est fournie par `MSE_25_30_VALIDATED_BASE_SHA` ; il exige un run `push` terminé avec `conclusion=success` sur le workflow MSE-25 et la branche attendue ;
+- attestation GitHub Actions de la baseline : le preflight exige un run `push` terminé avec `conclusion=success` sur le workflow MSE-25 et la branche attendue ;
 - l'apply ré-atteste la même baseline auprès de GitHub Actions avant toute écriture et compare cette preuve à celle du preflight ;
-- cette attestation est conservée dans les sections `repository`, `preflight` et `result.preflight` du rapport de rollout ; le checker offline, le rollback et le post-rollout recalculent ensuite `baselineAttestationAudit` et refusent toute preuve incohérente ;
+- cette attestation est conservée dans `repository`, `preflight` et `result.preflight` ; le checker offline, le rollback et le post-rollout recalculent `baselineAttestationAudit` ;
+- **suppression du bypass rollback legacy dans le chemin npm sécurisé** : `npm run mse-25.30:network-rollback` exige désormais obligatoirement le rapport contextuel complet issu de l'apply. `MSE_25_30_ALLOW_LEGACY_ROLLBACK_MANIFEST` n'est plus accepté par ce wrapper ;
 - protection de `backend/package.json`, du module `backend/src/modules/minisite-seo-enrichment` et des scripts MSE-25.30 via `RUNTIME_PROTECTED_PATHS`.
 
 ## Utilisation sur la machine d'administration
@@ -41,7 +42,7 @@ La baseline inclut notamment les durcissements éditoriaux et opératoires suiva
 Après synchronisation de la branche et redémarrage du backend avec le nouveau runtime :
 
 ```bash
-export MSE_25_30_VALIDATED_BASE_SHA=c3e8845eb603e8685151e783c826083fec836ec0
+export MSE_25_30_VALIDATED_BASE_SHA=a3a8bb9fca2a41479230135f5cd94782c22821bc
 npm run mse-25.30:preflight
 ```
 
@@ -63,7 +64,15 @@ npm run mse-25.30:rollout-report-check -- /chemin/vers/mse-25-30-rollout-....jso
 
 Cette commande est strictement read-only et offline. Elle vérifie `rolloutReportIntegrity`, `baselineAttestationAudit`, `approvedScopeAudit` et `rollbackManifestAudit` et doit retourner `ok: true`.
 
-Le rollback doit être lancé via `npm run mse-25.30:network-rollback`. Avant le premier POST de restauration, le wrapper vérifie les quatre chaînes de preuve. La validation post-rollout via `npm run mse-25.30:post-rollout-validate` exige les mêmes garanties avant ses lectures de validation.
+Le rollback doit être lancé uniquement via :
+
+```bash
+npm run mse-25.30:network-rollback
+```
+
+La variable `MSE_25_30_ROLLBACK_MANIFEST` doit pointer vers le **rapport de rollout contextuel complet**. Un tableau de rollback legacy ou un ancien type de rapport provoque `MSE_25_30_NETWORK_ROLLBACK_CONTEXT_REQUIRED` avant le premier POST de restauration.
+
+La validation post-rollout via `npm run mse-25.30:post-rollout-validate` exige les mêmes garanties avant ses lectures de validation.
 
 ## Règle de promotion
 
