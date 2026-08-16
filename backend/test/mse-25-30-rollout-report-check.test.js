@@ -7,11 +7,13 @@ const {
 } = require("../src/modules/minisite-seo-enrichment/rollout-report-check");
 const {
   EXPECTED_BRANCH,
+  EXPECTED_GITHUB_WORKFLOW_BLOB_SHA,
   GITHUB_WORKFLOW_ID,
   GITHUB_WORKFLOW_NAME,
+  GITHUB_WORKFLOW_PATH,
 } = require("../scripts/mse-25-30-preflight");
 
-const VALIDATED_BASE_SHA = "c72202f3eca15998d26254e502cf6a47a973c67f";
+const VALIDATED_BASE_SHA = "6cfc1dde265ad3f4ae376b467133ece612ff8343";
 
 function baselineAttestation() {
   return {
@@ -19,13 +21,15 @@ function baselineAttestation() {
     repository: "DANUBE-TECHNOLOGIES/marketing-engine",
     workflowId: GITHUB_WORKFLOW_ID,
     workflowName: GITHUB_WORKFLOW_NAME,
-    runId: 31955176772,
+    workflowPath: GITHUB_WORKFLOW_PATH,
+    workflowBlobSha: EXPECTED_GITHUB_WORKFLOW_BLOB_SHA,
+    runId: 31955664054,
     headSha: VALIDATED_BASE_SHA,
     headBranch: EXPECTED_BRANCH,
     event: "push",
     status: "completed",
     conclusion: "success",
-    htmlUrl: "https://github.com/DANUBE-TECHNOLOGIES/marketing-engine/actions/runs/31955176772",
+    htmlUrl: "https://github.com/DANUBE-TECHNOLOGIES/marketing-engine/actions/runs/31955664054",
   };
 }
 
@@ -95,6 +99,8 @@ test("MSE-25.30 contrôle hors ligne les quatre chaînes de preuve", () => {
   assert.equal(result.rolloutReportIntegrity.ok, true);
   assert.equal(result.baselineAttestationAudit.ok, true);
   assert.equal(result.baselineAttestationAudit.validatedBaseSha, VALIDATED_BASE_SHA);
+  assert.equal(result.baselineAttestationAudit.workflowPath, GITHUB_WORKFLOW_PATH);
+  assert.equal(result.baselineAttestationAudit.workflowBlobSha, EXPECTED_GITHUB_WORKFLOW_BLOB_SHA);
   assert.equal(result.approvedScopeAudit.ok, true);
   assert.equal(result.rollbackManifestAudit.ok, true);
 });
@@ -131,6 +137,17 @@ test("MSE-25.30 contrôle hors ligne refuse une attestation CI falsifiée", () =
   assert.throws(() => checkRolloutReport(report), (error) => {
     assert.equal(error.code, "MSE_25_30_ROLLOUT_BASELINE_CI_ATTESTATION_MISMATCH");
     assert.equal(error.details.ok, false);
+    return true;
+  });
+});
+
+test("MSE-25.30 contrôle hors ligne refuse une autre définition du workflow CI", () => {
+  const report = validReport();
+  report.preflight.baselineAttestation.workflowBlobSha = "0".repeat(40);
+
+  assert.throws(() => checkRolloutReport(report), (error) => {
+    assert.equal(error.code, "MSE_25_30_ROLLOUT_BASELINE_CI_ATTESTATION_MISMATCH");
+    assert.ok(error.details.issues.some((issue) => issue.code === "preflight-attestation-workflow-definition-mismatch"));
     return true;
   });
 });
