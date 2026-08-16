@@ -36,8 +36,24 @@ test("MSE-25.30 operator preview preserves exclusion reasons without leaking int
         title: "Circuits",
         changed: true,
         changes: [
-          { blockType: "hero", field: "title", generated: false },
-          { blockType: "faq", field: "block", generated: true },
+          {
+            blockId: 12,
+            blockType: "hero",
+            field: "title",
+            previous: "Circuits",
+            next: "Circuits à Gien",
+            generated: false,
+            purpose: "local-seo-h1",
+          },
+          {
+            blockId: 21,
+            blockType: "faq",
+            field: "block",
+            previous: null,
+            next: { type: "faq", title: "Questions sur les circuits à Gien" },
+            generated: true,
+            purpose: "local-seo-faq",
+          },
         ],
       },
       {
@@ -74,8 +90,24 @@ test("MSE-25.30 operator preview preserves exclusion reasons without leaking int
       title: "Circuits",
       changeCount: 2,
       changes: [
-        { blockType: "hero", field: "title", generated: false },
-        { blockType: "faq", field: "block", generated: true },
+        {
+          blockId: 12,
+          blockType: "hero",
+          field: "title",
+          previous: "Circuits",
+          next: "Circuits à Gien",
+          generated: false,
+          purpose: "local-seo-h1",
+        },
+        {
+          blockId: 21,
+          blockType: "faq",
+          field: "block",
+          previous: null,
+          next: { type: "faq", title: "Questions sur les circuits à Gien" },
+          generated: true,
+          purpose: "local-seo-faq",
+        },
       ],
     },
   ]);
