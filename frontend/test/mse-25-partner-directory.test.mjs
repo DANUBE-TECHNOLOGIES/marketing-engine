@@ -40,7 +40,8 @@ test("full partner directory exposes categorized supplier inventory with special
   for (const id of ["alma-latina", "australie-tours", "beachcomber-tours", "asia", "austral-lagons", "climats-du-monde", "jetset-voyages", "luxair-tours", "kuoni", "worldia", "ollandini"]) assert.match(longHaulDetails, new RegExp(`(?:^|\\n)\\s*"?${id}"?\\s*:`));
   for (const id of ["campings-com", "lagrange", "mmv", "pierre-vacances-center-parcs", "odalys", "thalasso-n1", "villages-clubs-soleil"]) assert.match(franceEuropeDetails, new RegExp(`(?:^|\\n)\\s*"?${id}"?\\s*:`));
 
-  for (const resolver of ["getPartnerDetails", "getCruisePartnerDetails", "getCircuitPartnerDetails", "getStayPartnerDetails", "getLongHaulPartnerDetails", "getFranceEuropePartnerDetails"]) assert.match(profile, new RegExp(resolver));
+  for (const resolver of ["getCruisePartnerDetails", "getCircuitPartnerDetails", "getStayPartnerDetails", "getLongHaulPartnerDetails", "getFranceEuropePartnerDetails"]) assert.match(profile, new RegExp(resolver));
+  assert.doesNotMatch(profile, /getPartnerDetails/);
   assert.match(profile, /getResolvedPartnerDetails/); assert.match(profile, /getPublishablePartnerProfiles/); assert.match(profile, /identityConfirmed/); assert.match(profile, /visibleTags:\s*Array\.isArray\(partner\.tags\) \? partner\.tags\.slice\(0, 2\)/);
 
   assert.match(catalogue, /\/partners\/kuoni-official\.webp/);
