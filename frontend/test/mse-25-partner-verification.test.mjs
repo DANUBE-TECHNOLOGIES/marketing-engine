@@ -10,31 +10,27 @@ const read = (relativePath) => fs.readFileSync(path.join(frontendRoot, relativeP
 
 test("partner verification distinguishes identity review from logo permission review", () => {
   const verification = read("components/page-builder/shared/partnerVerification.js");
-  const catalogue = read("components/page-builder/shared/fullPartners.js");
-  const circuitDetails = read("components/page-builder/shared/partnerCircuitDetails.js");
-  const circuitLogoSources = read("components/page-builder/shared/partnerCircuitLogoSources.js");
-  const backlog = read("components/page-builder/shared/partnerLogoBacklog.js");
   const audit = read("scripts/partner-catalog-quality.mjs");
+  const longHaul = read("components/page-builder/shared/partnerLongHaulDetails.js");
+  const longHaulSources = read("components/page-builder/shared/partnerLongHaulLogoSources.js");
 
   for (const id of [
     "hotels-lagons",
     "lmx-voyages",
     "mega-vacances",
     "aerosun",
-    "amerigo",
     "asiam",
-    "gaeland-ashling",
-    "planete-production",
     "travel-evasion",
   ]) {
     assert.match(verification, new RegExp(`"?${id}"?\\s*:`));
   }
 
-  assert.doesNotMatch(verification, /"rev-vacances"\s*:\s*\{[\s\S]*?identity-review/);
-  assert.match(catalogue, /P\("rev-vacances",\s*"Rev'Vacances",\s*"circuits"/);
-  assert.match(circuitDetails, /"rev-vacances"[\s\S]*rev-vacances\.fr/);
-  assert.match(circuitLogoSources, /"rev-vacances"[\s\S]*official-source-page/);
-  assert.match(backlog, /rev-vacances[\s\S]*category:\s*"circuits"[\s\S]*source-pending/);
+  for (const id of ["amerigo", "gaeland-ashling", "planete-production"]) {
+    const escaped = id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    assert.doesNotMatch(verification, new RegExp(`"?${escaped}"?\\s*:[\\s\\S]*?identity-review`));
+    assert.match(longHaul, new RegExp(`"?${escaped}"?\\s*:`));
+    assert.match(longHaulSources, new RegExp(`"?${escaped}"?\\s*:[\\s\\S]*?official-source-page`));
+  }
 
   assert.match(verification, /status: "identity-review"/);
 
