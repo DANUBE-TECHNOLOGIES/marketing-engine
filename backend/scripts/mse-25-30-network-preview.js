@@ -99,6 +99,8 @@ async function run({
     rolloutBlocked: payload?.summary?.rolloutBlocked === true,
     planFingerprint: payload?.planFingerprint || null,
     parameters: payload?.parameters || null,
+    excludedSiteSlugs: Array.isArray(payload?.excludedSiteSlugs) ? payload.excludedSiteSlugs : [],
+    excludedAgencies: Array.isArray(payload?.excludedAgencies) ? payload.excludedAgencies : [],
     summary: payload?.summary || {},
     similarity: {
       threshold: payload?.similarity?.threshold ?? null,
