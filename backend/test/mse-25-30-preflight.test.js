@@ -14,19 +14,20 @@ const {
   assertRepositoryState,
   attestValidatedBaseline,
   baselineWorkflowRunsUrl,
+  resolveValidatedBaseSha,
   selectSuccessfulBaselineRun,
 } = require("../scripts/mse-25-30-preflight");
 
 const PREFLIGHT_PATH = "backend/scripts/mse-25-30-preflight.js";
 const PACKAGE_PATH = "backend/package.json";
-const VALIDATED_SHA = "f2bc860dfaf3887560ae0da7a18ea884a1dce1ad";
+const VALIDATED_SHA = "a560c26174ca310a7fd41aa741eecfca112f9d11";
 
 function validState(overrides = {}) {
   return {
     branch: EXPECTED_BRANCH,
     head: "1627cfca69ae02a7ea5c3a356cd3ebb6762a4bd4",
     dirty: false,
-    validatedBaseSha: DEFAULT_VALIDATED_BASE_SHA,
+    validatedBaseSha: VALIDATED_SHA,
     baselineAncestor: true,
     protectedChanges: [],
     ...overrides,
@@ -44,19 +45,35 @@ function validHealth(overrides = {}) {
 
 function successfulWorkflowRun(overrides = {}) {
   return {
-    id: 31952176736,
+    id: 31955547623,
     name: GITHUB_WORKFLOW_NAME,
     head_sha: VALIDATED_SHA,
     head_branch: EXPECTED_BRANCH,
     event: "push",
     status: "completed",
     conclusion: "success",
-    html_url: "https://github.com/DANUBE-TECHNOLOGIES/marketing-engine/actions/runs/31952176736",
-    created_at: "2026-08-16T14:15:24Z",
-    updated_at: "2026-08-16T14:16:00Z",
+    html_url: "https://github.com/DANUBE-TECHNOLOGIES/marketing-engine/actions/runs/31955547623",
+    created_at: "2026-08-16T15:24:24Z",
+    updated_at: "2026-08-16T15:25:00Z",
     ...overrides,
   };
 }
+
+test("preflight exige explicitement MSE_25_30_VALIDATED_BASE_SHA", () => {
+  assert.throws(() => resolveValidatedBaseSha(""), (error) => {
+    assert.equal(error.code, "MSE_25_30_PREFLIGHT_VALIDATED_BASE_REQUIRED");
+    return true;
+  });
+  assert.equal(resolveValidatedBaseSha(VALIDATED_SHA), VALIDATED_SHA);
+  assert.notEqual(DEFAULT_VALIDATED_BASE_SHA, VALIDATED_SHA, "la constante historique ne doit plus servir de fallback opérateur");
+});
+
+test("preflight refuse une baseline explicite qui n'est pas une SHA complète", () => {
+  assert.throws(() => resolveValidatedBaseSha("f2bc860"), (error) => {
+    assert.equal(error.code, "MSE_25_30_PREFLIGHT_BASELINE_SHA_INVALID");
+    return true;
+  });
+});
 
 test("preflight autorise des commits sans rapport apres la baseline validee", () => {
   assert.doesNotThrow(() => assertRepositoryState(validState()));
@@ -67,16 +84,14 @@ test("preflight refuse une baseline validee absente de l'historique courant", ()
     () => assertRepositoryState(validState({ baselineAncestor: false })),
     (error) => {
       assert.equal(error.code, "MSE_25_30_PREFLIGHT_BASELINE_MISMATCH");
-      assert.equal(error.details.validatedBaseSha, DEFAULT_VALIDATED_BASE_SHA);
+      assert.equal(error.details.validatedBaseSha, VALIDATED_SHA);
       return true;
     },
   );
 });
 
 test("preflight refuse un runtime MSE-25.30 modifie depuis la baseline validee", () => {
-  const protectedChanges = [
-    "backend/src/modules/minisite-seo-enrichment/service.js",
-  ];
+  const protectedChanges = ["backend/src/modules/minisite-seo-enrichment/service.js"];
   assert.throws(
     () => assertRepositoryState(validState({ protectedChanges })),
     (error) => {
@@ -88,11 +103,7 @@ test("preflight refuse un runtime MSE-25.30 modifie depuis la baseline validee",
 });
 
 test("preflight protege aussi sa propre chaine de securite contre une derive de baseline", () => {
-  assert.ok(
-    RUNTIME_PROTECTED_PATHS.includes(PREFLIGHT_PATH),
-    `${PREFLIGHT_PATH} doit rester protege par le preflight`,
-  );
-
+  assert.ok(RUNTIME_PROTECTED_PATHS.includes(PREFLIGHT_PATH), `${PREFLIGHT_PATH} doit rester protege par le preflight`);
   assert.throws(
     () => assertRepositoryState(validState({ protectedChanges: [PREFLIGHT_PATH] })),
     (error) => {
@@ -104,11 +115,7 @@ test("preflight protege aussi sa propre chaine de securite contre une derive de 
 });
 
 test("preflight protege les commandes npm qui choisissent les wrappers operateur", () => {
-  assert.ok(
-    RUNTIME_PROTECTED_PATHS.includes(PACKAGE_PATH),
-    `${PACKAGE_PATH} doit rester protege par le preflight`,
-  );
-
+  assert.ok(RUNTIME_PROTECTED_PATHS.includes(PACKAGE_PATH), `${PACKAGE_PATH} doit rester protege par le preflight`);
   assert.throws(
     () => assertRepositoryState(validState({ protectedChanges: [PACKAGE_PATH] })),
     (error) => {
@@ -120,19 +127,12 @@ test("preflight protege les commandes npm qui choisissent les wrappers operateur
 });
 
 test("les gardes branche et working tree restent actives", () => {
-  assert.throws(
-    () => assertRepositoryState(validState({ branch: "develop" })),
-    (error) => error.code === "MSE_25_30_PREFLIGHT_BRANCH_MISMATCH",
-  );
-  assert.throws(
-    () => assertRepositoryState(validState({ dirty: true })),
-    (error) => error.code === "MSE_25_30_PREFLIGHT_DIRTY_WORKTREE",
-  );
+  assert.throws(() => assertRepositoryState(validState({ branch: "develop" })), (error) => error.code === "MSE_25_30_PREFLIGHT_BRANCH_MISMATCH");
+  assert.throws(() => assertRepositoryState(validState({ dirty: true })), (error) => error.code === "MSE_25_30_PREFLIGHT_DIRTY_WORKTREE");
 });
 
 test("preflight exige toutes les garanties runtime annoncees par health", () => {
   assert.doesNotThrow(() => assertHealth(validHealth()));
-
   for (const flag of REQUIRED_HEALTH_FLAGS) {
     assert.throws(
       () => assertHealth(validHealth({ [flag]: false })),
@@ -146,21 +146,11 @@ test("preflight exige toutes les garanties runtime annoncees par health", () => 
 });
 
 test("preflight refuse un endpoint health qui n'est pas MSE-25.30", () => {
-  assert.throws(
-    () => assertHealth(validHealth({ capability: "other-capability" })),
-    (error) => error.code === "MSE_25_30_PREFLIGHT_HEALTH_NOT_READY",
-  );
+  assert.throws(() => assertHealth(validHealth({ capability: "other-capability" })), (error) => error.code === "MSE_25_30_PREFLIGHT_HEALTH_NOT_READY");
 });
 
-test("preflight exige une SHA complete avant de consulter GitHub Actions", () => {
-  assert.throws(
-    () => baselineWorkflowRunsUrl("f2bc860"),
-    (error) => {
-      assert.equal(error.code, "MSE_25_30_PREFLIGHT_BASELINE_SHA_INVALID");
-      return true;
-    },
-  );
-
+test("preflight construit la requête GitHub uniquement avec une baseline explicite complète", () => {
+  assert.throws(() => baselineWorkflowRunsUrl("f2bc860"), (error) => error.code === "MSE_25_30_PREFLIGHT_BASELINE_SHA_INVALID");
   const url = baselineWorkflowRunsUrl(VALIDATED_SHA);
   assert.match(url, new RegExp(`/repos/${GITHUB_REPOSITORY}/actions/workflows/${GITHUB_WORKFLOW_ID}/runs`));
   assert.match(url, new RegExp(`head_sha=${VALIDATED_SHA}`));
@@ -168,12 +158,9 @@ test("preflight exige une SHA complete avant de consulter GitHub Actions", () =>
 });
 
 test("preflight accepte uniquement le run push reussi exact de la baseline", () => {
-  const attestation = selectSuccessfulBaselineRun({
-    workflow_runs: [successfulWorkflowRun()],
-  }, VALIDATED_SHA);
-
+  const attestation = selectSuccessfulBaselineRun({ workflow_runs: [successfulWorkflowRun()] }, VALIDATED_SHA);
   assert.equal(attestation.ok, true);
-  assert.equal(attestation.runId, 31952176736);
+  assert.equal(attestation.runId, 31955547623);
   assert.equal(attestation.headSha, VALIDATED_SHA);
   assert.equal(attestation.headBranch, EXPECTED_BRANCH);
   assert.equal(attestation.event, "push");
@@ -190,10 +177,7 @@ test("preflight refuse une baseline seulement validee manuellement, sur une autr
   ]) {
     assert.throws(
       () => selectSuccessfulBaselineRun({ workflow_runs: [run] }, VALIDATED_SHA),
-      (error) => {
-        assert.equal(error.code, "MSE_25_30_PREFLIGHT_BASELINE_CI_NOT_ATTESTED");
-        return true;
-      },
+      (error) => error.code === "MSE_25_30_PREFLIGHT_BASELINE_CI_NOT_ATTESTED",
     );
   }
 });
@@ -228,11 +212,10 @@ test("preflight construit et conserve l'attestation GitHub Actions certifiee", a
     },
     githubToken: "token-test",
   });
-
   assert.match(requestedUrl, new RegExp(`head_sha=${VALIDATED_SHA}`));
   assert.equal(requestedOptions.headers.Authorization, "Bearer token-test");
   assert.equal(attestation.repository, GITHUB_REPOSITORY);
   assert.equal(attestation.workflowId, GITHUB_WORKFLOW_ID);
   assert.equal(attestation.workflowName, GITHUB_WORKFLOW_NAME);
-  assert.equal(attestation.runId, 31952176736);
+  assert.equal(attestation.runId, 31955547623);
 });
