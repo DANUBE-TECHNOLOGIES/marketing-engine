@@ -25,7 +25,9 @@ const rows = FULL_PARTNERS
   .map((partner) => {
     const verification = getPartnerVerification(partner.id);
     const backlog = backlogById.get(partner.id) || null;
-    const hasLogo = Boolean(String(partner.logoUrl || "").trim());
+    const currentLogoUrl = String(partner.logoUrl || "").trim();
+    const hasLogo = Boolean(currentLogoUrl);
+    const currentFormat = currentLogoUrl ? path.extname(currentLogoUrl).slice(1).toLowerCase() : null;
     const targetAsset = `/partners/${partner.id}.webp`;
 
     return {
@@ -33,7 +35,8 @@ const rows = FULL_PARTNERS
       name: partner.name,
       category: partner.category,
       hasLogo,
-      currentLogoUrl: partner.logoUrl || null,
+      currentLogoUrl: currentLogoUrl || null,
+      currentFormat,
       verificationStatus: verification.status,
       backlogState: backlog?.state || null,
       sourceType: backlog?.sourceType || null,
@@ -70,8 +73,9 @@ const byCategory = Object.fromEntries(
 );
 
 console.log(JSON.stringify({
-  policy: "official-individual-webp-assets-only",
-  naming: "/partners/<partner-id>.webp",
+  policy: "official-individual-assets-webp-or-vetted-svg",
+  preferredNaming: "/partners/<partner-id>.webp",
+  acceptedFormats: ["webp", "svg"],
   summary: {
     total: rows.length,
     done: done.length,
@@ -83,4 +87,5 @@ console.log(JSON.stringify({
   actionable,
   permissionReview,
   identityReview,
+  done,
 }, null, 2));
