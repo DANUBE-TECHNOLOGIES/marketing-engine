@@ -5,6 +5,7 @@ const path = require("node:path");
 const { assertApprovedScopeAudit } = require("./post-rollout-audit");
 const { assertRollbackManifestIntegrity } = require("./network-rollback-audit");
 const { assertRolloutReportIntegrity } = require("./rollout-report-integrity");
+const { assertBaselineAttestation } = require("./baseline-attestation-audit");
 
 function resolveReportPath(value) {
   const configured = String(
@@ -38,6 +39,7 @@ function readReport(filePath) {
 
 function checkRolloutReport(report = {}) {
   const rolloutReportIntegrity = assertRolloutReportIntegrity(report);
+  const baselineAttestationAudit = assertBaselineAttestation(report);
   const approvedScopeAudit = assertApprovedScopeAudit(report);
   const rollbackManifestAudit = assertRollbackManifestIntegrity(report);
 
@@ -46,6 +48,7 @@ function checkRolloutReport(report = {}) {
     readOnly: true,
     offline: true,
     rolloutReportIntegrity,
+    baselineAttestationAudit,
     approvedScopeAudit,
     rollbackManifestAudit,
   };
