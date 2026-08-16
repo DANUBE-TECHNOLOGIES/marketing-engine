@@ -13,10 +13,6 @@ const REVIEW_REQUIRED = Object.freeze({
     status: "identity-review",
     reason: "Official brand identity/source still needs confirmation before final publication.",
   },
-  "travel-evasion": {
-    status: "identity-review",
-    reason: "Official identity is confirmed, but its public catalogue category still needs realignment before publication.",
-  },
 });
 
 const CATALOGUE_EXCLUSIONS = Object.freeze({
