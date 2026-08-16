@@ -73,6 +73,14 @@ export const PARTNER_CIRCUIT_LOGO_SOURCES = Object.freeze({
     targetAsset: "/partners/voyages-internationaux.webp",
     note: "Official brand site known; master logo asset still needs vetting.",
   },
+  "rev-vacances": {
+    status: "official-source-page",
+    sourceType: "official-site",
+    sourcePage: "https://www.rev-vacances.fr/",
+    preferredSource: null,
+    targetAsset: "/partners/rev-vacances.webp",
+    note: "Official REV VACANCES site is operated by PACHA TOURS SAS and presents circuits, cruises and tailor-made travel. Vet only the REV VACANCES masterbrand before ingestion.",
+  },
   worldia: {
     status: "source-pending",
     sourceType: "official-brand-source",
