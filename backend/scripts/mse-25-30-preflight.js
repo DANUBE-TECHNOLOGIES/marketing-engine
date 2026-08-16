@@ -12,9 +12,12 @@ const DEFAULT_VALIDATED_BASE_SHA = "04c869acf5d813f899689670da69a70c3ee4e2e0";
 const GITHUB_REPOSITORY = "DANUBE-TECHNOLOGIES/marketing-engine";
 const GITHUB_WORKFLOW_ID = 334395003;
 const GITHUB_WORKFLOW_NAME = "MSE-25 Search Console and indexation checks";
+const GITHUB_WORKFLOW_PATH = ".github/workflows/mse-25-16.yml";
+const EXPECTED_GITHUB_WORKFLOW_BLOB_SHA = "d1f323478b7990bbe8179a3669c8dc2ba7504139";
 const DEFAULT_GITHUB_API_ORIGIN = "https://api.github.com";
 const COMMIT_SHA_PATTERN = /^[0-9a-f]{40}$/i;
 const RUNTIME_PROTECTED_PATHS = Object.freeze([
+  GITHUB_WORKFLOW_PATH,
   "backend/package.json",
   "backend/src/modules/minisite-seo-enrichment",
   "backend/scripts/mse-25-30-preflight.js",
@@ -100,6 +103,7 @@ function repositoryState({
   const branch = gitValue(["branch", "--show-current"]);
   const head = gitValue(["rev-parse", "HEAD"]);
   const dirty = Boolean(gitValue(["status", "--porcelain"]));
+  const workflowBlobSha = gitValue(["rev-parse", `HEAD:${GITHUB_WORKFLOW_PATH}`]).toLowerCase();
   const baselineAncestor = gitSucceeds(["merge-base", "--is-ancestor", resolvedValidatedBaseSha, "HEAD"]);
   const protectedChanges = baselineAncestor
     ? protectedChangesSince(resolvedValidatedBaseSha, protectedPaths)
@@ -110,6 +114,8 @@ function repositoryState({
     head,
     dirty,
     validatedBaseSha: resolvedValidatedBaseSha,
+    workflowPath: GITHUB_WORKFLOW_PATH,
+    workflowBlobSha,
     baselineAncestor,
     protectedChanges,
   };
@@ -124,6 +130,16 @@ function assertRepositoryState(state, { expectedBranch = EXPECTED_BRANCH, allowD
   if (state.dirty && !allowDirty) {
     const error = new Error("Le working tree doit être propre avant le preflight MSE-25.30.");
     error.code = "MSE_25_30_PREFLIGHT_DIRTY_WORKTREE";
+    throw error;
+  }
+  if (String(state.workflowBlobSha || "").trim().toLowerCase() !== EXPECTED_GITHUB_WORKFLOW_BLOB_SHA) {
+    const error = new Error("La définition du workflow GitHub Actions MSE-25 ne correspond pas à la définition approuvée par le runtime.");
+    error.code = "MSE_25_30_PREFLIGHT_CI_WORKFLOW_CHANGED";
+    error.details = {
+      workflowPath: state.workflowPath || GITHUB_WORKFLOW_PATH,
+      expectedBlobSha: EXPECTED_GITHUB_WORKFLOW_BLOB_SHA,
+      actualBlobSha: state.workflowBlobSha || null,
+    };
     throw error;
   }
   if (state.baselineAncestor === false) {
@@ -239,6 +255,8 @@ function selectSuccessfulBaselineRun(payload, validatedBaseSha, {
     repository: GITHUB_REPOSITORY,
     workflowId: GITHUB_WORKFLOW_ID,
     workflowName: run.name,
+    workflowPath: GITHUB_WORKFLOW_PATH,
+    workflowBlobSha: EXPECTED_GITHUB_WORKFLOW_BLOB_SHA,
     runId: run.id,
     headSha: String(run.head_sha).toLowerCase(),
     headBranch: run.head_branch,
@@ -351,9 +369,11 @@ module.exports = {
   DEFAULT_REPORT_DIR,
   DEFAULT_VALIDATED_BASE_SHA,
   EXPECTED_BRANCH,
+  EXPECTED_GITHUB_WORKFLOW_BLOB_SHA,
   GITHUB_REPOSITORY,
   GITHUB_WORKFLOW_ID,
   GITHUB_WORKFLOW_NAME,
+  GITHUB_WORKFLOW_PATH,
   REQUIRED_HEALTH_FLAGS,
   RUNTIME_PROTECTED_PATHS,
   assertHealth,
