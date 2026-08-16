@@ -34,6 +34,7 @@ export const PARTNER_LOGO_BACKLOG = Object.freeze([
   { id: "heliades", category: "sejours", priority: 2, state: "permission-required", sourceType: "brand-permission", note: "Héliades terms prohibit reproduction of marks and logos without express authorisation." },
   { id: "voyamar", category: "sejours", priority: 2, state: "permission-required", sourceType: "brand-permission", note: "Voyamar terms prohibit reproduction of marks and logos without express authorisation." },
   { id: "aerosun", category: "sejours", priority: 3, state: "verification-pending", sourceType: "identity-check" },
+  { id: "travel-evasion", category: "sejours", priority: 2, state: "source-pending", sourceType: "official-site", note: "Official Travel Evasion public and B2B sites confirmed; use only the Travel Evasion masterbrand, not Mon French Club or product artwork." },
 
   { id: "alma-latina", category: "sur-mesure", priority: 2, state: "source-pending", sourceType: "official-site" },
   { id: "australie-tours", category: "sur-mesure", priority: 2, state: "source-pending", sourceType: "official-site" },
@@ -47,7 +48,6 @@ export const PARTNER_LOGO_BACKLOG = Object.freeze([
   { id: "luxair-tours", category: "sur-mesure", priority: 2, state: "source-pending", sourceType: "official-site" },
   { id: "gaeland-ashling", category: "sur-mesure", priority: 2, state: "source-pending", sourceType: "official-site" },
   { id: "planete-production", category: "sur-mesure", priority: 2, state: "source-pending", sourceType: "official-site" },
-  { id: "travel-evasion", category: "sur-mesure", priority: 3, state: "verification-pending", sourceType: "identity-check" },
 
   { id: "campings-com", category: "france-europe", priority: 2, state: "source-pending", sourceType: "official-site" },
   { id: "lagrange", category: "france-europe", priority: 2, state: "source-pending", sourceType: "official-site" },
