@@ -14,6 +14,7 @@
     "test:partners": "node --test test/mse-25-partners-public-regression.test.mjs test/mse-25-partner-directory.test.mjs test/mse-25-partner-assets.test.mjs test/mse-25-partner-catalog-quality.test.mjs test/mse-25-partner-verification.test.mjs test/mse-25-partner-readiness.test.mjs test/mse-25-partner-detail-sources.test.mjs",
     "partners:logos:audit": "node scripts/partner-logo-coverage.mjs",
     "partners:logos:queue": "node scripts/partner-logo-work-queue.mjs",
+    "partners:logos:discover:cruise": "node scripts/partner-cruise-logo-source-discovery.mjs",
     "partners:catalog:audit": "node scripts/partner-catalog-quality.mjs",
     "partners:details:audit": "node scripts/partner-detail-source-audit.mjs",
     "partners:readiness": "node scripts/partner-publication-readiness.mjs",
