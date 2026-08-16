@@ -37,10 +37,6 @@ const DETAILS = Object.freeze({
     destinations: ["Europe", "Afrique", "Amériques", "Asie", "Océan Indien", "Océanie", "Grand Nord & Antarctique"],
     travelTypes: ["Circuit accompagné", "Circuit privé", "Séjour", "Autotour", "Croisière", "Voyage sur mesure"],
   },
-  worldia: {
-    destinations: ["Europe", "Asie", "Amérique du Nord", "Amérique du Sud", "Moyen-Orient", "Afrique", "Îles"],
-    travelTypes: ["Voyage sur mesure", "Road trip", "City break", "Expédition", "Itinéraire multi-destinations"],
-  },
   ollandini: {
     destinations: ["Corse", "Ajaccio", "Balagne", "Golfe de Porto", "Sud Corse", "Sardaigne"],
     travelTypes: ["Séjour", "Circuit en voiture", "Circuit en autocar", "Sur mesure", "Location", "Hôtel-club"],
