@@ -1,6 +1,5 @@
 "use strict";
 
-import { getPartnerDetails } from "./partnerDetails";
 import { getCruisePartnerDetails } from "./partnerCruiseDetails";
 import { getCircuitPartnerDetails } from "./partnerCircuitDetails";
 import { getStayPartnerDetails } from "./partnerStayDetails";
@@ -8,15 +7,12 @@ import { getLongHaulPartnerDetails } from "./partnerLongHaulDetails";
 import { getFranceEuropePartnerDetails } from "./partnerFranceEuropeDetails";
 import { getPartnerVerification } from "./partnerVerification";
 
-// Specialized layers are authoritative. The generic detail catalogue is kept last
-// as a compatibility fallback while duplicated legacy entries are progressively removed.
 const DETAIL_GETTERS = Object.freeze([
   getCruisePartnerDetails,
   getCircuitPartnerDetails,
   getStayPartnerDetails,
   getLongHaulPartnerDetails,
   getFranceEuropePartnerDetails,
-  getPartnerDetails,
 ]);
 
 const COMPLETENESS_WEIGHTS = Object.freeze({
