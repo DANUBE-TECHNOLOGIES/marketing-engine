@@ -1,13 +1,13 @@
 "use strict";
 
 export const PARTNER_LOGO_BACKLOG = Object.freeze([
-  { id: "catlante-catamarans", category: "croisieres", priority: 1, state: "source-pending", sourceType: "official-site" },
-  { id: "croisieurope", category: "croisieres", priority: 1, state: "source-pending", sourceType: "official-site" },
+  { id: "catlante-catamarans", category: "croisieres", priority: 1, state: "source-vetted", sourceType: "official-site-svg", note: "Official site exposes logo.svg and logo-scroll.svg; use a vetted source before normalisation." },
+  { id: "croisieurope", category: "croisieres", priority: 1, state: "source-pending", sourceType: "official-site-or-brand-kit", note: "No trustworthy logo asset was exposed by the public homepage discovery pass." },
   { id: "ponant", category: "croisieres", priority: 1, state: "permission-required", sourceType: "official-press-request", note: "Le site presse PONANT demande de contacter le service presse pour les logos et visuels." },
   { id: "celestyal-cruises", category: "croisieres", priority: 1, state: "permission-required", sourceType: "brand-permission", note: "Les conditions d'utilisation Celestyal réservent l'utilisation des logos et marques sans consentement exprès." },
-  { id: "explora-journeys", category: "croisieres", priority: 1, state: "source-pending", sourceType: "official-site" },
-  { id: "cfc", category: "croisieres", priority: 1, state: "source-pending", sourceType: "official-site" },
-  { id: "hurtigruten", category: "croisieres", priority: 1, state: "source-pending", sourceType: "official-site" },
+  { id: "explora-journeys", category: "croisieres", priority: 1, state: "source-pending", sourceType: "official-press-kit", note: "Use the official Explora Journeys Media Centre / Press Kit rather than favicon or UI assets." },
+  { id: "cfc", category: "croisieres", priority: 1, state: "permission-required", sourceType: "brand-permission", note: "Hold logo reproduction until an authorised CFC asset source or written permission is confirmed." },
+  { id: "hurtigruten", category: "croisieres", priority: 1, state: "source-pending", sourceType: "official-press-library", note: "Homepage candidates are sub-brand wordmarks; use the official Hurtigruten press/media library for the masterbrand asset." },
 
   { id: "double-sens", category: "circuits", priority: 2, state: "source-pending", sourceType: "official-site" },
   { id: "destination-aventure", category: "circuits", priority: 2, state: "source-pending", sourceType: "official-site" },
