@@ -13,16 +13,18 @@ test("partner verification distinguishes identity review from logo permission re
   const audit = read("scripts/partner-catalog-quality.mjs");
   const longHaul = read("components/page-builder/shared/partnerLongHaulDetails.js");
   const longHaulSources = read("components/page-builder/shared/partnerLongHaulLogoSources.js");
+  const stayDetails = read("components/page-builder/shared/partnerStayDetails.js");
+  const staySources = read("components/page-builder/shared/partnerStayLogoSources.js");
 
-  for (const id of [
-    "hotels-lagons",
-    "lmx-voyages",
-    "mega-vacances",
-    "aerosun",
-    "asiam",
-    "travel-evasion",
-  ]) {
+  for (const id of ["mega-vacances", "aerosun", "asiam", "travel-evasion"]) {
     assert.match(verification, new RegExp(`"?${id}"?\\s*:`));
+  }
+
+  for (const id of ["hotels-lagons", "lmx-voyages"]) {
+    const escaped = id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    assert.doesNotMatch(verification, new RegExp(`"?${escaped}"?\\s*:[\\s\\S]*?identity-review`));
+    assert.match(stayDetails, new RegExp(`"?${escaped}"?\\s*:`));
+    assert.match(staySources, new RegExp(`"?${escaped}"?\\s*:[\\s\\S]*?official-source-page`));
   }
 
   for (const id of ["amerigo", "gaeland-ashling", "planete-production"]) {
