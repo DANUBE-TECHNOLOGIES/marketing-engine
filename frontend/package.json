@@ -16,6 +16,7 @@
     "partners:catalog:audit": "node scripts/partner-catalog-quality.mjs",
     "partners:readiness": "node scripts/partner-publication-readiness.mjs",
     "partners:readiness:strict": "node scripts/partner-publication-readiness.mjs --strict-content=true",
+    "partners:content:queue": "node scripts/partner-content-work-queue.mjs",
     "seo:audit-public": "node scripts/audit-public-seo.mjs",
     "seo:audit-public:strict": "node scripts/audit-public-seo.mjs --strict=true",
     "seo:recommend-public": "node scripts/recommend-public-seo.mjs",
