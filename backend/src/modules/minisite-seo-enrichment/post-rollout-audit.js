@@ -8,6 +8,10 @@ const {
   normalizeSiteSlug,
 } = require("./network-apply-audit");
 
+function readJson(filePath) {
+  return JSON.parse(fs.readFileSync(path.resolve(filePath), "utf8"));
+}
+
 function readRolloutReport(filePath) {
   const configuredPath = String(filePath || process.env.MSE_25_30_ROLLOUT_REPORT || "").trim();
   if (!configuredPath) {
@@ -19,7 +23,7 @@ function readRolloutReport(filePath) {
   const resolvedPath = path.resolve(configuredPath);
   let report;
   try {
-    report = JSON.parse(fs.readFileSync(resolvedPath, "utf8"));
+    report = readJson(resolvedPath);
   } catch (cause) {
     const error = new Error(`Impossible de lire le rapport de rollout : ${resolvedPath}`);
     error.code = "MSE_25_30_POST_ROLLOUT_REPORT_INVALID";
@@ -69,6 +73,28 @@ function assertApprovedScopeAudit(report = {}) {
   };
 }
 
+function persistValidationScopeAudit({ postRolloutReportPath, rolloutReport, approvedScopeAudit } = {}) {
+  if (!postRolloutReportPath) {
+    const error = new Error("Le rapport post-rollout est obligatoire pour persister la preuve de périmètre.");
+    error.code = "MSE_25_30_POST_ROLLOUT_OUTPUT_REQUIRED";
+    throw error;
+  }
+
+  const resolvedPath = path.resolve(postRolloutReportPath);
+  const report = readJson(resolvedPath);
+  const approvedScope = rolloutReport?.approvedScope || rolloutReport?.result?.approvedScope || {
+    excludedSiteSlugs: approvedScopeAudit?.excludedSiteSlugs || [],
+    excludedAgencies: [],
+  };
+  const enriched = {
+    ...report,
+    approvedScope,
+    approvedScopeAudit,
+  };
+  fs.writeFileSync(resolvedPath, JSON.stringify(enriched, null, 2) + "\n", "utf8");
+  return { reportPath: resolvedPath, approvedScope, approvedScopeAudit };
+}
+
 async function run(options = {}) {
   const loaded = readRolloutReport(options.rolloutReport);
   const approvedScopeAudit = assertApprovedScopeAudit(loaded.report);
@@ -76,8 +102,14 @@ async function run(options = {}) {
     ...options,
     rolloutReport: loaded.reportPath,
   });
+  const persisted = persistValidationScopeAudit({
+    postRolloutReportPath: result?.reportPath,
+    rolloutReport: loaded.report,
+    approvedScopeAudit,
+  });
   return {
     ...result,
+    approvedScope: persisted.approvedScope,
     approvedScopeAudit,
   };
 }
@@ -98,6 +130,8 @@ if (require.main === module) {
 module.exports = {
   assertApprovedScopeAudit,
   normalizedSlugs,
+  persistValidationScopeAudit,
+  readJson,
   readRolloutReport,
   run,
 };
