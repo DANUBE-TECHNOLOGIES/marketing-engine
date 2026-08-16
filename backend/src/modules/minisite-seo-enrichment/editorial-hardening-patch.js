@@ -17,6 +17,15 @@ function escapeRegex(value) {
   return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function configuredExcludedSiteSlugs(value) {
   let source = value;
   if (source === undefined) {
@@ -79,14 +88,27 @@ function naturalizeAgencyPlan(plan = {}) {
   const city = clean(plan.city);
   if (!city) return plan;
 
+  const transform = (value) => naturalizeFrench(value, city);
   const replacements = new Map();
   const pages = (plan.pages || []).map((page) => {
     const changes = (page.changes || []).map((change) => ({
       ...change,
-      next: transformStrings(change.next, (value) => naturalizeFrench(value, city), replacements),
+      next: transformStrings(change.next, transform, replacements),
     }));
+    const projectedPageMetadata = page.projectedPageMetadata
+      ? transformStrings(page.projectedPageMetadata, transform, replacements)
+      : page.projectedPageMetadata;
+    const pageRecord = page.page && typeof page.page === "object"
+      ? {
+          ...page.page,
+          seoTitle: transform(page.page.seoTitle),
+          metaDescription: transform(page.page.metaDescription),
+        }
+      : page.page;
     return {
       ...page,
+      page: pageRecord,
+      projectedPageMetadata,
       changes,
       optimizedBlocks: replaceKnownStrings(page.optimizedBlocks || [], replacements),
     };
@@ -103,9 +125,8 @@ function nextPosition(blocks = []) {
 }
 
 function hasDifferentiationBlock(page = {}) {
-  return (page.optimizedBlocks || []).some((block) =>
-    ["local-agency-differentiation"].includes(block?.seo?.purpose)
-  ) || (page.changes || []).some((change) => change?.purpose === "local-agency-differentiation");
+  return (page.optimizedBlocks || []).some((block) => block?.seo?.purpose === "local-agency-differentiation")
+    || (page.changes || []).some((change) => change?.purpose === "local-agency-differentiation");
 }
 
 function differentiationContent({ siteSlug, city, page } = {}) {
@@ -150,7 +171,7 @@ function differentiationContent({ siteSlug, city, page } = {}) {
   };
   return {
     title: titles[profile.key],
-    html: `<p>${choices[variant]}</p>`,
+    html: `<p>${escapeHtml(choices[variant])}</p>`,
     alignment: "left",
   };
 }
@@ -218,6 +239,32 @@ function hardenQualityReport(report = {}) {
   };
 }
 
+function filterSitemapReadiness(readiness = {}, excludedSiteSlugs = []) {
+  if (!excludedSiteSlugs.length) return readiness;
+  const excluded = new Set(excludedSiteSlugs.map((slug) => clean(slug).toLocaleLowerCase("fr-FR")));
+  const keep = (site) => !excluded.has(clean(site?.siteSlug || site?.slug).toLocaleLowerCase("fr-FR"));
+  const sites = Array.isArray(readiness.sites) ? readiness.sites.filter(keep) : [];
+  const notReady = sites.filter((site) => site?.readyToSubmit !== true);
+  const current = readiness.current && typeof readiness.current === "object"
+    ? {
+        ...readiness.current,
+        notReady: Array.isArray(readiness.current.notReady) ? readiness.current.notReady.filter(keep) : readiness.current.notReady,
+      }
+    : readiness.current;
+  if (current && Array.isArray(current.notReady)) {
+    current.notReadyCount = current.notReady.length;
+    current.blocked = current.notReady.length > 0;
+  }
+  return {
+    ...readiness,
+    current,
+    sites,
+    notReady,
+    notReadyCount: notReady.length,
+    blocked: notReady.length > 0,
+  };
+}
+
 function recomputeSummary(plan, similarity, quality, excludedAgencies) {
   const plans = plan.plans || [];
   const sitemapReadiness = plan.sitemapReadiness || { blocked: false, notReadyCount: 0 };
@@ -257,12 +304,13 @@ function installEditorialHardening(ServiceClass) {
 
   prototype.buildNetworkContentOptimization = async function buildNetworkContentOptimizationHardened(options = {}) {
     const plan = await originalBuildNetwork.call(this, options);
+    const hardenedPlans = (plan.plans || []).map((item) => strengthenAgencyDifferentiation(naturalizeAgencyPlan(item)));
     const excludedSiteSlugs = configuredExcludedSiteSlugs(options.excludedSiteSlugs);
     const excludedSet = new Set(excludedSiteSlugs);
-    const excludedAgencies = (plan.plans || [])
+    const excludedAgencies = hardenedPlans
       .filter((item) => excludedSet.has(clean(item.siteSlug).toLocaleLowerCase("fr-FR")))
       .map((item) => ({ agencyId: item.agencyId ?? null, siteSlug: item.siteSlug, city: item.city || null }));
-    const plans = (plan.plans || []).filter(
+    const plans = hardenedPlans.filter(
       (item) => !excludedSet.has(clean(item.siteSlug).toLocaleLowerCase("fr-FR"))
     );
 
@@ -273,11 +321,13 @@ function installEditorialHardening(ServiceClass) {
     const quality = hardenQualityReport(preRolloutQualityReport(plans, {
       minimumWords: Number(options.qualityMinimumWords ?? 120),
     }));
+    const sitemapReadiness = filterSitemapReadiness(plan.sitemapReadiness || {}, excludedSiteSlugs);
     const enriched = {
       ...plan,
       plans,
       similarity,
       quality,
+      sitemapReadiness,
       excludedAgencies,
       excludedSiteSlugs,
     };
@@ -309,6 +359,7 @@ module.exports = {
   DEFAULT_EXCLUDED_SITE_SLUGS,
   configuredExcludedSiteSlugs,
   differentiationContent,
+  filterSitemapReadiness,
   hardenQualityReport,
   installEditorialHardening,
   naturalizeAgencyPlan,
