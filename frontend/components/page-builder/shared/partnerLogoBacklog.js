@@ -45,7 +45,6 @@ export const PARTNER_LOGO_BACKLOG = Object.freeze([
   { id: "jetset-voyages", category: "sur-mesure", priority: 2, state: "source-pending", sourceType: "official-site" },
   { id: "luxair-tours", category: "sur-mesure", priority: 2, state: "source-pending", sourceType: "official-site" },
   { id: "gaeland-ashling", category: "sur-mesure", priority: 3, state: "verification-pending", sourceType: "identity-check" },
-  { id: "ollandini", category: "sur-mesure", priority: 2, state: "source-pending", sourceType: "official-site" },
   { id: "planete-production", category: "sur-mesure", priority: 3, state: "verification-pending", sourceType: "identity-check" },
   { id: "travel-evasion", category: "sur-mesure", priority: 3, state: "verification-pending", sourceType: "identity-check" },
 
@@ -53,6 +52,7 @@ export const PARTNER_LOGO_BACKLOG = Object.freeze([
   { id: "lagrange", category: "france-europe", priority: 2, state: "source-pending", sourceType: "official-site" },
   { id: "mmv", category: "france-europe", priority: 2, state: "source-pending", sourceType: "official-site" },
   { id: "pierre-vacances-center-parcs", category: "france-europe", priority: 2, state: "source-pending", sourceType: "official-site" },
+  { id: "ollandini", category: "france-europe", priority: 2, state: "source-pending", sourceType: "official-site", note: "Corsica specialist; source only the Ollandini masterbrand from its official site." },
   { id: "rev-vacances", category: "france-europe", priority: 3, state: "verification-pending", sourceType: "identity-check" },
   { id: "odalys", category: "france-europe", priority: 2, state: "source-pending", sourceType: "official-site" },
   { id: "thalasso-n1", category: "france-europe", priority: 2, state: "source-pending", sourceType: "official-site" },
