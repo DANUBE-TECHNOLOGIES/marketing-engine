@@ -21,10 +21,15 @@ const DETAILS = Object.freeze({
     travelTypes: ["Circuit accompagné", "Petit groupe", "Autocar", "Séjour découverte"],
     website: "https://www.salaun-holidays.com/",
   },
+  "pouchkine-tours": {
+    destinations: ["Europe de l'Est", "Europe centrale", "Balkans", "Caucase", "Asie centrale"],
+    travelTypes: ["Circuit culturel", "Circuit accompagné", "Voyage découverte", "Itinéraire patrimonial"],
+    website: "https://www.salaun-holidays.com/informations/brochures-salaun-holidays",
+  },
   nordiska: {
     destinations: ["Norvège", "Finlande", "Suède", "Danemark", "Islande", "Laponie"],
     travelTypes: ["Circuit accompagné", "Croisière", "Autotour", "Séjour découverte", "Circuit privatif", "Voyage à la carte"],
-    website: "https://www.salaun-holidays.com/circuits/nordiska",
+    website: "https://www.salaun-holidays.com/nordiska",
   },
   "top-of-travel": {
     destinations: ["Albanie", "Croatie", "Italie", "Portugal", "Madère", "Malte", "Monténégro", "Jordanie", "Cap-Vert"],
