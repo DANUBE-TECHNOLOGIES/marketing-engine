@@ -6,8 +6,10 @@ const {
   DEFAULT_EXCLUDED_SITE_SLUGS,
   configuredExcludedSiteSlugs,
   differentiationContent,
+  filterSitemapReadiness,
   hardenQualityReport,
   installEditorialHardening,
+  naturalizeAgencyPlan,
   naturalizeFrench,
 } = require("../src/modules/minisite-seo-enrichment/editorial-hardening-patch");
 
@@ -28,6 +30,35 @@ test("MSE-25.30 naturalise les formulations locales françaises sans keyword stu
     naturalizeFrench("Ambassade FRAM - Mondescale Ozoir la Ferrière à Ozoir la Ferrière vous accueille.", "Ozoir la Ferrière"),
     "Ambassade FRAM - Mondescale Ozoir la Ferrière vous accueille."
   );
+});
+
+test("MSE-25.30 naturalise aussi les métadonnées ajoutées au plan projeté final", () => {
+  const plan = naturalizeAgencyPlan({
+    city: "Amilly",
+    pages: [{
+      slug: "home",
+      page: {
+        seoTitle: "Agence de voyages à Amilly | TUI STORE Amilly",
+        metaDescription: "TUI STORE Amilly à Amilly vous conseille pour vos voyages.",
+      },
+      projectedPageMetadata: {
+        seoTitle: "Agence de voyages à Amilly | TUI STORE Amilly",
+        metaDescription: "TUI STORE Amilly à Amilly vous conseille pour vos voyages.",
+      },
+      optimizedBlocks: [],
+      changes: [{
+        blockType: "page",
+        field: "metaDescription",
+        previous: "ancienne meta",
+        next: "TUI STORE Amilly à Amilly vous conseille pour vos voyages.",
+        generated: true,
+      }],
+    }],
+  });
+
+  assert.equal(plan.pages[0].page.metaDescription, "TUI STORE Amilly vous conseille pour vos voyages.");
+  assert.equal(plan.pages[0].projectedPageMetadata.metaDescription, "TUI STORE Amilly vous conseille pour vos voyages.");
+  assert.equal(plan.pages[0].changes[0].next, "TUI STORE Amilly vous conseille pour vos voyages.");
 });
 
 test("MSE-25.30 promeut une page publiée sans contenu visible en blocage", () => {
@@ -87,6 +118,29 @@ test("MSE-25.30 produit une différenciation locale déterministe sans inventer 
   );
 });
 
+test("MSE-25.30 retire une agence exclue du gate sitemap projeté", () => {
+  const scoped = filterSitemapReadiness({
+    sites: [
+      { siteSlug: "tui-store-melun", readyToSubmit: false },
+      { siteSlug: "tui-store-amilly", readyToSubmit: true },
+    ],
+    notReady: [{ siteSlug: "tui-store-melun", readyToSubmit: false }],
+    notReadyCount: 1,
+    blocked: true,
+    current: {
+      notReady: [{ siteSlug: "tui-store-melun", readyToSubmit: false }],
+      notReadyCount: 1,
+      blocked: true,
+    },
+  }, ["tui-store-melun"]);
+
+  assert.deepEqual(scoped.sites.map((site) => site.siteSlug), ["tui-store-amilly"]);
+  assert.equal(scoped.notReadyCount, 0);
+  assert.equal(scoped.blocked, false);
+  assert.equal(scoped.current.notReadyCount, 0);
+  assert.equal(scoped.current.blocked, false);
+});
+
 test("MSE-25.30 retire une agence exclue avant les gates réseau et expose le périmètre", async () => {
   class FakeService {
     health() { return { status: "ok" }; }
@@ -116,7 +170,14 @@ test("MSE-25.30 retire une agence exclue avant les gates réseau et expose le p�
         ],
         similarity: {},
         quality: {},
-        sitemapReadiness: { blocked: false, notReadyCount: 0 },
+        sitemapReadiness: {
+          sites: [
+            { siteSlug: "tui-store-melun", readyToSubmit: false },
+            { siteSlug: "tui-store-amilly", readyToSubmit: true },
+          ],
+          blocked: true,
+          notReadyCount: 1,
+        },
         summary: {},
       };
     }
@@ -129,5 +190,6 @@ test("MSE-25.30 retire une agence exclue avant les gates réseau et expose le p�
   assert.deepEqual(result.excludedAgencies, [{ agencyId: 8, siteSlug: "tui-store-melun", city: "Melun" }]);
   assert.equal(result.summary.agenciesProcessed, 1);
   assert.equal(result.summary.agenciesExcluded, 1);
+  assert.equal(result.sitemapReadiness.blocked, false);
   assert.equal(new FakeService().health().networkAgencyExclusionGuard, true);
 });
