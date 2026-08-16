@@ -15,13 +15,7 @@ const DETAIL_GETTERS = Object.freeze([
   getFranceEuropePartnerDetails,
 ]);
 
-const COMPLETENESS_WEIGHTS = Object.freeze({
-  identity: 30,
-  summary: 20,
-  tags: 10,
-  details: 25,
-  logo: 15,
-});
+const COMPLETENESS_WEIGHTS = Object.freeze({ identity: 30, summary: 20, tags: 10, details: 25, logo: 15 });
 
 export function getResolvedPartnerDetails(partnerId) {
   for (const getter of DETAIL_GETTERS) {
@@ -31,13 +25,17 @@ export function getResolvedPartnerDetails(partnerId) {
   return null;
 }
 
+function isPublicationEligibleStatus(status) {
+  return status !== "identity-review" && status !== "catalogue-excluded";
+}
+
 function scorePartnerCompleteness(partner, details, verification) {
   const summary = String(partner?.summary || "").trim();
   const tags = Array.isArray(partner?.tags) ? partner.tags.filter(Boolean) : [];
   const destinations = Array.isArray(details?.destinations) ? details.destinations.filter(Boolean) : [];
   const travelTypes = Array.isArray(details?.travelTypes) ? details.travelTypes.filter(Boolean) : [];
   const hasLogo = Boolean(String(partner?.logoUrl || "").trim());
-  const identityConfirmed = verification.status !== "identity-review";
+  const identityConfirmed = isPublicationEligibleStatus(verification.status);
 
   let score = 0;
   if (identityConfirmed) score += COMPLETENESS_WEIGHTS.identity;
@@ -47,7 +45,8 @@ function scorePartnerCompleteness(partner, details, verification) {
   if (hasLogo) score += COMPLETENESS_WEIGHTS.logo;
 
   const blockers = [];
-  if (!identityConfirmed) blockers.push("identity-review");
+  if (verification.status === "identity-review") blockers.push("identity-review");
+  if (verification.status === "catalogue-excluded") blockers.push("catalogue-excluded");
   if (!summary) blockers.push("missing-summary");
   if (tags.length < 2) blockers.push("insufficient-tags");
   if (!destinations.length || !travelTypes.length) blockers.push("missing-details");
@@ -62,11 +61,10 @@ function scorePartnerCompleteness(partner, details, verification) {
 
 export function getPartnerProfile(partner) {
   if (!partner || !partner.id) return null;
-
   const details = getResolvedPartnerDetails(partner.id);
   const verification = getPartnerVerification(partner.id);
   const completeness = scorePartnerCompleteness(partner, details, verification);
-  const identityConfirmed = verification.status !== "identity-review";
+  const identityConfirmed = isPublicationEligibleStatus(verification.status);
 
   return {
     ...partner,
@@ -83,9 +81,7 @@ export function getPartnerProfile(partner) {
 }
 
 export function getPublishablePartnerProfiles(partners = []) {
-  return partners
-    .map(getPartnerProfile)
-    .filter((partner) => partner?.publishable && partner?.readyForPublication);
+  return partners.map(getPartnerProfile).filter((partner) => partner?.publishable && partner?.readyForPublication);
 }
 
 export function getPartnerCompletenessSummary(partners = []) {
