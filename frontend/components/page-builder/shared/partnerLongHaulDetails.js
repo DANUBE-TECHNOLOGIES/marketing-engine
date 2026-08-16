@@ -9,6 +9,18 @@ const DETAILS = Object.freeze({
     destinations: ["Australie", "Nouvelle-Zélande", "Pacifique Sud"],
     travelTypes: ["Voyage sur mesure", "Autotour", "Circuit", "Séjour"],
   },
+  "beachcomber-tours": {
+    destinations: ["Maurice", "Seychelles", "Maldives", "Dubaï", "Abu Dhabi", "Oman"],
+    travelTypes: ["Séjour haut de gamme", "Voyage de noces", "Famille", "Golf", "Multi-centres"],
+  },
+  asia: {
+    destinations: ["Japon", "Thaïlande", "Vietnam", "Inde", "Indonésie", "Asie du Sud-Est"],
+    travelTypes: ["Voyage sur mesure", "Circuit privé", "Circuit accompagné", "Combiné"],
+  },
+  "austral-lagons": {
+    destinations: ["Tahiti", "Seychelles", "Maurice", "Réunion", "Maldives", "Zanzibar", "Afrique australe"],
+    travelTypes: ["Voyage sur mesure", "Séjour haut de gamme", "Voyage de noces", "Safari", "Combiné"],
+  },
   "climats-du-monde": {
     destinations: ["Asie", "Moyen-Orient", "Afrique", "Océan Indien"],
     travelTypes: ["Circuit", "Voyage sur mesure", "Séjour", "Combiné"],
@@ -20,6 +32,18 @@ const DETAILS = Object.freeze({
   "luxair-tours": {
     destinations: ["Méditerranée", "Canaries", "Cap-Vert", "Égypte", "Destinations soleil"],
     travelTypes: ["Forfait vol + hôtel", "Séjour", "City break", "Vacances balnéaires"],
+  },
+  kuoni: {
+    destinations: ["Europe", "Afrique", "Amériques", "Asie", "Océan Indien", "Océanie", "Grand Nord & Antarctique"],
+    travelTypes: ["Circuit accompagné", "Circuit privé", "Séjour", "Autotour", "Croisière", "Voyage sur mesure"],
+  },
+  worldia: {
+    destinations: ["Europe", "Asie", "Amérique du Nord", "Amérique du Sud", "Moyen-Orient", "Afrique", "Îles"],
+    travelTypes: ["Voyage sur mesure", "Road trip", "City break", "Expédition", "Itinéraire multi-destinations"],
+  },
+  ollandini: {
+    destinations: ["Corse", "Ajaccio", "Balagne", "Golfe de Porto", "Sud Corse", "Sardaigne"],
+    travelTypes: ["Séjour", "Circuit en voiture", "Circuit en autocar", "Sur mesure", "Location", "Hôtel-club"],
   },
 });
 
