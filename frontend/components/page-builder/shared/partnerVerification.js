@@ -1,10 +1,6 @@
 "use strict";
 
 const REVIEW_REQUIRED = Object.freeze({
-  "mega-vacances": {
-    status: "identity-review",
-    reason: "The captured partner identity is not yet tied to a verified French tour-operator source; public search results are ambiguous and include unrelated brands, so publication stays blocked.",
-  },
   asiam: {
     status: "identity-review",
     reason: "A recent ASIAM TRAVEL company exists in France, but there is not yet enough evidence that it is the same commercial brand shown in the partner inventory; publication stays blocked until the identity is matched conclusively.",
