@@ -20,13 +20,15 @@ const [
   loadModule("partnerVerification.js"),
 ]);
 
+// Keep the same precedence as partnerProfile.js: specialized layers are authoritative,
+// partnerDetails.js is only the compatibility fallback.
 const detailModules = await Promise.all([
-  loadModule("partnerDetails.js"),
   loadModule("partnerCruiseDetails.js"),
   loadModule("partnerCircuitDetails.js"),
   loadModule("partnerStayDetails.js"),
   loadModule("partnerLongHaulDetails.js"),
   loadModule("partnerFranceEuropeDetails.js"),
+  loadModule("partnerDetails.js"),
 ]);
 
 const detailGetters = detailModules
