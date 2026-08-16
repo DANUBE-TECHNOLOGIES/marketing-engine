@@ -12,7 +12,10 @@ test("partner logo sourcing keeps vetted assets separate from press and permissi
   const cruiseSources = read("components/page-builder/shared/partnerCruiseLogoSources.js");
   const circuitSources = read("components/page-builder/shared/partnerCircuitLogoSources.js");
   const staySources = read("components/page-builder/shared/partnerStayLogoSources.js");
+  const longHaulSources = read("components/page-builder/shared/partnerLongHaulLogoSources.js");
+  const franceEuropeSources = read("components/page-builder/shared/partnerFranceEuropeLogoSources.js");
   const stayDetails = read("components/page-builder/shared/partnerStayDetails.js");
+  const franceEuropeDetails = read("components/page-builder/shared/partnerFranceEuropeDetails.js");
   const catalogue = read("components/page-builder/shared/fullPartners.js");
   const verification = read("components/page-builder/shared/partnerVerification.js");
   const backlog = read("components/page-builder/shared/partnerLogoBacklog.js");
@@ -44,8 +47,21 @@ test("partner logo sourcing keeps vetted assets separate from press and permissi
   assert.match(staySources, /voyamar[\s\S]*permission-review/);
   assert.match(staySources, /getStayLogoSource/);
 
+  assert.match(longHaulSources, /alma-latina[\s\S]*official-source-page/);
+  assert.doesNotMatch(longHaulSources, /ollandini/);
+
+  assert.match(franceEuropeSources, /campings-com[\s\S]*official-source-page/);
+  assert.match(franceEuropeSources, /ollandini[\s\S]*official-source-page/);
+  assert.match(franceEuropeSources, /pierre-vacances-center-parcs[\s\S]*multi-brand-review/);
+  assert.match(franceEuropeSources, /"pierre-vacances"[\s\S]*source-pending/);
+  assert.match(franceEuropeSources, /"center-parcs"[\s\S]*source-pending/);
+  assert.match(franceEuropeSources, /maeva[\s\S]*source-pending/);
+  assert.match(franceEuropeDetails, /pierre-vacances-center-parcs[\s\S]*displayMode:\s*"brand-cluster"/);
+  assert.match(franceEuropeDetails, /brands:\s*\["Pierre & Vacances", "Center Parcs", "maeva"\]/);
+
   assert.match(catalogue, /P\("jet-tours",\s*"Jet tours",\s*"sejours"/);
   assert.match(catalogue, /P\("plein-vent",\s*"Plein Vent",\s*"sejours"/);
+  assert.match(catalogue, /P\("ollandini",\s*"Ollandini",\s*"france-europe"/);
   assert.match(stayDetails, /"jet-tours"[\s\S]*Club Jet tours/);
   assert.match(stayDetails, /"plein-vent"[\s\S]*Club Jumbo/);
 
@@ -54,6 +70,7 @@ test("partner logo sourcing keeps vetted assets separate from press and permissi
     assert.match(backlog, new RegExp(`${id}[\\s\\S]*permission-required`));
   }
   assert.match(backlog, /worldia[\s\S]*catalogue-excluded/);
+  assert.match(backlog, /ollandini[\s\S]*france-europe/);
 
   assert.match(queue, /official-individual-assets-webp-or-vetted-svg/);
   assert.match(queue, /acceptedFormats:\s*\["webp", "svg"\]/);
