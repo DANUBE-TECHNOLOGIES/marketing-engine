@@ -33,6 +33,37 @@ function pageWithPositions(positions) {
   };
 }
 
+function pageWithLegacyCta() {
+  return {
+    slug: "avis",
+    title: "Avis clients",
+    published: true,
+    page: {
+      title: "Avis clients",
+      slug: "avis",
+      status: "published",
+      published: true,
+      seoTitle: "Avis clients | Mondescale Voyages",
+      metaDescription: "Découvrez les avis des voyageurs accompagnés par Mondescale Voyages.",
+    },
+    optimizedBlocks: [
+      {
+        type: "cta",
+        status: "published",
+        position: 10,
+        settings: {},
+        content: {
+          title: "Votre voyage commence ici",
+          text: "Parlez de votre projet avec votre conseiller.",
+          label: "Demander un devis",
+          href: "#contact",
+          style: "primary",
+        },
+      },
+    ],
+  };
+}
+
 test("MSE-25.30 preflight reports duplicate V2 positions before rollout", () => {
   const plan = { agencyId: 5, siteSlug: "ambassade-fram-mondescale-ozoir-la-ferriere", pages: [pageWithPositions([0, 0])] };
   const issue = persistenceValidationIssue(plan, plan.pages[0]);
@@ -50,5 +81,12 @@ test("MSE-25.30 preflight reports duplicate V2 positions before rollout", () => 
 test("MSE-25.30 persistence preflight accepts unique V2 positions", () => {
   const plan = { agencyId: 5, siteSlug: "ambassade-fram-mondescale-ozoir-la-ferriere", pages: [pageWithPositions([10, 20])] };
   assert.equal(persistenceValidationIssue(plan, plan.pages[0]), null);
+  assert.deepEqual(persistenceValidationIssues([plan]), []);
+});
+
+test("MSE-25.30 persistence preflight migrates legacy CTA before strict V2 validation", () => {
+  const page = pageWithLegacyCta();
+  const plan = { agencyId: 5, siteSlug: "ambassade-fram-mondescale-ozoir-la-ferriere", pages: [page] };
+  assert.equal(persistenceValidationIssue(plan, page), null);
   assert.deepEqual(persistenceValidationIssues([plan]), []);
 });
