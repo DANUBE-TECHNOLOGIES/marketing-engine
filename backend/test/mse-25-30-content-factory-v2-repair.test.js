@@ -38,7 +38,15 @@ test("V2 repair publishes copied blocks when the page is already published", () 
   assert.deepEqual(block.content.paragraphs, ["Texte visible"]);
 });
 
-test("V2 repair preview and apply preserve page metadata and are idempotent", async () => {
+test("V2 repair requires tenant scope", async () => {
+  const repair = new ContentFactoryV2Repair({ agencySite: { findUnique: async () => null } });
+  await assert.rejects(
+    () => repair.plan({ siteSlug: "ambassade-fram-mondescale-ozoir-la-ferriere" }),
+    (error) => error.code === "CONTENT_FACTORY_V2_REPAIR_TENANT_REQUIRED"
+  );
+});
+
+test("V2 repair preview and apply preserve page metadata, use tenant composite key and are idempotent", async () => {
   const page = {
     id: "page-1",
     slug: "budapest-weekend",
@@ -67,14 +75,18 @@ test("V2 repair preview and apply preserve page metadata and are idempotent", as
 
   let blockCount = 0;
   const createdPayloads = [];
+  const lookupPayloads = [];
   const prisma = {
     agencySite: {
-      findUnique: async () => ({
-        id: "site-1",
-        slug: "ambassade-fram-mondescale-ozoir-la-ferriere",
-        name: "Ozoir",
-        pages: [page],
-      }),
+      findUnique: async (input) => {
+        lookupPayloads.push(input);
+        return {
+          id: "site-1",
+          slug: "ambassade-fram-mondescale-ozoir-la-ferriere",
+          name: "Ozoir",
+          pages: [page],
+        };
+      },
     },
     $transaction: async (callback) => callback({
       pageBlock: {
@@ -89,28 +101,29 @@ test("V2 repair preview and apply preserve page metadata and are idempotent", as
   };
 
   const repair = new ContentFactoryV2Repair(prisma);
-  const preview = await repair.plan({
+  const common = {
+    tenantId: "tenant-mondescale",
     siteSlug: "ambassade-fram-mondescale-ozoir-la-ferriere",
     destinationSlug: "budapest",
-  });
+  };
+  const preview = await repair.plan(common);
 
   assert.equal(preview.candidateCount, 1);
   assert.equal(preview.blockCount, 2);
   assert.equal(preview.candidates[0].published, true);
+  assert.deepEqual(lookupPayloads[0].where, {
+    tenantId_slug: {
+      tenantId: "tenant-mondescale",
+      slug: "ambassade-fram-mondescale-ozoir-la-ferriere",
+    },
+  });
 
   await assert.rejects(
-    () => repair.apply({
-      siteSlug: "ambassade-fram-mondescale-ozoir-la-ferriere",
-      destinationSlug: "budapest",
-    }),
+    () => repair.apply(common),
     (error) => error.code === "CONTENT_FACTORY_V2_REPAIR_CONFIRM_REQUIRED"
   );
 
-  const applied = await repair.apply({
-    siteSlug: "ambassade-fram-mondescale-ozoir-la-ferriere",
-    destinationSlug: "budapest",
-    confirm: true,
-  });
+  const applied = await repair.apply({ ...common, confirm: true });
 
   assert.equal(applied.repairedPages, 1);
   assert.equal(applied.createdBlocks, 2);
@@ -118,11 +131,7 @@ test("V2 repair preview and apply preserve page metadata and are idempotent", as
   assert.ok(createdPayloads[0].every((entry) => entry.pageId === "page-1"));
   assert.ok(createdPayloads[0].every((entry) => entry.status === "published"));
 
-  const secondApply = await repair.apply({
-    siteSlug: "ambassade-fram-mondescale-ozoir-la-ferriere",
-    destinationSlug: "budapest",
-    confirm: true,
-  });
+  const secondApply = await repair.apply({ ...common, confirm: true });
   assert.equal(secondApply.repairedPages, 0);
   assert.equal(secondApply.createdBlocks, 0);
 });
