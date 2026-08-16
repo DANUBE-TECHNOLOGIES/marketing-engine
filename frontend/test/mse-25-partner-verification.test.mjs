@@ -11,21 +11,27 @@ const read = (relativePath) => fs.readFileSync(path.join(frontendRoot, relativeP
 test("partner verification distinguishes identity review from logo permission review", () => {
   const verification = read("components/page-builder/shared/partnerVerification.js");
   const audit = read("scripts/partner-catalog-quality.mjs");
+  const catalogue = read("components/page-builder/shared/fullPartners.js");
   const longHaul = read("components/page-builder/shared/partnerLongHaulDetails.js");
   const longHaulSources = read("components/page-builder/shared/partnerLongHaulLogoSources.js");
   const stayDetails = read("components/page-builder/shared/partnerStayDetails.js");
   const staySources = read("components/page-builder/shared/partnerStayLogoSources.js");
+  const backlog = read("components/page-builder/shared/partnerLogoBacklog.js");
 
-  for (const id of ["mega-vacances", "aerosun", "asiam", "travel-evasion"]) {
+  for (const id of ["mega-vacances", "aerosun", "asiam"]) {
     assert.match(verification, new RegExp(`"?${id}"?\\s*:`));
   }
 
-  for (const id of ["hotels-lagons", "lmx-voyages"]) {
+  for (const id of ["hotels-lagons", "lmx-voyages", "travel-evasion"]) {
     const escaped = id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     assert.doesNotMatch(verification, new RegExp(`"?${escaped}"?\\s*:[\\s\\S]*?identity-review`));
     assert.match(stayDetails, new RegExp(`"?${escaped}"?\\s*:`));
     assert.match(staySources, new RegExp(`"?${escaped}"?\\s*:[\\s\\S]*?official-source-page`));
   }
+
+  assert.match(catalogue, /P\("travel-evasion",\s*"Travel Evasion",\s*"sejours"/);
+  assert.doesNotMatch(catalogue, /P\("travel-evasion",\s*"Travel Evasion",\s*"sur-mesure"/);
+  assert.match(backlog, /travel-evasion[\s\S]*category:\s*"sejours"[\s\S]*state:\s*"source-pending"/);
 
   for (const id of ["amerigo", "gaeland-ashling", "planete-production"]) {
     const escaped = id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
