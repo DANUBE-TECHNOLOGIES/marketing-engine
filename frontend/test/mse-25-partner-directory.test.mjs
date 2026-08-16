@@ -31,13 +31,14 @@ test("full partner directory exposes categorized supplier inventory with special
   for (const id of ["catlante-catamarans", "croisieurope", "ponant", "celestyal-cruises", "explora-journeys", "cfc", "hurtigruten", "msc-croisieres", "costa-croisieres"]) assert.match(cruiseDetails, new RegExp(`(?:^|\\n)\\s*"?${id}"?\\s*:`));
   assert.match(cruiseDetails, /Croisière à la cabine/); assert.match(cruiseDetails, /Départ de Marseille/);
 
-  for (const id of ["double-sens", "destination-aventure", "la-francaise-des-circuits", "salaun-holidays", "nordiska", "top-of-travel", "visit-europe", "voyages-internationaux"]) assert.match(circuitDetails, new RegExp(`(?:^|\\n)\\s*"?${id}"?\\s*:`));
-  assert.match(circuitDetails, /Trek & randonnée/); assert.match(circuitDetails, /Voyage Signature/); assert.match(circuitDetails, /Voyage en train/);
+  for (const id of ["double-sens", "destination-aventure", "la-francaise-des-circuits", "salaun-holidays", "nordiska", "top-of-travel", "visit-europe", "voyages-internationaux", "worldia"]) assert.match(circuitDetails, new RegExp(`(?:^|\\n)\\s*"?${id}"?\\s*:`));
+  assert.match(circuitDetails, /Trek & randonnée/); assert.match(circuitDetails, /Voyage Signature/); assert.match(circuitDetails, /Voyage en train/); assert.match(circuitDetails, /Itinéraire multi-destinations/);
 
   for (const id of ["fram", "tui-france", "club-med", "belambra", "boomerang", "exotismes", "mondial-tourisme", "plein-vent", "solea", "pacha-tours", "heliades", "voyamar"]) assert.match(stayDetails, new RegExp(`(?:^|\\n)\\s*"?${id}"?\\s*:`));
   for (const term of [/Club Framissima/, /Kappa Club/, /Mondi Club/, /Club Jumbo/, /Méditerranée orientale/, /Naya Club/]) assert.match(stayDetails, term);
 
-  for (const id of ["alma-latina", "australie-tours", "beachcomber-tours", "asia", "austral-lagons", "climats-du-monde", "jetset-voyages", "luxair-tours", "kuoni", "worldia", "ollandini"]) assert.match(longHaulDetails, new RegExp(`(?:^|\\n)\\s*"?${id}"?\\s*:`));
+  for (const id of ["alma-latina", "australie-tours", "beachcomber-tours", "asia", "austral-lagons", "climats-du-monde", "jetset-voyages", "luxair-tours", "kuoni", "ollandini"]) assert.match(longHaulDetails, new RegExp(`(?:^|\\n)\\s*"?${id}"?\\s*:`));
+  assert.doesNotMatch(longHaulDetails, /(?:^|\n)\s*worldia\s*:/);
   for (const id of ["campings-com", "lagrange", "mmv", "pierre-vacances-center-parcs", "odalys", "thalasso-n1", "villages-clubs-soleil"]) assert.match(franceEuropeDetails, new RegExp(`(?:^|\\n)\\s*"?${id}"?\\s*:`));
 
   for (const resolver of ["getCruisePartnerDetails", "getCircuitPartnerDetails", "getStayPartnerDetails", "getLongHaulPartnerDetails", "getFranceEuropePartnerDetails"]) assert.match(profile, new RegExp(resolver));
