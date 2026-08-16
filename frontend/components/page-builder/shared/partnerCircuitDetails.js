@@ -46,6 +46,11 @@ const DETAILS = Object.freeze({
     travelTypes: ["Circuit accompagné", "Voyage en autocar", "Voyage en avion", "Découverte culturelle"],
     website: "https://www.voyages-internationaux.fr/",
   },
+  "rev-vacances": {
+    destinations: ["Égypte", "Afrique", "Europe", "Amérique du Nord", "Amérique du Sud", "Asie"],
+    travelTypes: ["Circuit accompagné", "Croisière", "Voyage à la carte", "Séjour", "Voyage privatif"],
+    website: "https://www.rev-vacances.fr/",
+  },
   worldia: {
     destinations: ["Europe", "Asie", "Amérique du Nord", "Amérique du Sud", "Moyen-Orient", "Afrique", "Îles"],
     travelTypes: ["Voyage sur mesure", "Road trip", "City break", "Expédition", "Itinéraire multi-destinations"],
