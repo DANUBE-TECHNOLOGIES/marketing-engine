@@ -1,11 +1,23 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { FULL_PARTNERS } from "../components/page-builder/shared/fullPartners.js";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const frontendRoot = path.resolve(here, "..");
 const publicRoot = path.join(frontendRoot, "public");
+const cataloguePath = path.join(
+  frontendRoot,
+  "components/page-builder/shared/fullPartners.js"
+);
+
+async function loadCatalogue() {
+  const source = fs.readFileSync(cataloguePath, "utf8");
+  const dataUrl = `data:text/javascript;base64,${Buffer.from(source).toString("base64")}`;
+  const module = await import(dataUrl);
+  return Array.isArray(module.FULL_PARTNERS) ? module.FULL_PARTNERS : [];
+}
+
+const FULL_PARTNERS = await loadCatalogue();
 
 const rows = FULL_PARTNERS.map((partner) => {
   const logoUrl = String(partner.logoUrl || "").trim();
@@ -18,6 +30,7 @@ const rows = FULL_PARTNERS.map((partner) => {
     name: partner.name,
     category: partner.category,
     logoUrl: logoUrl || null,
+    fileUrl: filePath ? pathToFileURL(filePath).href : null,
     state: !logoUrl ? "missing" : exists ? "ready" : "broken-reference",
   };
 });
