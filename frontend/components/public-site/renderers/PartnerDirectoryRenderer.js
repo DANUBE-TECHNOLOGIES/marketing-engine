@@ -6,6 +6,7 @@ import { getCircuitPartnerDetails } from "../../page-builder/shared/partnerCircu
 import { getStayPartnerDetails } from "../../page-builder/shared/partnerStayDetails";
 import { getLongHaulPartnerDetails } from "../../page-builder/shared/partnerLongHaulDetails";
 import { getFranceEuropePartnerDetails } from "../../page-builder/shared/partnerFranceEuropeDetails";
+import { isPartnerPublicationConfirmed } from "../../page-builder/shared/partnerVerification";
 import styles from "./PartnerDirectoryRenderer.module.css";
 
 function MetadataGroup({ label, values }) {
@@ -73,7 +74,12 @@ function PartnerCard({ partner }) {
 
 export default function PartnerDirectoryRenderer({ section }) {
   const content = getSectionContent(section);
-  const categories = getPartnerDirectoryCategories();
+  const categories = getPartnerDirectoryCategories()
+    .map((category) => ({
+      ...category,
+      partners: category.partners.filter((partner) => isPartnerPublicationConfirmed(partner.id)),
+    }))
+    .filter((category) => category.partners.length);
 
   return (
     <section className={`public-site-section ${styles.section}`}>
