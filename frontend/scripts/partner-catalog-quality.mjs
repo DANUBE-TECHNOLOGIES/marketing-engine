@@ -22,13 +22,15 @@ const [
   loadModule("partnerVerification.js"),
 ]);
 
+// Same resolution contract as partnerProfile.js and publication readiness:
+// specialized detail layers win; the generic catalogue is a legacy fallback only.
 const detailModules = await Promise.all([
-  loadModule("partnerDetails.js"),
   loadModule("partnerCruiseDetails.js"),
   loadModule("partnerCircuitDetails.js"),
   loadModule("partnerStayDetails.js"),
   loadModule("partnerLongHaulDetails.js"),
   loadModule("partnerFranceEuropeDetails.js"),
+  loadModule("partnerDetails.js"),
 ]);
 
 const getters = detailModules
@@ -151,6 +153,7 @@ const payload = {
     logos: "individual-assets-only",
     identity: "confirm-before-final-publication",
     publicationReadiness: "content-ready-with-logo-fallback-allowed",
+    detailPrecedence: "specialized-before-generic-fallback",
     maxVisibleTags: 2,
   },
   summary: {
