@@ -9,6 +9,11 @@ const DETAILS = Object.freeze({
     destinations: ["Australie", "Nouvelle-Zélande", "Pacifique Sud"],
     travelTypes: ["Voyage sur mesure", "Autotour", "Circuit", "Séjour"],
   },
+  amerigo: {
+    destinations: ["États-Unis", "Canada", "Mexique", "Amérique centrale", "Amérique du Sud", "Asie"],
+    travelTypes: ["Circuit accompagné", "Voyage sur mesure", "Voyage de groupe", "Autotour", "Circuit thématique"],
+    website: "https://www.amerigo.fr/",
+  },
   "beachcomber-tours": {
     destinations: ["Maurice", "Seychelles", "Maldives", "Dubaï", "Abu Dhabi", "Oman"],
     travelTypes: ["Séjour haut de gamme", "Voyage de noces", "Famille", "Golf", "Multi-centres"],
@@ -32,6 +37,16 @@ const DETAILS = Object.freeze({
   "luxair-tours": {
     destinations: ["Méditerranée", "Canaries", "Cap-Vert", "Égypte", "Destinations soleil"],
     travelTypes: ["Forfait vol + hôtel", "Séjour", "City break", "Vacances balnéaires"],
+  },
+  "gaeland-ashling": {
+    destinations: ["Irlande", "Écosse", "Angleterre", "Pays de Galles"],
+    travelTypes: ["Voyage sur mesure", "Autotour", "Séjour", "Manoir & château", "Location", "Circuit"],
+    website: "https://www.gaeland-ashling.com/",
+  },
+  "planete-production": {
+    destinations: ["Monde", "Afrique", "Asie", "Amériques", "Océan Indien", "Europe"],
+    travelTypes: ["Voyage sur mesure", "FIT", "Groupe", "Production à la carte", "Voyage d'aventure"],
+    website: "https://planeteproduction.fr/",
   },
   kuoni: {
     destinations: ["Europe", "Afrique", "Amériques", "Asie", "Océan Indien", "Océanie", "Grand Nord & Antarctique"],
