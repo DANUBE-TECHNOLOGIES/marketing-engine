@@ -1,10 +1,6 @@
 "use strict";
 
 const REVIEW_REQUIRED = Object.freeze({
-  "pouchkine-tours": {
-    status: "identity-review",
-    reason: "Official brand identity/source still needs confirmation before final publication.",
-  },
   "hotels-lagons": {
     status: "identity-review",
     reason: "Brand identity and official source still need confirmation before final publication.",
