@@ -1,14 +1,6 @@
 "use strict";
 
 const REVIEW_REQUIRED = Object.freeze({
-  "hotels-lagons": {
-    status: "identity-review",
-    reason: "Brand identity and official source still need confirmation before final publication.",
-  },
-  "lmx-voyages": {
-    status: "identity-review",
-    reason: "Brand identity and official source still need confirmation before final publication.",
-  },
   "mega-vacances": {
     status: "identity-review",
     reason: "Brand identity and official source still need confirmation before final publication.",
@@ -23,7 +15,7 @@ const REVIEW_REQUIRED = Object.freeze({
   },
   "travel-evasion": {
     status: "identity-review",
-    reason: "Official brand identity/source still needs confirmation before final publication.",
+    reason: "Official identity is confirmed, but its public catalogue category still needs realignment before publication.",
   },
 });
 
