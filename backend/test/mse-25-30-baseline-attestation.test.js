@@ -4,8 +4,10 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const {
   EXPECTED_BRANCH,
+  EXPECTED_GITHUB_WORKFLOW_BLOB_SHA,
   GITHUB_WORKFLOW_ID,
   GITHUB_WORKFLOW_NAME,
+  GITHUB_WORKFLOW_PATH,
 } = require("../scripts/mse-25-30-preflight");
 const {
   assertPreflightBaselineAttestation,
@@ -15,7 +17,7 @@ const {
   auditBaselineAttestation,
 } = require("../src/modules/minisite-seo-enrichment/baseline-attestation-audit");
 
-const BASE_SHA = "c72202f3eca15998d26254e502cf6a47a973c67f";
+const BASE_SHA = "6cfc1dde265ad3f4ae376b467133ece612ff8343";
 
 function attestation(overrides = {}) {
   return {
@@ -23,7 +25,9 @@ function attestation(overrides = {}) {
     repository: "DANUBE-TECHNOLOGIES/marketing-engine",
     workflowId: GITHUB_WORKFLOW_ID,
     workflowName: GITHUB_WORKFLOW_NAME,
-    runId: 31955176772,
+    workflowPath: GITHUB_WORKFLOW_PATH,
+    workflowBlobSha: EXPECTED_GITHUB_WORKFLOW_BLOB_SHA,
+    runId: 31955664054,
     headSha: BASE_SHA,
     headBranch: EXPECTED_BRANCH,
     event: "push",
@@ -57,7 +61,9 @@ test("MSE-25.30 recalcule une chaîne d'attestation CI cohérente", () => {
   const audit = auditBaselineAttestation(rolloutReport());
   assert.equal(audit.ok, true);
   assert.equal(audit.validatedBaseSha, BASE_SHA);
-  assert.equal(audit.runId, 31955176772);
+  assert.equal(audit.runId, 31955664054);
+  assert.equal(audit.workflowPath, GITHUB_WORKFLOW_PATH);
+  assert.equal(audit.workflowBlobSha, EXPECTED_GITHUB_WORKFLOW_BLOB_SHA);
   assert.deepEqual(audit.issues, []);
 });
 
@@ -72,13 +78,15 @@ test("MSE-25.30 refuse une SHA baseline désynchronisée dans le rapport", () =>
   });
 });
 
-test("MSE-25.30 refuse une attestation venant d'un run manuel ou en échec", () => {
+test("MSE-25.30 refuse une attestation venant d'un run manuel, en échec ou d'une autre définition CI", () => {
   for (const mutated of [
     { event: "workflow_dispatch" },
     { conclusion: "failure" },
     { headBranch: "develop" },
     { workflowId: 123 },
     { headSha: "b".repeat(40) },
+    { workflowPath: ".github/workflows/fake.yml" },
+    { workflowBlobSha: "0".repeat(40) },
   ]) {
     const report = rolloutReport();
     report.result.preflight.baselineAttestation = attestation(mutated);
@@ -90,8 +98,8 @@ test("MSE-25.30 refuse une attestation venant d'un run manuel ou en échec", () 
 });
 
 test("MSE-25.30 apply compare le preflight enregistré à une attestation GitHub fraîche", () => {
-  const recorded = attestation({ runId: 31955176772 });
-  const live = attestation({ runId: 31955176772 });
+  const recorded = attestation();
+  const live = attestation();
   const audit = assertPreflightBaselineAttestation({
     repository: {
       validatedBaseSha: BASE_SHA,
@@ -103,8 +111,8 @@ test("MSE-25.30 apply compare le preflight enregistré à une attestation GitHub
 
   assert.equal(audit.ok, true);
   assert.equal(audit.validatedBaseSha, BASE_SHA);
-  assert.equal(audit.preflightRunId, 31955176772);
-  assert.equal(audit.liveRunId, 31955176772);
+  assert.equal(audit.preflightRunId, 31955664054);
+  assert.equal(audit.liveRunId, 31955664054);
 });
 
 test("MSE-25.30 apply refuse un preflight dont la baseline a été substituée", () => {
