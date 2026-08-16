@@ -49,16 +49,19 @@ export BACKEND_ORIGIN=http://127.0.0.1:4000
 export TENANT_SLUG=mondescale
 ```
 
-Le backend doit exposer les capacités MSE-25.30 attendues par le health check : persistance, écritures versionnées, garde de similarité, quality gate, sitemap readiness, snapshots de rollback, compensation automatique, protection des pages `noindex` et protection des routes canoniques rendues hors Website Designer V2.
+Le backend doit exposer les capacités MSE-25.30 attendues par le health check : persistance, écritures versionnées, garde de similarité, quality gate, sitemap readiness, snapshots de rollback, compensation automatique, protection des pages `noindex`, protection des routes canoniques rendues hors Website Designer V2 et garde d'empreinte du plan approuvé.
 
-Les deux protections d'écriture suivantes sont obligatoires :
+Les protections d'écriture suivantes sont obligatoires :
 
 ```text
 noindexContentWriteGuard = true
 managedRouteContentWriteGuard = true
+approvedPlanFingerprintGuard = true
 ```
 
-Elles garantissent notamment que les pages légales volontairement `noindex` et les pages V2 dont la route canonique est gérée par un renderer dédié ne sont ni chargées ni écrites inutilement par le rollout de contenu.
+Les deux premières garantissent notamment que les pages légales volontairement `noindex` et les pages V2 dont la route canonique est gérée par un renderer dédié ne sont ni chargées ni écrites inutilement par le rollout de contenu.
+
+`approvedPlanFingerprintGuard` garantit que l'apply ne peut pas écrire un plan différent de celui qui a été prévisualisé et approuvé par l'opérateur.
 
 ## 5. Lancer le préflight réel — aucune écriture
 
@@ -73,9 +76,10 @@ Le préflight :
 2. refuse un working tree sale ;
 3. vérifie que la baseline CI validée est bien dans l'historique courant ;
 4. refuse toute dérive des chemins runtime protégés depuis cette baseline ;
-5. vérifie les capacités annoncées par `/minisite-seo-enrichment/health` ;
+5. vérifie les capacités annoncées par `/minisite-seo-enrichment/health`, dont `approvedPlanFingerprintGuard=true` ;
 6. lance le preview réseau sans écriture ;
-7. archive un rapport JSON horodaté, par défaut sous `~/mse-25-30-reports/`.
+7. calcule et archive l'empreinte du plan effectivement prévisualisé avec les paramètres qui ont servi à le produire ;
+8. archive un rapport JSON horodaté, par défaut sous `~/mse-25-30-reports/`.
 
 La sortie contient le chemin exact `reportPath`. Le conserver : l'apply exigera ce même fichier.
 
@@ -88,6 +92,12 @@ rolloutBlocked = false
 similarity.blockingConflictCount = 0
 quality.blockingCount = 0
 sitemapReadiness.notReadyCount = 0
+```
+
+Le health check doit également confirmer :
+
+```text
+approvedPlanFingerprintGuard = true
 ```
 
 Les avertissements non bloquants doivent malgré tout être lus. Le seuil de similarité réseau par défaut est de `0.78`.
@@ -123,6 +133,17 @@ Une exclusion connue n'est pas une anomalie. En revanche, une page commerciale o
 
 Le rapport de préflight expire au bout de 30 minutes par défaut. L'apply exige également le même tenant, le même backend et le même HEAD Git que le préflight.
 
+### Invariant preview → apply
+
+Le rapport de préflight constitue l'approbation d'un plan précis, pas seulement l'autorisation générale d'exécuter MSE-25.30. Entre le preview approuvé et l'apply :
+
+- ne modifier aucun paramètre de génération, de sélection, de qualité ou de similarité ;
+- ne modifier ni le tenant ni le backend ciblé ;
+- ne substituer aucun autre rapport de preview ;
+- conserver l'empreinte du plan approuvé et les paramètres archivés dans le rapport.
+
+Au moment de l'apply, le backend recalcule le plan avec les paramètres approuvés et compare son empreinte à celle du préflight. Toute divergence doit bloquer l'écriture avant la première mutation. Dans ce cas, ne jamais forcer l'apply : produire un nouveau preview, relire le diff, puis approuver ce nouveau plan.
+
 ## 7. Appliquer MSE-25.30
 
 Récupérer d'abord le chemin exact affiché par le préflight :
@@ -137,19 +158,24 @@ Puis seulement après validation humaine du rapport :
 CONFIRM_MSE_25_30_ROLLOUT=YES npm run mse-25.30:network-apply
 ```
 
+L'apply doit reprendre les paramètres approuvés depuis le rapport de préflight. Il ne doit pas permettre à des paramètres opérateur divergents de transformer silencieusement le plan entre preview et écriture.
+
+Avant la première écriture, l'empreinte du plan recalculé doit être strictement identique à l'empreinte approuvée. Un mismatch est un arrêt normal de sécurité et impose un nouveau cycle preview → revue → approbation.
+
 Pour chaque page réellement modifiée, le backend :
 
 1. crée un snapshot Website Designer V2 ;
 2. refuse l'écriture si l'identifiant exact du snapshot de rollback n'est pas résolu ;
 3. sauvegarde le contenu optimisé dans une nouvelle version ;
 4. conserve les valeurs attendues des changements (`expectedChanges`) ;
-5. ajoute l'entrée correspondante au manifeste de rollback.
+5. conserve pour chaque changement les informations de diff nécessaires à l'audit, notamment `previous`, `next`, `blockId` et `purpose` lorsqu'elles sont applicables ;
+6. ajoute l'entrée correspondante au manifeste de rollback.
 
 Les pages listées dans `excludedPages` restent également associées au résultat de l'agence afin que l'opérateur puisse vérifier qu'elles n'ont pas été transformées silencieusement en écritures.
 
 Si une écriture suivante échoue, les pages déjà appliquées sont automatiquement compensées en ordre inverse à partir de leurs snapshots. Une compensation partielle est remontée explicitement comme erreur.
 
-Après un rollout réussi, le script crée automatiquement un rapport contextualisé horodaté sous `~/mse-25-30-reports/`. Sa sortie contient `rolloutReportPath`. Ce rapport lie ensemble le HEAD, le tenant, le backend, le préflight, les versions appliquées, les changements attendus et le manifeste de rollback.
+Après un rollout réussi, le script crée automatiquement un rapport contextualisé horodaté sous `~/mse-25-30-reports/`. Sa sortie contient `rolloutReportPath`. Ce rapport lie ensemble le HEAD, le tenant, le backend, le préflight, l'empreinte du plan approuvé, les versions appliquées, les changements attendus et le manifeste de rollback.
 
 Si le serveur a appliqué le rollout mais que l'écriture locale du rapport échoue, le résultat reste explicitement `ok: true` pour l'application serveur, avec `operatorAttentionRequired: true`, le manifeste restant dans la sortie et un code de sortie opérateur non nul. Ne jamais relancer aveuglément l'apply dans ce cas.
 
@@ -198,9 +224,11 @@ Après un rollback, refaire les contrôles publics et d'indexation appropriés a
 
 - Ne jamais lancer `network-apply` sans préflight récent.
 - Ne jamais réutiliser un préflight d'un autre HEAD, tenant ou backend.
+- Ne jamais appliquer un plan dont l'empreinte diffère de celle du preview approuvé.
+- Ne jamais modifier les paramètres du plan entre preview et apply ; toute modification impose un nouveau preview.
 - Lire les pages exclues et leur raison au même titre que les pages modifiées.
 - Ne jamais abaisser le seuil de similarité pour forcer un rollout sans analyse.
 - Ne jamais supprimer les versions Website Designer V2 référencées par un rapport de rollout encore actif.
-- Conserver ensemble le HEAD Git, le rapport de préflight, le rapport de rollout, le rapport post-rollout et, en cas d'incident, la sortie du rollback.
+- Conserver ensemble le HEAD Git, le rapport de préflight, l'empreinte du plan approuvé, le rapport de rollout, le rapport post-rollout et, en cas d'incident, la sortie du rollback.
 - Ne jamais considérer l'écriture backend comme seule preuve de réussite : la validation post-rollout doit également confirmer le contrat public, l'HTML réellement rendu et l'indexabilité attendue.
 - Une introduction ou un contenu manuel existant reste prioritaire : MSE-25.30 ne doit pas l'écraser lorsqu'il est conçu pour préserver ce champ.
