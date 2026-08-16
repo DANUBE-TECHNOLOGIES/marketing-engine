@@ -33,6 +33,7 @@ export const FULL_PARTNERS = Object.freeze([
   P("top-of-travel", "Top of Travel", "circuits", "Séjours et circuits organisés vers des destinations européennes et méditerranéennes, avec une forte dimension de découverte.", ["Europe", "circuit"]),
   P("visit-europe", "Visit Europe", "circuits", "Circuits, escapades et séjours en Europe pour combiner patrimoine, villes et régions.", ["Europe", "culture"]),
   P("voyages-internationaux", "Voyages Internationaux", "circuits", "Circuits accompagnés et voyages organisés à travers de grandes destinations internationales.", ["monde", "accompagné"]),
+  P("rev-vacances", "Rev'Vacances", "circuits", "Circuits, croisières et voyages à la carte en Europe et dans le monde, avec une forte programmation culturelle et découverte.", ["circuits", "croisières", "à la carte"]),
   P("worldia", "Worldia", "circuits", "Itinéraires personnalisables, circuits et combinés permettant de construire un voyage à plusieurs étapes.", ["itinéraire", "personnalisable"]),
 
   P("fram", "FRAM", "sejours", "Séjours, clubs, circuits et vacances en famille dans de nombreuses destinations soleil et moyen-courrier.", ["clubs", "famille", "soleil"], "/partners/fram.webp"),
@@ -73,7 +74,6 @@ export const FULL_PARTNERS = Object.freeze([
   P("mmv", "MMV Vacances Club", "france-europe", "Clubs et résidences de vacances à la montagne, particulièrement adaptés aux séjours en famille.", ["montagne", "famille"]),
   P("pierre-vacances-center-parcs", "Pierre & Vacances / Center Parcs / maeva", "france-europe", "Résidences, villages nature, domaines de loisirs et locations de vacances en France et en Europe.", ["résidence", "famille", "France"]),
   P("ollandini", "Ollandini", "france-europe", "Spécialiste de la Corse, avec des séjours, circuits, locations et hôtels-clubs pour découvrir les différentes régions de l'île.", ["Corse", "spécialiste"]),
-  P("rev-vacances", "Rev'Vacances", "france-europe", "Séjours et solutions de vacances distribués par le réseau, notamment pour des escapades et vacances accessibles.", ["vacances", "séjours"]),
   P("odalys", "Odalys Voyages", "france-europe", "Résidences, locations et séjours en France et en Europe, à la mer, à la montagne et en ville.", ["résidence", "France", "Europe"]),
   P("thalasso-n1", "Thalasso N°1", "france-europe", "Séjours bien-être, thalassothérapie et escapades détente en France et à l'étranger.", ["bien-être", "thalasso"]),
   P("villages-clubs-soleil", "Villages Clubs du Soleil", "france-europe", "Villages clubs en France, à la montagne et sur le littoral, avec des formules adaptées aux familles et aux activités.", ["France", "club", "famille"]),
