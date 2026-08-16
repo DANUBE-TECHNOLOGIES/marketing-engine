@@ -46,6 +46,15 @@ export const PARTNER_LOGO_BACKLOG = Object.freeze([
   { id: "ollandini", category: "sur-mesure", priority: 2, state: "source-pending", sourceType: "official-site" },
   { id: "planete-production", category: "sur-mesure", priority: 3, state: "verification-pending", sourceType: "identity-check" },
   { id: "travel-evasion", category: "sur-mesure", priority: 3, state: "verification-pending", sourceType: "identity-check" },
+
+  { id: "campings-com", category: "france-europe", priority: 2, state: "source-pending", sourceType: "official-site" },
+  { id: "lagrange", category: "france-europe", priority: 2, state: "source-pending", sourceType: "official-site" },
+  { id: "mmv", category: "france-europe", priority: 2, state: "source-pending", sourceType: "official-site" },
+  { id: "pierre-vacances-center-parcs", category: "france-europe", priority: 2, state: "source-pending", sourceType: "official-site" },
+  { id: "rev-vacances", category: "france-europe", priority: 3, state: "verification-pending", sourceType: "identity-check" },
+  { id: "odalys", category: "france-europe", priority: 2, state: "source-pending", sourceType: "official-site" },
+  { id: "thalasso-n1", category: "france-europe", priority: 2, state: "source-pending", sourceType: "official-site" },
+  { id: "villages-clubs-soleil", category: "france-europe", priority: 2, state: "source-pending", sourceType: "official-site" },
 ]);
 
 export function getPartnerLogoBacklog(category = "") {
