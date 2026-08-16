@@ -14,6 +14,8 @@ test("full partner directory exposes the network categories and supplier invento
   const cruiseDetails = read("components/page-builder/shared/partnerCruiseDetails.js");
   const circuitDetails = read("components/page-builder/shared/partnerCircuitDetails.js");
   const stayDetails = read("components/page-builder/shared/partnerStayDetails.js");
+  const longHaulDetails = read("components/page-builder/shared/partnerLongHaulDetails.js");
+  const franceEuropeDetails = read("components/page-builder/shared/partnerFranceEuropeDetails.js");
   const assetCoverage = read("components/page-builder/shared/partnerAssetCoverage.js");
   const logoBacklog = read("components/page-builder/shared/partnerLogoBacklog.js");
   const renderer = read("components/public-site/renderers/PartnerDirectoryRenderer.js");
@@ -82,6 +84,23 @@ test("full partner directory exposes the network categories and supplier invento
   assert.match(stayDetails, /Circuit privatif/);
   assert.match(renderer, /getStayPartnerDetails/);
 
+  assert.match(longHaulDetails, /"alma-latina"/);
+  assert.match(longHaulDetails, /"australie-tours"/);
+  assert.match(longHaulDetails, /"climats-du-monde"/);
+  assert.match(longHaulDetails, /"jetset-voyages"/);
+  assert.match(longHaulDetails, /"luxair-tours"/);
+  assert.match(longHaulDetails, /Voyage sur mesure/);
+  assert.match(renderer, /getLongHaulPartnerDetails/);
+
+  assert.match(franceEuropeDetails, /"campings-com"/);
+  assert.match(franceEuropeDetails, /lagrange:/);
+  assert.match(franceEuropeDetails, /mmv:/);
+  assert.match(franceEuropeDetails, /"pierre-vacances-center-parcs"/);
+  assert.match(franceEuropeDetails, /odalys:/);
+  assert.match(franceEuropeDetails, /"thalasso-n1"/);
+  assert.match(franceEuropeDetails, /"villages-clubs-soleil"/);
+  assert.match(renderer, /getFranceEuropePartnerDetails/);
+
   assert.match(catalogue, /\/partners\/kuoni-official\.webp/);
   assert.match(details, /Top Clubs/);
   assert.match(details, /Kappa Club/);
@@ -109,6 +128,11 @@ test("full partner directory exposes the network categories and supplier invento
   assert.match(logoBacklog, /"belambra"/);
   assert.match(logoBacklog, /"voyamar"/);
   assert.match(logoBacklog, /"aerosun"/);
+  assert.match(logoBacklog, /"alma-latina"/);
+  assert.match(logoBacklog, /"australie-tours"/);
+  assert.match(logoBacklog, /"campings-com"/);
+  assert.match(logoBacklog, /"pierre-vacances-center-parcs"/);
+  assert.match(logoBacklog, /"villages-clubs-soleil"/);
   assert.match(logoBacklog, /verification-pending/);
 
   assert.match(renderer, /getPartnerDirectoryCategories/);
