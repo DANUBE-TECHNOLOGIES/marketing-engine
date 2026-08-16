@@ -11,7 +11,9 @@ const read = (relativePath) => fs.readFileSync(path.join(frontendRoot, relativeP
 test("full partner directory exposes the network categories and supplier inventory", () => {
   const catalogue = read("components/page-builder/shared/fullPartners.js");
   const details = read("components/page-builder/shared/partnerDetails.js");
+  const cruiseDetails = read("components/page-builder/shared/partnerCruiseDetails.js");
   const assetCoverage = read("components/page-builder/shared/partnerAssetCoverage.js");
+  const logoBacklog = read("components/page-builder/shared/partnerLogoBacklog.js");
   const renderer = read("components/public-site/renderers/PartnerDirectoryRenderer.js");
   const registry = read("components/public-site/renderers/registry.js");
   const blockCatalogue = read("lib/page-builder-v2/block-catalog.js");
@@ -56,6 +58,12 @@ test("full partner directory exposes the network categories and supplier invento
     assert.match(details, new RegExp(`(?:^|\\n)\\s*"?${enrichedId}"?\\s*:`));
   }
 
+  assert.match(cruiseDetails, /"catlante-catamarans"/);
+  assert.match(cruiseDetails, /cfc:/);
+  assert.match(cruiseDetails, /Croisière à la cabine/);
+  assert.match(cruiseDetails, /Départ de Marseille/);
+  assert.match(renderer, /getCruisePartnerDetails/);
+
   assert.match(catalogue, /\/partners\/kuoni-official\.webp/);
   assert.match(details, /Top Clubs/);
   assert.match(details, /Kappa Club/);
@@ -71,6 +79,12 @@ test("full partner directory exposes the network categories and supplier invento
   assert.match(assetCoverage, /noSprite: true/);
   assert.match(assetCoverage, /missingLogo/);
   assert.doesNotMatch(assetCoverage, /common-partners-sprite/);
+
+  assert.match(logoBacklog, /"ponant"/);
+  assert.match(logoBacklog, /"celestyal-cruises"/);
+  assert.match(logoBacklog, /permission-required/);
+  assert.match(logoBacklog, /official-press-request/);
+  assert.match(logoBacklog, /brand-permission/);
 
   assert.match(renderer, /getPartnerDirectoryCategories/);
   assert.match(renderer, /categoryNav/);
