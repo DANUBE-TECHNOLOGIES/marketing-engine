@@ -33,7 +33,7 @@ export const PARTNER_LOGO_BACKLOG = Object.freeze([
   { id: "pacha-tours", category: "sejours", priority: 2, state: "source-pending", sourceType: "official-site" },
   { id: "heliades", category: "sejours", priority: 2, state: "permission-required", sourceType: "brand-permission", note: "Héliades terms prohibit reproduction of marks and logos without express authorisation." },
   { id: "voyamar", category: "sejours", priority: 2, state: "permission-required", sourceType: "brand-permission", note: "Voyamar terms prohibit reproduction of marks and logos without express authorisation." },
-  { id: "aerosun", category: "sejours", priority: 3, state: "verification-pending", sourceType: "identity-check" },
+  { id: "aerosun", category: "sejours", priority: 99, state: "catalogue-excluded", sourceType: "none", note: "AEROSUN VOYAGES SAS is the legal operator behind Voyamar; do not create a duplicate public brand or logo entry." },
   { id: "travel-evasion", category: "sejours", priority: 2, state: "source-pending", sourceType: "official-site", note: "Official Travel Evasion public and B2B sites confirmed; use only the Travel Evasion masterbrand, not Mon French Club or product artwork." },
 
   { id: "alma-latina", category: "sur-mesure", priority: 2, state: "source-pending", sourceType: "official-site" },
