@@ -75,6 +75,18 @@ const ASSET_RESTRICTIONS = Object.freeze({
     status: "asset-permission-review",
     reason: "Partner identity is confirmed by Salaün Holidays, but Pouchkine Tours is listed as a protected mark whose reproduction/exploitation is prohibited without authorisation.",
   },
+  belambra: {
+    status: "asset-permission-review",
+    reason: "Belambra's official legal notice requires prior written authorisation for reproduction or use of its logos and marks.",
+  },
+  heliades: {
+    status: "asset-permission-review",
+    reason: "Héliades' official terms prohibit reproduction of its marks and logos without express authorisation.",
+  },
+  voyamar: {
+    status: "asset-permission-review",
+    reason: "Voyamar's official terms prohibit reproduction of its marks and logos without express authorisation.",
+  },
 });
 
 export function getPartnerVerification(partnerId) {
