@@ -8,7 +8,7 @@ const { run: runPreview } = require("./mse-25-30-network-preview");
 
 const DEFAULT_BACKEND_ORIGIN = "http://127.0.0.1:4000";
 const EXPECTED_BRANCH = "feature/mse-25-30-local-seo-optimizer";
-const DEFAULT_VALIDATED_BASE_SHA = "86e48d4db3d4330d1f6952d3ecd2f13439ec4154";
+const DEFAULT_VALIDATED_BASE_SHA = "04c869acf5d813f899689670da69a70c3ee4e2e0";
 const RUNTIME_PROTECTED_PATHS = Object.freeze([
   "backend/src/modules/minisite-seo-enrichment",
   "backend/scripts/mse-25-30-network-preview.js",
@@ -28,6 +28,7 @@ const REQUIRED_HEALTH_FLAGS = Object.freeze([
   "networkAutomaticCompensation",
   "noindexContentWriteGuard",
   "managedRouteContentWriteGuard",
+  "approvedPlanFingerprintGuard",
 ]);
 const DEFAULT_REPORT_DIR = path.join(os.homedir(), "mse-25-30-reports");
 
