@@ -11,10 +11,11 @@ module.exports = ({ prisma }) => {
 
   router.get("/content-factory/health", (_req, res) => res.json({
     ok: true,
-    version: "1.1.0",
+    version: "1.1.1",
     capability: "autonomous-content-factory",
     modes: ["preview", "persist"],
     v2Repair: true,
+    tenantScopedRepair: true,
   }));
 
   router.post("/content-factory/preview", async (req, res, next) => {
@@ -32,13 +33,19 @@ module.exports = ({ prisma }) => {
 
   router.post("/content-factory/v2-repair/preview", async (req, res, next) => {
     try {
-      res.json(await v2Repair.plan(req.body || {}));
+      res.json(await v2Repair.plan({
+        ...(req.body || {}),
+        tenantId: req.tenantId,
+      }));
     } catch (e) { next(e); }
   });
 
   router.post("/content-factory/v2-repair/apply", async (req, res, next) => {
     try {
-      res.json(await v2Repair.apply(req.body || {}));
+      res.json(await v2Repair.apply({
+        ...(req.body || {}),
+        tenantId: req.tenantId,
+      }));
     } catch (e) { next(e); }
   });
 
