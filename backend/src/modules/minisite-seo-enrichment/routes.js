@@ -7,12 +7,14 @@ const { installEditorialHardening } = require("./editorial-hardening-patch");
 const { installPublishedSiteScope } = require("./published-site-scope-patch");
 const { installPlanFingerprintGuard } = require("./plan-fingerprint-patch");
 const { installSummaryConsistency } = require("./summary-consistency-patch");
+const { installPageBuilderContractNormalization } = require("./page-builder-contract-patch");
 const PageBuilderPersistenceService = require("../page-builder-persistence/service");
 const { MiniSiteStructuredDataService } = require("../minisite-structured-data/service");
 
 installProjectedReadiness(MiniSiteSeoEnrichmentService);
 installEditorialHardening(MiniSiteSeoEnrichmentService);
 installPublishedSiteScope(MiniSiteSeoEnrichmentService);
+installPageBuilderContractNormalization(MiniSiteSeoEnrichmentService);
 installPlanFingerprintGuard(MiniSiteSeoEnrichmentService);
 installSummaryConsistency(MiniSiteSeoEnrichmentService);
 
