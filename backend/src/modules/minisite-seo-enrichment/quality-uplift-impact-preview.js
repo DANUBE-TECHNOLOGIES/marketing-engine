@@ -26,7 +26,10 @@ function appendInternalLink(site, proposal, operation) {
   source.blocks.push({
     blockType: "rich_text",
     status: "published",
-    content: { html: `<p><a href="${String(targetPath).replace(/\"/g, "&quot;")}">Découvrir cette page</a></p>` },
+    content: {
+      html: `<p>Découvrir cette page</p>`,
+      links: [{ label: "Découvrir cette page", href: targetPath }],
+    },
     seo: { generatedBy: "mse-25.31-impact-preview", purpose: "editorial-internal-link-simulation" },
   });
   return true;
