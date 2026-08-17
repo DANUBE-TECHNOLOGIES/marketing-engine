@@ -36,11 +36,25 @@ function siteFixture() {
   };
 }
 
-function createPrisma(site = siteFixture()) {
+function createPrisma(site = siteFixture(), initialPolicy = null) {
+  let paymentPolicy = initialPolicy;
+
   return {
     agencySite: {
       async findUnique({ where }) {
         return where.slug === site?.slug ? site : null;
+      },
+    },
+    agencyPaymentPolicy: {
+      async findUnique({ where }) {
+        return where.siteId === site?.id ? paymentPolicy : null;
+      },
+      async upsert({ where, create, update }) {
+        if (where.siteId !== site?.id) return null;
+        paymentPolicy = paymentPolicy
+          ? { ...paymentPolicy, ...update, siteId: site.id }
+          : { ...create, siteId: site.id };
+        return paymentPolicy;
       },
     },
     agencySitePage: {
@@ -88,12 +102,112 @@ test("preview route normalizes the site slug and returns a read-only fingerprint
     const body = await response.json();
     assert.equal(body.ok, true);
     assert.equal(body.mode, "preview");
+    assert.equal(body.policySource, "override");
     assert.equal(body.site.slug, "gien");
     assert.equal(body.preview.readOnly, true);
     assert.equal(body.preview.writes, false);
     assert.equal(typeof body.preview.fingerprint, "string");
     assert.equal(body.preview.fingerprint.length, 64);
     assert.equal(body.preview.proposals.length, 2);
+  });
+});
+
+test("preview route uses the persisted policy when no override is supplied", async () => {
+  const persisted = {
+    siteId: "site-1",
+    enabled: true,
+    products: ["flight"],
+    installmentCounts: [3],
+    feeMode: "with-fees",
+    disclaimer: "Sous réserve d’acceptation.",
+    ctaLabel: "Nous contacter",
+  };
+
+  await withServer(createPrisma(siteFixture(), persisted), async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/api/agency-sites/gien/flexible-payment/preview`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({}),
+    });
+
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.equal(body.policySource, "persisted");
+    assert.deepEqual(body.preview.policy.products, ["flight"]);
+    assert.deepEqual(body.preview.policy.installmentCounts, [3]);
+    assert.equal(body.preview.proposals.length, 2);
+  });
+});
+
+test("policy route persists a validated agency policy and immediately rebuilds preview", async () => {
+  await withServer(createPrisma(), async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/api/agency-sites/gien/flexible-payment/policy`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        confirm: true,
+        policy: {
+          enabled: true,
+          products: ["flight", "travel"],
+          installmentCounts: [4, 3, 4],
+          feeMode: "without-fees",
+          disclaimer: "Sous réserve d’acceptation du dossier.",
+          ctaLabel: "Étudier mes possibilités",
+        },
+      }),
+    });
+
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.equal(body.mode, "policy-update");
+    assert.equal(body.configured, true);
+    assert.deepEqual(body.policy.products, ["flight", "travel"]);
+    assert.deepEqual(body.policy.installmentCounts, [3, 4]);
+    assert.equal(body.policy.feeMode, "without-fees");
+    assert.equal(body.preview.proposals.length, 2);
+
+    const readResponse = await fetch(`${baseUrl}/api/agency-sites/gien/flexible-payment`);
+    const readBody = await readResponse.json();
+    assert.equal(readBody.configured, true);
+    assert.equal(readBody.policy.ctaLabel, "Étudier mes possibilités");
+  });
+});
+
+test("policy route refuses writes without explicit confirmation", async () => {
+  await withServer(createPrisma(), async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/api/agency-sites/gien/flexible-payment/policy`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        policy: { enabled: true, products: ["flight"] },
+      }),
+    });
+
+    assert.equal(response.status, 400);
+    const body = await response.json();
+    assert.equal(body.code, "FLEXIBLE_PAYMENT_POLICY_CONFIRM_REQUIRED");
+  });
+});
+
+test("policy route rejects unsupported commercial claims instead of silently normalizing them", async () => {
+  await withServer(createPrisma(), async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/api/agency-sites/gien/flexible-payment/policy`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        confirm: true,
+        policy: {
+          enabled: true,
+          products: ["flight"],
+          installmentCounts: [36],
+          feeMode: "free-forever",
+        },
+      }),
+    });
+
+    assert.equal(response.status, 400);
+    const body = await response.json();
+    assert.match(body.code, /^FLEXIBLE_PAYMENT_POLICY_INVALID_/);
   });
 });
 
