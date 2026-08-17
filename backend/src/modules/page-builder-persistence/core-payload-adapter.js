@@ -87,6 +87,12 @@ function adaptBlockForCore(
   };
 }
 
+function envelopeObject(value, fallback = {}) {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value
+    : fallback;
+}
+
 function adaptBlockForPersistence(
   original,
   validated,
@@ -115,23 +121,37 @@ function adaptBlockForPersistence(
       {},
 
     settings:
-      validated.settings ||
-      {},
+      envelopeObject(
+        validated.settings,
+        envelopeObject(original?.settings, {})
+      ),
 
+    /*
+     * Le registre Core valide actuellement le contenu éditorial mais son
+     * normaliseur historique ne renvoie pas toutes les métadonnées de
+     * l'enveloppe. Ces métadonnées ont déjà été fournies par le payload V2 :
+     * il faut donc les préserver lorsqu'elles ne sont pas explicitement
+     * remplacées par le Core, au lieu de les effacer silencieusement.
+     */
     seo:
-      validated.seo ||
-      {},
+      envelopeObject(
+        validated.seo,
+        envelopeObject(original?.seo, {})
+      ),
 
     visibleDesktop:
-      validated.visibleDesktop !==
-      false,
+      validated.visibleDesktop !== undefined
+        ? validated.visibleDesktop !== false
+        : original?.visibleDesktop !== false,
 
     visibleMobile:
-      validated.visibleMobile !==
-      false,
+      validated.visibleMobile !== undefined
+        ? validated.visibleMobile !== false
+        : original?.visibleMobile !== false,
 
     version:
-      validated.version,
+      validated.version ??
+      original?.version,
   };
 }
 
