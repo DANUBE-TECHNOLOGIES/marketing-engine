@@ -50,11 +50,76 @@ function reduction(before, after) {
   };
 }
 
+function warningRows(plan = {}) {
+  return [
+    ...(plan.intentOpportunities || []).map((item) => ({ kind: "intent-quality", pageSlug: item.pageSlug })),
+    ...(plan.thinContentOpportunities || []).map((item) => ({ kind: "thin-content", pageSlug: item.pageSlug })),
+    ...(plan.internalLinkOpportunities || []).map((item) => ({ kind: "internal-link", pageSlug: item.pageSlug })),
+  ];
+}
+
+function warningKey(row = {}) {
+  return `${String(row.kind || "")}:${String(row.pageSlug || "")}`;
+}
+
+function pageWarningCounts(plan = {}) {
+  const map = new Map();
+  for (const row of warningRows(plan)) {
+    const slug = String(row.pageSlug || "home");
+    const current = map.get(slug) || { total: 0, kinds: [] };
+    current.total += 1;
+    if (!current.kinds.includes(row.kind)) current.kinds.push(row.kind);
+    map.set(slug, current);
+  }
+  return map;
+}
+
+function projectedPageImpact(currentPlan = {}, projectedPlan = {}, proposals = []) {
+  const beforeRows = warningRows(currentPlan);
+  const afterRows = warningRows(projectedPlan);
+  const afterKeys = new Set(afterRows.map(warningKey));
+  const beforeByPage = pageWarningCounts(currentPlan);
+  const afterByPage = pageWarningCounts(projectedPlan);
+  const proposalByPage = new Map((proposals || []).map((proposal) => [String(proposal.pageSlug || "home"), proposal]));
+  const slugs = new Set([
+    ...beforeByPage.keys(),
+    ...afterByPage.keys(),
+    ...proposalByPage.keys(),
+  ]);
+
+  return Array.from(slugs)
+    .sort((left, right) => left.localeCompare(right, "fr"))
+    .map((pageSlug) => {
+      const before = beforeByPage.get(pageSlug) || { total: 0, kinds: [] };
+      const after = afterByPage.get(pageSlug) || { total: 0, kinds: [] };
+      const resolvedKinds = beforeRows
+        .filter((row) => String(row.pageSlug || "home") === pageSlug && !afterKeys.has(warningKey(row)))
+        .map((row) => row.kind);
+      const proposal = proposalByPage.get(pageSlug) || null;
+      const nonSimulatedOperationTypes = (proposal?.operations || [])
+        .filter((operation) => !["enrich-body", "add-internal-link"].includes(operation.type))
+        .map((operation) => operation.type);
+
+      return {
+        pageSlug,
+        beforeWarnings: before.total,
+        projectedWarnings: after.total,
+        projectedReduction: Math.max(0, before.total - after.total),
+        beforeKinds: before.kinds,
+        projectedKinds: after.kinds,
+        resolvedKinds,
+        projectionComplete: nonSimulatedOperationTypes.length === 0,
+        nonSimulatedOperationTypes,
+      };
+    });
+}
+
 function projectQualityUpliftImpact({ site = {}, currentPlan = {}, proposals = [], minimumWords = 120 } = {}) {
   const projectedSite = clone(site);
   let simulatedBodyOperations = 0;
   let simulatedInternalLinkOperations = 0;
   let nonSimulatedOperations = 0;
+  const nonSimulatedOperationTypes = [];
 
   for (const proposal of proposals || []) {
     const targetPage = findPage(projectedSite, proposal.pageSlug);
@@ -65,6 +130,7 @@ function projectQualityUpliftImpact({ site = {}, currentPlan = {}, proposals = [
         if (appendInternalLink(projectedSite, proposal, operation)) simulatedInternalLinkOperations += 1;
       } else {
         nonSimulatedOperations += 1;
+        if (!nonSimulatedOperationTypes.includes(operation.type)) nonSimulatedOperationTypes.push(operation.type);
       }
     }
   }
@@ -72,6 +138,7 @@ function projectQualityUpliftImpact({ site = {}, currentPlan = {}, proposals = [
   const projectedPlan = buildLocalSeoQualityUpliftPlan(projectedSite, { minimumWords });
   const before = counts(currentPlan);
   const after = counts(projectedPlan);
+  const pages = projectedPageImpact(currentPlan, projectedPlan, proposals);
 
   return {
     version: "mse-25.31",
@@ -80,11 +147,26 @@ function projectQualityUpliftImpact({ site = {}, currentPlan = {}, proposals = [
     writes: false,
     destructive: false,
     projectionComplete: nonSimulatedOperations === 0,
-    simulation: { simulatedBodyOperations, simulatedInternalLinkOperations, nonSimulatedOperations },
+    simulation: {
+      simulatedBodyOperations,
+      simulatedInternalLinkOperations,
+      nonSimulatedOperations,
+      nonSimulatedOperationTypes,
+    },
     before,
     projected: after,
     projectedReduction: reduction(before, after),
+    pages,
   };
 }
 
-module.exports = { appendBodyPreview, appendInternalLink, counts, projectQualityUpliftImpact, reduction };
+module.exports = {
+  appendBodyPreview,
+  appendInternalLink,
+  counts,
+  pageWarningCounts,
+  projectQualityUpliftImpact,
+  projectedPageImpact,
+  reduction,
+  warningRows,
+};
