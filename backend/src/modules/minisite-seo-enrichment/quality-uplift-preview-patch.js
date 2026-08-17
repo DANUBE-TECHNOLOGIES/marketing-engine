@@ -5,6 +5,7 @@ const { consolidateQualityUpliftActions } = require("./quality-uplift-action-pla
 const { buildQualityUpliftProposal } = require("./quality-uplift-proposal-planner");
 const { buildBodyCopyPreview } = require("./quality-uplift-copy-preview");
 const { projectQualityUpliftImpact } = require("./quality-uplift-impact-preview");
+const { buildQualityUpliftOperatorReport } = require("./quality-uplift-operator-report");
 const { networkQualityUpliftFingerprint, qualityUpliftFingerprint } = require("./quality-uplift-fingerprint");
 
 function siteFromAgencyPlan(plan = {}) {
@@ -139,8 +140,10 @@ function installQualityUpliftPreview(ServiceClass) {
         fullyResolvedPageCount: pages.filter((page) => Number(page.beforeWarnings || 0) > 0 && Number(page.projectedWarnings || 0) === 0).length,
       },
     };
+    const planFingerprint = networkQualityUpliftFingerprint(response);
+    const operatorReport = buildQualityUpliftOperatorReport(response);
 
-    return { ...response, planFingerprint: networkQualityUpliftFingerprint(response) };
+    return { ...response, planFingerprint, operatorReport };
   };
 
   Object.defineProperty(ServiceClass.prototype, "__mse2531QualityUpliftPreviewInstalled", { value: true, configurable: false, enumerable: false, writable: false });
