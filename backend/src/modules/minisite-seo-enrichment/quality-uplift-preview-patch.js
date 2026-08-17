@@ -38,6 +38,16 @@ function sum(agencies, path) {
   }, 0);
 }
 
+function projectedPages(agencies = []) {
+  return agencies.flatMap((agency) =>
+    (agency.impact?.pages || []).map((page) => ({
+      agencyId: agency.agencyId || null,
+      siteSlug: agency.siteSlug || null,
+      ...page,
+    }))
+  );
+}
+
 function installQualityUpliftPreview(ServiceClass) {
   if (!ServiceClass || ServiceClass.prototype.__mse2531QualityUpliftPreviewInstalled) return ServiceClass;
 
@@ -94,6 +104,7 @@ function installQualityUpliftPreview(ServiceClass) {
       const agencyId = site.agencyId || site.agency?.id;
       if (agencyId) agencies.push(await this.previewAgencyQualityUplift({ agencyId, minimumWords }));
     }
+    const pages = projectedPages(agencies);
 
     const response = {
       version: "mse-25.31",
@@ -121,6 +132,11 @@ function installQualityUpliftPreview(ServiceClass) {
         projectedOpportunityCount: sum(agencies, ["impact", "projected", "total"]),
         projectedWarningReduction: sum(agencies, ["impact", "projectedReduction", "total"]),
         projectionCompleteAgencyCount: agencies.filter((agency) => agency.impact?.projectionComplete === true).length,
+        projectedPageCount: pages.length,
+        projectionCompletePageCount: pages.filter((page) => page.projectionComplete === true).length,
+        projectionPartialPageCount: pages.filter((page) => page.projectionComplete !== true).length,
+        pagesWithProjectedReductionCount: pages.filter((page) => Number(page.projectedReduction || 0) > 0).length,
+        fullyResolvedPageCount: pages.filter((page) => Number(page.beforeWarnings || 0) > 0 && Number(page.projectedWarnings || 0) === 0).length,
       },
     };
 
@@ -131,4 +147,4 @@ function installQualityUpliftPreview(ServiceClass) {
   return ServiceClass;
 }
 
-module.exports = { installQualityUpliftPreview, proposalWithCopyPreview, siteFromAgencyPlan, sum };
+module.exports = { installQualityUpliftPreview, projectedPages, proposalWithCopyPreview, siteFromAgencyPlan, sum };
