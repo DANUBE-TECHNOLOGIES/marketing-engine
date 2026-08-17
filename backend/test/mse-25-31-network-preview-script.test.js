@@ -53,6 +53,12 @@ test("operator output preserves read-only safety and ranking", () => {
   assert.equal(result.topPages.length, 1);
   assert.equal(result.topPages[0].pageSlug, "avis");
   assert.equal(result.manualReviewNeeded[0].pageSlug, "services");
+  assert.equal(result.allPages, undefined);
+
+  const archival = operatorOutput(payload, { topPages: 1, includeAllPages: true });
+  assert.equal(archival.topPages.length, 1);
+  assert.equal(archival.allPages.length, 2);
+  assert.deepEqual(archival.allPages.map((row) => row.pageSlug), ["avis", "services"]);
 });
 
 test("network preview command fails closed on unsafe payload", () => {
@@ -89,7 +95,11 @@ test("run posts only to the read-only quality uplift preview route", async (t) =
         minimumWords: 140,
         summary: {},
         excludedSites: [],
-        operatorReport: { summary: {}, rows: [], manualReviewNeeded: [] },
+        operatorReport: {
+          summary: { pageCount: 1 },
+          rows: [{ siteSlug: "gien", pageSlug: "avis", priority: "high" }],
+          manualReviewNeeded: [],
+        },
       }),
     };
   };
@@ -98,10 +108,12 @@ test("run posts only to the read-only quality uplift preview route", async (t) =
     backendOrigin: "http://127.0.0.1:4000/",
     tenantSlug: "mondescale",
     minimumWords: 140,
+    includeAllPages: true,
     emitOutput: false,
   });
 
   assert.equal(result.ok, true);
+  assert.equal(result.allPages.length, 1);
   assert.equal(calls.length, 1);
   assert.equal(calls[0].url, "http://127.0.0.1:4000/minisite-seo-enrichment/network/quality-uplift/preview");
   assert.equal(calls[0].options.method, "POST");
