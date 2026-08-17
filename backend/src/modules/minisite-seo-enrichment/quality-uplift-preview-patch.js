@@ -3,6 +3,9 @@
 const {
   buildLocalSeoQualityUpliftPlan,
 } = require("./quality-uplift-planner");
+const {
+  consolidateQualityUpliftActions,
+} = require("./quality-uplift-action-planner");
 
 function siteFromAgencyPlan(plan = {}) {
   return {
@@ -33,6 +36,7 @@ function installQualityUpliftPreview(ServiceClass) {
     const agencyPlan = await this.buildAgencyContentOptimization({ agencyId });
     const site = siteFromAgencyPlan(agencyPlan);
     const plan = buildLocalSeoQualityUpliftPlan(site, { minimumWords });
+    const actionPlan = consolidateQualityUpliftActions(plan);
 
     return {
       operation: "preview-quality-uplift",
@@ -40,6 +44,13 @@ function installQualityUpliftPreview(ServiceClass) {
       destructive: false,
       readOnly: true,
       ...plan,
+      actions: actionPlan.actions,
+      actionSummary: {
+        actionCount: actionPlan.actionCount,
+        highPriorityCount: actionPlan.highPriorityCount,
+        mediumPriorityCount: actionPlan.mediumPriorityCount,
+        lowPriorityCount: actionPlan.lowPriorityCount,
+      },
       excludedPages: agencyPlan.excludedPages || [],
     };
   };
@@ -95,6 +106,22 @@ function installQualityUpliftPreview(ServiceClass) {
         ),
         totalOpportunityCount: agencies.reduce(
           (sum, agency) => sum + Number(agency.summary?.totalOpportunityCount || 0),
+          0
+        ),
+        pageActionCount: agencies.reduce(
+          (sum, agency) => sum + Number(agency.actionSummary?.actionCount || 0),
+          0
+        ),
+        highPriorityPageCount: agencies.reduce(
+          (sum, agency) => sum + Number(agency.actionSummary?.highPriorityCount || 0),
+          0
+        ),
+        mediumPriorityPageCount: agencies.reduce(
+          (sum, agency) => sum + Number(agency.actionSummary?.mediumPriorityCount || 0),
+          0
+        ),
+        lowPriorityPageCount: agencies.reduce(
+          (sum, agency) => sum + Number(agency.actionSummary?.lowPriorityCount || 0),
           0
         ),
       },
