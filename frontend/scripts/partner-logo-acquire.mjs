@@ -49,13 +49,7 @@ if (!backlog) {
   process.exit(2);
 }
 if (backlog.state !== "source-vetted") {
-  console.error(JSON.stringify({
-    ok: false,
-    partnerId,
-    error: "source-not-vetted",
-    backlogState: backlog.state,
-    requiredState: "source-vetted",
-  }, null, 2));
+  console.error(JSON.stringify({ ok: false, partnerId, error: "source-not-vetted", backlogState: backlog.state, requiredState: "source-vetted" }, null, 2));
   process.exit(2);
 }
 
@@ -63,12 +57,7 @@ const registry = registries[backlog.category] || {};
 const source = registry[partnerId] || null;
 const sourceUrl = String(source?.preferredSource || source?.assetUrl || "").trim();
 if (!source || source.status !== "vetted-source" || !sourceUrl) {
-  console.error(JSON.stringify({
-    ok: false,
-    partnerId,
-    error: "vetted-registry-source-missing",
-    registryStatus: source?.status || null,
-  }, null, 2));
+  console.error(JSON.stringify({ ok: false, partnerId, error: "vetted-registry-source-missing", registryStatus: source?.status || null }, null, 2));
   process.exit(2);
 }
 
@@ -84,7 +73,7 @@ async function downloadAsset(url) {
   const response = await fetch(url, {
     redirect: "follow",
     headers: {
-      "user-agent": "Mozilla/5.0 (compatible; MondescalePartnerAssetAcquisition/2.1)",
+      "user-agent": "Mozilla/5.0 (compatible; MondescalePartnerAssetAcquisition/2.2)",
       accept: "image/svg+xml,image/webp,image/png,image/*;q=0.9,*/*;q=0.1",
     },
   });
@@ -100,6 +89,28 @@ function detectFormat(buffer, contentType, url) {
   if (/image\/webp/i.test(contentType) || buffer.subarray(8, 12).toString("ascii") === "WEBP") return "webp";
   if (/image\/png/i.test(contentType) || buffer.subarray(1, 4).toString("ascii") === "PNG") return "png";
   throw new Error(`unsupported asset format: ${contentType || "unknown"}`);
+}
+
+function validateSvg(buffer) {
+  const text = buffer.toString("utf8");
+  if (!/<svg\b/i.test(text)) throw new Error("SVG payload has no svg root");
+  if (/<(?:script|iframe|object|embed)\b/i.test(text)) throw new Error("SVG payload contains forbidden active content");
+  if (/\bon(?:load|error|click|mouseover|focus)\s*=/i.test(text)) throw new Error("SVG payload contains forbidden event handlers");
+  if (/\b(?:href|xlink:href)\s*=\s*["']\s*(?:https?:|\/\/|javascript:|data:text\/html)/i.test(text)) {
+    throw new Error("SVG payload contains forbidden external or executable references");
+  }
+}
+
+function validateGeneratedAsset(filePath, format) {
+  const stat = fs.statSync(filePath);
+  if (stat.size < 100) throw new Error("generated asset is unexpectedly small");
+  if (stat.size > 2 * 1024 * 1024) throw new Error("generated asset exceeds 2 MiB public logo limit");
+  const buffer = fs.readFileSync(filePath);
+  if (format === "svg") validateSvg(buffer);
+  if (format === "webp" && buffer.subarray(8, 12).toString("ascii") !== "WEBP") {
+    throw new Error("generated WebP payload has invalid signature");
+  }
+  return stat.size;
 }
 
 async function convertToWebp(inputPath, outputPath, inputFormat) {
@@ -125,11 +136,9 @@ async function convertToWebp(inputPath, outputPath, inputFormat) {
   try {
     const sharpModule = await import("sharp");
     const sharp = sharpModule.default || sharpModule;
-    await sharp(inputPath)
-      .resize(520, 180, { fit: "inside", withoutEnlargement: true })
-      .extend({ top: 30, bottom: 30, left: 40, right: 40, background: { r: 0, g: 0, b: 0, alpha: 0 } })
-      .webp({ quality: 88, alphaQuality: 100 })
-      .toFile(outputPath);
+    await sharp(inputPath).resize(520, 180, { fit: "inside", withoutEnlargement: true }).extend({
+      top: 30, bottom: 30, left: 40, right: 40, background: { r: 0, g: 0, b: 0, alpha: 0 },
+    }).webp({ quality: 88, alphaQuality: 100 }).toFile(outputPath);
     return "sharp";
   } catch {
     return null;
@@ -137,15 +146,14 @@ async function convertToWebp(inputPath, outputPath, inputFormat) {
 }
 
 function existingAcceptedAssets(id) {
-  return ["webp", "svg"]
-    .map((format) => path.join(publicPartners, `${id}.${format}`))
-    .filter((filePath) => fs.existsSync(filePath));
+  return ["webp", "svg"].map((format) => path.join(publicPartners, `${id}.${format}`)).filter((filePath) => fs.existsSync(filePath));
 }
 
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "mle-partner-logo-"));
 try {
   const downloaded = await downloadAsset(sourceUrl);
   const format = detectFormat(downloaded.buffer, downloaded.contentType, downloaded.finalUrl);
+  if (format === "svg") validateSvg(downloaded.buffer);
   const sourcePath = path.join(tempDir, `${partnerId}.${format}`);
   fs.writeFileSync(sourcePath, downloaded.buffer);
 
@@ -167,13 +175,11 @@ try {
     }
   }
 
-  if (!["webp", "svg"].includes(outputFormat)) {
-    throw new Error(`output format ${outputFormat} violates accepted public asset policy`);
-  }
+  if (!["webp", "svg"].includes(outputFormat)) throw new Error(`output format ${outputFormat} violates accepted public asset policy`);
 
   const targetName = `${partnerId}.${outputFormat}`;
   const targetPath = path.join(publicPartners, targetName);
-  const generatedBytes = fs.statSync(generatedPath).size;
+  const generatedBytes = validateGeneratedAsset(generatedPath, outputFormat);
   const existingAssets = existingAcceptedAssets(partnerId);
 
   if (write && existingAssets.length && !overwrite) {
@@ -181,29 +187,17 @@ try {
   }
 
   const payload = {
-    ok: true,
-    partnerId,
-    category: backlog.category,
-    source: downloaded.finalUrl,
-    sourceContentType: downloaded.contentType,
-    registryStatus: source.status,
-    backlogState: backlog.state,
-    outputFormat,
-    converter,
-    generatedBytes,
-    targetPath: path.relative(frontendRoot, targetPath),
+    ok: true, partnerId, category: backlog.category, source: downloaded.finalUrl,
+    sourceContentType: downloaded.contentType, registryStatus: source.status, backlogState: backlog.state,
+    outputFormat, converter, generatedBytes, targetPath: path.relative(frontendRoot, targetPath),
     existingAssets: existingAssets.map((filePath) => path.relative(frontendRoot, filePath)),
-    writeRequested: write,
-    overwriteRequested: overwrite,
-    written: false,
+    writeRequested: write, overwriteRequested: overwrite, written: false,
   };
 
   if (write) {
     fs.mkdirSync(publicPartners, { recursive: true });
     if (overwrite) {
-      for (const filePath of existingAssets) {
-        if (filePath !== targetPath) fs.rmSync(filePath, { force: true });
-      }
+      for (const filePath of existingAssets) if (filePath !== targetPath) fs.rmSync(filePath, { force: true });
     }
     fs.copyFileSync(generatedPath, targetPath);
     payload.written = true;
