@@ -11,6 +11,11 @@ const CRUISE_DETAILS = Object.freeze({
     travelTypes: ["Croisière fluviale", "Croisière côtière", "Circuit culturel"],
     website: "https://www.croisieurope.com/",
   },
+  "rivages-du-monde": {
+    destinations: ["Danube", "Douro", "Rhin", "Nil", "Mékong", "Yangtsé", "Galápagos", "Patagonie", "Grand Nord"],
+    travelTypes: ["Croisière fluviale", "Croisière maritime", "Croisière côtière", "Croisière culturelle", "Expédition", "Yachting"],
+    website: "https://www.rivagesdumonde.fr/",
+  },
   ponant: {
     destinations: ["Arctique", "Antarctique", "Groenland", "Méditerranée", "Tropiques"],
     travelTypes: ["Croisière premium", "Expédition", "Voyage polaire"],
