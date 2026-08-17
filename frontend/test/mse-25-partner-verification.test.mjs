@@ -20,9 +20,17 @@ test("partner verification distinguishes identity review from logo permission re
 
   assert.match(verification, /asiam[\s\S]*identity-review/);
 
-  assert.doesNotMatch(catalogue, /mega-vacances|Mega Vacances/);
-  assert.doesNotMatch(verification, /mega-vacances|Mega Vacances/);
-  assert.doesNotMatch(backlog, /mega-vacances|Mega Vacances/);
+  for (const id of ["mega-vacances", "worldia", "aerosun"]) {
+    const escaped = id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    assert.doesNotMatch(catalogue, new RegExp(`P\\("${escaped}"`));
+    assert.doesNotMatch(backlog, new RegExp(`id:\\s*"${escaped}"`));
+  }
+  assert.doesNotMatch(catalogue, /Mega Vacances/);
+  assert.doesNotMatch(backlog, /Mega Vacances/);
+
+  // Keep explicit defensive exclusions for brands that must not be reintroduced.
+  assert.match(verification, /worldia[\s\S]*status:\s*"catalogue-excluded"/);
+  assert.match(verification, /aerosun[\s\S]*status:\s*"catalogue-excluded"/);
 
   for (const id of ["hotels-lagons", "lmx-voyages", "travel-evasion"]) {
     const escaped = id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -34,9 +42,6 @@ test("partner verification distinguishes identity review from logo permission re
   assert.match(catalogue, /P\("travel-evasion",\s*"Travel Evasion",\s*"sejours"/);
   assert.doesNotMatch(catalogue, /P\("travel-evasion",\s*"Travel Evasion",\s*"sur-mesure"/);
   assert.match(backlog, /travel-evasion[\s\S]*category:\s*"sejours"[\s\S]*state:\s*"source-pending"/);
-
-  assert.match(verification, /aerosun[\s\S]*status:\s*"catalogue-excluded"/);
-  assert.match(backlog, /aerosun[\s\S]*priority:\s*99[\s\S]*state:\s*"catalogue-excluded"/);
 
   for (const id of ["amerigo", "gaeland-ashling", "planete-production"]) {
     const escaped = id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
