@@ -115,6 +115,7 @@ async function run({
     tenantSlug: tenant,
     minimumWords: resolvedMinimumWords,
     topPages: resolvedTopPages,
+    includeAllPages: true,
     emitOutput: false,
   };
   const firstPreview = assertSafePreview(await previewRunner(previewOptions));
@@ -157,6 +158,7 @@ async function run({
     repository: repo,
     context,
     planFingerprint,
+    candidatePageCount: Array.isArray(firstPreview.allPages) ? firstPreview.allPages.length : 0,
     previewSummary: firstPreview.summary || {},
     operatorSummary: firstPreview.operatorSummary || {},
   };
