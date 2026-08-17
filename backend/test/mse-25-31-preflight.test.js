@@ -68,7 +68,7 @@ test("preflight requires the dedicated branch and a clean worktree", () => {
   );
 });
 
-test("preflight runs the read-only network preview twice and archives the stable plan with context", async () => {
+test("preflight runs the read-only network preview twice and archives the complete candidate set", async () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "mse-25-31-preflight-"));
   const output = path.join(directory, "report.json");
   const calls = [];
@@ -85,7 +85,12 @@ test("preflight runs the read-only network preview twice and archives the stable
       minimumWords: 130,
       summary: { pageActionCount: 3 },
       operatorSummary: { pageCount: 3 },
-      topPages: [],
+      topPages: [{ siteSlug: "gien", pageSlug: "avis" }],
+      allPages: [
+        { siteSlug: "gien", pageSlug: "avis" },
+        { siteSlug: "gien", pageSlug: "services" },
+        { siteSlug: "nevers", pageSlug: "avis" },
+      ],
       manualReviewNeeded: [],
     };
   };
@@ -94,7 +99,7 @@ test("preflight runs the read-only network preview twice and archives the stable
     backendOrigin: "http://127.0.0.1:4000/",
     tenantSlug: "mondescale",
     minimumWords: 130,
-    topPages: 10,
+    topPages: 1,
     output,
     emitOutput: false,
     previewRunner,
@@ -104,6 +109,7 @@ test("preflight runs the read-only network preview twice and archives the stable
   assert.equal(calls.length, 2);
   assert.deepEqual(calls[0], calls[1]);
   assert.equal(calls[0].emitOutput, false);
+  assert.equal(calls[0].includeAllPages, true);
   assert.equal(calls[0].backendOrigin, "http://127.0.0.1:4000");
   assert.equal(calls[0].tenantSlug, "mondescale");
   assert.equal(result.ok, true);
@@ -112,11 +118,12 @@ test("preflight runs the read-only network preview twice and archives the stable
   assert.equal(result.destructive, false);
   assert.equal(result.planFingerprint, FP_A);
   assert.equal(result.reportPath, output);
+  assert.equal(result.candidatePageCount, 3);
   assert.deepEqual(result.context, {
     backendOrigin: "http://127.0.0.1:4000",
     tenantSlug: "mondescale",
     minimumWords: 130,
-    topPages: 10,
+    topPages: 1,
   });
 
   const report = JSON.parse(fs.readFileSync(output, "utf8"));
@@ -127,5 +134,7 @@ test("preflight runs the read-only network preview twice and archives the stable
   assert.equal(report.determinism.verified, true);
   assert.equal(report.determinism.previewCount, 2);
   assert.equal(report.repository.branch, EXPECTED_BRANCH);
+  assert.equal(report.preview.topPages.length, 1);
+  assert.equal(report.preview.allPages.length, 3);
   assert.deepEqual(report.context, result.context);
 });
