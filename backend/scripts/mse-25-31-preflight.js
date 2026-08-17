@@ -67,6 +67,97 @@ function assertFingerprint(value) {
   return fingerprint;
 }
 
+function pageKey(value = {}) {
+  return `${String(value.siteSlug || "").trim()}:${String(value.pageSlug || "home").trim() || "home"}`;
+}
+
+function sortedTypes(value) {
+  return [...new Set((Array.isArray(value) ? value : []).filter(Boolean))].sort();
+}
+
+function expectedPayloadClassification(payload = {}) {
+  const types = sortedTypes((payload.operations || []).map((operation) => operation?.type));
+  const complete = [];
+  const incomplete = [];
+  for (const type of types) {
+    if (type === "enrich-body" && payload.bodyCopyPreview?.html && payload.bodyCopyPreview?.title) complete.push(type);
+    else incomplete.push(type);
+  }
+  return { types, complete, incomplete, payloadComplete: types.length > 0 && incomplete.length === 0 };
+}
+
+function assertExecutionPayloadCoverage(preview = {}) {
+  const pages = Array.isArray(preview.allPages) ? preview.allPages : [];
+  const payloads = Array.isArray(preview.executionPayloads) ? preview.executionPayloads : [];
+  const payloadByKey = new Map();
+  const issues = [];
+
+  for (const payload of payloads) {
+    const key = String(payload?.key || pageKey(payload)).trim();
+    if (!key || key.startsWith(":")) {
+      issues.push({ code: "payload-key-missing", key: key || null });
+      continue;
+    }
+    if (payloadByKey.has(key)) {
+      issues.push({ code: "payload-key-duplicate", key });
+      continue;
+    }
+    payloadByKey.set(key, payload);
+  }
+
+  for (const page of pages) {
+    const key = pageKey(page);
+    const pageTypes = sortedTypes(page.operationTypes);
+    if (!pageTypes.length) continue;
+    const payload = payloadByKey.get(key);
+    if (!payload) {
+      issues.push({ code: "payload-missing", key, operationTypes: pageTypes });
+      continue;
+    }
+    const classification = expectedPayloadClassification(payload);
+    if (JSON.stringify(classification.types) !== JSON.stringify(pageTypes)) {
+      issues.push({ code: "payload-operation-mismatch", key, pageTypes, payloadTypes: classification.types });
+    }
+    if (
+      JSON.stringify(sortedTypes(payload.completeOperationTypes)) !== JSON.stringify(classification.complete)
+      || JSON.stringify(sortedTypes(payload.incompleteOperationTypes)) !== JSON.stringify(classification.incomplete)
+      || payload.payloadComplete !== classification.payloadComplete
+    ) {
+      issues.push({ code: "payload-classification-mismatch", key });
+    }
+  }
+
+  const pageKeys = new Set(pages.map(pageKey));
+  for (const key of payloadByKey.keys()) {
+    if (!pageKeys.has(key)) issues.push({ code: "payload-without-candidate", key });
+  }
+
+  if (issues.length > 0) {
+    const error = new Error("Les payloads d'exécution scellés ne correspondent pas exactement aux pages candidates du preflight MSE-25.31.");
+    error.code = "MSE_25_31_PREFLIGHT_EXECUTION_PAYLOAD_INVALID";
+    error.details = { issues };
+    throw error;
+  }
+  return {
+    ok: true,
+    candidateCount: pages.length,
+    payloadCount: payloads.length,
+    completePayloadCount: payloads.filter((payload) => payload.payloadComplete === true).length,
+    incompletePayloadCount: payloads.filter((payload) => payload.payloadComplete !== true).length,
+  };
+}
+
+function assertDeterministicExecutionPayloads(first = {}, second = {}) {
+  const firstAudit = assertExecutionPayloadCoverage(first);
+  const secondAudit = assertExecutionPayloadCoverage(second);
+  if (JSON.stringify(first.executionPayloads || []) !== JSON.stringify(second.executionPayloads || [])) {
+    const error = new Error("Deux previews successifs ont le même plan SEO mais des payloads d'exécution différents.");
+    error.code = "MSE_25_31_PREFLIGHT_NON_DETERMINISTIC_EXECUTION_PAYLOAD";
+    throw error;
+  }
+  return firstAudit.completePayloadCount === secondAudit.completePayloadCount ? firstAudit : firstAudit;
+}
+
 function assertDeterministicPreview(first = {}, second = {}) {
   assertSafePreview(first);
   assertSafePreview(second);
@@ -121,6 +212,7 @@ async function run({
   const firstPreview = assertSafePreview(await previewRunner(previewOptions));
   const secondPreview = assertSafePreview(await previewRunner(previewOptions));
   const planFingerprint = assertDeterministicPreview(firstPreview, secondPreview);
+  const executionPayloadAudit = assertDeterministicExecutionPayloads(firstPreview, secondPreview);
   const file = reportPath(output || process.env.MSE_25_31_PREFLIGHT_OUTPUT);
   const context = {
     backendOrigin: origin,
@@ -140,11 +232,13 @@ async function run({
     context,
     planFingerprint,
     preview: firstPreview,
+    executionPayloadAudit,
     determinism: {
       verified: true,
       previewCount: 2,
       firstFingerprint: planFingerprint,
       secondFingerprint: planFingerprint,
+      executionPayloadsVerified: true,
     },
   };
   fs.writeFileSync(file, JSON.stringify(report, null, 2) + "\n", "utf8");
@@ -159,6 +253,7 @@ async function run({
     context,
     planFingerprint,
     candidatePageCount: Array.isArray(firstPreview.allPages) ? firstPreview.allPages.length : 0,
+    executionPayloadAudit,
     previewSummary: firstPreview.summary || {},
     operatorSummary: firstPreview.operatorSummary || {},
   };
@@ -182,12 +277,17 @@ module.exports = {
   DEFAULT_REPORT_DIR,
   EXPECTED_BRANCH,
   SHA256_PATTERN,
+  assertDeterministicExecutionPayloads,
   assertDeterministicPreview,
+  assertExecutionPayloadCoverage,
   assertFingerprint,
   assertRepositoryState,
   assertSafePreview,
+  expectedPayloadClassification,
   gitValue,
+  pageKey,
   reportPath,
   repositoryState,
   run,
+  sortedTypes,
 };
