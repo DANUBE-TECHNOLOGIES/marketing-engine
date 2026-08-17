@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   fetchFlexiblePaymentConfiguration,
@@ -34,8 +34,16 @@ function parseInstallments(value) {
   )].sort((a, b) => a - b);
 }
 
+function withInstallmentDraft(policy, installmentDraft) {
+  return {
+    ...policy,
+    installmentCounts: parseInstallments(installmentDraft),
+  };
+}
+
 export default function FlexiblePaymentPolicyPanel({ siteSlug }) {
   const [policy, setPolicy] = useState(EMPTY_POLICY);
+  const [installmentDraft, setInstallmentDraft] = useState("");
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -52,7 +60,9 @@ export default function FlexiblePaymentPolicyPanel({ siteSlug }) {
       try {
         const payload = await fetchFlexiblePaymentConfiguration(siteSlug);
         if (cancelled) return;
-        setPolicy(payload?.policy || EMPTY_POLICY);
+        const loadedPolicy = payload?.policy || EMPTY_POLICY;
+        setPolicy(loadedPolicy);
+        setInstallmentDraft((loadedPolicy.installmentCounts || []).join(", "));
         setPreview(payload?.preview || null);
       } catch (loadError) {
         if (!cancelled) {
@@ -69,16 +79,20 @@ export default function FlexiblePaymentPolicyPanel({ siteSlug }) {
     };
   }, [siteSlug]);
 
-  const installmentText = useMemo(
-    () => (policy.installmentCounts || []).join(", "),
-    [policy.installmentCounts]
-  );
+  function normalizeInstallmentDraft() {
+    const installmentCounts = parseInstallments(installmentDraft);
+    setPolicy((current) => ({ ...current, installmentCounts }));
+    setInstallmentDraft(installmentCounts.join(", "));
+    return installmentCounts;
+  }
 
   async function runPreview() {
     setError("");
     setNotice("");
+    const nextPolicy = withInstallmentDraft(policy, installmentDraft);
+    normalizeInstallmentDraft();
     try {
-      const payload = await previewFlexiblePayment(siteSlug, policy);
+      const payload = await previewFlexiblePayment(siteSlug, nextPolicy);
       setPreview(payload.preview);
       setNotice("Aperçu recalculé sans écriture.");
     } catch (previewError) {
@@ -90,9 +104,13 @@ export default function FlexiblePaymentPolicyPanel({ siteSlug }) {
     setSaving(true);
     setError("");
     setNotice("");
+    const nextPolicy = withInstallmentDraft(policy, installmentDraft);
+    normalizeInstallmentDraft();
     try {
-      const payload = await saveFlexiblePaymentPolicy(siteSlug, policy);
-      setPolicy(payload.policy || policy);
+      const payload = await saveFlexiblePaymentPolicy(siteSlug, nextPolicy);
+      const savedPolicy = payload.policy || nextPolicy;
+      setPolicy(savedPolicy);
+      setInstallmentDraft((savedPolicy.installmentCounts || []).join(", "));
       setPreview(payload.preview || null);
       setNotice("Configuration de paiement enregistrée pour cette agence.");
     } catch (saveError) {
@@ -162,15 +180,11 @@ export default function FlexiblePaymentPolicyPanel({ siteSlug }) {
         <span>Échéances autorisées</span>
         <input
           type="text"
-          value={installmentText}
+          value={installmentDraft}
           placeholder="Ex. 3, 4"
           disabled={loading}
-          onChange={(event) =>
-            setPolicy((current) => ({
-              ...current,
-              installmentCounts: parseInstallments(event.target.value),
-            }))
-          }
+          onChange={(event) => setInstallmentDraft(event.target.value)}
+          onBlur={normalizeInstallmentDraft}
         />
         <small>Entiers de 2 à 24. Laisser vide pour parler uniquement de règlement échelonné.</small>
       </label>
@@ -238,4 +252,4 @@ export default function FlexiblePaymentPolicyPanel({ siteSlug }) {
   );
 }
 
-export { EMPTY_POLICY, parseInstallments, toggleValue };
+export { EMPTY_POLICY, parseInstallments, toggleValue, withInstallmentDraft };
