@@ -16,6 +16,7 @@
     "partners:logos:registry:audit": "node scripts/partner-logo-source-registry-audit.mjs",
     "partners:logos:queue": "node scripts/partner-logo-work-queue.mjs",
     "partners:logos:discover": "node scripts/partner-logo-source-discovery.mjs",
+    "partners:logos:acquire": "node scripts/partner-logo-acquire.mjs",
     "partners:logos:discover:cruise": "node scripts/partner-cruise-logo-source-discovery.mjs",
     "partners:logos:acquire:cruise": "node scripts/partner-cruise-logo-acquire.mjs",
     "partners:catalog:audit": "node scripts/partner-catalog-quality.mjs",
