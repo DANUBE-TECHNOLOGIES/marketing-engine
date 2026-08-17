@@ -21,6 +21,7 @@ test("partner logo sourcing keeps vetted assets separate from press and permissi
   const backlog = read("components/page-builder/shared/partnerLogoBacklog.js");
   const queue = read("scripts/partner-logo-work-queue.mjs");
   const coverage = read("scripts/partner-logo-coverage.mjs");
+  const registryAudit = read("scripts/partner-logo-source-registry-audit.mjs");
   const assetTest = read("test/mse-25-partner-assets.test.mjs");
 
   assert.match(cruiseSources, /"catlante-catamarans"/);
@@ -43,8 +44,8 @@ test("partner logo sourcing keeps vetted assets separate from press and permissi
   assert.match(staySources, /boomerang[\s\S]*official-source-page/);
   assert.match(staySources, /"jet-tours"[\s\S]*official-source-page/);
   assert.match(staySources, /"jet-tours"[\s\S]*jettours\.com/);
-  assert.match(staySources, /"plein-vent"[\s\S]*official-source-page/);
-  assert.match(staySources, /mondial-tourisme[\s\S]*official-source-page/);
+  assert.match(staySources, /"plein-vent"[\s\S]*permission-review/);
+  assert.match(staySources, /mondial-tourisme[\s\S]*permission-review/);
   assert.match(staySources, /"travel-evasion"[\s\S]*official-source-page/);
   assert.match(staySources, /"travel-evasion"[\s\S]*travelevasion\.fr/);
   assert.match(staySources, /heliades[\s\S]*permission-review/);
@@ -73,7 +74,7 @@ test("partner logo sourcing keeps vetted assets separate from press and permissi
   assert.match(stayDetails, /"plein-vent"[\s\S]*Club Jumbo/);
   assert.match(stayDetails, /"travel-evasion"[\s\S]*Croisière sur le Nil/);
 
-  for (const id of ["belambra", "heliades", "voyamar"]) {
+  for (const id of ["belambra", "mondial-tourisme", "plein-vent", "heliades", "voyamar"]) {
     assert.match(verification, new RegExp(`${id}[\\s\\S]*asset-permission-review`));
     assert.match(backlog, new RegExp(`${id}[\\s\\S]*permission-required`));
   }
@@ -91,6 +92,9 @@ test("partner logo sourcing keeps vetted assets separate from press and permissi
   assert.match(coverage, /publicationBlocked/);
   assert.match(coverage, /not-actionable/);
   assert.match(coverage, /individual-assets-only-publishable-partners/);
+
+  assert.match(registryAudit, /catalogue-backlog-source-registry-consistency/);
+  assert.match(registryAudit, /vetted-backlog-without-direct-source/);
 
   assert.match(assetTest, /\(\?:webp\|svg\)/);
   assert.match(assetTest, /<svg\\b/);
