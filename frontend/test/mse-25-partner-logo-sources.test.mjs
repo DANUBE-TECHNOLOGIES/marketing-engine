@@ -107,6 +107,8 @@ test("partner logo sourcing keeps vetted assets separate from press and permissi
   assert.match(acquisition, /source\.status !== "vetted-source"/);
   assert.match(acquisition, /vetted-registry-source-missing/);
   assert.match(acquisition, /writeRequested:\s*write/);
+  assert.match(acquisition, /PNG source requires a WebP converter/);
+  assert.match(acquisition, /\["webp", "svg"\]\.includes\(outputFormat\)/);
 
   assert.match(packageJson, /"partners:logos:discover":\s*"node scripts\/partner-logo-source-discovery\.mjs"/);
   assert.match(packageJson, /"partners:logos:acquire":\s*"node scripts\/partner-logo-acquire\.mjs"/);
