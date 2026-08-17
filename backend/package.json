@@ -20,7 +20,8 @@
     "mse-25.30:network-rollback": "node src/modules/minisite-seo-enrichment/network-rollback-audit.js",
     "mse-25.30:post-rollout-validate": "node src/modules/minisite-seo-enrichment/post-rollout-audit.js",
     "mse-25.31:network-preview": "node scripts/mse-25-31-network-preview.js",
-    "mse-25.31:preflight": "node scripts/mse-25-31-preflight.js"
+    "mse-25.31:preflight": "node scripts/mse-25-31-preflight.js",
+    "mse-25.31:preflight-check": "node scripts/mse-25-31-preflight-check.js"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",
