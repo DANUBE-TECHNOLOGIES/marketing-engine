@@ -20,6 +20,7 @@ test("partner logo sourcing keeps vetted assets separate from press and permissi
   const verification = read("components/page-builder/shared/partnerVerification.js");
   const backlog = read("components/page-builder/shared/partnerLogoBacklog.js");
   const queue = read("scripts/partner-logo-work-queue.mjs");
+  const coverage = read("scripts/partner-logo-coverage.mjs");
   const assetTest = read("test/mse-25-partner-assets.test.mjs");
 
   assert.match(cruiseSources, /"catlante-catamarans"/);
@@ -66,6 +67,7 @@ test("partner logo sourcing keeps vetted assets separate from press and permissi
   assert.match(catalogue, /P\("plein-vent",\s*"Plein Vent",\s*"sejours"/);
   assert.match(catalogue, /P\("travel-evasion",\s*"Travel Evasion",\s*"sejours"/);
   assert.match(catalogue, /P\("ollandini",\s*"Ollandini",\s*"france-europe"/);
+  assert.doesNotMatch(catalogue, /worldia|aerosun|mega-vacances/i);
   assert.match(stayDetails, /"jet-tours"[\s\S]*Club Jet tours/);
   assert.match(stayDetails, /"plein-vent"[\s\S]*Club Jumbo/);
   assert.match(stayDetails, /"travel-evasion"[\s\S]*Croisière sur le Nil/);
@@ -74,14 +76,18 @@ test("partner logo sourcing keeps vetted assets separate from press and permissi
     assert.match(verification, new RegExp(`${id}[\\s\\S]*asset-permission-review`));
     assert.match(backlog, new RegExp(`${id}[\\s\\S]*permission-required`));
   }
-  assert.match(backlog, /worldia[\s\S]*catalogue-excluded/);
-  assert.match(backlog, /aerosun[\s\S]*catalogue-excluded/);
+  assert.doesNotMatch(backlog, /worldia|aerosun|mega-vacances/i);
   assert.match(backlog, /travel-evasion[\s\S]*sejours[\s\S]*source-pending/);
   assert.match(backlog, /ollandini[\s\S]*france-europe/);
 
   assert.match(queue, /official-individual-assets-webp-or-vetted-svg/);
   assert.match(queue, /acceptedFormats:\s*\["webp", "svg"\]/);
   assert.match(queue, /currentFormat/);
+
+  assert.match(coverage, /partnerVerification\.js/);
+  assert.match(coverage, /publicationBlocked/);
+  assert.match(coverage, /not-actionable/);
+  assert.match(coverage, /individual-assets-only-publishable-partners/);
 
   assert.match(assetTest, /\(\?:webp\|svg\)/);
   assert.match(assetTest, /<svg\\b/);
