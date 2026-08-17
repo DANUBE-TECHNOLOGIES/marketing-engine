@@ -9,13 +9,28 @@ const {
   rollbackPaymentPlacement,
 } = require("./placement-executor");
 
-function normalizeSiteSlug(value) {
-  return String(value || "").trim().toLowerCase();
+function normalizeSiteKey(value) {
+  return String(value || "").trim();
 }
 
-async function loadSite(prisma, siteSlug, policyRepository = new PaymentPolicyRepository(prisma)) {
-  const site = await prisma.agencySite.findUnique({
-    where: { slug: normalizeSiteSlug(siteSlug) },
+async function findSiteByKey(prisma, siteKey, options = {}) {
+  const key = normalizeSiteKey(siteKey);
+  if (!key) return null;
+
+  const bySlug = await prisma.agencySite.findUnique({
+    where: { slug: key.toLowerCase() },
+    ...options,
+  });
+  if (bySlug) return bySlug;
+
+  return prisma.agencySite.findUnique({
+    where: { id: key },
+    ...options,
+  });
+}
+
+async function loadSite(prisma, siteKey, policyRepository = new PaymentPolicyRepository(prisma)) {
+  const site = await findSiteByKey(prisma, siteKey, {
     include: {
       agency: true,
       pages: {
@@ -176,8 +191,7 @@ module.exports = function createFlexiblePaymentRoutes({ prisma }) {
 
   router.post("/api/agency-sites/:siteSlug/flexible-payment/rollback", async (req, res) => {
     try {
-      const site = await prisma.agencySite.findUnique({
-        where: { slug: normalizeSiteSlug(req.params.siteSlug) },
+      const site = await findSiteByKey(prisma, req.params.siteSlug, {
         select: { id: true, slug: true },
       });
       if (!site) {
@@ -229,5 +243,6 @@ module.exports = function createFlexiblePaymentRoutes({ prisma }) {
 };
 
 module.exports.assertPolicyWriteConfirmed = assertPolicyWriteConfirmed;
+module.exports.findSiteByKey = findSiteByKey;
 module.exports.loadSite = loadSite;
-module.exports.normalizeSiteSlug = normalizeSiteSlug;
+module.exports.normalizeSiteKey = normalizeSiteKey;
