@@ -48,10 +48,12 @@ const registries = [
 
 const issues = [];
 const registryIds = new Set();
+const sourceById = new Map();
 
 for (const [expectedCategory, registry] of registries) {
   for (const [id, source] of Object.entries(registry)) {
     registryIds.add(id);
+    sourceById.set(id, source);
     const partner = catalogueById.get(id);
     if (!partner) {
       issues.push({ type: "orphan-source-registry-entry", id, expectedCategory });
@@ -85,6 +87,25 @@ for (const item of backlog) {
       catalogueCategory: partner.category,
     });
   }
+
+  const source = sourceById.get(item.id) || null;
+  const sourceStatus = String(source?.status || "").trim();
+  if (item.state === "permission-required" && sourceStatus && sourceStatus !== "permission-review") {
+    issues.push({
+      type: "permission-backlog-source-status-mismatch",
+      id: item.id,
+      backlogState: item.state,
+      sourceStatus,
+    });
+  }
+  if (item.state === "source-vetted" && sourceStatus !== "vetted-source") {
+    issues.push({
+      type: "vetted-backlog-source-status-mismatch",
+      id: item.id,
+      backlogState: item.state,
+      sourceStatus: sourceStatus || null,
+    });
+  }
 }
 
 for (const partner of catalogue) {
@@ -98,14 +119,43 @@ for (const partner of catalogue) {
     continue;
   }
 
-  if (verification.status === "asset-permission-review" || backlogItem.state === "permission-required") continue;
+  const source = sourceById.get(partner.id) || null;
+  const sourceStatus = String(source?.status || "").trim();
+
+  if (verification.status === "asset-permission-review") {
+    if (backlogItem.state !== "permission-required") {
+      issues.push({
+        type: "verification-backlog-permission-mismatch",
+        id: partner.id,
+        verificationStatus: verification.status,
+        backlogState: backlogItem.state,
+      });
+    }
+    if (source && sourceStatus !== "permission-review") {
+      issues.push({
+        type: "verification-source-permission-mismatch",
+        id: partner.id,
+        verificationStatus: verification.status,
+        sourceStatus,
+      });
+    }
+    continue;
+  }
+
+  if (backlogItem.state === "permission-required") {
+    issues.push({
+      type: "permission-backlog-without-verification-restriction",
+      id: partner.id,
+      verificationStatus: verification.status,
+    });
+    continue;
+  }
+
   if (!registryIds.has(partner.id)) {
     issues.push({ type: "missing-logo-source-registry", id: partner.id, category: partner.category });
   }
 
   if (backlogItem.state === "source-vetted") {
-    const registry = registries.find(([category]) => category === partner.category)?.[1] || {};
-    const source = registry[partner.id] || null;
     const directSource = source?.preferredSource || source?.assetUrl || "";
     if (!directSource) {
       issues.push({ type: "vetted-backlog-without-direct-source", id: partner.id });
