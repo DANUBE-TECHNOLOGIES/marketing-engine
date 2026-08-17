@@ -15,6 +15,7 @@ on:
       - 'backend/test/minisite-local-*.test.js'
       - 'backend/test/minisite-seo-*.test.js'
       - 'backend/test/mse-25-30-*.test.js'
+      - 'backend/test/mse-25-31-*.test.js'
       - 'backend/test/agency-seo-*.test.js'
       - 'frontend/app/agence/[siteSlug]/sitemap.xml/route.js'
       - 'frontend/app/api/indexation/**'
@@ -51,7 +52,7 @@ jobs:
       - name: Run Search Console, local SEO and optimizer backend tests
         env:
           SEARCH_CONSOLE_ENABLED: 'false'
-        run: node --test test/search-console-*.test.js test/minisite-local-*.test.js test/minisite-seo-*.test.js test/mse-25-30-*.test.js test/agency-seo-*.test.js
+        run: node --test test/search-console-*.test.js test/minisite-local-*.test.js test/minisite-seo-*.test.js test/mse-25-30-*.test.js test/mse-25-31-*.test.js test/agency-seo-*.test.js
 
       - name: Verify Search Console module loads with provider disabled
         env:
