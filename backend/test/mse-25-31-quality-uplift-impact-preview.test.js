@@ -4,7 +4,10 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const { buildLocalSeoQualityUpliftPlan } = require("../src/modules/minisite-seo-enrichment/quality-uplift-planner");
-const { projectQualityUpliftImpact } = require("../src/modules/minisite-seo-enrichment/quality-uplift-impact-preview");
+const {
+  projectQualityUpliftImpact,
+  projectedPageImpact,
+} = require("../src/modules/minisite-seo-enrichment/quality-uplift-impact-preview");
 
 function site() {
   return {
@@ -97,4 +100,33 @@ test("impact preview declares partial projection and exposes unsimulated operati
   assert.ok(avis);
   assert.equal(avis.projectionComplete, false);
   assert.deepEqual(avis.nonSimulatedOperationTypes, ["strengthen-meta-description"]);
+});
+
+test("per-page impact keeps multiple intent warnings distinct", () => {
+  const currentPlan = {
+    intentOpportunities: [
+      { pageSlug: "services", intent: "cruise" },
+      { pageSlug: "services", intent: "circuit" },
+    ],
+    thinContentOpportunities: [],
+    internalLinkOpportunities: [],
+  };
+  const projectedPlan = {
+    intentOpportunities: [
+      { pageSlug: "services", intent: "circuit" },
+    ],
+    thinContentOpportunities: [],
+    internalLinkOpportunities: [],
+  };
+
+  const pages = projectedPageImpact(currentPlan, projectedPlan, []);
+  const services = pages.find((page) => page.pageSlug === "services");
+
+  assert.ok(services);
+  assert.equal(services.beforeWarnings, 2);
+  assert.equal(services.projectedWarnings, 1);
+  assert.equal(services.projectedReduction, 1);
+  assert.deepEqual(services.resolvedWarnings, [
+    { kind: "intent-quality", discriminator: "cruise" },
+  ]);
 });
