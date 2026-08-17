@@ -7,13 +7,15 @@ function attachLocalSeoReadiness(sitemap, coverage) {
     const local = coverageBySlug.get(String(item.siteSlug || ""));
     if (!local) return { ...item, readyToSubmit: false, blockers: [...(item.blockers || []), "local-seo-audit-missing"], localSeo: null };
     const blockingGaps = (local.gaps || []).filter((gap) => gap.severity === "critical" || gap.severity === "high");
-    const localSeoReady = Number(local.score || 0) >= 85 && blockingGaps.length === 0;
+    const score = Number(local.score || 0);
+    const scoreTargetMet = score >= 85;
+    const localSeoReady = blockingGaps.length === 0;
     return {
       ...item,
       readyToSubmit: item.readyToSubmit === true && localSeoReady,
       blockers: localSeoReady ? [...(item.blockers || [])] : [...new Set([...(item.blockers || []), "local-seo-not-ready"])],
       warnings: [...new Set([...(item.warnings || []), ...(local.gaps || []).filter((gap) => gap.severity === "medium").map((gap) => `local-seo:${gap.code}`)])],
-      localSeo: { score: local.score, status: local.status, ready: localSeoReady, blockingGapCount: blockingGaps.length },
+      localSeo: { score, status: local.status, scoreTargetMet, ready: localSeoReady, blockingGapCount: blockingGaps.length },
     };
   });
   const readySites = sites.filter((item) => item.readyToSubmit).length;
