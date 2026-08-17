@@ -31,9 +31,18 @@ function assertApplyAuthorization({
   }
 
   const verifiedPlan = assertExecutionPlan(executionPlan, approvalManifest, preflightReport);
-  if (!verifiedPlan.executable || verifiedPlan.summary.approvedCount <= 0) {
+  if (verifiedPlan.summary.approvedCount <= 0) {
     const error = new Error("Aucune page explicitement approuvée n'est disponible pour l'apply MSE-25.31.");
     error.code = "MSE_25_31_APPLY_NO_APPROVED_PAGES";
+    throw error;
+  }
+  if (!verifiedPlan.executable) {
+    const error = new Error("Le plan contient au moins une opération approuvée dont le payload final d'écriture n'est pas entièrement scellé.");
+    error.code = "MSE_25_31_APPLY_INCOMPLETE_WRITE_PAYLOAD";
+    error.details = {
+      approvedCount: verifiedPlan.summary.approvedCount,
+      payloadIncompleteCount: verifiedPlan.summary.payloadIncompleteCount || 0,
+    };
     throw error;
   }
 
