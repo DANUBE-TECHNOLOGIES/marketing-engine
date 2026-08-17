@@ -20,6 +20,13 @@ const editorPage = fs.readFileSync(
   path.join(root, "app/website-builder/editor/[siteId]/page.js"),
   "utf8"
 );
+const paymentProxy = fs.readFileSync(
+  path.join(
+    root,
+    "app/api/agency-sites/[siteKey]/flexible-payment/[[...operation]]/route.js"
+  ),
+  "utf8"
+);
 const registry = fs.readFileSync(
   path.join(root, "components/public-site/renderers/registry.js"),
   "utf8"
@@ -49,6 +56,18 @@ test("MSE-25.32 exposes persisted policy operations to Website Designer V2", () 
   assert.match(paymentApi, /previewFingerprint/);
 });
 
+test("MSE-25.32 proxies Website Designer payment calls to the backend", () => {
+  assert.match(paymentProxy, /BACKEND_INTERNAL_URL/);
+  assert.match(paymentProxy, /ALLOWED_OPERATIONS/);
+  assert.match(paymentProxy, /"policy"/);
+  assert.match(paymentProxy, /"preview"/);
+  assert.match(paymentProxy, /"apply"/);
+  assert.match(paymentProxy, /"rollback"/);
+  assert.match(paymentProxy, /export function GET/);
+  assert.match(paymentProxy, /export function POST/);
+  assert.match(paymentProxy, /export function PUT/);
+});
+
 test("MSE-25.32 provides structured Website Designer controls for agency payment policy", () => {
   assert.match(policyPanel, /Paiement en plusieurs fois/);
   assert.match(policyPanel, /Billetterie aérienne/);
@@ -59,6 +78,10 @@ test("MSE-25.32 provides structured Website Designer controls for agency payment
   assert.match(policyPanel, /Libellé du CTA/);
   assert.match(policyPanel, /Prévisualiser/);
   assert.match(policyPanel, /Enregistrer la configuration/);
+  assert.match(policyPanel, /Déployer les blocs/);
+  assert.match(policyPanel, /applyFlexiblePayment/);
+  assert.match(policyPanel, /preview\.fingerprint/);
+  assert.match(policyPanel, /installmentDraft/);
 });
 
 test("MSE-25.32 mounts payment policy controls in the live Website Designer editor", () => {
