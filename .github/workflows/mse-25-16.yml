@@ -11,6 +11,7 @@ on:
       - 'backend/src/modules/minisite-seo-enrichment/**'
       - 'backend/src/modules/agency-seo/**'
       - 'backend/src/modules/flexible-payment-experience/**'
+      - 'backend/prisma/migrations/**'
       - 'backend/scripts/search-console-readiness-check.js'
       - 'backend/test/search-console-*.test.js'
       - 'backend/test/minisite-local-*.test.js'
@@ -95,7 +96,7 @@ jobs:
         run: node --test test/mse-25-32-flexible-payment-experience.test.mjs
 
       - name: Lint MSE-25.32 flexible payment integration
-        run: npx eslint "components/public-site/renderers/FlexiblePaymentRenderer.js" "components/public-site/renderers/registry.js" "lib/page-builder-v2/block-catalog.js"
+        run: npx eslint "components/public-site/renderers/FlexiblePaymentRenderer.js" "components/public-site/renderers/registry.js" "lib/page-builder-v2/block-catalog.js" "lib/page-builder-v2/flexible-payment-api.js"
 
       - name: Lint sitemap and indexation API
         run: npx eslint "app/agence/[siteSlug]/sitemap.xml/route.js" "app/api/indexation/route.js" "lib/indexation-api.js"
