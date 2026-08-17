@@ -4,7 +4,12 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { execFileSync } = require("node:child_process");
-const { run: runPreview } = require("./mse-25-31-network-preview");
+const {
+  DEFAULT_TOP_PAGES,
+  normalizeOrigin,
+  positiveInteger,
+  run: runPreview,
+} = require("./mse-25-31-network-preview");
 
 const EXPECTED_BRANCH = "feature/mse-25-31-local-seo-quality-uplift";
 const DEFAULT_REPORT_DIR = path.join(os.homedir(), "mse-25-31-reports");
@@ -37,6 +42,20 @@ function assertRepositoryState(state, { expectedBranch = EXPECTED_BRANCH, allowD
   return state;
 }
 
+function assertSafePreview(preview = {}) {
+  if (preview.readOnly !== true || preview.writes !== false || preview.destructive !== false) {
+    const error = new Error("Le preflight MSE-25.31 refuse tout preview qui ne garantit pas un mode strictement read-only.");
+    error.code = "MSE_25_31_PREFLIGHT_UNSAFE_PREVIEW";
+    error.details = {
+      readOnly: preview.readOnly,
+      writes: preview.writes,
+      destructive: preview.destructive,
+    };
+    throw error;
+  }
+  return preview;
+}
+
 function assertFingerprint(value) {
   const fingerprint = String(value || "").trim().toLowerCase();
   if (!SHA256_PATTERN.test(fingerprint)) {
@@ -49,6 +68,8 @@ function assertFingerprint(value) {
 }
 
 function assertDeterministicPreview(first = {}, second = {}) {
+  assertSafePreview(first);
+  assertSafePreview(second);
   const firstFingerprint = assertFingerprint(first.planFingerprint);
   const secondFingerprint = assertFingerprint(second.planFingerprint);
   if (firstFingerprint !== secondFingerprint) {
@@ -84,18 +105,28 @@ async function run({
     expectedBranch: expectedBranch || process.env.MSE_25_31_EXPECTED_BRANCH || EXPECTED_BRANCH,
     allowDirty,
   });
+  const origin = normalizeOrigin(backendOrigin || process.env.BACKEND_ORIGIN);
+  const tenant = String(tenantSlug || process.env.TENANT_SLUG || "mondescale").trim();
+  const resolvedTopPages = positiveInteger(topPages ?? process.env.TOP_PAGES, DEFAULT_TOP_PAGES);
+  const resolvedMinimumWords = minimumWords ?? process.env.MINIMUM_WORDS;
 
   const previewOptions = {
-    backendOrigin,
-    tenantSlug,
-    minimumWords,
-    topPages,
+    backendOrigin: origin,
+    tenantSlug: tenant,
+    minimumWords: resolvedMinimumWords,
+    topPages: resolvedTopPages,
     emitOutput: false,
   };
-  const firstPreview = await previewRunner(previewOptions);
-  const secondPreview = await previewRunner(previewOptions);
+  const firstPreview = assertSafePreview(await previewRunner(previewOptions));
+  const secondPreview = assertSafePreview(await previewRunner(previewOptions));
   const planFingerprint = assertDeterministicPreview(firstPreview, secondPreview);
   const file = reportPath(output || process.env.MSE_25_31_PREFLIGHT_OUTPUT);
+  const context = {
+    backendOrigin: origin,
+    tenantSlug: tenant,
+    minimumWords: firstPreview.minimumWords ?? (resolvedMinimumWords === undefined ? null : Number(resolvedMinimumWords)),
+    topPages: resolvedTopPages,
+  };
 
   const report = {
     version: "mse-25.31",
@@ -105,6 +136,7 @@ async function run({
     writes: false,
     destructive: false,
     repository: repo,
+    context,
     planFingerprint,
     preview: firstPreview,
     determinism: {
@@ -123,6 +155,7 @@ async function run({
     destructive: false,
     reportPath: file,
     repository: repo,
+    context,
     planFingerprint,
     previewSummary: firstPreview.summary || {},
     operatorSummary: firstPreview.operatorSummary || {},
@@ -150,6 +183,7 @@ module.exports = {
   assertDeterministicPreview,
   assertFingerprint,
   assertRepositoryState,
+  assertSafePreview,
   gitValue,
   reportPath,
   repositoryState,
