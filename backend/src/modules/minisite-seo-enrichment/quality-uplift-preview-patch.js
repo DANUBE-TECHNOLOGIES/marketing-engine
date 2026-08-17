@@ -9,6 +9,9 @@ const {
 const {
   buildQualityUpliftProposal,
 } = require("./quality-uplift-proposal-planner");
+const {
+  buildBodyCopyPreview,
+} = require("./quality-uplift-copy-preview");
 
 function siteFromAgencyPlan(plan = {}) {
   return {
@@ -16,6 +19,7 @@ function siteFromAgencyPlan(plan = {}) {
     agencyId: plan.agencyId || null,
     agency: {
       id: plan.agencyId || null,
+      name: plan.agencyName || null,
       city: plan.city || null,
     },
     pages: (plan.pages || []).map((item) => ({
@@ -25,6 +29,20 @@ function siteFromAgencyPlan(plan = {}) {
       published: item.published === true || item.page?.published === true,
       blocks: item.currentBlocks || item.page?.blocks || [],
     })),
+  };
+}
+
+function proposalWithCopyPreview(proposal, action, site) {
+  const page = (site.pages || []).find(
+    (item) => String(item?.slug || "") === String(proposal?.pageSlug || "")
+  ) || null;
+  const bodyCopyPreview = page
+    ? buildBodyCopyPreview({ agency: site.agency || {}, page, action })
+    : null;
+
+  return {
+    ...proposal,
+    bodyCopyPreview,
   };
 }
 
@@ -41,6 +59,9 @@ function installQualityUpliftPreview(ServiceClass) {
     const plan = buildLocalSeoQualityUpliftPlan(site, { minimumWords });
     const actionPlan = consolidateQualityUpliftActions(plan);
     const proposalPlan = buildQualityUpliftProposal(actionPlan);
+    const proposals = proposalPlan.proposals.map((proposal, index) =>
+      proposalWithCopyPreview(proposal, actionPlan.actions[index], site)
+    );
 
     return {
       operation: "preview-quality-uplift",
@@ -55,10 +76,11 @@ function installQualityUpliftPreview(ServiceClass) {
         mediumPriorityCount: actionPlan.mediumPriorityCount,
         lowPriorityCount: actionPlan.lowPriorityCount,
       },
-      proposals: proposalPlan.proposals,
+      proposals,
       proposalSummary: {
         proposalCount: proposalPlan.proposalCount,
         operationCount: proposalPlan.operationCount,
+        bodyCopyPreviewCount: proposals.filter((item) => item.bodyCopyPreview).length,
       },
       excludedPages: agencyPlan.excludedPages || [],
     };
@@ -141,6 +163,10 @@ function installQualityUpliftPreview(ServiceClass) {
           (sum, agency) => sum + Number(agency.proposalSummary?.operationCount || 0),
           0
         ),
+        bodyCopyPreviewCount: agencies.reduce(
+          (sum, agency) => sum + Number(agency.proposalSummary?.bodyCopyPreviewCount || 0),
+          0
+        ),
       },
     };
   };
@@ -157,5 +183,6 @@ function installQualityUpliftPreview(ServiceClass) {
 
 module.exports = {
   installQualityUpliftPreview,
+  proposalWithCopyPreview,
   siteFromAgencyPlan,
 };
