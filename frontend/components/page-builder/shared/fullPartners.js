@@ -31,7 +31,6 @@ export const FULL_PARTNERS = Object.freeze([
   P("visit-europe", "Visit Europe", "circuits", "Circuits, escapades et séjours en Europe pour combiner patrimoine, villes et régions.", ["Europe", "culture"]),
   P("voyages-internationaux", "Voyages Internationaux", "circuits", "Circuits accompagnés et voyages organisés à travers de grandes destinations internationales.", ["monde", "accompagné"]),
   P("rev-vacances", "Rev'Vacances", "circuits", "Circuits, croisières et voyages à la carte en Europe et dans le monde, avec une forte programmation culturelle et découverte.", ["circuits", "croisières", "à la carte"]),
-  P("worldia", "Worldia", "circuits", "Itinéraires personnalisables, circuits et combinés permettant de construire un voyage à plusieurs étapes.", ["itinéraire", "personnalisable"]),
 
   P("fram", "FRAM", "sejours", "Séjours, clubs, circuits et vacances en famille dans de nombreuses destinations soleil et moyen-courrier.", ["clubs", "famille", "soleil"], "/partners/fram.webp"),
   P("tui-france", "TUI France", "sejours", "Séjours, clubs, circuits et voyages à travers les univers Club Marmara, Club Lookéa, TUI Sélection et Nouvelles Frontières.", ["clubs", "circuits", "séjours"], "/partners/tui-official.webp"),
@@ -48,7 +47,6 @@ export const FULL_PARTNERS = Object.freeze([
   P("pacha-tours", "Pacha Tours", "sejours", "Séjours et circuits autour du bassin méditerranéen et de destinations culturelles ou balnéaires.", ["Méditerranée", "séjours"]),
   P("heliades", "Vacances Héliades", "sejours", "Séjours et circuits tournés vers la Méditerranée et les îles, avec une forte identité grecque et insulaire.", ["Grèce", "îles", "Méditerranée"]),
   P("voyamar", "Voyamar", "sejours", "Séjours, clubs et circuits avec une offre généraliste de destinations soleil et découvertes.", ["clubs", "circuits"]),
-  P("aerosun", "Aérosun", "sejours", "Offres de séjours loisirs et balnéaires distribuées dans l'univers Voyamar.", ["séjours", "soleil"]),
   P("travel-evasion", "Travel Evasion", "sejours", "Séjours, clubs francophones, circuits et croisières, avec une expertise forte de l'Égypte et du bassin méditerranéen.", ["Égypte", "séjours", "circuits"]),
 
   P("alma-latina", "Alma Latina", "sur-mesure", "Voyages à la carte et circuits dédiés aux cultures, paysages et grands itinéraires d'Amérique latine.", ["Amérique latine", "sur mesure"]),
