@@ -10,6 +10,7 @@ const read = (relativePath) => fs.readFileSync(path.join(frontendRoot, relativeP
 
 test("partner logo sourcing keeps vetted assets separate from press and permission reviews", () => {
   const cruiseSources = read("components/page-builder/shared/partnerCruiseLogoSources.js");
+  const cruiseDetails = read("components/page-builder/shared/partnerCruiseDetails.js");
   const circuitSources = read("components/page-builder/shared/partnerCircuitLogoSources.js");
   const staySources = read("components/page-builder/shared/partnerStayLogoSources.js");
   const longHaulSources = read("components/page-builder/shared/partnerLongHaulLogoSources.js");
@@ -28,9 +29,12 @@ test("partner logo sourcing keeps vetted assets separate from press and permissi
   assert.match(cruiseSources, /status:\s*"vetted-source"/);
   assert.match(cruiseSources, /catlante-catamarans\.svg/);
   assert.match(cruiseSources, /croisieurope[\s\S]*official-press-room/);
+  assert.match(cruiseSources, /rivages-du-monde[\s\S]*official-source-page/);
+  assert.match(cruiseSources, /rivages-du-monde[\s\S]*rivagesdumonde\.fr/);
   assert.match(cruiseSources, /explora-journeys[\s\S]*official-press-kit/);
   assert.match(cruiseSources, /hurtigruten[\s\S]*official-press-library/);
   assert.match(cruiseSources, /cfc[\s\S]*permission-review/);
+  assert.match(cruiseDetails, /rivages-du-monde[\s\S]*Croisière fluviale[\s\S]*Expédition/);
 
   assert.match(circuitSources, /double-sens[\s\S]*official-site/);
   assert.match(circuitSources, /la-francaise-des-circuits[\s\S]*official-site/);
@@ -65,6 +69,7 @@ test("partner logo sourcing keeps vetted assets separate from press and permissi
   assert.match(franceEuropeDetails, /pierre-vacances-center-parcs[\s\S]*displayMode:\s*"brand-cluster"/);
   assert.match(franceEuropeDetails, /brands:\s*\["Pierre & Vacances", "Center Parcs", "maeva"\]/);
 
+  assert.match(catalogue, /P\("rivages-du-monde",\s*"Rivages du Monde",\s*"croisieres"/);
   assert.match(catalogue, /P\("jet-tours",\s*"Jet tours",\s*"sejours"/);
   assert.match(catalogue, /P\("plein-vent",\s*"Plein Vent",\s*"sejours"/);
   assert.match(catalogue, /P\("travel-evasion",\s*"Travel Evasion",\s*"sejours"/);
@@ -79,6 +84,7 @@ test("partner logo sourcing keeps vetted assets separate from press and permissi
     assert.match(backlog, new RegExp(`${id}[\\s\\S]*permission-required`));
   }
   assert.doesNotMatch(backlog, /worldia|aerosun|mega-vacances/i);
+  assert.match(backlog, /rivages-du-monde[\s\S]*croisieres[\s\S]*source-pending/);
   assert.match(backlog, /travel-evasion[\s\S]*sejours[\s\S]*source-pending/);
   assert.match(backlog, /ollandini[\s\S]*france-europe/);
 
