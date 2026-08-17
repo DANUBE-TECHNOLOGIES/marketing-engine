@@ -10,7 +10,6 @@ const read = (relativePath) => fs.readFileSync(path.join(frontendRoot, relativeP
 
 test("generic partner logo discovery stays read-only and respects publication holds", () => {
   const discovery = read("scripts/partner-logo-source-discovery.mjs");
-
   assert.match(discovery, /discover-only-no-write/);
   assert.match(discovery, /identity-review/);
   assert.match(discovery, /catalogue-excluded/);
@@ -22,7 +21,6 @@ test("generic partner logo discovery stays read-only and respects publication ho
 
 test("generic partner logo acquisition requires two-stage vetting and explicit overwrite", () => {
   const acquire = read("scripts/partner-logo-acquire.mjs");
-
   assert.match(acquire, /backlog\.state !== "source-vetted"/);
   assert.match(acquire, /source\.status !== "vetted-source"/);
   assert.match(acquire, /preferredSource \|\| source\?\.assetUrl/);
@@ -34,12 +32,24 @@ test("generic partner logo acquisition requires two-stage vetting and explicit o
   assert.match(acquire, /refusing to publish PNG/);
 });
 
+test("generic partner logo acquisition validates downloaded and generated payloads before publication", () => {
+  const acquire = read("scripts/partner-logo-acquire.mjs");
+  assert.match(acquire, /function validateSvg/);
+  assert.match(acquire, /script\|iframe\|object\|embed/);
+  assert.match(acquire, /forbidden event handlers/);
+  assert.match(acquire, /forbidden external or executable references/);
+  assert.match(acquire, /function validateGeneratedAsset/);
+  assert.match(acquire, /2 \* 1024 \* 1024/);
+  assert.match(acquire, /generated WebP payload has invalid signature/);
+  assert.match(acquire, /if \(format === "svg"\) validateSvg\(downloaded\.buffer\)/);
+  assert.match(acquire, /validateGeneratedAsset\(generatedPath, outputFormat\)/);
+});
+
 test("Rivages du Monde is wired through catalogue, cruise details and logo sourcing", () => {
   const catalogue = read("components/page-builder/shared/fullPartners.js");
   const details = read("components/page-builder/shared/partnerCruiseDetails.js");
   const sources = read("components/page-builder/shared/partnerCruiseLogoSources.js");
   const backlog = read("components/page-builder/shared/partnerLogoBacklog.js");
-
   assert.match(catalogue, /P\("rivages-du-monde",\s*"Rivages du Monde",\s*"croisieres"/);
   assert.match(details, /"rivages-du-monde"[\s\S]*Croisière fluviale/);
   assert.match(sources, /"rivages-du-monde"[\s\S]*rivagesdumonde\.fr/);
