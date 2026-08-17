@@ -13,6 +13,7 @@ const P = (id, name, category, summary, tags = [], logoUrl = "") => ({ id, name,
 export const FULL_PARTNERS = Object.freeze([
   P("catlante-catamarans", "Catlante Catamarans", "croisieres", "Croisières en catamaran et séjours nautiques, avec une approche centrée sur la mer et les mouillages.", ["catamaran", "navigation"]),
   P("croisieurope", "CroisiEurope", "croisieres", "Croisières fluviales, maritimes et itinéraires culturels au fil des grands fleuves et régions d'Europe.", ["fluvial", "Europe"]),
+  P("rivages-du-monde", "Rivages du Monde", "croisieres", "Croisières culturelles haut de gamme, fluviales, maritimes et côtières, à bord de bateaux à taille humaine avec accompagnement francophone.", ["culture", "fluvial", "haut de gamme"]),
   P("ponant", "Ponant", "croisieres", "Croisières premium et expéditions à bord de navires de petite capacité vers des itinéraires d'exception.", ["premium", "expédition"]),
   P("celestyal-cruises", "Celestyal Cruises", "croisieres", "Croisières en Méditerranée orientale, particulièrement adaptées à la découverte des îles et escales culturelles.", ["Méditerranée", "îles"]),
   P("explora-journeys", "Explora Journeys", "croisieres", "Croisières haut de gamme pensées comme des voyages océaniques, avec une forte place accordée au temps passé à destination.", ["luxe", "océan"]),
