@@ -42,7 +42,13 @@ function createPrisma(site = siteFixture(), initialPolicy = null) {
   return {
     agencySite: {
       async findUnique({ where }) {
-        return where.slug === site?.slug ? site : null;
+        if (where.slug !== undefined) {
+          return where.slug === site?.slug ? site : null;
+        }
+        if (where.id !== undefined) {
+          return where.id === site?.id ? site : null;
+        }
+        return null;
       },
     },
     agencyPaymentPolicy: {
@@ -108,6 +114,24 @@ test("preview route normalizes the site slug and returns a read-only fingerprint
     assert.equal(body.preview.writes, false);
     assert.equal(typeof body.preview.fingerprint, "string");
     assert.equal(body.preview.fingerprint.length, 64);
+    assert.equal(body.preview.proposals.length, 2);
+  });
+});
+
+test("preview route accepts the AgencySite id used by Website Designer V2", async () => {
+  await withServer(createPrisma(), async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/api/agency-sites/site-1/flexible-payment/preview`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        policy: { enabled: true, products: ["flight"] },
+      }),
+    });
+
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.equal(body.site.id, "site-1");
+    assert.equal(body.site.slug, "gien");
     assert.equal(body.preview.proposals.length, 2);
   });
 });
