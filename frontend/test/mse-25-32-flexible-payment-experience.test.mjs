@@ -8,6 +8,10 @@ const catalog = fs.readFileSync(
   path.join(root, "lib/page-builder-v2/block-catalog.js"),
   "utf8"
 );
+const paymentApi = fs.readFileSync(
+  path.join(root, "lib/page-builder-v2/flexible-payment-api.js"),
+  "utf8"
+);
 const registry = fs.readFileSync(
   path.join(root, "components/public-site/renderers/registry.js"),
   "utf8"
@@ -25,6 +29,16 @@ test("MSE-25.32 exposes flexible payment in Website Designer V2", () => {
   assert.match(catalog, /label: "Paiement en plusieurs fois"/);
   assert.match(catalog, /feeMode: "unspecified"/);
   assert.match(catalog, /installmentCounts: \[\]/);
+});
+
+test("MSE-25.32 exposes persisted policy operations to Website Designer V2", () => {
+  assert.match(paymentApi, /fetchFlexiblePaymentConfiguration/);
+  assert.match(paymentApi, /previewFlexiblePayment/);
+  assert.match(paymentApi, /saveFlexiblePaymentPolicy/);
+  assert.match(paymentApi, /applyFlexiblePayment/);
+  assert.match(paymentApi, /rollbackFlexiblePayment/);
+  assert.match(paymentApi, /JSON\.stringify\(\{ confirm: true, policy \}\)/);
+  assert.match(paymentApi, /previewFingerprint/);
 });
 
 test("MSE-25.32 registers flexible payment in the public renderer", () => {
