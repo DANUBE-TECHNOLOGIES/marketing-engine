@@ -2,8 +2,8 @@
 
 const DETAILS = Object.freeze({
   "double-sens": {
-    destinations: ["Europe", "Afrique", "Asie", "Amérique du Sud", "Caraïbes"],
-    travelTypes: ["Voyage sur mesure", "Petit groupe", "Immersion locale", "Trek & randonnée", "Voyage solidaire"],
+    destinations: ["Europe", "Afrique", "Asie", "Amérique latine", "Moyen-Orient"],
+    travelTypes: ["Voyage sur mesure", "Petit groupe", "Immersion locale", "Trek & randonnée", "Voyage solidaire", "Autotour"],
     website: "https://www.doublesens.fr/",
   },
   "destination-aventure": {
@@ -50,10 +50,6 @@ const DETAILS = Object.freeze({
     destinations: ["Égypte", "Afrique", "Europe", "Amérique du Nord", "Amérique du Sud", "Asie"],
     travelTypes: ["Circuit accompagné", "Croisière", "Voyage à la carte", "Séjour", "Voyage privatif"],
     website: "https://www.rev-vacances.fr/",
-  },
-  worldia: {
-    destinations: ["Europe", "Asie", "Amérique du Nord", "Amérique du Sud", "Moyen-Orient", "Afrique", "Îles"],
-    travelTypes: ["Voyage sur mesure", "Road trip", "City break", "Expédition", "Itinéraire multi-destinations"],
   },
 });
 
