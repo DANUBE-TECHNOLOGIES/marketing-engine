@@ -1,6 +1,8 @@
 "use strict";
 
 const express = require("express");
+const PaymentPolicyRepository = require("./policy-repository");
+const { validatePaymentPolicyInput } = require("./payment-experience");
 const {
   applyPaymentPlacementPreview,
   buildPaymentPlacementPreview,
@@ -11,8 +13,8 @@ function normalizeSiteSlug(value) {
   return String(value || "").trim().toLowerCase();
 }
 
-async function loadSite(prisma, siteSlug) {
-  return prisma.agencySite.findUnique({
+async function loadSite(prisma, siteSlug, policyRepository = new PaymentPolicyRepository(prisma)) {
+  const site = await prisma.agencySite.findUnique({
     where: { slug: normalizeSiteSlug(siteSlug) },
     include: {
       agency: true,
@@ -26,6 +28,10 @@ async function loadSite(prisma, siteSlug) {
       },
     },
   });
+
+  if (!site) return null;
+  const paymentPolicy = await policyRepository.findBySiteId(site.id);
+  return { ...site, paymentPolicy };
 }
 
 function sendModuleError(res, error) {
@@ -37,14 +43,24 @@ function sendModuleError(res, error) {
   });
 }
 
+function assertPolicyWriteConfirmed(confirm) {
+  if (confirm !== true) {
+    const error = new Error("Flexible payment policy update requires confirm=true.");
+    error.code = "FLEXIBLE_PAYMENT_POLICY_CONFIRM_REQUIRED";
+    error.status = 400;
+    throw error;
+  }
+}
+
 module.exports = function createFlexiblePaymentRoutes({ prisma }) {
   if (!prisma) throw new TypeError("Flexible Payment routes require Prisma.");
 
   const router = express.Router();
+  const policyRepository = new PaymentPolicyRepository(prisma);
 
   router.get("/api/agency-sites/:siteSlug/flexible-payment", async (req, res) => {
     try {
-      const site = await loadSite(prisma, req.params.siteSlug);
+      const site = await loadSite(prisma, req.params.siteSlug, policyRepository);
       if (!site) {
         return res.status(404).json({
           ok: false,
@@ -58,6 +74,38 @@ module.exports = function createFlexiblePaymentRoutes({ prisma }) {
         ok: true,
         site: { id: site.id, slug: site.slug, agencyId: site.agencyId },
         configured: Boolean(site.paymentPolicy),
+        policy: site.paymentPolicy,
+        preview,
+      });
+    } catch (error) {
+      return sendModuleError(res, error);
+    }
+  });
+
+  router.put("/api/agency-sites/:siteSlug/flexible-payment/policy", async (req, res) => {
+    try {
+      assertPolicyWriteConfirmed(req.body?.confirm === true);
+      const site = await loadSite(prisma, req.params.siteSlug, policyRepository);
+      if (!site) {
+        return res.status(404).json({
+          ok: false,
+          code: "FLEXIBLE_PAYMENT_SITE_NOT_FOUND",
+          error: "Mini-site agence introuvable.",
+        });
+      }
+
+      const policy = validatePaymentPolicyInput(req.body?.policy);
+      const savedPolicy = await policyRepository.upsert(site.id, policy);
+      const preview = buildPaymentPlacementPreview({
+        site: { ...site, paymentPolicy: savedPolicy },
+      });
+
+      return res.json({
+        ok: true,
+        mode: "policy-update",
+        site: { id: site.id, slug: site.slug, agencyId: site.agencyId },
+        configured: true,
+        policy: savedPolicy,
         preview,
       });
     } catch (error) {
@@ -67,7 +115,7 @@ module.exports = function createFlexiblePaymentRoutes({ prisma }) {
 
   router.post("/api/agency-sites/:siteSlug/flexible-payment/preview", async (req, res) => {
     try {
-      const site = await loadSite(prisma, req.params.siteSlug);
+      const site = await loadSite(prisma, req.params.siteSlug, policyRepository);
       if (!site) {
         return res.status(404).json({
           ok: false,
@@ -85,6 +133,7 @@ module.exports = function createFlexiblePaymentRoutes({ prisma }) {
         ok: true,
         mode: "preview",
         site: { id: site.id, slug: site.slug, agencyId: site.agencyId },
+        policySource: req.body?.policy === undefined ? "persisted" : "override",
         preview,
       });
     } catch (error) {
@@ -94,7 +143,7 @@ module.exports = function createFlexiblePaymentRoutes({ prisma }) {
 
   router.post("/api/agency-sites/:siteSlug/flexible-payment/apply", async (req, res) => {
     try {
-      const site = await loadSite(prisma, req.params.siteSlug);
+      const site = await loadSite(prisma, req.params.siteSlug, policyRepository);
       if (!site) {
         return res.status(404).json({
           ok: false,
@@ -114,7 +163,12 @@ module.exports = function createFlexiblePaymentRoutes({ prisma }) {
         }
       );
 
-      return res.json({ ok: true, mode: "apply", ...result });
+      return res.json({
+        ok: true,
+        mode: "apply",
+        policySource: req.body?.policy === undefined ? "persisted" : "override",
+        ...result,
+      });
     } catch (error) {
       return sendModuleError(res, error);
     }
@@ -174,5 +228,6 @@ module.exports = function createFlexiblePaymentRoutes({ prisma }) {
   return router;
 };
 
+module.exports.assertPolicyWriteConfirmed = assertPolicyWriteConfirmed;
 module.exports.loadSite = loadSite;
 module.exports.normalizeSiteSlug = normalizeSiteSlug;
