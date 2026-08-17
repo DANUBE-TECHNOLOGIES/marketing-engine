@@ -6,6 +6,9 @@ const {
 const {
   consolidateQualityUpliftActions,
 } = require("./quality-uplift-action-planner");
+const {
+  buildQualityUpliftProposal,
+} = require("./quality-uplift-proposal-planner");
 
 function siteFromAgencyPlan(plan = {}) {
   return {
@@ -37,6 +40,7 @@ function installQualityUpliftPreview(ServiceClass) {
     const site = siteFromAgencyPlan(agencyPlan);
     const plan = buildLocalSeoQualityUpliftPlan(site, { minimumWords });
     const actionPlan = consolidateQualityUpliftActions(plan);
+    const proposalPlan = buildQualityUpliftProposal(actionPlan);
 
     return {
       operation: "preview-quality-uplift",
@@ -50,6 +54,11 @@ function installQualityUpliftPreview(ServiceClass) {
         highPriorityCount: actionPlan.highPriorityCount,
         mediumPriorityCount: actionPlan.mediumPriorityCount,
         lowPriorityCount: actionPlan.lowPriorityCount,
+      },
+      proposals: proposalPlan.proposals,
+      proposalSummary: {
+        proposalCount: proposalPlan.proposalCount,
+        operationCount: proposalPlan.operationCount,
       },
       excludedPages: agencyPlan.excludedPages || [],
     };
@@ -122,6 +131,14 @@ function installQualityUpliftPreview(ServiceClass) {
         ),
         lowPriorityPageCount: agencies.reduce(
           (sum, agency) => sum + Number(agency.actionSummary?.lowPriorityCount || 0),
+          0
+        ),
+        proposalCount: agencies.reduce(
+          (sum, agency) => sum + Number(agency.proposalSummary?.proposalCount || 0),
+          0
+        ),
+        proposedOperationCount: agencies.reduce(
+          (sum, agency) => sum + Number(agency.proposalSummary?.operationCount || 0),
           0
         ),
       },
