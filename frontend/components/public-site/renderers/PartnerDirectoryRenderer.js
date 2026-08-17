@@ -52,6 +52,13 @@ function PartnerCard({ partner }) {
             <div className={styles.metadata}>
               <MetadataGroup label="Destinations" values={profile.details.destinations} />
               <MetadataGroup label="Types de voyages" values={profile.details.travelTypes} />
+              <MetadataGroup label="Marques" values={profile.details.brands} />
+              {profile.details.note ? <p className={styles.note}>{profile.details.note}</p> : null}
+              {profile.details.website ? (
+                <a className={styles.website} href={profile.details.website} target="_blank" rel="noreferrer">
+                  Site du partenaire
+                </a>
+              ) : null}
             </div>
           </details>
         ) : null}
