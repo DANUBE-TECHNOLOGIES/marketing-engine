@@ -24,7 +24,8 @@
     "mse-25.31:preflight-check": "node scripts/mse-25-31-preflight-check.js",
     "mse-25.31:approval-manifest": "node scripts/mse-25-31-approval-manifest.js",
     "mse-25.31:approval-check": "node scripts/mse-25-31-approval-check.js",
-    "mse-25.31:execution-plan": "node scripts/mse-25-31-execution-plan.js"
+    "mse-25.31:execution-plan": "node scripts/mse-25-31-execution-plan.js",
+    "mse-25.31:execution-plan-check": "node scripts/mse-25-31-execution-plan-check.js"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",
