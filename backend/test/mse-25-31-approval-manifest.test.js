@@ -99,22 +99,47 @@ const rows = [
   },
 ];
 
-test("approval manifest starts with every candidate explicitly unapproved", () => {
+test("approval manifest starts with every candidate explicitly unapproved and exposes exact write evidence", () => {
   const manifest = createApprovalManifest(preflightReport(rows));
   assert.equal(manifest.publicWrites, false);
   assert.equal(manifest.defaultApproval, false);
   assert.equal(manifest.summary.candidateCount, 2);
   assert.equal(manifest.summary.approvedCount, 0);
   assert.equal(manifest.summary.rejectedOrPendingCount, 2);
+  assert.equal(manifest.summary.payloadCompleteCount, 1);
+  assert.equal(manifest.summary.payloadIncompleteCount, 1);
   assert.equal(manifest.summary.manualReviewNeededCount, 1);
   assert.ok(manifest.candidates.every((candidate) => candidate.approved === false));
   assert.deepEqual(manifest.candidates.map((candidate) => candidate.key), ["gien:avis", "nevers:avis"]);
+
+  const bodyCandidate = manifest.candidates.find((candidate) => candidate.key === "gien:avis");
+  const metaCandidate = manifest.candidates.find((candidate) => candidate.key === "nevers:avis");
+  assert.match(bodyCandidate.writePayloadFingerprint, /^[0-9a-f]{64}$/);
+  assert.equal(bodyCandidate.writePayloadComplete, true);
+  assert.equal(bodyCandidate.writePreview.bodyCopy.html, "<p>Texte exact gien.</p>");
+  assert.equal(metaCandidate.writePayloadComplete, false);
+  assert.equal(metaCandidate.writePreview.bodyCopy, null);
+  assert.deepEqual(metaCandidate.writePreview.incompleteOperationTypes, ["strengthen-meta-description"]);
 });
 
 test("candidate set fingerprint is stable regardless of incoming row order", () => {
   const first = createApprovalManifest(preflightReport(rows));
   const second = createApprovalManifest(preflightReport([...rows].reverse()));
   assert.equal(first.candidateSetFingerprint, second.candidateSetFingerprint);
+});
+
+test("candidate set fingerprint changes when the exact sealed write payload changes", () => {
+  const firstReport = preflightReport(rows);
+  const secondReport = preflightReport(rows);
+  secondReport.preview.executionPayloads.find((payload) => payload.key === "gien:avis").bodyCopyPreview.html = "<p>Autre texte exact.</p>";
+  secondReport.executionPayloadAudit.completePayloadCount = 1;
+  const first = createApprovalManifest(firstReport);
+  const second = createApprovalManifest(secondReport);
+  assert.notEqual(first.candidateSetFingerprint, second.candidateSetFingerprint);
+  assert.notEqual(
+    first.candidates.find((candidate) => candidate.key === "gien:avis").writePayloadFingerprint,
+    second.candidates.find((candidate) => candidate.key === "gien:avis").writePayloadFingerprint
+  );
 });
 
 test("approval candidates reject duplicate logical pages", () => {
