@@ -12,7 +12,27 @@ const { EXPECTED_BRANCH } = require("../scripts/mse-25-31-preflight");
 const FP = "a".repeat(64);
 const HEAD = "b".repeat(40);
 
+function payloadForRow(row) {
+  const types = row.operationTypes || [];
+  const bodyOnly = types.length === 1 && types[0] === "enrich-body";
+  return {
+    key: `${row.siteSlug}:${row.pageSlug || "home"}`,
+    agencyId: row.agencyId ?? null,
+    siteSlug: row.siteSlug,
+    city: row.city || null,
+    pageSlug: row.pageSlug || "home",
+    operations: types.map((type) => ({ type })),
+    bodyCopyPreview: bodyOnly ? { title: "Informations utiles", html: `<p>Texte exact ${row.siteSlug}.</p>` } : null,
+    safeguards: {},
+    completeOperationTypes: bodyOnly ? [...types] : [],
+    incompleteOperationTypes: bodyOnly ? [] : [...types],
+    payloadComplete: bodyOnly && types.length > 0,
+  };
+}
+
 function preflightReport(rows) {
+  const executionPayloads = rows.map(payloadForRow);
+  const completePayloadCount = executionPayloads.filter((payload) => payload.payloadComplete).length;
   return {
     version: "mse-25.31",
     operation: "preflight-quality-uplift",
@@ -33,12 +53,21 @@ function preflightReport(rows) {
       destructive: false,
       planFingerprint: FP,
       allPages: rows,
+      executionPayloads,
+    },
+    executionPayloadAudit: {
+      ok: true,
+      candidateCount: rows.length,
+      payloadCount: executionPayloads.length,
+      completePayloadCount,
+      incompletePayloadCount: executionPayloads.length - completePayloadCount,
     },
     determinism: {
       verified: true,
       previewCount: 2,
       firstFingerprint: FP,
       secondFingerprint: FP,
+      executionPayloadsVerified: true,
     },
   };
 }
