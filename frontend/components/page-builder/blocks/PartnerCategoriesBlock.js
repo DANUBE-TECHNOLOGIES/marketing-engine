@@ -1,19 +1,6 @@
 import { getSectionContent } from "../shared/blockUtils";
-import { FULL_PARTNERS, PARTNER_DIRECTORY_CATEGORIES } from "../shared/fullPartners";
-import { isPartnerPublicationConfirmed } from "../shared/partnerVerification";
-import { getCruisePartnerDetails } from "../shared/partnerCruiseDetails";
-import { getCircuitPartnerDetails } from "../shared/partnerCircuitDetails";
-import { getStayPartnerDetails } from "../shared/partnerStayDetails";
-import { getLongHaulPartnerDetails } from "../shared/partnerLongHaulDetails";
-import { getFranceEuropePartnerDetails } from "../shared/partnerFranceEuropeDetails";
-
-const DETAIL_RESOLVERS = Object.freeze({
-  croisieres: getCruisePartnerDetails,
-  circuits: getCircuitPartnerDetails,
-  sejours: getStayPartnerDetails,
-  "sur-mesure": getLongHaulPartnerDetails,
-  "france-europe": getFranceEuropePartnerDetails,
-});
+import { PARTNER_DIRECTORY_CATEGORIES } from "../shared/fullPartners";
+import { getPublishablePartnerProfiles } from "../shared/partnerProfile";
 
 function initials(name) {
   return String(name || "")
@@ -28,7 +15,7 @@ function PartnerLogo({ partner }) {
   if (partner.logoUrl) {
     return (
       <span className="as-partner-logo" aria-hidden="true">
-        <img src={partner.logoUrl} alt="" loading="lazy" />
+        <img src={partner.logoUrl} alt="" loading="lazy" decoding="async" />
       </span>
     );
   }
@@ -49,14 +36,13 @@ function DetailList({ label, values }) {
 
 export default function PartnerCategoriesBlock({ section }) {
   const content = getSectionContent(section);
-  const published = FULL_PARTNERS.filter((partner) => isPartnerPublicationConfirmed(partner.id));
   const categories = PARTNER_DIRECTORY_CATEGORIES.map((category) => ({
     ...category,
-    partners: published.filter((partner) => partner.category === category.id),
+    partners: getPublishablePartnerProfiles(category.partners),
   })).filter((category) => category.partners.length > 0);
 
   return (
-    <section className="as-section as-partners-directory" data-block-type="partner-categories">
+    <section className="as-section as-partners-directory" data-block-type="partner-directory">
       <div className="as-shell">
         <div className="as-section-heading">
           <div>
@@ -86,38 +72,35 @@ export default function PartnerCategoriesBlock({ section }) {
               </div>
 
               <div className="as-partner-grid">
-                {category.partners.map((partner) => {
-                  const details = DETAIL_RESOLVERS[category.id]?.(partner.id) || null;
-                  return (
-                    <article className="as-card as-partner-card" key={partner.id}>
-                      <div className="as-partner-card-head">
-                        <PartnerLogo partner={partner} />
-                        <div>
-                          <h4>{partner.name}</h4>
-                          {partner.tags?.length > 0 && <p className="as-partner-tags">{partner.tags.slice(0, 3).join(" · ")}</p>}
-                        </div>
+                {category.partners.map((partner) => (
+                  <article className="as-card as-partner-card" key={partner.id} data-partner-id={partner.id}>
+                    <div className="as-partner-card-head">
+                      <PartnerLogo partner={partner} />
+                      <div>
+                        <h4>{partner.name}</h4>
+                        {partner.visibleTags.length > 0 && <p className="as-partner-tags">{partner.visibleTags.join(" · ")}</p>}
                       </div>
-                      <p>{partner.summary}</p>
+                    </div>
+                    <p>{partner.summary}</p>
 
-                      {details && (
-                        <details className="as-partner-details">
-                          <summary>Destinations et types de voyages</summary>
-                          <div className="as-partner-details-body">
-                            <DetailList label="Destinations" values={details.destinations} />
-                            <DetailList label="Types de voyages" values={details.travelTypes} />
-                            {Array.isArray(details.brands) && details.brands.length > 0 && <DetailList label="Marques" values={details.brands} />}
-                            {details.note && <p className="as-partner-note">{details.note}</p>}
-                            {details.website && (
-                              <a className="as-partner-website" href={details.website} target="_blank" rel="noreferrer">
-                                Site du partenaire
-                              </a>
-                            )}
-                          </div>
-                        </details>
-                      )}
-                    </article>
-                  );
-                })}
+                    {partner.details && (
+                      <details className="as-partner-details">
+                        <summary>Destinations et types de voyages</summary>
+                        <div className="as-partner-details-body">
+                          <DetailList label="Destinations" values={partner.details.destinations} />
+                          <DetailList label="Types de voyages" values={partner.details.travelTypes} />
+                          {Array.isArray(partner.details.brands) && partner.details.brands.length > 0 && <DetailList label="Marques" values={partner.details.brands} />}
+                          {partner.details.note && <p className="as-partner-note">{partner.details.note}</p>}
+                          {partner.details.website && (
+                            <a className="as-partner-website" href={partner.details.website} target="_blank" rel="noreferrer">
+                              Site du partenaire
+                            </a>
+                          )}
+                        </div>
+                      </details>
+                    )}
+                  </article>
+                ))}
               </div>
             </section>
           ))}
