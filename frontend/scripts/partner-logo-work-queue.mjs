@@ -29,6 +29,7 @@ const rows = FULL_PARTNERS
     const hasLogo = Boolean(currentLogoUrl);
     const currentFormat = currentLogoUrl ? path.extname(currentLogoUrl).slice(1).toLowerCase() : null;
     const targetAsset = `/partners/${partner.id}.webp`;
+    const sourceVetted = backlog?.state === "source-vetted";
 
     return {
       id: partner.id,
@@ -49,12 +50,15 @@ const rows = FULL_PARTNERS
             ? "done"
             : verification.status === "asset-permission-review" || backlog?.state === "permission-required"
               ? "hold-permission-review"
-              : "acquire-official-asset",
+              : sourceVetted
+                ? "acquire-vetted-asset"
+                : "discover-official-asset",
     };
   })
   .sort((a, b) => a.priority - b.priority || a.category.localeCompare(b.category) || a.name.localeCompare(b.name));
 
-const actionable = rows.filter((row) => row.action === "acquire-official-asset");
+const readyToAcquire = rows.filter((row) => row.action === "acquire-vetted-asset");
+const sourceDiscovery = rows.filter((row) => row.action === "discover-official-asset");
 const permissionReview = rows.filter((row) => row.action === "hold-permission-review");
 const identityReview = rows.filter((row) => row.action === "hold-identity-review");
 const done = rows.filter((row) => row.action === "done");
@@ -65,7 +69,8 @@ const byCategory = Object.fromEntries(
     return [category, {
       total: categoryRows.length,
       done: categoryRows.filter((row) => row.action === "done").length,
-      actionable: categoryRows.filter((row) => row.action === "acquire-official-asset").length,
+      readyToAcquire: categoryRows.filter((row) => row.action === "acquire-vetted-asset").length,
+      sourceDiscovery: categoryRows.filter((row) => row.action === "discover-official-asset").length,
       permissionReview: categoryRows.filter((row) => row.action === "hold-permission-review").length,
       identityReview: categoryRows.filter((row) => row.action === "hold-identity-review").length,
     }];
@@ -79,12 +84,14 @@ console.log(JSON.stringify({
   summary: {
     total: rows.length,
     done: done.length,
-    actionable: actionable.length,
+    readyToAcquire: readyToAcquire.length,
+    sourceDiscovery: sourceDiscovery.length,
     permissionReview: permissionReview.length,
     identityReview: identityReview.length,
   },
   byCategory,
-  actionable,
+  readyToAcquire,
+  sourceDiscovery,
   permissionReview,
   identityReview,
   done,
