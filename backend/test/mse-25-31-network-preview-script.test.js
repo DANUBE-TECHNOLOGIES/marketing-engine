@@ -5,6 +5,7 @@ const assert = require("node:assert/strict");
 
 const {
   assertSafePreview,
+  executionPayloads,
   isSafePreview,
   normalizeOrigin,
   operatorOutput,
@@ -61,6 +62,48 @@ test("operator output preserves read-only safety and ranking", () => {
   assert.deepEqual(archival.allPages.map((row) => row.pageSlug), ["avis", "services"]);
 });
 
+test("execution payload archive seals exact body copy and blocks operations without final values", () => {
+  const payloads = executionPayloads({
+    agencies: [{
+      agencyId: 1,
+      siteSlug: "gien",
+      city: "Gien",
+      proposals: [
+        {
+          pageSlug: "avis",
+          operations: [{ type: "enrich-body", preserveExisting: true }],
+          bodyCopyPreview: { title: "Informations utiles", html: "<p>Texte exact approuvé.</p>" },
+          safeguards: { preserveManualCopy: true },
+        },
+        {
+          pageSlug: "services",
+          operations: [{ type: "strengthen-meta-description", preserveExisting: false }],
+          bodyCopyPreview: null,
+          safeguards: {},
+        },
+        {
+          pageSlug: "contact",
+          operations: [{ type: "add-internal-link", suggestedSourceSlugs: ["home"] }],
+          bodyCopyPreview: null,
+          safeguards: {},
+        },
+      ],
+    }],
+  });
+
+  const body = payloads.find((item) => item.key === "gien:avis");
+  const meta = payloads.find((item) => item.key === "gien:services");
+  const link = payloads.find((item) => item.key === "gien:contact");
+  assert.equal(body.payloadComplete, true);
+  assert.equal(body.bodyCopyPreview.html, "<p>Texte exact approuvé.</p>");
+  assert.deepEqual(body.completeOperationTypes, ["enrich-body"]);
+  assert.deepEqual(body.incompleteOperationTypes, []);
+  assert.equal(meta.payloadComplete, false);
+  assert.deepEqual(meta.incompleteOperationTypes, ["strengthen-meta-description"]);
+  assert.equal(link.payloadComplete, false);
+  assert.deepEqual(link.incompleteOperationTypes, ["add-internal-link"]);
+});
+
 test("network preview command fails closed on unsafe payload", () => {
   const unsafe = { readOnly: false, writes: true, destructive: false, operatorReport: { rows: [] } };
   const result = operatorOutput(unsafe);
@@ -95,6 +138,7 @@ test("run posts only to the read-only quality uplift preview route", async (t) =
         minimumWords: 140,
         summary: {},
         excludedSites: [],
+        agencies: [],
         operatorReport: {
           summary: { pageCount: 1 },
           rows: [{ siteSlug: "gien", pageSlug: "avis", priority: "high" }],
@@ -114,6 +158,7 @@ test("run posts only to the read-only quality uplift preview route", async (t) =
 
   assert.equal(result.ok, true);
   assert.equal(result.allPages.length, 1);
+  assert.equal(result.executionPayloads.length, 0);
   assert.equal(calls.length, 1);
   assert.equal(calls[0].url, "http://127.0.0.1:4000/minisite-seo-enrichment/network/quality-uplift/preview");
   assert.equal(calls[0].options.method, "POST");
