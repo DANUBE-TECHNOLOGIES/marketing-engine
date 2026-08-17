@@ -35,6 +35,26 @@ function appendInternalLink(site, proposal, operation) {
   return true;
 }
 
+function applyExactSeoOperation(page, operation = {}) {
+  if (!page || !String(operation.finalValue || "").trim()) return false;
+  if (operation.type === "strengthen-title" && operation.target?.scope === "page" && operation.target?.field === "seoTitle") {
+    page.seoTitle = operation.finalValue;
+    return true;
+  }
+  if (operation.type === "strengthen-meta-description" && operation.target?.scope === "page" && operation.target?.field === "metaDescription") {
+    page.metaDescription = operation.finalValue;
+    page.seoDescription = operation.finalValue;
+    return true;
+  }
+  if (operation.type === "strengthen-h1" && operation.target?.scope === "block" && operation.target?.blockId !== null && operation.target?.blockId !== undefined) {
+    const block = (page.blocks || []).find((item) => String(item?.id) === String(operation.target.blockId));
+    if (!block || String(operation.target?.field || "") !== "title") return false;
+    block.content = { ...(block.content || {}), title: operation.finalValue };
+    return true;
+  }
+  return false;
+}
+
 function counts(plan = {}) {
   return {
     intent: Number(plan.summary?.intentOpportunityCount || 0),
@@ -85,6 +105,13 @@ function projectedPageImpact(currentPlan = {}, projectedPlan = {}, proposals = [
   const afterByPage = pageWarningCounts(projectedPlan);
   const proposalByPage = new Map((proposals || []).map((proposal) => [String(proposal.pageSlug || "home"), proposal]));
   const slugs = new Set([...beforeByPage.keys(), ...afterByPage.keys(), ...proposalByPage.keys()]);
+  const simulatedTypes = new Set([
+    "enrich-body",
+    "add-internal-link",
+    "strengthen-title",
+    "strengthen-meta-description",
+    "strengthen-h1",
+  ]);
 
   return Array.from(slugs)
     .sort((left, right) => left.localeCompare(right, "fr"))
@@ -97,7 +124,7 @@ function projectedPageImpact(currentPlan = {}, projectedPlan = {}, proposals = [
       const proposal = proposalByPage.get(pageSlug) || null;
       const nonSimulatedOperationTypes = Array.from(new Set(
         (proposal?.operations || [])
-          .filter((operation) => !["enrich-body", "add-internal-link"].includes(operation.type))
+          .filter((operation) => !simulatedTypes.has(operation.type))
           .map((operation) => operation.type)
       ));
 
@@ -120,6 +147,7 @@ function projectQualityUpliftImpact({ site = {}, currentPlan = {}, proposals = [
   const projectedSite = clone(site);
   let simulatedBodyOperations = 0;
   let simulatedInternalLinkOperations = 0;
+  let simulatedMetadataOperations = 0;
   let nonSimulatedOperations = 0;
   const nonSimulatedOperationTypes = [];
 
@@ -128,8 +156,22 @@ function projectQualityUpliftImpact({ site = {}, currentPlan = {}, proposals = [
     for (const operation of proposal.operations || []) {
       if (operation.type === "enrich-body") {
         if (appendBodyPreview(targetPage, proposal.bodyCopyPreview)) simulatedBodyOperations += 1;
+        else {
+          nonSimulatedOperations += 1;
+          if (!nonSimulatedOperationTypes.includes(operation.type)) nonSimulatedOperationTypes.push(operation.type);
+        }
       } else if (operation.type === "add-internal-link") {
         if (appendInternalLink(projectedSite, proposal, operation)) simulatedInternalLinkOperations += 1;
+        else {
+          nonSimulatedOperations += 1;
+          if (!nonSimulatedOperationTypes.includes(operation.type)) nonSimulatedOperationTypes.push(operation.type);
+        }
+      } else if (["strengthen-title", "strengthen-meta-description", "strengthen-h1"].includes(operation.type)) {
+        if (applyExactSeoOperation(targetPage, operation)) simulatedMetadataOperations += 1;
+        else {
+          nonSimulatedOperations += 1;
+          if (!nonSimulatedOperationTypes.includes(operation.type)) nonSimulatedOperationTypes.push(operation.type);
+        }
       } else {
         nonSimulatedOperations += 1;
         if (!nonSimulatedOperationTypes.includes(operation.type)) nonSimulatedOperationTypes.push(operation.type);
@@ -149,7 +191,13 @@ function projectQualityUpliftImpact({ site = {}, currentPlan = {}, proposals = [
     writes: false,
     destructive: false,
     projectionComplete: nonSimulatedOperations === 0,
-    simulation: { simulatedBodyOperations, simulatedInternalLinkOperations, nonSimulatedOperations, nonSimulatedOperationTypes },
+    simulation: {
+      simulatedBodyOperations,
+      simulatedInternalLinkOperations,
+      simulatedMetadataOperations,
+      nonSimulatedOperations,
+      nonSimulatedOperationTypes,
+    },
     before,
     projected: after,
     projectedReduction: reduction(before, after),
@@ -160,6 +208,7 @@ function projectQualityUpliftImpact({ site = {}, currentPlan = {}, proposals = [
 module.exports = {
   appendBodyPreview,
   appendInternalLink,
+  applyExactSeoOperation,
   counts,
   pageWarningCounts,
   projectQualityUpliftImpact,
