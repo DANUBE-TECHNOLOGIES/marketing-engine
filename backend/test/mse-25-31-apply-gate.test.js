@@ -52,7 +52,20 @@ function preflightReport({ payloadComplete = true } = {}) {
         payloadComplete,
       }],
     },
-    determinism: { verified: true, previewCount: 2, firstFingerprint: FP, secondFingerprint: FP },
+    executionPayloadAudit: {
+      ok: true,
+      candidateCount: 1,
+      payloadCount: 1,
+      completePayloadCount: payloadComplete ? 1 : 0,
+      incompletePayloadCount: payloadComplete ? 0 : 1,
+    },
+    determinism: {
+      verified: true,
+      previewCount: 2,
+      firstFingerprint: FP,
+      secondFingerprint: FP,
+      executionPayloadsVerified: true,
+    },
   };
 }
 
