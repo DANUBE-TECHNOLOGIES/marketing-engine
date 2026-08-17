@@ -95,10 +95,15 @@ test("full partner directory exposes categorized supplier inventory with complet
   assert.match(rendererCss, /@media \(max-width: 720px\)/);
 
   assert.match(publicRegistry, /"partner-directory":\s*PartnerDirectoryRenderer/);
+  assert.match(publicRegistry, /"partners-directory":\s*PartnerDirectoryRenderer/);
+  assert.match(previewRegistry, /registerBlock\("partner-directory", PartnerCategoriesBlock\)/);
+  assert.match(previewRegistry, /registerBlock\("partners-directory", PartnerCategoriesBlock\)/);
   assert.match(previewRegistry, /registerBlock\("partner-categories", PartnerCategoriesBlock\)/);
   assert.match(previewRenderer, /PARTNER_DIRECTORY_CATEGORIES/);
-  assert.match(previewRenderer, /isPartnerPublicationConfirmed/);
+  assert.match(previewRenderer, /getPublishablePartnerProfiles/);
+  assert.match(previewRenderer, /data-block-type="partner-directory"/);
   assert.match(previewRenderer, /Destinations et types de voyages/);
+  assert.match(previewRenderer, /Site du partenaire/);
   assert.match(blockCatalogue, /type: "partner-directory"/);
   assert.match(blockCatalogue, /singleton: true/);
 });
