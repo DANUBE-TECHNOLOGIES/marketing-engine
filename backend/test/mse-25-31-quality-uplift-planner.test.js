@@ -5,6 +5,7 @@ const assert = require("node:assert/strict");
 
 const {
   buildLocalSeoQualityUpliftPlan,
+  internalLinkOpportunities,
   missingSignals,
   thinContentOpportunities,
 } = require("../src/modules/minisite-seo-enrichment/quality-uplift-planner");
@@ -49,6 +50,43 @@ test("thinContentOpportunities only includes published pages below the threshold
   assert.equal(opportunities[0].pageSlug, "avis");
   assert.equal(opportunities[0].minimumWords, 120);
   assert.ok(opportunities[0].missingWords > 0);
+});
+
+test("internalLinkOpportunities mirrors editorial incoming-link gaps", () => {
+  const site = {
+    slug: "mondescale-test",
+    pages: [
+      {
+        slug: "home",
+        published: true,
+        blocks: [
+          {
+            content: {
+              links: [{ href: "/agence/mondescale-test/services" }],
+            },
+          },
+        ],
+      },
+      {
+        slug: "services",
+        published: true,
+        blocks: [{ content: { text: "Services" } }],
+      },
+      {
+        slug: "croisieres",
+        published: true,
+        blocks: [{ content: { text: "Croisières" } }],
+      },
+    ],
+  };
+
+  const opportunities = internalLinkOpportunities(site);
+  assert.equal(opportunities.some((item) => item.pageSlug === "services"), false);
+  const cruise = opportunities.find((item) => item.pageSlug === "croisieres");
+  assert.ok(cruise);
+  assert.equal(cruise.path, "/agence/mondescale-test/croisieres");
+  assert.equal(cruise.incomingEditorialLinks, 0);
+  assert.equal(cruise.suggestedSourceSlugs[0], "home");
 });
 
 test("quality uplift plan is read-only and does not turn secondary weakness into a blocking gate", () => {
@@ -100,6 +138,12 @@ test("quality uplift plan is read-only and does not turn secondary weakness into
   assert.equal(plan.siteSlug, "mondescale-test");
   assert.ok(Array.isArray(plan.intentOpportunities));
   assert.ok(Array.isArray(plan.thinContentOpportunities));
-  assert.equal(plan.summary.totalOpportunityCount, plan.summary.intentOpportunityCount + plan.summary.thinContentOpportunityCount);
+  assert.ok(Array.isArray(plan.internalLinkOpportunities));
+  assert.equal(
+    plan.summary.totalOpportunityCount,
+    plan.summary.intentOpportunityCount +
+      plan.summary.thinContentOpportunityCount +
+      plan.summary.internalLinkOpportunityCount
+  );
   assert.equal(plan.intentOpportunities.some((item) => item.severity === "blocking"), false);
 });
