@@ -11,11 +11,18 @@ const {
   assertDeterministicPreview,
   assertFingerprint,
   assertRepositoryState,
+  assertSafePreview,
   run,
 } = require("../scripts/mse-25-31-preflight");
 
 const FP_A = "a".repeat(64);
 const FP_B = "b".repeat(64);
+const safePreview = (fingerprint = FP_A) => ({
+  readOnly: true,
+  writes: false,
+  destructive: false,
+  planFingerprint: fingerprint,
+});
 
 test("preflight accepts only a valid sha256 plan fingerprint", () => {
   assert.equal(assertFingerprint(FP_A), FP_A);
@@ -25,9 +32,23 @@ test("preflight accepts only a valid sha256 plan fingerprint", () => {
   );
 });
 
+test("preflight independently refuses unsafe preview payloads", () => {
+  assert.equal(assertSafePreview(safePreview()).readOnly, true);
+  for (const preview of [
+    { ...safePreview(), readOnly: false },
+    { ...safePreview(), writes: true },
+    { ...safePreview(), destructive: true },
+  ]) {
+    assert.throws(
+      () => assertSafePreview(preview),
+      (error) => error.code === "MSE_25_31_PREFLIGHT_UNSAFE_PREVIEW"
+    );
+  }
+});
+
 test("preflight refuses a plan whose fingerprint changes between two previews", () => {
   assert.throws(
-    () => assertDeterministicPreview({ planFingerprint: FP_A }, { planFingerprint: FP_B }),
+    () => assertDeterministicPreview(safePreview(FP_A), safePreview(FP_B)),
     (error) => error.code === "MSE_25_31_PREFLIGHT_NON_DETERMINISTIC_PLAN"
   );
 });
@@ -47,7 +68,7 @@ test("preflight requires the dedicated branch and a clean worktree", () => {
   );
 });
 
-test("preflight runs the read-only network preview twice and archives the stable plan", async () => {
+test("preflight runs the read-only network preview twice and archives the stable plan with context", async () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "mse-25-31-preflight-"));
   const output = path.join(directory, "report.json");
   const calls = [];
@@ -61,6 +82,7 @@ test("preflight runs the read-only network preview twice and archives the stable
       writes: false,
       destructive: false,
       planFingerprint: FP_A,
+      minimumWords: 130,
       summary: { pageActionCount: 3 },
       operatorSummary: { pageCount: 3 },
       topPages: [],
@@ -69,7 +91,7 @@ test("preflight runs the read-only network preview twice and archives the stable
   };
 
   const result = await run({
-    backendOrigin: "http://127.0.0.1:4000",
+    backendOrigin: "http://127.0.0.1:4000/",
     tenantSlug: "mondescale",
     minimumWords: 130,
     topPages: 10,
@@ -82,12 +104,20 @@ test("preflight runs the read-only network preview twice and archives the stable
   assert.equal(calls.length, 2);
   assert.deepEqual(calls[0], calls[1]);
   assert.equal(calls[0].emitOutput, false);
+  assert.equal(calls[0].backendOrigin, "http://127.0.0.1:4000");
+  assert.equal(calls[0].tenantSlug, "mondescale");
   assert.equal(result.ok, true);
   assert.equal(result.readOnly, true);
   assert.equal(result.writes, false);
   assert.equal(result.destructive, false);
   assert.equal(result.planFingerprint, FP_A);
   assert.equal(result.reportPath, output);
+  assert.deepEqual(result.context, {
+    backendOrigin: "http://127.0.0.1:4000",
+    tenantSlug: "mondescale",
+    minimumWords: 130,
+    topPages: 10,
+  });
 
   const report = JSON.parse(fs.readFileSync(output, "utf8"));
   assert.equal(report.readOnly, true);
@@ -97,4 +127,5 @@ test("preflight runs the read-only network preview twice and archives the stable
   assert.equal(report.determinism.verified, true);
   assert.equal(report.determinism.previewCount, 2);
   assert.equal(report.repository.branch, EXPECTED_BRANCH);
+  assert.deepEqual(report.context, result.context);
 });
