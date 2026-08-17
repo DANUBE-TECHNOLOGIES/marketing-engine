@@ -4,6 +4,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const {
   EXPECTED_BRANCH,
+  assertExecutionPayloadCoverage,
   assertFingerprint,
   assertSafePreview,
 } = require("./mse-25-31-preflight");
@@ -20,6 +21,24 @@ function loadReport(file) {
     throw error;
   }
   return { file: resolved, report: JSON.parse(fs.readFileSync(resolved, "utf8")) };
+}
+
+function assertExecutionPayloadAudit(report = {}) {
+  const recomputed = assertExecutionPayloadCoverage(report.preview || {});
+  const recorded = report.executionPayloadAudit || {};
+  const determinism = report.determinism || {};
+  const fields = ["candidateCount", "payloadCount", "completePayloadCount", "incompletePayloadCount"];
+  const mismatches = fields
+    .filter((field) => Number(recorded[field]) !== Number(recomputed[field]))
+    .map((field) => ({ field, recorded: recorded[field] ?? null, recomputed: recomputed[field] }));
+
+  if (recorded.ok !== true || determinism.executionPayloadsVerified !== true || mismatches.length > 0) {
+    const error = new Error("La preuve de couverture des payloads d'exécution du preflight MSE-25.31 est absente ou désynchronisée.");
+    error.code = "MSE_25_31_PREFLIGHT_REPORT_EXECUTION_PAYLOAD_AUDIT_INVALID";
+    error.details = { mismatches, executionPayloadsVerified: determinism.executionPayloadsVerified === true };
+    throw error;
+  }
+  return recomputed;
 }
 
 function assertReport(report = {}, {
@@ -59,6 +78,7 @@ function assertReport(report = {}, {
     error.code = "MSE_25_31_PREFLIGHT_REPORT_DETERMINISM_INVALID";
     throw error;
   }
+  const executionPayloadAudit = assertExecutionPayloadAudit(report);
 
   const repository = report.repository || {};
   if (repository.branch !== expectedBranch) {
@@ -111,6 +131,7 @@ function assertReport(report = {}, {
     repository: { branch: repository.branch, head },
     context,
     planFingerprint,
+    executionPayloadAudit,
   };
 }
 
@@ -147,6 +168,7 @@ if (require.main === module) {
 
 module.exports = {
   COMMIT_SHA_PATTERN,
+  assertExecutionPayloadAudit,
   assertReport,
   loadReport,
   run,
