@@ -9,6 +9,7 @@ const {
   normalizeOrigin,
   operatorOutput,
   positiveInteger,
+  run,
 } = require("../scripts/mse-25-31-network-preview");
 
 test("network preview command normalizes origin and positive limits", () => {
@@ -67,4 +68,43 @@ test("network preview command fails closed on unsafe payload", () => {
 
 test("destructive payload is also unsafe even when writes is false", () => {
   assert.equal(isSafePreview({ readOnly: true, writes: false, destructive: true }), false);
+});
+
+test("run posts only to the read-only quality uplift preview route", async (t) => {
+  const calls = [];
+  const originalFetch = global.fetch;
+  t.after(() => { global.fetch = originalFetch; });
+  global.fetch = async (url, options) => {
+    calls.push({ url, options });
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({
+        version: "mse-25.31",
+        operation: "preview-network-quality-uplift",
+        readOnly: true,
+        writes: false,
+        destructive: false,
+        planFingerprint: "safe-plan",
+        minimumWords: 140,
+        summary: {},
+        excludedSites: [],
+        operatorReport: { summary: {}, rows: [], manualReviewNeeded: [] },
+      }),
+    };
+  };
+
+  const result = await run({
+    backendOrigin: "http://127.0.0.1:4000/",
+    tenantSlug: "mondescale",
+    minimumWords: 140,
+    emitOutput: false,
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, "http://127.0.0.1:4000/minisite-seo-enrichment/network/quality-uplift/preview");
+  assert.equal(calls[0].options.method, "POST");
+  assert.equal(calls[0].options.headers["x-tenant-slug"], "mondescale");
+  assert.deepEqual(JSON.parse(calls[0].options.body), { minimumWords: 140 });
 });
