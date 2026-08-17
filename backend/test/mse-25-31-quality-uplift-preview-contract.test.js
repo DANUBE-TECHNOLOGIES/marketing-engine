@@ -85,6 +85,11 @@ test("agency preview exposes fact-safe body copy but no writes", async () => {
 test("network preview excludes drafts and aggregates proposal and projected page counts without mutation", async () => {
   const service = new FakeService();
   const result = await service.previewNetworkQualityUplift({ minimumWords: 120 });
+  const impactPages = result.agencies.flatMap((agency) => agency.impact?.pages || []);
+  const pagesWithReduction = impactPages.filter((page) => Number(page.projectedReduction || 0) > 0).length;
+  const fullyResolved = impactPages.filter(
+    (page) => Number(page.beforeWarnings || 0) > 0 && Number(page.projectedWarnings || 0) === 0
+  ).length;
 
   assert.equal(result.readOnly, true);
   assert.equal(result.writes, false);
@@ -94,11 +99,11 @@ test("network preview excludes drafts and aggregates proposal and projected page
   assert.ok(result.summary.pageActionCount >= 1);
   assert.ok(result.summary.proposalCount >= 1);
   assert.ok(result.summary.bodyCopyPreviewCount >= 1);
-  assert.ok(result.summary.projectedPageCount >= 1);
+  assert.equal(result.summary.projectedPageCount, impactPages.length);
   assert.equal(
     result.summary.projectionCompletePageCount + result.summary.projectionPartialPageCount,
     result.summary.projectedPageCount
   );
-  assert.ok(result.summary.pagesWithProjectedReductionCount >= 1);
-  assert.ok(result.summary.fullyResolvedPageCount <= result.summary.pagesWithProjectedReductionCount);
+  assert.equal(result.summary.pagesWithProjectedReductionCount, pagesWithReduction);
+  assert.equal(result.summary.fullyResolvedPageCount, fullyResolved);
 });
