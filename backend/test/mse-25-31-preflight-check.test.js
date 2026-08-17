@@ -31,12 +31,31 @@ function validReport() {
       writes: false,
       destructive: false,
       planFingerprint: FP,
+      allPages: [{ siteSlug: "gien", pageSlug: "avis", operationTypes: ["enrich-body"] }],
+      executionPayloads: [{
+        key: "gien:avis",
+        siteSlug: "gien",
+        pageSlug: "avis",
+        operations: [{ type: "enrich-body", preserveExisting: true }],
+        bodyCopyPreview: { title: "Informations utiles", html: "<p>Texte exact.</p>" },
+        completeOperationTypes: ["enrich-body"],
+        incompleteOperationTypes: [],
+        payloadComplete: true,
+      }],
+    },
+    executionPayloadAudit: {
+      ok: true,
+      candidateCount: 1,
+      payloadCount: 1,
+      completePayloadCount: 1,
+      incompletePayloadCount: 0,
     },
     determinism: {
       verified: true,
       previewCount: 2,
       firstFingerprint: FP,
       secondFingerprint: FP,
+      executionPayloadsVerified: true,
     },
   };
 }
@@ -51,6 +70,7 @@ test("offline check accepts a coherent read-only preflight report", () => {
   assert.equal(result.ok, true);
   assert.equal(result.planFingerprint, FP);
   assert.equal(result.repository.head, HEAD);
+  assert.equal(result.executionPayloadAudit.completePayloadCount, 1);
 });
 
 test("offline check rejects a preview fingerprint substituted after preflight", () => {
@@ -68,6 +88,25 @@ test("offline check rejects an incoherent determinism proof", () => {
   assert.throws(
     () => assertReport(report),
     (error) => error.code === "MSE_25_31_PREFLIGHT_REPORT_DETERMINISM_INVALID"
+  );
+});
+
+test("offline check recalculates payload coverage and rejects altered write evidence", () => {
+  const report = validReport();
+  report.preview.executionPayloads[0].bodyCopyPreview = null;
+  assert.throws(
+    () => assertReport(report),
+    (error) => error.code === "MSE_25_31_PREFLIGHT_EXECUTION_PAYLOAD_INVALID"
+  );
+});
+
+test("offline check rejects a stale recorded payload audit", () => {
+  const report = validReport();
+  report.executionPayloadAudit.completePayloadCount = 0;
+  report.executionPayloadAudit.incompletePayloadCount = 1;
+  assert.throws(
+    () => assertReport(report),
+    (error) => error.code === "MSE_25_31_PREFLIGHT_REPORT_EXECUTION_PAYLOAD_AUDIT_INVALID"
   );
 });
 
