@@ -39,6 +39,88 @@ function normalizePaymentPolicy(input = {}) {
   };
 }
 
+function validatePaymentPolicyInput(input) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    const error = new Error("La configuration de paiement doit être un objet.");
+    error.code = "FLEXIBLE_PAYMENT_POLICY_INVALID";
+    error.status = 400;
+    throw error;
+  }
+
+  if (input.enabled !== undefined && typeof input.enabled !== "boolean") {
+    const error = new Error("enabled doit être un booléen.");
+    error.code = "FLEXIBLE_PAYMENT_POLICY_INVALID_ENABLED";
+    error.status = 400;
+    throw error;
+  }
+
+  if (input.products !== undefined) {
+    if (!Array.isArray(input.products)) {
+      const error = new Error("products doit être un tableau.");
+      error.code = "FLEXIBLE_PAYMENT_POLICY_INVALID_PRODUCTS";
+      error.status = 400;
+      throw error;
+    }
+    const invalidProducts = input.products
+      .map((value) => normalizeText(value).toLowerCase())
+      .filter((value) => !ALLOWED_PRODUCTS.has(value));
+    if (invalidProducts.length) {
+      const error = new Error(`Produit de paiement non supporté : ${invalidProducts[0]}.`);
+      error.code = "FLEXIBLE_PAYMENT_POLICY_INVALID_PRODUCT";
+      error.status = 400;
+      throw error;
+    }
+  }
+
+  if (input.installmentCounts !== undefined) {
+    if (!Array.isArray(input.installmentCounts)) {
+      const error = new Error("installmentCounts doit être un tableau.");
+      error.code = "FLEXIBLE_PAYMENT_POLICY_INVALID_INSTALLMENTS";
+      error.status = 400;
+      throw error;
+    }
+    const invalidInstallment = input.installmentCounts.find((value) => {
+      const count = Number(value);
+      return !Number.isInteger(count) || count < 2 || count > 24;
+    });
+    if (invalidInstallment !== undefined) {
+      const error = new Error("Les échéances doivent être des entiers compris entre 2 et 24.");
+      error.code = "FLEXIBLE_PAYMENT_POLICY_INVALID_INSTALLMENT";
+      error.status = 400;
+      throw error;
+    }
+  }
+
+  if (input.feeMode !== undefined) {
+    const feeMode = normalizeText(input.feeMode).toLowerCase();
+    if (!ALLOWED_FEE_MODES.has(feeMode)) {
+      const error = new Error("feeMode doit être unspecified, with-fees ou without-fees.");
+      error.code = "FLEXIBLE_PAYMENT_POLICY_INVALID_FEE_MODE";
+      error.status = 400;
+      throw error;
+    }
+  }
+
+  for (const field of ["disclaimer", "ctaLabel"]) {
+    if (input[field] !== undefined && typeof input[field] !== "string") {
+      const error = new Error(`${field} doit être une chaîne de caractères.`);
+      error.code = "FLEXIBLE_PAYMENT_POLICY_INVALID_TEXT";
+      error.status = 400;
+      throw error;
+    }
+  }
+
+  const normalized = normalizePaymentPolicy(input);
+  if (normalized.enabled && normalized.products.length === 0) {
+    const error = new Error("Une configuration activée doit cibler au moins un produit.");
+    error.code = "FLEXIBLE_PAYMENT_POLICY_PRODUCTS_REQUIRED";
+    error.status = 400;
+    throw error;
+  }
+
+  return normalized;
+}
+
 function formatInstallmentClaim(policy) {
   if (!policy.installmentCounts.length) return "";
   const labels = policy.installmentCounts.map((count) => `${count}x`);
@@ -162,10 +244,13 @@ function planPaymentPlacements({ site = {}, policy: inputPolicy = {} } = {}) {
 }
 
 module.exports = {
+  ALLOWED_FEE_MODES,
+  ALLOWED_PRODUCTS,
   buildPublicPaymentCopy,
   classifyPlacement,
   formatInstallmentClaim,
   hasFlexiblePaymentBlock,
   normalizePaymentPolicy,
   planPaymentPlacements,
+  validatePaymentPolicyInput,
 };
