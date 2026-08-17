@@ -10,13 +10,27 @@ const read = (relativePath) => fs.readFileSync(path.join(frontendRoot, relativeP
 
 test("generic partner logo discovery stays read-only and respects publication holds", () => {
   const discovery = read("scripts/partner-logo-source-discovery.mjs");
-  assert.match(discovery, /discover-only-no-write/);
+  assert.match(discovery, /discover-classify-no-write/);
   assert.match(discovery, /identity-review/);
   assert.match(discovery, /catalogue-excluded/);
   assert.match(discovery, /asset-permission-review/);
   assert.match(discovery, /--category=/);
   assert.match(discovery, /--partner=/);
   assert.match(discovery, /favicon|icon|sprite|payment|social/);
+});
+
+test("generic partner logo discovery classifies candidates without auto-vetting them", () => {
+  const discovery = read("scripts/partner-logo-source-discovery.mjs");
+  assert.match(discovery, /function candidateDecision/);
+  assert.match(discovery, /state: "review-first"/);
+  assert.match(discovery, /visual\/legal review still required/);
+  assert.match(discovery, /state: "review"/);
+  assert.match(discovery, /manual masterbrand confirmation required/);
+  assert.match(discovery, /suggestedCandidate/);
+  assert.match(discovery, /manual-masterbrand-review/);
+  assert.match(discovery, /broaden-official-source-search/);
+  assert.doesNotMatch(discovery, /source-vetted/);
+  assert.doesNotMatch(discovery, /vetted-source/);
 });
 
 test("generic partner logo acquisition requires two-stage vetting and explicit overwrite", () => {
