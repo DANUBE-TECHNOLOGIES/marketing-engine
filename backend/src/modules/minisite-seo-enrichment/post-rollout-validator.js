@@ -19,9 +19,30 @@ function pageFieldValue(page = {}, field) {
   return direct !== undefined ? direct : legacy.valueAtPath(nested, field);
 }
 
+function validateVersionedBlockChange(page, expectedChange = {}) {
+  const direct = legacy.validateExpectedChange(page, expectedChange);
+  if (direct.ok || direct.reason !== "block-not-found" || expectedChange?.blockId == null) return direct;
+
+  const logicalChange = { ...expectedChange, blockId: null };
+  const logical = legacy.validateExpectedChange(page, logicalChange);
+  if (!logical.ok) {
+    return {
+      ...logical,
+      expected: expectedChange,
+      matchedBy: "block-type-after-versioning",
+    };
+  }
+
+  return {
+    ...logical,
+    expected: expectedChange,
+    matchedBy: "block-type-after-versioning",
+  };
+}
+
 function validateExpectedChange(page, expectedChange = {}) {
   if (!isPageLevelChange(expectedChange)) {
-    return legacy.validateExpectedChange(page, expectedChange);
+    return validateVersionedBlockChange(page, expectedChange);
   }
 
   const actual = pageFieldValue(page, expectedChange?.field);
@@ -310,4 +331,5 @@ module.exports = {
   validateDraftSite,
   validateExpectedChange,
   validateSite,
+  validateVersionedBlockChange,
 };
