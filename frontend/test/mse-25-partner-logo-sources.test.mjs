@@ -21,8 +21,11 @@ test("partner logo sourcing keeps vetted assets separate from press and permissi
   const verification = read("components/page-builder/shared/partnerVerification.js");
   const backlog = read("components/page-builder/shared/partnerLogoBacklog.js");
   const queue = read("scripts/partner-logo-work-queue.mjs");
+  const discovery = read("scripts/partner-logo-source-discovery.mjs");
+  const acquisition = read("scripts/partner-logo-acquire.mjs");
   const coverage = read("scripts/partner-logo-coverage.mjs");
   const registryAudit = read("scripts/partner-logo-source-registry-audit.mjs");
+  const packageJson = read("package.json");
   const assetTest = read("test/mse-25-partner-assets.test.mjs");
 
   assert.match(cruiseSources, /"catlante-catamarans"/);
@@ -93,6 +96,20 @@ test("partner logo sourcing keeps vetted assets separate from press and permissi
   assert.match(queue, /currentFormat/);
   assert.match(queue, /acquire-vetted-asset/);
   assert.match(queue, /discover-official-asset/);
+
+  assert.match(discovery, /discover-only-no-write/);
+  assert.match(discovery, /--category=/);
+  assert.match(discovery, /--partner=/);
+  assert.match(discovery, /asset-permission-review/);
+  assert.match(discovery, /identity-review/);
+
+  assert.match(acquisition, /requiredState:\s*"source-vetted"/);
+  assert.match(acquisition, /source\.status !== "vetted-source"/);
+  assert.match(acquisition, /vetted-registry-source-missing/);
+  assert.match(acquisition, /writeRequested:\s*write/);
+
+  assert.match(packageJson, /"partners:logos:discover":\s*"node scripts\/partner-logo-source-discovery\.mjs"/);
+  assert.match(packageJson, /"partners:logos:acquire":\s*"node scripts\/partner-logo-acquire\.mjs"/);
 
   assert.match(coverage, /partnerVerification\.js/);
   assert.match(coverage, /publicationBlocked/);
