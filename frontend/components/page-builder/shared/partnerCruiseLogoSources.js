@@ -24,6 +24,14 @@ export const PARTNER_CRUISE_LOGO_SOURCES = Object.freeze({
     targetAsset: "/partners/croisieurope.webp",
     note: "Official press room is confirmed and points to the 2026 press pack / professional media resources. Acquire the master logo from those official resources rather than scraping payment or UI icons.",
   },
+  "rivages-du-monde": {
+    status: "official-source-page",
+    sourceType: "official-site",
+    preferredSource: null,
+    sourcePage: "https://www.rivagesdumonde.fr/",
+    targetAsset: "/partners/rivages-du-monde.webp",
+    note: "Official Rivages du Monde site confirms the cruise masterbrand. Discover and vet the exact master logo before ingestion; do not substitute ship, itinerary or editorial artwork.",
+  },
   "explora-journeys": {
     status: "official-source-page",
     sourceType: "official-press-kit",
