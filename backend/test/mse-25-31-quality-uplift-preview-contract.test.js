@@ -74,13 +74,15 @@ test("agency preview exposes fact-safe body copy but no writes", async () => {
   assert.ok(result.actionSummary.actionCount >= 1);
   assert.ok(result.proposalSummary.proposalCount >= 1);
   assert.ok(result.proposalSummary.bodyCopyPreviewCount >= 1);
+  assert.ok(Array.isArray(result.impact.pages));
+  assert.ok(result.impact.pages.length >= 1);
   const avis = result.proposals.find((item) => item.pageSlug === "avis");
   assert.ok(avis);
   assert.ok(avis.bodyCopyPreview);
   assert.equal(avis.bodyCopyPreview.factualPolicy, "agency-and-page-context-only");
 });
 
-test("network preview excludes drafts and aggregates proposal counts without mutation", async () => {
+test("network preview excludes drafts and aggregates proposal and projected page counts without mutation", async () => {
   const service = new FakeService();
   const result = await service.previewNetworkQualityUplift({ minimumWords: 120 });
 
@@ -92,4 +94,11 @@ test("network preview excludes drafts and aggregates proposal counts without mut
   assert.ok(result.summary.pageActionCount >= 1);
   assert.ok(result.summary.proposalCount >= 1);
   assert.ok(result.summary.bodyCopyPreviewCount >= 1);
+  assert.ok(result.summary.projectedPageCount >= 1);
+  assert.equal(
+    result.summary.projectionCompletePageCount + result.summary.projectionPartialPageCount,
+    result.summary.projectedPageCount
+  );
+  assert.ok(result.summary.pagesWithProjectedReductionCount >= 1);
+  assert.ok(result.summary.fullyResolvedPageCount <= result.summary.pagesWithProjectedReductionCount);
 });
