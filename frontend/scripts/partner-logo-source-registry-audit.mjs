@@ -12,16 +12,7 @@ async function loadModule(fileName) {
   return import(dataUrl);
 }
 
-const [
-  catalogueModule,
-  verificationModule,
-  backlogModule,
-  cruiseModule,
-  circuitModule,
-  stayModule,
-  longHaulModule,
-  franceEuropeModule,
-] = await Promise.all([
+const [catalogueModule, verificationModule, backlogModule, cruiseModule, circuitModule, stayModule, longHaulModule, franceEuropeModule] = await Promise.all([
   loadModule("fullPartners.js"),
   loadModule("partnerVerification.js"),
   loadModule("partnerLogoBacklog.js"),
@@ -60,14 +51,8 @@ for (const [expectedCategory, registry] of registries) {
       continue;
     }
     if (partner.category !== expectedCategory) {
-      issues.push({
-        type: "source-registry-category-mismatch",
-        id,
-        expectedCategory,
-        catalogueCategory: partner.category,
-      });
+      issues.push({ type: "source-registry-category-mismatch", id, expectedCategory, catalogueCategory: partner.category });
     }
-
     const status = String(source?.status || "").trim();
     if (!status) issues.push({ type: "missing-source-status", id });
   }
@@ -80,31 +65,19 @@ for (const item of backlog) {
     continue;
   }
   if (partner.category !== item.category) {
-    issues.push({
-      type: "backlog-category-mismatch",
-      id: item.id,
-      backlogCategory: item.category,
-      catalogueCategory: partner.category,
-    });
+    issues.push({ type: "backlog-category-mismatch", id: item.id, backlogCategory: item.category, catalogueCategory: partner.category });
+  }
+  if (String(partner.logoUrl || "").trim()) {
+    issues.push({ type: "activated-logo-still-in-work-backlog", id: item.id, logoUrl: partner.logoUrl, backlogState: item.state });
   }
 
   const source = sourceById.get(item.id) || null;
   const sourceStatus = String(source?.status || "").trim();
   if (item.state === "permission-required" && sourceStatus && sourceStatus !== "permission-review") {
-    issues.push({
-      type: "permission-backlog-source-status-mismatch",
-      id: item.id,
-      backlogState: item.state,
-      sourceStatus,
-    });
+    issues.push({ type: "permission-backlog-source-status-mismatch", id: item.id, backlogState: item.state, sourceStatus });
   }
   if (item.state === "source-vetted" && sourceStatus !== "vetted-source") {
-    issues.push({
-      type: "vetted-backlog-source-status-mismatch",
-      id: item.id,
-      backlogState: item.state,
-      sourceStatus: sourceStatus || null,
-    });
+    issues.push({ type: "vetted-backlog-source-status-mismatch", id: item.id, backlogState: item.state, sourceStatus: sourceStatus || null });
   }
 }
 
@@ -124,54 +97,31 @@ for (const partner of catalogue) {
 
   if (verification.status === "asset-permission-review") {
     if (backlogItem.state !== "permission-required") {
-      issues.push({
-        type: "verification-backlog-permission-mismatch",
-        id: partner.id,
-        verificationStatus: verification.status,
-        backlogState: backlogItem.state,
-      });
+      issues.push({ type: "verification-backlog-permission-mismatch", id: partner.id, verificationStatus: verification.status, backlogState: backlogItem.state });
     }
     if (source && sourceStatus !== "permission-review") {
-      issues.push({
-        type: "verification-source-permission-mismatch",
-        id: partner.id,
-        verificationStatus: verification.status,
-        sourceStatus,
-      });
+      issues.push({ type: "verification-source-permission-mismatch", id: partner.id, verificationStatus: verification.status, sourceStatus });
     }
     continue;
   }
 
   if (backlogItem.state === "permission-required") {
-    issues.push({
-      type: "permission-backlog-without-verification-restriction",
-      id: partner.id,
-      verificationStatus: verification.status,
-    });
+    issues.push({ type: "permission-backlog-without-verification-restriction", id: partner.id, verificationStatus: verification.status });
     continue;
   }
 
-  if (!registryIds.has(partner.id)) {
-    issues.push({ type: "missing-logo-source-registry", id: partner.id, category: partner.category });
-  }
+  if (!registryIds.has(partner.id)) issues.push({ type: "missing-logo-source-registry", id: partner.id, category: partner.category });
 
   if (backlogItem.state === "source-vetted") {
     const directSource = source?.preferredSource || source?.assetUrl || "";
-    if (!directSource) {
-      issues.push({ type: "vetted-backlog-without-direct-source", id: partner.id });
-    }
+    if (!directSource) issues.push({ type: "vetted-backlog-without-direct-source", id: partner.id });
   }
 }
 
 const payload = {
   ok: issues.length === 0,
   policy: "catalogue-backlog-source-registry-consistency",
-  summary: {
-    cataloguePartners: catalogue.length,
-    backlogEntries: backlog.length,
-    sourceRegistryEntries: registryIds.size,
-    issues: issues.length,
-  },
+  summary: { cataloguePartners: catalogue.length, backlogEntries: backlog.length, sourceRegistryEntries: registryIds.size, issues: issues.length },
   issues,
 };
 
