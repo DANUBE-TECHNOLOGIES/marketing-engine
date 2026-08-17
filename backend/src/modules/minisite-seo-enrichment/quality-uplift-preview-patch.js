@@ -7,6 +7,8 @@ const { buildBodyCopyPreview } = require("./quality-uplift-copy-preview");
 const { projectQualityUpliftImpact } = require("./quality-uplift-impact-preview");
 const { buildQualityUpliftOperatorReport } = require("./quality-uplift-operator-report");
 const { networkQualityUpliftFingerprint, qualityUpliftFingerprint } = require("./quality-uplift-fingerprint");
+const { titleForPage, descriptionForPage } = require("./generator");
+const { buildHeroTitle } = require("./content-optimizer");
 
 function siteFromAgencyPlan(plan = {}) {
   return {
@@ -23,10 +25,54 @@ function siteFromAgencyPlan(plan = {}) {
   };
 }
 
+function normalizedBlockType(block = {}) {
+  return String(block.blockType || block.type || "").trim().toLowerCase().replace(/[_\s]+/g, "-");
+}
+
+function exactHeroTarget(page = {}) {
+  const heroes = (page.blocks || []).filter((block) => normalizedBlockType(block).includes("hero"));
+  if (heroes.length !== 1) return null;
+  const hero = heroes[0];
+  return {
+    scope: "block",
+    blockType: "hero",
+    blockId: hero.id ?? null,
+    field: "title",
+  };
+}
+
+function sealOperationFinalValue(operation = {}, site = {}, page = {}) {
+  if (operation.type === "strengthen-title") {
+    return {
+      ...operation,
+      target: { scope: "page", field: "seoTitle" },
+      finalValue: titleForPage({ agency: site.agency || {}, page }),
+    };
+  }
+  if (operation.type === "strengthen-meta-description") {
+    return {
+      ...operation,
+      target: { scope: "page", field: "metaDescription" },
+      finalValue: descriptionForPage({ agency: site.agency || {}, page }),
+    };
+  }
+  if (operation.type === "strengthen-h1") {
+    return {
+      ...operation,
+      target: exactHeroTarget(page),
+      finalValue: buildHeroTitle({ agency: site.agency || {}, page }),
+    };
+  }
+  return { ...operation };
+}
+
 function proposalWithCopyPreview(proposal, action, site) {
   const page = (site.pages || []).find((item) => String(item?.slug || "") === String(proposal?.pageSlug || "")) || null;
   return {
     ...proposal,
+    operations: page
+      ? (proposal.operations || []).map((operation) => sealOperationFinalValue(operation, site, page))
+      : [...(proposal.operations || [])],
     bodyCopyPreview: page ? buildBodyCopyPreview({ agency: site.agency || {}, page, action }) : null,
   };
 }
@@ -88,6 +134,13 @@ function installQualityUpliftPreview(ServiceClass) {
         proposalCount: proposalPlan.proposalCount,
         operationCount: proposalPlan.operationCount,
         bodyCopyPreviewCount: proposals.filter((item) => item.bodyCopyPreview).length,
+        exactMetadataValueCount: proposals.reduce(
+          (count, proposal) => count + (proposal.operations || []).filter((operation) =>
+            ["strengthen-title", "strengthen-meta-description", "strengthen-h1"].includes(operation.type)
+            && String(operation.finalValue || "").trim()
+          ).length,
+          0
+        ),
       },
       impact,
       excludedPages: agencyPlan.excludedPages || [],
@@ -130,6 +183,7 @@ function installQualityUpliftPreview(ServiceClass) {
         proposalCount: sum(agencies, ["proposalSummary", "proposalCount"]),
         proposedOperationCount: sum(agencies, ["proposalSummary", "operationCount"]),
         bodyCopyPreviewCount: sum(agencies, ["proposalSummary", "bodyCopyPreviewCount"]),
+        exactMetadataValueCount: sum(agencies, ["proposalSummary", "exactMetadataValueCount"]),
         projectedOpportunityCount: sum(agencies, ["impact", "projected", "total"]),
         projectedWarningReduction: sum(agencies, ["impact", "projectedReduction", "total"]),
         projectionCompleteAgencyCount: agencies.filter((agency) => agency.impact?.projectionComplete === true).length,
@@ -150,4 +204,13 @@ function installQualityUpliftPreview(ServiceClass) {
   return ServiceClass;
 }
 
-module.exports = { installQualityUpliftPreview, projectedPages, proposalWithCopyPreview, siteFromAgencyPlan, sum };
+module.exports = {
+  exactHeroTarget,
+  installQualityUpliftPreview,
+  normalizedBlockType,
+  projectedPages,
+  proposalWithCopyPreview,
+  sealOperationFinalValue,
+  siteFromAgencyPlan,
+  sum,
+};
