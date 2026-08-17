@@ -18,7 +18,6 @@ export const PARTNER_LOGO_BACKLOG = Object.freeze([
   { id: "visit-europe", category: "circuits", priority: 2, state: "source-pending", sourceType: "official-site" },
   { id: "voyages-internationaux", category: "circuits", priority: 2, state: "source-pending", sourceType: "official-site" },
   { id: "rev-vacances", category: "circuits", priority: 2, state: "source-pending", sourceType: "official-site", note: "Official Rev Vacances site confirmed; use only the REV VACANCES masterbrand from a vetted source." },
-  { id: "worldia", category: "circuits", priority: 99, state: "catalogue-excluded", sourceType: "none", note: "Explicitly excluded from the public catalogue; do not source or ingest a logo." },
   { id: "pouchkine-tours", category: "circuits", priority: 2, state: "permission-required", sourceType: "brand-permission", note: "Pouchkine Tours identity is confirmed by Salaün Holidays, but the mark is protected and logo reproduction is held until authorisation." },
 
   { id: "belambra", category: "sejours", priority: 2, state: "permission-required", sourceType: "brand-permission", note: "Belambra legal notice requires prior written authorisation for use or reproduction of logos and marks." },
@@ -30,9 +29,8 @@ export const PARTNER_LOGO_BACKLOG = Object.freeze([
   { id: "plein-vent", category: "sejours", priority: 2, state: "source-pending", sourceType: "official-group-brand" },
   { id: "solea", category: "sejours", priority: 2, state: "source-pending", sourceType: "official-site" },
   { id: "pacha-tours", category: "sejours", priority: 2, state: "source-pending", sourceType: "official-site" },
-  { id: "heliades", category: "sejours", priority: 2, state: "permission-required", sourceType: "brand-permission", note: "Héliades terms prohibit reproduction of marks and logos without express authorisation." },
-  { id: "voyamar", category: "sejours", priority: 2, state: "permission-required", sourceType: "brand-permission", note: "Voyamar terms prohibit reproduction of marks and logos without express authorisation." },
-  { id: "aerosun", category: "sejours", priority: 99, state: "catalogue-excluded", sourceType: "none", note: "AEROSUN VOYAGES SAS is the legal operator behind Voyamar; do not create a duplicate public brand or logo entry." },
+  { id: "heliades", category: "sejours", priority: 2, state: "permission-required", sourceType: "brand-permission", note: "Héliades terms prohibit reproduction of its marks and logos without express authorisation." },
+  { id: "voyamar", category: "sejours", priority: 2, state: "permission-required", sourceType: "brand-permission", note: "Voyamar terms prohibit reproduction of its marks and logos without express authorisation." },
   { id: "travel-evasion", category: "sejours", priority: 2, state: "source-pending", sourceType: "official-site", note: "Official Travel Evasion public and B2B sites confirmed; use only the Travel Evasion masterbrand, not Mon French Club or product artwork." },
 
   { id: "alma-latina", category: "sur-mesure", priority: 2, state: "source-pending", sourceType: "official-site" },
