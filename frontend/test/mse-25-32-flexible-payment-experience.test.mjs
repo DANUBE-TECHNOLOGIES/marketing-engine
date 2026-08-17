@@ -12,6 +12,10 @@ const paymentApi = fs.readFileSync(
   path.join(root, "lib/page-builder-v2/flexible-payment-api.js"),
   "utf8"
 );
+const policyPanel = fs.readFileSync(
+  path.join(root, "components/page-builder-v2/FlexiblePaymentPolicyPanel.js"),
+  "utf8"
+);
 const registry = fs.readFileSync(
   path.join(root, "components/public-site/renderers/registry.js"),
   "utf8"
@@ -39,6 +43,18 @@ test("MSE-25.32 exposes persisted policy operations to Website Designer V2", () 
   assert.match(paymentApi, /rollbackFlexiblePayment/);
   assert.match(paymentApi, /JSON\.stringify\(\{ confirm: true, policy \}\)/);
   assert.match(paymentApi, /previewFingerprint/);
+});
+
+test("MSE-25.32 provides structured Website Designer controls for agency payment policy", () => {
+  assert.match(policyPanel, /Paiement en plusieurs fois/);
+  assert.match(policyPanel, /Billetterie aérienne/);
+  assert.match(policyPanel, /Voyages et séjours/);
+  assert.match(policyPanel, /Échéances autorisées/);
+  assert.match(policyPanel, /value="without-fees"/);
+  assert.match(policyPanel, /Disclaimer/);
+  assert.match(policyPanel, /Libellé du CTA/);
+  assert.match(policyPanel, /Prévisualiser/);
+  assert.match(policyPanel, /Enregistrer la configuration/);
 });
 
 test("MSE-25.32 registers flexible payment in the public renderer", () => {
