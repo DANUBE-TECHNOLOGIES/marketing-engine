@@ -4,6 +4,8 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const {
+  assertSafePreview,
+  isSafePreview,
   normalizeOrigin,
   operatorOutput,
   positiveInteger,
@@ -39,6 +41,8 @@ test("operator output preserves read-only safety and ranking", () => {
     },
   };
 
+  assert.equal(isSafePreview(payload), true);
+  assert.equal(assertSafePreview(payload), payload);
   const result = operatorOutput(payload, { topPages: 1 });
   assert.equal(result.ok, true);
   assert.equal(result.readOnly, true);
@@ -50,8 +54,17 @@ test("operator output preserves read-only safety and ranking", () => {
   assert.equal(result.manualReviewNeeded[0].pageSlug, "services");
 });
 
-test("operator output refuses to report unsafe payload as ok", () => {
-  const result = operatorOutput({ readOnly: false, writes: true, operatorReport: { rows: [] } });
+test("network preview command fails closed on unsafe payload", () => {
+  const unsafe = { readOnly: false, writes: true, destructive: false, operatorReport: { rows: [] } };
+  const result = operatorOutput(unsafe);
   assert.equal(result.ok, false);
-  assert.equal(result.writes, true);
+  assert.equal(isSafePreview(unsafe), false);
+  assert.throws(
+    () => assertSafePreview(unsafe),
+    (error) => error.code === "MSE_25_31_UNSAFE_PREVIEW_PAYLOAD"
+  );
+});
+
+test("destructive payload is also unsafe even when writes is false", () => {
+  assert.equal(isSafePreview({ readOnly: true, writes: false, destructive: true }), false);
 });
