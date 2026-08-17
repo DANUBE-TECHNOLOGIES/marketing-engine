@@ -37,6 +37,19 @@ function sourceReport() {
         operationTypes: ["enrich-body"],
         manualReviewReasons: [],
       }],
+      executionPayloads: [{
+        key: "gien:avis",
+        agencyId: 1,
+        siteSlug: "gien",
+        city: "Gien",
+        pageSlug: "avis",
+        operations: [{ type: "enrich-body", preserveExisting: true }],
+        bodyCopyPreview: { title: "Informations utiles", html: "<p>Texte exact approuvé.</p>" },
+        safeguards: { preserveManualCopy: true },
+        completeOperationTypes: ["enrich-body"],
+        incompleteOperationTypes: [],
+        payloadComplete: true,
+      }],
     },
     determinism: { verified: true, previewCount: 2, firstFingerprint: FP, secondFingerprint: FP },
   };
@@ -66,6 +79,17 @@ test("execution plan check rejects a substituted approved page", () => {
   const manifest = approvedManifest(report);
   const plan = buildExecutionPlan(manifest, report);
   plan.pages[0].siteSlug = "nevers";
+  assert.throws(
+    () => assertExecutionPlan(plan, manifest, report),
+    (error) => error.code === "MSE_25_31_EXECUTION_PLAN_MISMATCH"
+  );
+});
+
+test("execution plan check rejects a substituted sealed write payload", () => {
+  const report = sourceReport();
+  const manifest = approvedManifest(report);
+  const plan = buildExecutionPlan(manifest, report);
+  plan.pages[0].executionPayload.bodyCopyPreview.html = "<p>Texte substitué.</p>";
   assert.throws(
     () => assertExecutionPlan(plan, manifest, report),
     (error) => error.code === "MSE_25_31_EXECUTION_PLAN_MISMATCH"
