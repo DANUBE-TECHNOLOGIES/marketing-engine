@@ -55,6 +55,8 @@ registerBlock("trust", CardsBlock);
 registerBlock("expertise", CardsBlock);
 registerBlock("commitments", CardsBlock);
 registerBlock("partner-categories", PartnerCategoriesBlock);
+registerBlock("partner-directory", PartnerCategoriesBlock);
+registerBlock("partners-directory", PartnerCategoriesBlock);
 registerBlock("travel-themes", CardsBlock);
 registerBlock("booking-support", CardsBlock);
 registerBlock("destinations-highlight", CardsBlock);
