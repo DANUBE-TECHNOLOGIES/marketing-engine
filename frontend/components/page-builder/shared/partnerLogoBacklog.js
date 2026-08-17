@@ -26,7 +26,7 @@ export const PARTNER_LOGO_BACKLOG = Object.freeze([
   { id: "hotels-lagons", category: "sejours", priority: 2, state: "source-pending", sourceType: "official-site", note: "Official Hôtels & Lagons B2B site confirmed; use only the masterbrand." },
   { id: "lmx-voyages", category: "sejours", priority: 2, state: "source-pending", sourceType: "official-site", note: "Official French LMX Voyages site confirmed; use the French-market masterbrand." },
   { id: "mondial-tourisme", category: "sejours", priority: 2, state: "permission-required", sourceType: "site-terms-restriction", note: "Mondial Tourisme's official site terms prohibit reuse/exploitation of site elements; hold logo ingestion pending an authorised brand asset or explicit permission." },
-  { id: "plein-vent", category: "sejours", priority: 2, state: "source-pending", sourceType: "official-group-brand" },
+  { id: "plein-vent", category: "sejours", priority: 2, state: "permission-required", sourceType: "brand-permission", note: "Plein Vent's official legal notice requires express authorisation from the rights holder for reproduction or representation of its marks and logos." },
   { id: "solea", category: "sejours", priority: 2, state: "source-pending", sourceType: "official-site" },
   { id: "pacha-tours", category: "sejours", priority: 2, state: "source-pending", sourceType: "official-site" },
   { id: "heliades", category: "sejours", priority: 2, state: "permission-required", sourceType: "brand-permission", note: "Héliades terms prohibit reproduction of marks and logos without express authorisation." },
