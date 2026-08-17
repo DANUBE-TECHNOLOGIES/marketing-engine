@@ -36,6 +36,7 @@ test("partner logo sourcing keeps vetted assets separate from press and permissi
   assert.match(circuitSources, /salaun-holidays[\s\S]*permission-review/);
   assert.match(circuitSources, /nordiska[\s\S]*permission-review/);
   assert.match(circuitSources, /pouchkine-tours[\s\S]*permission-review/);
+  assert.doesNotMatch(circuitSources, /worldia/i);
   assert.match(circuitSources, /getCircuitLogoSource/);
 
   assert.match(staySources, /belambra[\s\S]*permission-review/);
@@ -83,6 +84,8 @@ test("partner logo sourcing keeps vetted assets separate from press and permissi
   assert.match(queue, /official-individual-assets-webp-or-vetted-svg/);
   assert.match(queue, /acceptedFormats:\s*\["webp", "svg"\]/);
   assert.match(queue, /currentFormat/);
+  assert.match(queue, /acquire-vetted-asset/);
+  assert.match(queue, /discover-official-asset/);
 
   assert.match(coverage, /partnerVerification\.js/);
   assert.match(coverage, /publicationBlocked/);
