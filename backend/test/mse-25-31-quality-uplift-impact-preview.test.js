@@ -43,6 +43,9 @@ test("impact preview simulates body and internal-link work without mutating sour
   const source = site();
   const snapshot = JSON.stringify(source);
   const currentPlan = buildLocalSeoQualityUpliftPlan(source, { minimumWords: 120 });
+  const avisInternalLink = currentPlan.internalLinkOpportunities.find((item) => item.pageSlug === "avis");
+  assert.ok(avisInternalLink?.path);
+
   const result = projectQualityUpliftImpact({
     site: source,
     currentPlan,
@@ -54,7 +57,7 @@ test("impact preview simulates body and internal-link work without mutating sour
           title: "Informations utiles",
           html: `<p>${Array.from({ length: 130 }, () => "avis").join(" ")}</p>`,
         },
-        diagnostics: { internalLink: { path: "/agence/mondescale-gien/avis" } },
+        diagnostics: { internalLink: { path: avisInternalLink.path } },
         operations: [
           { type: "enrich-body" },
           { type: "add-internal-link", suggestedSourceSlugs: ["home"] },
