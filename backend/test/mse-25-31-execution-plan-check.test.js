@@ -51,7 +51,20 @@ function sourceReport() {
         payloadComplete: true,
       }],
     },
-    determinism: { verified: true, previewCount: 2, firstFingerprint: FP, secondFingerprint: FP },
+    executionPayloadAudit: {
+      ok: true,
+      candidateCount: 1,
+      payloadCount: 1,
+      completePayloadCount: 1,
+      incompletePayloadCount: 0,
+    },
+    determinism: {
+      verified: true,
+      previewCount: 2,
+      firstFingerprint: FP,
+      secondFingerprint: FP,
+      executionPayloadsVerified: true,
+    },
   };
 }
 
