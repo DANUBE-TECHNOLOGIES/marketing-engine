@@ -79,3 +79,47 @@ test("MSE-25.30 conserve la validation historique des changements de bloc", () =
   assert.equal(isPageLevelChange(change), false);
   assert.equal(validateExpectedChange(page, change).ok, true);
 });
+
+test("MSE-25.30 retrouve un bloc recréé par le versioning grâce à son identité logique", () => {
+  const page = {
+    blocks: [{
+      id: "new-version-block-id",
+      type: "hero",
+      content: { title: "Agence de voyages à Gien" },
+    }],
+  };
+  const change = {
+    blockId: "old-pre-rollout-block-id",
+    blockType: "hero",
+    field: "title",
+    next: "Agence de voyages à Gien",
+  };
+
+  const result = validateExpectedChange(page, change);
+  assert.equal(result.ok, true);
+  assert.equal(result.matchedBy, "block-type-after-versioning");
+  assert.equal(result.actual, change.next);
+  assert.deepEqual(result.expected, change);
+});
+
+test("MSE-25.30 ne masque pas une valeur incorrecte lorsque l ID du bloc a changé", () => {
+  const page = {
+    blocks: [{
+      id: "new-version-block-id",
+      type: "hero",
+      content: { title: "Ancien titre incorrect" },
+    }],
+  };
+  const change = {
+    blockId: "old-pre-rollout-block-id",
+    blockType: "hero",
+    field: "title",
+    next: "Agence de voyages à Gien",
+  };
+
+  const result = validateExpectedChange(page, change);
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, "value-mismatch");
+  assert.equal(result.matchedBy, "block-type-after-versioning");
+  assert.equal(result.actual, "Ancien titre incorrect");
+});
