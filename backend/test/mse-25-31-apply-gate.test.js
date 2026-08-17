@@ -180,6 +180,10 @@ test("apply gate refuses an approved page whose final write payload is incomplet
       confirm: true,
       approvedExecutionPlanFingerprint: executionPlan.executionPlanFingerprint,
     }),
-    (error) => error.code === "MSE_25_31_APPLY_NO_APPROVED_PAGES"
+    (error) => {
+      assert.equal(error.code, "MSE_25_31_APPLY_INCOMPLETE_WRITE_PAYLOAD");
+      assert.equal(error.details.payloadIncompleteCount, 1);
+      return true;
+    }
   );
 });
