@@ -53,10 +53,13 @@ jobs:
       - name: Install backend dependencies
         run: npm ci
 
-      - name: Run Search Console, local SEO and MSE-25 backend tests
+      - name: Run Search Console, local SEO and MSE-25.30/25.31 backend tests
         env:
           SEARCH_CONSOLE_ENABLED: 'false'
-        run: node --test test/search-console-*.test.js test/minisite-local-*.test.js test/minisite-seo-*.test.js test/mse-25-30-*.test.js test/mse-25-31-*.test.js test/mse-25-32-*.test.js test/agency-seo-*.test.js
+        run: node --test test/search-console-*.test.js test/minisite-local-*.test.js test/minisite-seo-*.test.js test/mse-25-30-*.test.js test/mse-25-31-*.test.js test/agency-seo-*.test.js
+
+      - name: Run MSE-25.32 flexible payment backend tests
+        run: node --test test/mse-25-32-*.test.js
 
       - name: Verify Search Console module loads with provider disabled
         env:
