@@ -35,6 +35,7 @@ const backlogById = new Map((backlogModule.PARTNER_LOGO_BACKLOG || []).map((item
 
 const partnerArg = process.argv.find((arg) => arg.startsWith("--partner="));
 const write = process.argv.includes("--write=true");
+const overwrite = process.argv.includes("--overwrite=true");
 const partnerId = String(partnerArg?.split("=", 2)[1] || "").trim();
 
 if (!partnerId) {
@@ -135,6 +136,12 @@ async function convertToWebp(inputPath, outputPath, inputFormat) {
   }
 }
 
+function existingAcceptedAssets(id) {
+  return ["webp", "svg"]
+    .map((format) => path.join(publicPartners, `${id}.${format}`))
+    .filter((filePath) => fs.existsSync(filePath));
+}
+
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "mle-partner-logo-"));
 try {
   const downloaded = await downloadAsset(sourceUrl);
@@ -167,6 +174,11 @@ try {
   const targetName = `${partnerId}.${outputFormat}`;
   const targetPath = path.join(publicPartners, targetName);
   const generatedBytes = fs.statSync(generatedPath).size;
+  const existingAssets = existingAcceptedAssets(partnerId);
+
+  if (write && existingAssets.length && !overwrite) {
+    throw new Error(`partner already has accepted public asset(s): ${existingAssets.map((filePath) => path.basename(filePath)).join(", ")}; pass --overwrite=true only after explicit review`);
+  }
 
   const payload = {
     ok: true,
@@ -180,12 +192,19 @@ try {
     converter,
     generatedBytes,
     targetPath: path.relative(frontendRoot, targetPath),
+    existingAssets: existingAssets.map((filePath) => path.relative(frontendRoot, filePath)),
     writeRequested: write,
+    overwriteRequested: overwrite,
     written: false,
   };
 
   if (write) {
     fs.mkdirSync(publicPartners, { recursive: true });
+    if (overwrite) {
+      for (const filePath of existingAssets) {
+        if (filePath !== targetPath) fs.rmSync(filePath, { force: true });
+      }
+    }
     fs.copyFileSync(generatedPath, targetPath);
     payload.written = true;
   }
