@@ -124,6 +124,18 @@ test("approval check rejects candidate content changed after preflight", () => {
   );
 });
 
+test("approval check rejects substituted sealed write payload evidence", () => {
+  const report = preflightReport();
+  const manifest = createApprovalManifest(report);
+  const candidate = manifest.candidates.find((item) => item.key === "gien:avis");
+  candidate.writePayloadFingerprint = "f".repeat(64);
+  candidate.writePreview.bodyCopy.html = "<p>Texte substitué.</p>";
+  assert.throws(
+    () => assertApprovalManifest(manifest, report),
+    (error) => error.code === "MSE_25_31_APPROVAL_MANIFEST_CANDIDATE_SET_MISMATCH"
+  );
+});
+
 test("approval check requires reviewer and timestamp for every approved page", () => {
   const report = preflightReport();
   const manifest = createApprovalManifest(report);
