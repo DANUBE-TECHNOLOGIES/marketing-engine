@@ -66,6 +66,41 @@ function compactRow(row = {}) {
   };
 }
 
+function executionPayloads(payload = {}) {
+  const rows = [];
+  for (const agency of payload.agencies || []) {
+    for (const proposal of agency.proposals || []) {
+      const operations = Array.isArray(proposal.operations)
+        ? JSON.parse(JSON.stringify(proposal.operations))
+        : [];
+      const bodyCopyPreview = proposal.bodyCopyPreview
+        ? JSON.parse(JSON.stringify(proposal.bodyCopyPreview))
+        : null;
+      const operationTypes = operations.map((operation) => operation?.type).filter(Boolean);
+      const completeOperationTypes = [];
+      const incompleteOperationTypes = [];
+      for (const type of operationTypes) {
+        if (type === "enrich-body" && bodyCopyPreview?.html && bodyCopyPreview?.title) completeOperationTypes.push(type);
+        else incompleteOperationTypes.push(type);
+      }
+      rows.push({
+        key: `${String(agency.siteSlug || "").trim()}:${String(proposal.pageSlug || "home").trim() || "home"}`,
+        agencyId: agency.agencyId ?? null,
+        siteSlug: agency.siteSlug || null,
+        city: agency.city || null,
+        pageSlug: proposal.pageSlug || "home",
+        operations,
+        bodyCopyPreview,
+        safeguards: proposal.safeguards ? JSON.parse(JSON.stringify(proposal.safeguards)) : {},
+        completeOperationTypes,
+        incompleteOperationTypes,
+        payloadComplete: operationTypes.length > 0 && incompleteOperationTypes.length === 0,
+      });
+    }
+  }
+  return rows.sort((left, right) => left.key.localeCompare(right.key, "fr"));
+}
+
 function operatorOutput(payload = {}, { topPages = DEFAULT_TOP_PAGES, includeAllPages = false } = {}) {
   const report = payload.operatorReport || {};
   const rows = Array.isArray(report.rows) ? report.rows : [];
@@ -85,7 +120,10 @@ function operatorOutput(payload = {}, { topPages = DEFAULT_TOP_PAGES, includeAll
     topPages: rows.slice(0, limit).map(compactRow),
     manualReviewNeeded: (report.manualReviewNeeded || []).slice(0, limit).map(compactRow),
   };
-  if (includeAllPages) result.allPages = rows.map(compactRow);
+  if (includeAllPages) {
+    result.allPages = rows.map(compactRow);
+    result.executionPayloads = executionPayloads(payload);
+  }
   return result;
 }
 
@@ -127,6 +165,7 @@ module.exports = {
   DEFAULT_TOP_PAGES,
   assertSafePreview,
   compactRow,
+  executionPayloads,
   isSafePreview,
   jsonRequest,
   normalizeOrigin,
