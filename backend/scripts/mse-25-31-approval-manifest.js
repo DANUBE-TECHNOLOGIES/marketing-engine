@@ -68,8 +68,8 @@ function createApprovalManifest(report = {}) {
     publicWrites: false,
     defaultApproval: false,
     sourcePreflight: {
-      repository: verified.repository,
-      context: verified.context,
+      repository: { ...(verified.repository || {}) },
+      context: { ...(verified.context || {}) },
       planFingerprint: verified.planFingerprint,
     },
     candidateSetFingerprint,
