@@ -3,6 +3,9 @@
 const {
   auditLocalIntentTargetQuality,
 } = require("../minisite-structured-data/local-intent-target-quality");
+const {
+  collectLinks,
+} = require("./pre-rollout-quality");
 
 const CORE_INTENT = "agency";
 
@@ -86,12 +89,59 @@ function thinContentOpportunities(site = {}, { minimumWords = 120 } = {}) {
     }));
 }
 
+function canonicalPath(siteSlug, page = {}) {
+  const root = `/agence/${String(siteSlug || "").trim()}`;
+  const slug = String(page.slug || "").trim();
+  return !slug || ["home", "accueil"].includes(normalize(slug))
+    ? root
+    : `${root}/${slug}`;
+}
+
+function internalLinkOpportunities(site = {}) {
+  const pages = publishedPages(site);
+  const rows = pages.map((page) => ({
+    page,
+    pageSlug: String(page.slug || "").trim() || "home",
+    path: canonicalPath(site.slug, page),
+    links: collectLinks(page.blocks || []).map((href) => String(href).split(/[?#]/)[0]),
+  }));
+  const incoming = new Map(rows.map((row) => [row.path, 0]));
+
+  for (const row of rows) {
+    for (const href of row.links) {
+      if (incoming.has(href)) incoming.set(href, incoming.get(href) + 1);
+    }
+  }
+
+  return rows
+    .filter((row) => !["home", "accueil"].includes(normalize(row.pageSlug)))
+    .filter((row) => (incoming.get(row.path) || 0) === 0)
+    .map((row) => ({
+      kind: "internal-link",
+      severity: "medium",
+      pageSlug: row.pageSlug,
+      path: row.path,
+      incomingEditorialLinks: 0,
+      suggestedSourceSlugs: rows
+        .filter((candidate) => candidate.pageSlug !== row.pageSlug)
+        .sort((left, right) => {
+          const leftHome = ["home", "accueil"].includes(normalize(left.pageSlug)) ? 0 : 1;
+          const rightHome = ["home", "accueil"].includes(normalize(right.pageSlug)) ? 0 : 1;
+          if (leftHome !== rightHome) return leftHome - rightHome;
+          return left.pageSlug.localeCompare(right.pageSlug, "fr");
+        })
+        .slice(0, 3)
+        .map((candidate) => candidate.pageSlug),
+    }));
+}
+
 function buildLocalSeoQualityUpliftPlan(
   site = {},
   { minimumWords = 120 } = {}
 ) {
   const intent = intentOpportunities(site);
   const thin = thinContentOpportunities(site, { minimumWords });
+  const links = internalLinkOpportunities(site);
 
   return {
     version: "mse-25.31",
@@ -102,17 +152,21 @@ function buildLocalSeoQualityUpliftPlan(
     summary: {
       intentOpportunityCount: intent.length,
       thinContentOpportunityCount: thin.length,
-      totalOpportunityCount: intent.length + thin.length,
+      internalLinkOpportunityCount: links.length,
+      totalOpportunityCount: intent.length + thin.length + links.length,
     },
     intentOpportunities: intent,
     thinContentOpportunities: thin,
+    internalLinkOpportunities: links,
   };
 }
 
 module.exports = {
   buildLocalSeoQualityUpliftPlan,
+  canonicalPath,
   contentText,
   intentOpportunities,
+  internalLinkOpportunities,
   missingSignals,
   thinContentOpportunities,
   wordCountForPage,
