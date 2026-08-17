@@ -23,6 +23,7 @@ on:
       - 'frontend/app/agence/[siteSlug]/sitemap.xml/route.js'
       - 'frontend/app/api/indexation/**'
       - 'frontend/app/indexation/**'
+      - 'frontend/components/page-builder-v2/**'
       - 'frontend/components/public-site/renderers/**'
       - 'frontend/lib/page-builder-v2/**'
       - 'frontend/lib/indexation-api.js'
@@ -96,7 +97,7 @@ jobs:
         run: node --test test/mse-25-32-flexible-payment-experience.test.mjs
 
       - name: Lint MSE-25.32 flexible payment integration
-        run: npx eslint "components/public-site/renderers/FlexiblePaymentRenderer.js" "components/public-site/renderers/registry.js" "lib/page-builder-v2/block-catalog.js" "lib/page-builder-v2/flexible-payment-api.js"
+        run: npx eslint "components/page-builder-v2/FlexiblePaymentPolicyPanel.js" "components/public-site/renderers/FlexiblePaymentRenderer.js" "components/public-site/renderers/registry.js" "lib/page-builder-v2/block-catalog.js" "lib/page-builder-v2/flexible-payment-api.js"
 
       - name: Lint sitemap and indexation API
         run: npx eslint "app/agence/[siteSlug]/sitemap.xml/route.js" "app/api/indexation/route.js" "lib/indexation-api.js"
