@@ -52,14 +52,14 @@ function reduction(before, after) {
 
 function warningRows(plan = {}) {
   return [
-    ...(plan.intentOpportunities || []).map((item) => ({ kind: "intent-quality", pageSlug: item.pageSlug })),
-    ...(plan.thinContentOpportunities || []).map((item) => ({ kind: "thin-content", pageSlug: item.pageSlug })),
-    ...(plan.internalLinkOpportunities || []).map((item) => ({ kind: "internal-link", pageSlug: item.pageSlug })),
+    ...(plan.intentOpportunities || []).map((item) => ({ kind: "intent-quality", pageSlug: item.pageSlug, discriminator: item.intent || item.label || "" })),
+    ...(plan.thinContentOpportunities || []).map((item) => ({ kind: "thin-content", pageSlug: item.pageSlug, discriminator: "" })),
+    ...(plan.internalLinkOpportunities || []).map((item) => ({ kind: "internal-link", pageSlug: item.pageSlug, discriminator: item.path || "" })),
   ];
 }
 
 function warningKey(row = {}) {
-  return `${String(row.kind || "")}:${String(row.pageSlug || "")}`;
+  return [row.kind, row.pageSlug, row.discriminator].map((value) => String(value || "")).join(":");
 }
 
 function pageWarningCounts(plan = {}) {
@@ -81,24 +81,22 @@ function projectedPageImpact(currentPlan = {}, projectedPlan = {}, proposals = [
   const beforeByPage = pageWarningCounts(currentPlan);
   const afterByPage = pageWarningCounts(projectedPlan);
   const proposalByPage = new Map((proposals || []).map((proposal) => [String(proposal.pageSlug || "home"), proposal]));
-  const slugs = new Set([
-    ...beforeByPage.keys(),
-    ...afterByPage.keys(),
-    ...proposalByPage.keys(),
-  ]);
+  const slugs = new Set([...beforeByPage.keys(), ...afterByPage.keys(), ...proposalByPage.keys()]);
 
   return Array.from(slugs)
     .sort((left, right) => left.localeCompare(right, "fr"))
     .map((pageSlug) => {
       const before = beforeByPage.get(pageSlug) || { total: 0, kinds: [] };
       const after = afterByPage.get(pageSlug) || { total: 0, kinds: [] };
-      const resolvedKinds = beforeRows
-        .filter((row) => String(row.pageSlug || "home") === pageSlug && !afterKeys.has(warningKey(row)))
-        .map((row) => row.kind);
+      const resolvedRows = beforeRows.filter((row) => String(row.pageSlug || "home") === pageSlug && !afterKeys.has(warningKey(row)));
+      const resolvedKinds = Array.from(new Set(resolvedRows.map((row) => row.kind)));
+      const resolvedWarnings = resolvedRows.map((row) => ({ kind: row.kind, discriminator: row.discriminator || null }));
       const proposal = proposalByPage.get(pageSlug) || null;
-      const nonSimulatedOperationTypes = (proposal?.operations || [])
-        .filter((operation) => !["enrich-body", "add-internal-link"].includes(operation.type))
-        .map((operation) => operation.type);
+      const nonSimulatedOperationTypes = Array.from(new Set(
+        (proposal?.operations || [])
+          .filter((operation) => !["enrich-body", "add-internal-link"].includes(operation.type))
+          .map((operation) => operation.type)
+      ));
 
       return {
         pageSlug,
@@ -108,6 +106,7 @@ function projectedPageImpact(currentPlan = {}, projectedPlan = {}, proposals = [
         beforeKinds: before.kinds,
         projectedKinds: after.kinds,
         resolvedKinds,
+        resolvedWarnings,
         projectionComplete: nonSimulatedOperationTypes.length === 0,
         nonSimulatedOperationTypes,
       };
@@ -147,12 +146,7 @@ function projectQualityUpliftImpact({ site = {}, currentPlan = {}, proposals = [
     writes: false,
     destructive: false,
     projectionComplete: nonSimulatedOperations === 0,
-    simulation: {
-      simulatedBodyOperations,
-      simulatedInternalLinkOperations,
-      nonSimulatedOperations,
-      nonSimulatedOperationTypes,
-    },
+    simulation: { simulatedBodyOperations, simulatedInternalLinkOperations, nonSimulatedOperations, nonSimulatedOperationTypes },
     before,
     projected: after,
     projectedReduction: reduction(before, after),
@@ -168,5 +162,6 @@ module.exports = {
   projectQualityUpliftImpact,
   projectedPageImpact,
   reduction,
+  warningKey,
   warningRows,
 };
