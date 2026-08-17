@@ -3,7 +3,7 @@
 const express = require("express");
 const {
   MiniSiteSeoEnrichmentService,
-} = require("../minisite-seo-enrichment");
+} = require("../minisite-seo-enrichment/service");
 const {
   scopedService,
 } = require("../minisite-seo-enrichment/routes");
