@@ -1,3 +1,6 @@
 "use strict";
 
-module.exports = require("./payment-experience");
+module.exports = {
+  ...require("./payment-experience"),
+  ...require("./placement-executor"),
+};
