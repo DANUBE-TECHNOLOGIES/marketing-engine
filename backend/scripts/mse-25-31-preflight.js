@@ -7,6 +7,7 @@ const { execFileSync } = require("node:child_process");
 const {
   DEFAULT_TOP_PAGES,
   normalizeOrigin,
+  operationPayloadComplete,
   positiveInteger,
   run: runPreview,
 } = require("./mse-25-31-network-preview");
@@ -76,14 +77,22 @@ function sortedTypes(value) {
 }
 
 function expectedPayloadClassification(payload = {}) {
-  const types = sortedTypes((payload.operations || []).map((operation) => operation?.type));
+  const operations = Array.isArray(payload.operations) ? payload.operations : [];
+  const types = sortedTypes(operations.map((operation) => operation?.type));
   const complete = [];
   const incomplete = [];
-  for (const type of types) {
-    if (type === "enrich-body" && payload.bodyCopyPreview?.html && payload.bodyCopyPreview?.title) complete.push(type);
+  for (const operation of operations) {
+    const type = operation?.type;
+    if (!type) continue;
+    if (operationPayloadComplete(operation, payload.bodyCopyPreview || null)) complete.push(type);
     else incomplete.push(type);
   }
-  return { types, complete, incomplete, payloadComplete: types.length > 0 && incomplete.length === 0 };
+  return {
+    types,
+    complete: sortedTypes(complete),
+    incomplete: sortedTypes(incomplete),
+    payloadComplete: types.length > 0 && incomplete.length === 0,
+  };
 }
 
 function assertExecutionPayloadCoverage(preview = {}) {
@@ -149,13 +158,13 @@ function assertExecutionPayloadCoverage(preview = {}) {
 
 function assertDeterministicExecutionPayloads(first = {}, second = {}) {
   const firstAudit = assertExecutionPayloadCoverage(first);
-  const secondAudit = assertExecutionPayloadCoverage(second);
+  assertExecutionPayloadCoverage(second);
   if (JSON.stringify(first.executionPayloads || []) !== JSON.stringify(second.executionPayloads || [])) {
     const error = new Error("Deux previews successifs ont le même plan SEO mais des payloads d'exécution différents.");
     error.code = "MSE_25_31_PREFLIGHT_NON_DETERMINISTIC_EXECUTION_PAYLOAD";
     throw error;
   }
-  return firstAudit.completePayloadCount === secondAudit.completePayloadCount ? firstAudit : firstAudit;
+  return firstAudit;
 }
 
 function assertDeterministicPreview(first = {}, second = {}) {
