@@ -33,6 +33,22 @@ async function jsonRequest(url, options = {}) {
   return payload;
 }
 
+function isSafePreview(payload = {}) {
+  return payload.readOnly === true && payload.writes === false && payload.destructive === false;
+}
+
+function assertSafePreview(payload = {}) {
+  if (isSafePreview(payload)) return payload;
+  const error = new Error("MSE-25.31 refuse un payload qui n'est pas strictement read-only.");
+  error.code = "MSE_25_31_UNSAFE_PREVIEW_PAYLOAD";
+  error.details = {
+    readOnly: payload.readOnly,
+    writes: payload.writes,
+    destructive: payload.destructive,
+  };
+  throw error;
+}
+
 function compactRow(row = {}) {
   return {
     agencyId: row.agencyId ?? null,
@@ -55,7 +71,7 @@ function operatorOutput(payload = {}, { topPages = DEFAULT_TOP_PAGES } = {}) {
   const rows = Array.isArray(report.rows) ? report.rows : [];
   const limit = positiveInteger(topPages, DEFAULT_TOP_PAGES);
   return {
-    ok: payload.readOnly === true && payload.writes === false,
+    ok: isSafePreview(payload),
     version: payload.version || "mse-25.31",
     operation: payload.operation || "preview-network-quality-uplift",
     readOnly: payload.readOnly === true,
@@ -84,6 +100,7 @@ async function run({ backendOrigin, tenantSlug, minimumWords, topPages, emitOutp
     headers: { "x-tenant-slug": tenant },
     body: JSON.stringify(body),
   });
+  assertSafePreview(payload);
   const result = operatorOutput(payload, {
     topPages: topPages ?? process.env.TOP_PAGES ?? DEFAULT_TOP_PAGES,
   });
@@ -105,7 +122,9 @@ if (require.main === module) {
 
 module.exports = {
   DEFAULT_TOP_PAGES,
+  assertSafePreview,
   compactRow,
+  isSafePreview,
   jsonRequest,
   normalizeOrigin,
   operatorOutput,
