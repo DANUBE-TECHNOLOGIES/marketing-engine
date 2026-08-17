@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import {
+  applyFlexiblePayment,
   fetchFlexiblePaymentConfiguration,
   previewFlexiblePayment,
   saveFlexiblePaymentPolicy,
@@ -47,6 +48,7 @@ export default function FlexiblePaymentPolicyPanel({ siteSlug }) {
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deploying, setDeploying] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -86,6 +88,15 @@ export default function FlexiblePaymentPolicyPanel({ siteSlug }) {
     return installmentCounts;
   }
 
+  async function refreshConfiguration() {
+    const payload = await fetchFlexiblePaymentConfiguration(siteSlug);
+    const loadedPolicy = payload?.policy || policy;
+    setPolicy(loadedPolicy);
+    setInstallmentDraft((loadedPolicy.installmentCounts || []).join(", "));
+    setPreview(payload?.preview || null);
+    return payload;
+  }
+
   async function runPreview() {
     setError("");
     setNotice("");
@@ -120,7 +131,40 @@ export default function FlexiblePaymentPolicyPanel({ siteSlug }) {
     }
   }
 
+  async function deployPreview() {
+    if (!preview?.fingerprint) return;
+    setDeploying(true);
+    setError("");
+    setNotice("");
+    const nextPolicy = withInstallmentDraft(policy, installmentDraft);
+    normalizeInstallmentDraft();
+
+    try {
+      const result = await applyFlexiblePayment(
+        siteSlug,
+        preview.fingerprint,
+        nextPolicy
+      );
+      await refreshConfiguration();
+      const applied = Array.isArray(result?.applied) ? result.applied.length : 0;
+      const skipped = Array.isArray(result?.skipped) ? result.skipped.length : 0;
+      setNotice(
+        `Déploiement terminé : ${applied} bloc(s) ajouté(s), ${skipped} ignoré(s).`
+      );
+    } catch (deployError) {
+      setError(
+        deployError?.message ||
+          "Impossible de déployer cet aperçu. Recalculez-le avant de réessayer."
+      );
+    } finally {
+      setDeploying(false);
+    }
+  }
+
   if (!siteSlug) return null;
+
+  const busy = loading || saving || deploying;
+  const canDeploy = Boolean(preview?.fingerprint) && (preview?.proposals?.length || 0) > 0;
 
   return (
     <section className={styles.panel} aria-label="Configuration du paiement en plusieurs fois">
@@ -241,15 +285,28 @@ export default function FlexiblePaymentPolicyPanel({ siteSlug }) {
       {notice ? <p className={styles.notice}>{notice}</p> : null}
 
       <div className={styles.actions}>
-        <button type="button" onClick={runPreview} disabled={loading || saving}>
+        <button type="button" onClick={runPreview} disabled={busy}>
           Prévisualiser
         </button>
-        <button type="button" onClick={savePolicy} disabled={loading || saving}>
+        <button type="button" onClick={savePolicy} disabled={busy}>
           {saving ? "Enregistrement…" : "Enregistrer la configuration"}
+        </button>
+        <button
+          type="button"
+          onClick={deployPreview}
+          disabled={busy || !canDeploy}
+          title={canDeploy ? "Déployer exactement cet aperçu" : "Prévisualisez d’abord un déploiement contenant au moins un bloc"}
+        >
+          {deploying ? "Déploiement…" : "Déployer les blocs"}
         </button>
       </div>
     </section>
   );
 }
 
-export { EMPTY_POLICY, parseInstallments, toggleValue, withInstallmentDraft };
+export {
+  EMPTY_POLICY,
+  parseInstallments,
+  toggleValue,
+  withInstallmentDraft,
+};
