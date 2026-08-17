@@ -16,6 +16,10 @@ const policyPanel = fs.readFileSync(
   path.join(root, "components/page-builder-v2/FlexiblePaymentPolicyPanel.js"),
   "utf8"
 );
+const editorPage = fs.readFileSync(
+  path.join(root, "app/website-builder/editor/[siteId]/page.js"),
+  "utf8"
+);
 const registry = fs.readFileSync(
   path.join(root, "components/public-site/renderers/registry.js"),
   "utf8"
@@ -55,6 +59,12 @@ test("MSE-25.32 provides structured Website Designer controls for agency payment
   assert.match(policyPanel, /Libellé du CTA/);
   assert.match(policyPanel, /Prévisualiser/);
   assert.match(policyPanel, /Enregistrer la configuration/);
+});
+
+test("MSE-25.32 mounts payment policy controls in the live Website Designer editor", () => {
+  assert.match(editorPage, /FlexiblePaymentPolicyPanel/);
+  assert.match(editorPage, /siteSlug=\{resolvedParams\.siteId\}/);
+  assert.match(editorPage, /VisualPageBuilder/);
 });
 
 test("MSE-25.32 registers flexible payment in the public renderer", () => {
