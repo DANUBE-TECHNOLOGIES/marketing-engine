@@ -1,5 +1,7 @@
 "use strict";
 
+const fs = require("node:fs");
+const path = require("node:path");
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
@@ -65,4 +67,20 @@ test("strict policy validation accepts a disabled empty policy", () => {
     disclaimer: "",
     ctaLabel: "Contacter mon agence",
   });
+});
+
+test("payment policy migration creates a dedicated one-to-one AgencySite table", () => {
+  const sql = fs.readFileSync(
+    path.join(
+      __dirname,
+      "../prisma/migrations/20260817230500_mse_25_32_agency_payment_policy/migration.sql"
+    ),
+    "utf8"
+  );
+
+  assert.match(sql, /CREATE TABLE "AgencyPaymentPolicy"/);
+  assert.match(sql, /PRIMARY KEY \("siteId"\)/);
+  assert.match(sql, /REFERENCES "AgencySite"\("id"\)/);
+  assert.match(sql, /ON DELETE CASCADE/);
+  assert.match(sql, /CHECK \("feeMode" IN \('unspecified', 'with-fees', 'without-fees'\)\)/);
 });
