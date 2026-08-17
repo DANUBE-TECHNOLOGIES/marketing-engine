@@ -10,7 +10,8 @@ const { EXPECTED_BRANCH } = require("../scripts/mse-25-31-preflight");
 const FP = "a".repeat(64);
 const HEAD = "b".repeat(40);
 
-function preflightReport() {
+function preflightReport({ payloadComplete = true } = {}) {
+  const operationType = payloadComplete ? "enrich-body" : "strengthen-meta-description";
   return {
     version: "mse-25.31",
     operation: "preflight-quality-uplift",
@@ -32,18 +33,31 @@ function preflightReport() {
         pageSlug: "avis",
         priority: "high",
         priorityScore: 70,
-        executionClass: "simulation-ready",
+        executionClass: payloadComplete ? "simulation-ready" : "manual-review-needed",
         projectedReduction: 2,
-        operationTypes: ["enrich-body"],
-        manualReviewReasons: [],
+        operationTypes: [operationType],
+        manualReviewReasons: payloadComplete ? [] : [operationType],
+      }],
+      executionPayloads: [{
+        key: "gien:avis",
+        agencyId: 1,
+        siteSlug: "gien",
+        city: "Gien",
+        pageSlug: "avis",
+        operations: [{ type: operationType, preserveExisting: payloadComplete }],
+        bodyCopyPreview: payloadComplete ? { title: "Informations utiles", html: "<p>Texte exact approuvé.</p>" } : null,
+        safeguards: payloadComplete ? { preserveManualCopy: true } : {},
+        completeOperationTypes: payloadComplete ? [operationType] : [],
+        incompleteOperationTypes: payloadComplete ? [] : [operationType],
+        payloadComplete,
       }],
     },
     determinism: { verified: true, previewCount: 2, firstFingerprint: FP, secondFingerprint: FP },
   };
 }
 
-function evidence() {
-  const report = preflightReport();
+function evidence(options) {
+  const report = preflightReport(options);
   const manifest = createApprovalManifest(report);
   manifest.candidates[0].approved = true;
   manifest.candidates[0].reviewer = "operator@example.test";
@@ -52,7 +66,7 @@ function evidence() {
   return { report, manifest, executionPlan };
 }
 
-test("apply gate authorizes evidence without performing writes", () => {
+test("apply gate authorizes complete sealed evidence without performing writes", () => {
   const { report, manifest, executionPlan } = evidence();
   const result = assertApplyAuthorization({
     executionPlan,
@@ -140,6 +154,23 @@ test("apply gate refuses an execution plan with no approved pages", () => {
   const report = preflightReport();
   const manifest = createApprovalManifest(report);
   const executionPlan = buildExecutionPlan(manifest, report);
+  assert.throws(
+    () => assertApplyAuthorization({
+      executionPlan,
+      approvalManifest: manifest,
+      preflightReport: report,
+      repository: { branch: EXPECTED_BRANCH, head: HEAD, dirty: false },
+      confirm: true,
+      approvedExecutionPlanFingerprint: executionPlan.executionPlanFingerprint,
+    }),
+    (error) => error.code === "MSE_25_31_APPLY_NO_APPROVED_PAGES"
+  );
+});
+
+test("apply gate refuses an approved page whose final write payload is incomplete", () => {
+  const { report, manifest, executionPlan } = evidence({ payloadComplete: false });
+  assert.equal(executionPlan.executable, false);
+  assert.equal(executionPlan.summary.payloadIncompleteCount, 1);
   assert.throws(
     () => assertApplyAuthorization({
       executionPlan,
