@@ -66,11 +66,11 @@ function compactRow(row = {}) {
   };
 }
 
-function operatorOutput(payload = {}, { topPages = DEFAULT_TOP_PAGES } = {}) {
+function operatorOutput(payload = {}, { topPages = DEFAULT_TOP_PAGES, includeAllPages = false } = {}) {
   const report = payload.operatorReport || {};
   const rows = Array.isArray(report.rows) ? report.rows : [];
   const limit = positiveInteger(topPages, DEFAULT_TOP_PAGES);
-  return {
+  const result = {
     ok: isSafePreview(payload),
     version: payload.version || "mse-25.31",
     operation: payload.operation || "preview-network-quality-uplift",
@@ -85,9 +85,11 @@ function operatorOutput(payload = {}, { topPages = DEFAULT_TOP_PAGES } = {}) {
     topPages: rows.slice(0, limit).map(compactRow),
     manualReviewNeeded: (report.manualReviewNeeded || []).slice(0, limit).map(compactRow),
   };
+  if (includeAllPages) result.allPages = rows.map(compactRow);
+  return result;
 }
 
-async function run({ backendOrigin, tenantSlug, minimumWords, topPages, emitOutput = true } = {}) {
+async function run({ backendOrigin, tenantSlug, minimumWords, topPages, includeAllPages = false, emitOutput = true } = {}) {
   const origin = normalizeOrigin(backendOrigin || process.env.BACKEND_ORIGIN);
   const tenant = String(tenantSlug || process.env.TENANT_SLUG || "mondescale").trim();
   const body = {};
@@ -103,6 +105,7 @@ async function run({ backendOrigin, tenantSlug, minimumWords, topPages, emitOutp
   assertSafePreview(payload);
   const result = operatorOutput(payload, {
     topPages: topPages ?? process.env.TOP_PAGES ?? DEFAULT_TOP_PAGES,
+    includeAllPages,
   });
   if (emitOutput) console.log(JSON.stringify(result, null, 2));
   return result;
