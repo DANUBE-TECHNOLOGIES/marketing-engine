@@ -11,33 +11,50 @@ const {
 } = require("./mse-25-31-approval-manifest");
 const { loadReport } = require("./mse-25-31-preflight-check");
 
-function approvedExecutionRows(manifest = {}) {
+function executionPayloadMap(preflightReport = {}) {
+  return new Map(
+    (Array.isArray(preflightReport.preview?.executionPayloads) ? preflightReport.preview.executionPayloads : [])
+      .map((payload) => [String(payload.key || ""), payload])
+      .filter(([key]) => key)
+  );
+}
+
+function approvedExecutionRows(manifest = {}, preflightReport = {}) {
+  const payloads = executionPayloadMap(preflightReport);
   return (manifest.candidates || [])
     .filter((candidate) => candidate.approved === true)
-    .map((candidate) => ({
-      key: candidate.key,
-      agencyId: candidate.agencyId ?? null,
-      siteSlug: candidate.siteSlug,
-      city: candidate.city || null,
-      pageSlug: candidate.pageSlug || "home",
-      priority: candidate.priority || "low",
-      priorityScore: Number(candidate.priorityScore || 0),
-      executionClass: candidate.executionClass || null,
-      projectedReduction: Number(candidate.projectedReduction || 0),
-      operationTypes: Array.isArray(candidate.operationTypes) ? [...candidate.operationTypes] : [],
-      manualReviewReasons: Array.isArray(candidate.manualReviewReasons) ? [...candidate.manualReviewReasons] : [],
-      approval: {
-        reviewer: String(candidate.reviewer || "").trim(),
-        reviewedAt: String(candidate.reviewedAt || "").trim(),
-        note: candidate.note ?? null,
-      },
-    }))
+    .map((candidate) => {
+      const sealedPayload = payloads.get(String(candidate.key || "")) || null;
+      return {
+        key: candidate.key,
+        agencyId: candidate.agencyId ?? null,
+        siteSlug: candidate.siteSlug,
+        city: candidate.city || null,
+        pageSlug: candidate.pageSlug || "home",
+        priority: candidate.priority || "low",
+        priorityScore: Number(candidate.priorityScore || 0),
+        executionClass: candidate.executionClass || null,
+        projectedReduction: Number(candidate.projectedReduction || 0),
+        operationTypes: Array.isArray(candidate.operationTypes) ? [...candidate.operationTypes] : [],
+        manualReviewReasons: Array.isArray(candidate.manualReviewReasons) ? [...candidate.manualReviewReasons] : [],
+        executionPayloadComplete: sealedPayload?.payloadComplete === true,
+        incompleteOperationTypes: Array.isArray(sealedPayload?.incompleteOperationTypes)
+          ? [...sealedPayload.incompleteOperationTypes]
+          : [...(candidate.operationTypes || [])],
+        executionPayload: sealedPayload ? JSON.parse(JSON.stringify(sealedPayload)) : null,
+        approval: {
+          reviewer: String(candidate.reviewer || "").trim(),
+          reviewedAt: String(candidate.reviewedAt || "").trim(),
+          note: candidate.note ?? null,
+        },
+      };
+    })
     .sort((left, right) => left.key.localeCompare(right.key, "fr"));
 }
 
 function buildExecutionPlan(manifest = {}, preflightReport = {}) {
   const verifiedApproval = assertApprovalManifest(manifest, preflightReport);
-  const pages = approvedExecutionRows(manifest);
+  const pages = approvedExecutionRows(manifest, preflightReport);
   const approvalDecisionFingerprint = digest({
     planFingerprint: verifiedApproval.planFingerprint,
     candidateSetFingerprint: verifiedApproval.candidateSetFingerprint,
@@ -56,6 +73,7 @@ function buildExecutionPlan(manifest = {}, preflightReport = {}) {
     approvalDecisionFingerprint,
     pages,
   });
+  const incompletePages = pages.filter((page) => page.executionPayloadComplete !== true);
 
   return {
     version: "mse-25.31",
@@ -65,7 +83,7 @@ function buildExecutionPlan(manifest = {}, preflightReport = {}) {
     writes: false,
     destructive: false,
     publicWrites: false,
-    executable: pages.length > 0,
+    executable: pages.length > 0 && incompletePages.length === 0,
     source: {
       repository: {
         branch: preflightReport.repository?.branch || null,
@@ -82,8 +100,14 @@ function buildExecutionPlan(manifest = {}, preflightReport = {}) {
       approvedCount: pages.length,
       skippedCount: verifiedApproval.summary.candidateCount - pages.length,
       approvedManualReviewCount: pages.filter((page) => page.executionClass === "manual-review-needed").length,
+      payloadCompleteCount: pages.length - incompletePages.length,
+      payloadIncompleteCount: incompletePages.length,
       projectedWarningReduction: pages.reduce((sum, page) => sum + Number(page.projectedReduction || 0), 0),
     },
+    incompletePages: incompletePages.map((page) => ({
+      key: page.key,
+      incompleteOperationTypes: page.incompleteOperationTypes,
+    })),
     pages,
   };
 }
@@ -115,6 +139,7 @@ function run({ approvalManifestPath, preflightReportPath, output, emitOutput = t
     executionPlanFingerprint: plan.executionPlanFingerprint,
     approvalDecisionFingerprint: plan.source.approvalDecisionFingerprint,
     summary: plan.summary,
+    incompletePages: plan.incompletePages,
   };
   if (emitOutput) console.log(JSON.stringify(result, null, 2));
   return result;
@@ -138,5 +163,6 @@ module.exports = {
   approvedExecutionRows,
   buildExecutionPlan,
   defaultOutputPath,
+  executionPayloadMap,
   run,
 };
