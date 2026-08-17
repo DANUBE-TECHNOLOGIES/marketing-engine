@@ -27,13 +27,7 @@ class FakeService {
           slug: "avis",
           title: "Avis clients",
           published: true,
-          page: {
-            slug: "avis",
-            title: "Avis clients",
-            published: true,
-            status: "published",
-            blocks: [],
-          },
+          page: { slug: "avis", title: "Avis clients", published: true, status: "published", blocks: [] },
           currentBlocks: [
             { blockType: "hero", content: { title: "Avis clients à Gien" } },
             { blockType: "rich_text", content: { html: "Des avis clients à Gien." } },
@@ -82,7 +76,7 @@ test("agency preview exposes fact-safe body copy but no writes", async () => {
   assert.equal(avis.bodyCopyPreview.factualPolicy, "agency-and-page-context-only");
 });
 
-test("network preview excludes drafts and aggregates proposal and projected page counts without mutation", async () => {
+test("network preview excludes drafts and exposes projected operator report without mutation", async () => {
   const service = new FakeService();
   const result = await service.previewNetworkQualityUplift({ minimumWords: 120 });
   const impactPages = result.agencies.flatMap((agency) => agency.impact?.pages || []);
@@ -106,4 +100,13 @@ test("network preview excludes drafts and aggregates proposal and projected page
   );
   assert.equal(result.summary.pagesWithProjectedReductionCount, pagesWithReduction);
   assert.equal(result.summary.fullyResolvedPageCount, fullyResolved);
+
+  assert.ok(result.planFingerprint);
+  assert.equal(result.operatorReport.readOnly, true);
+  assert.equal(result.operatorReport.writes, false);
+  assert.equal(result.operatorReport.summary.pageCount, result.summary.pageActionCount);
+  assert.equal(
+    result.operatorReport.summary.simulationReadyCount + result.operatorReport.summary.manualReviewNeededCount,
+    result.operatorReport.summary.pageCount
+  );
 });
