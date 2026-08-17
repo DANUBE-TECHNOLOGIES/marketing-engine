@@ -66,11 +66,21 @@ test("impact preview simulates body and internal-link work without mutating sour
   assert.equal(result.projectionComplete, true);
   assert.equal(result.simulation.simulatedBodyOperations, 1);
   assert.equal(result.simulation.simulatedInternalLinkOperations, 1);
+  assert.deepEqual(result.simulation.nonSimulatedOperationTypes, []);
   assert.ok(result.projected.thinContent <= result.before.thinContent);
   assert.ok(result.projected.internalLink <= result.before.internalLink);
+
+  const avis = result.pages.find((page) => page.pageSlug === "avis");
+  assert.ok(avis);
+  assert.ok(avis.beforeWarnings >= 2);
+  assert.ok(avis.projectedWarnings < avis.beforeWarnings);
+  assert.ok(avis.projectedReduction >= 1);
+  assert.ok(avis.resolvedKinds.includes("thin-content"));
+  assert.ok(avis.resolvedKinds.includes("internal-link"));
+  assert.equal(avis.projectionComplete, true);
 });
 
-test("impact preview declares partial projection when metadata or h1 work remains", () => {
+test("impact preview declares partial projection and exposes unsimulated operation types", () => {
   const source = site();
   const currentPlan = buildLocalSeoQualityUpliftPlan(source, { minimumWords: 120 });
   const result = projectQualityUpliftImpact({
@@ -81,4 +91,10 @@ test("impact preview declares partial projection when metadata or h1 work remain
 
   assert.equal(result.projectionComplete, false);
   assert.equal(result.simulation.nonSimulatedOperations, 1);
+  assert.deepEqual(result.simulation.nonSimulatedOperationTypes, ["strengthen-meta-description"]);
+
+  const avis = result.pages.find((page) => page.pageSlug === "avis");
+  assert.ok(avis);
+  assert.equal(avis.projectionComplete, false);
+  assert.deepEqual(avis.nonSimulatedOperationTypes, ["strengthen-meta-description"]);
 });
