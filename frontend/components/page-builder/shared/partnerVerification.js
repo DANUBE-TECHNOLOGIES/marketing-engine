@@ -47,6 +47,10 @@ const ASSET_RESTRICTIONS = Object.freeze({
     status: "asset-permission-review",
     reason: "Belambra's official legal notice requires prior written authorisation for reproduction or use of its logos and marks.",
   },
+  "mondial-tourisme": {
+    status: "asset-permission-review",
+    reason: "Mondial Tourisme's official website terms prohibit reuse or exploitation of site elements for one's own account; hold logo ingestion until an authorised brand asset or explicit permission is available.",
+  },
   heliades: {
     status: "asset-permission-review",
     reason: "Héliades' official terms prohibit reproduction of its marks and logos without express authorisation.",
