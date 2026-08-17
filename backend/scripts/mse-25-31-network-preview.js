@@ -66,6 +66,31 @@ function compactRow(row = {}) {
   };
 }
 
+function operationPayloadComplete(operation = {}, bodyCopyPreview = null) {
+  if (operation.type === "enrich-body") {
+    return Boolean(bodyCopyPreview?.html && bodyCopyPreview?.title);
+  }
+  if (operation.type === "strengthen-title") {
+    return operation.target?.scope === "page"
+      && operation.target?.field === "seoTitle"
+      && Boolean(String(operation.finalValue || "").trim());
+  }
+  if (operation.type === "strengthen-meta-description") {
+    return operation.target?.scope === "page"
+      && operation.target?.field === "metaDescription"
+      && Boolean(String(operation.finalValue || "").trim());
+  }
+  if (operation.type === "strengthen-h1") {
+    return operation.target?.scope === "block"
+      && operation.target?.blockType === "hero"
+      && operation.target?.field === "title"
+      && operation.target?.blockId !== null
+      && operation.target?.blockId !== undefined
+      && Boolean(String(operation.finalValue || "").trim());
+  }
+  return false;
+}
+
 function executionPayloads(payload = {}) {
   const rows = [];
   for (const agency of payload.agencies || []) {
@@ -76,13 +101,15 @@ function executionPayloads(payload = {}) {
       const bodyCopyPreview = proposal.bodyCopyPreview
         ? JSON.parse(JSON.stringify(proposal.bodyCopyPreview))
         : null;
-      const operationTypes = operations.map((operation) => operation?.type).filter(Boolean);
       const completeOperationTypes = [];
       const incompleteOperationTypes = [];
-      for (const type of operationTypes) {
-        if (type === "enrich-body" && bodyCopyPreview?.html && bodyCopyPreview?.title) completeOperationTypes.push(type);
+      for (const operation of operations) {
+        const type = operation?.type;
+        if (!type) continue;
+        if (operationPayloadComplete(operation, bodyCopyPreview)) completeOperationTypes.push(type);
         else incompleteOperationTypes.push(type);
       }
+      const operationTypes = operations.map((operation) => operation?.type).filter(Boolean);
       rows.push({
         key: `${String(agency.siteSlug || "").trim()}:${String(proposal.pageSlug || "home").trim() || "home"}`,
         agencyId: agency.agencyId ?? null,
@@ -169,6 +196,7 @@ module.exports = {
   isSafePreview,
   jsonRequest,
   normalizeOrigin,
+  operationPayloadComplete,
   operatorOutput,
   positiveInteger,
   run,
