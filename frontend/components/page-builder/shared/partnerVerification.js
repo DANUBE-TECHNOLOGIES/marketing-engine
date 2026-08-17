@@ -51,6 +51,10 @@ const ASSET_RESTRICTIONS = Object.freeze({
     status: "asset-permission-review",
     reason: "Mondial Tourisme's official website terms prohibit reuse or exploitation of site elements for one's own account; hold logo ingestion until an authorised brand asset or explicit permission is available.",
   },
+  "plein-vent": {
+    status: "asset-permission-review",
+    reason: "Plein Vent's official legal notice states that reproduction or representation of the marks and logos shown on its site requires the express authorisation of the rights holder.",
+  },
   heliades: {
     status: "asset-permission-review",
     reason: "Héliades' official terms prohibit reproduction of its marks and logos without express authorisation.",
