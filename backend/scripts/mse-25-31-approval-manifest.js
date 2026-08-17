@@ -21,8 +21,30 @@ function candidateKey(row = {}) {
   return `${String(row.siteSlug || "").trim()}:${String(row.pageSlug || "home").trim() || "home"}`;
 }
 
+function executionPayloadMap(report = {}) {
+  return new Map(
+    (Array.isArray(report.preview?.executionPayloads) ? report.preview.executionPayloads : [])
+      .map((payload) => [String(payload?.key || candidateKey(payload)).trim(), payload])
+      .filter(([key]) => key && !key.startsWith(":"))
+  );
+}
+
+function writePreview(payload = {}) {
+  const bodyCopyPreview = payload.bodyCopyPreview || null;
+  return {
+    payloadComplete: payload.payloadComplete === true,
+    completeOperationTypes: Array.isArray(payload.completeOperationTypes) ? [...payload.completeOperationTypes] : [],
+    incompleteOperationTypes: Array.isArray(payload.incompleteOperationTypes) ? [...payload.incompleteOperationTypes] : [],
+    bodyCopy: bodyCopyPreview ? {
+      title: bodyCopyPreview.title || null,
+      html: bodyCopyPreview.html || null,
+    } : null,
+  };
+}
+
 function approvalCandidates(report = {}) {
   const rows = Array.isArray(report.preview?.allPages) ? report.preview.allPages : [];
+  const payloads = executionPayloadMap(report);
   const seen = new Set();
   const candidates = rows.map((row) => {
     const key = candidateKey(row);
@@ -33,6 +55,13 @@ function approvalCandidates(report = {}) {
       throw error;
     }
     seen.add(key);
+    const payload = payloads.get(key) || null;
+    if ((row.operationTypes || []).length > 0 && !payload) {
+      const error = new Error("Une page candidate ne possède pas de payload d'exécution scellé dans le preflight MSE-25.31.");
+      error.code = "MSE_25_31_APPROVAL_WRITE_PAYLOAD_MISSING";
+      error.details = { key };
+      throw error;
+    }
     return {
       key,
       agencyId: row.agencyId ?? null,
@@ -45,6 +74,9 @@ function approvalCandidates(report = {}) {
       projectedReduction: Number(row.projectedReduction || 0),
       operationTypes: row.operationTypes || [],
       manualReviewReasons: row.manualReviewReasons || [],
+      writePayloadFingerprint: payload ? digest(payload) : null,
+      writePayloadComplete: payload?.payloadComplete === true,
+      writePreview: payload ? writePreview(payload) : null,
       approved: false,
       reviewer: null,
       reviewedAt: null,
@@ -77,6 +109,8 @@ function createApprovalManifest(report = {}) {
       candidateCount: candidates.length,
       approvedCount: 0,
       rejectedOrPendingCount: candidates.length,
+      payloadCompleteCount: candidates.filter((item) => item.writePayloadComplete).length,
+      payloadIncompleteCount: candidates.filter((item) => !item.writePayloadComplete).length,
       manualReviewNeededCount: candidates.filter((item) => item.executionClass === "manual-review-needed").length,
     },
     candidates,
@@ -128,6 +162,8 @@ module.exports = {
   createApprovalManifest,
   defaultOutputPath,
   digest,
+  executionPayloadMap,
   run,
   stableValue,
+  writePreview,
 };
