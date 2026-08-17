@@ -55,6 +55,34 @@ function report() {
           manualReviewReasons: ["strengthen-meta-description"],
         },
       ],
+      executionPayloads: [
+        {
+          key: "gien:avis",
+          agencyId: 1,
+          siteSlug: "gien",
+          city: "Gien",
+          pageSlug: "avis",
+          operations: [{ type: "enrich-body", strategy: "append-or-enrich-existing-editorial-copy", preserveExisting: true }],
+          bodyCopyPreview: { title: "Informations utiles", html: "<p>Texte exact approuvé.</p>" },
+          safeguards: { preserveManualCopy: true },
+          completeOperationTypes: ["enrich-body"],
+          incompleteOperationTypes: [],
+          payloadComplete: true,
+        },
+        {
+          key: "nevers:services",
+          agencyId: 2,
+          siteSlug: "nevers",
+          city: "Nevers",
+          pageSlug: "services",
+          operations: [{ type: "strengthen-meta-description" }],
+          bodyCopyPreview: null,
+          safeguards: {},
+          completeOperationTypes: [],
+          incompleteOperationTypes: ["strengthen-meta-description"],
+          payloadComplete: false,
+        },
+      ],
     },
     determinism: {
       verified: true,
@@ -74,7 +102,7 @@ function approvedManifest(sourceReport = report()) {
   return manifest;
 }
 
-test("execution plan contains only explicitly approved pages and never writes", () => {
+test("execution plan contains only explicitly approved pages with exact sealed payload and never writes", () => {
   const source = report();
   const plan = buildExecutionPlan(approvedManifest(source), source);
   assert.equal(plan.readOnly, true);
@@ -84,7 +112,11 @@ test("execution plan contains only explicitly approved pages and never writes", 
   assert.equal(plan.executable, true);
   assert.equal(plan.pages.length, 1);
   assert.equal(plan.pages[0].key, "gien:avis");
+  assert.equal(plan.pages[0].executionPayloadComplete, true);
+  assert.equal(plan.pages[0].executionPayload.bodyCopyPreview.html, "<p>Texte exact approuvé.</p>");
   assert.equal(plan.summary.approvedCount, 1);
+  assert.equal(plan.summary.payloadCompleteCount, 1);
+  assert.equal(plan.summary.payloadIncompleteCount, 0);
   assert.equal(plan.summary.skippedCount, 1);
   assert.match(plan.executionPlanFingerprint, /^[0-9a-f]{64}$/);
   assert.match(plan.source.approvalDecisionFingerprint, /^[0-9a-f]{64}$/);
@@ -120,7 +152,7 @@ test("execution plan refuses approval candidate mutation inherited from manifest
   );
 });
 
-test("execution plan carries approved manual-review pages only after explicit audit", () => {
+test("approved manual-review page remains non-executable until its exact write payload exists", () => {
   const source = report();
   const manifest = createApprovalManifest(source);
   manifest.candidates[1].approved = true;
@@ -128,6 +160,9 @@ test("execution plan carries approved manual-review pages only after explicit au
   manifest.candidates[1].reviewedAt = "2026-08-17T20:31:00.000Z";
   const plan = buildExecutionPlan(manifest, source);
   assert.equal(plan.summary.approvedManualReviewCount, 1);
+  assert.equal(plan.summary.payloadIncompleteCount, 1);
+  assert.equal(plan.executable, false);
   assert.equal(plan.pages[0].executionClass, "manual-review-needed");
   assert.deepEqual(plan.pages[0].manualReviewReasons, ["strengthen-meta-description"]);
+  assert.deepEqual(plan.incompletePages[0].incompleteOperationTypes, ["strengthen-meta-description"]);
 });
