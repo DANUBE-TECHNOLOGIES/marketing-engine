@@ -14,6 +14,13 @@ function stableValue(value) {
   return value;
 }
 
+function digest(value) {
+  return crypto
+    .createHash("sha256")
+    .update(JSON.stringify(stableValue(value)))
+    .digest("hex");
+}
+
 function fingerprintPayload(preview = {}) {
   return {
     version: preview.version || "mse-25.31",
@@ -52,12 +59,44 @@ function fingerprintPayload(preview = {}) {
 }
 
 function qualityUpliftFingerprint(preview = {}) {
-  const json = JSON.stringify(stableValue(fingerprintPayload(preview)));
-  return crypto.createHash("sha256").update(json).digest("hex");
+  return digest(fingerprintPayload(preview));
+}
+
+function networkFingerprintPayload(preview = {}) {
+  return {
+    version: preview.version || "mse-25.31",
+    minimumWords: Number(preview.minimumWords || 120),
+    agencies: (preview.agencies || [])
+      .map((agency) => ({
+        siteSlug: agency.siteSlug || null,
+        agencyId: agency.agencyId || null,
+        fingerprint: agency.planFingerprint || qualityUpliftFingerprint(agency),
+      }))
+      .sort((left, right) =>
+        String(left.siteSlug || "").localeCompare(String(right.siteSlug || ""), "fr")
+      ),
+    excludedSites: (preview.excludedSites || [])
+      .map((site) => ({
+        siteSlug: site.siteSlug || null,
+        agencyId: site.agencyId || null,
+        status: site.status || null,
+        reason: site.reason || null,
+      }))
+      .sort((left, right) =>
+        String(left.siteSlug || "").localeCompare(String(right.siteSlug || ""), "fr")
+      ),
+  };
+}
+
+function networkQualityUpliftFingerprint(preview = {}) {
+  return digest(networkFingerprintPayload(preview));
 }
 
 module.exports = {
+  digest,
   fingerprintPayload,
+  networkFingerprintPayload,
+  networkQualityUpliftFingerprint,
   qualityUpliftFingerprint,
   stableValue,
 };
