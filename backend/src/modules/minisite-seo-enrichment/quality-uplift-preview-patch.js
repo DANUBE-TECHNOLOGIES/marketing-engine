@@ -12,6 +12,10 @@ const {
 const {
   buildBodyCopyPreview,
 } = require("./quality-uplift-copy-preview");
+const {
+  networkQualityUpliftFingerprint,
+  qualityUpliftFingerprint,
+} = require("./quality-uplift-fingerprint");
 
 function siteFromAgencyPlan(plan = {}) {
   return {
@@ -62,13 +66,23 @@ function installQualityUpliftPreview(ServiceClass) {
     const proposals = proposalPlan.proposals.map((proposal, index) =>
       proposalWithCopyPreview(proposal, actionPlan.actions[index], site)
     );
+    const fingerprintSource = {
+      version: "mse-25.31",
+      siteSlug: plan.siteSlug,
+      agencyId: plan.agencyId,
+      minimumWords: Number(minimumWords || 120),
+      actions: actionPlan.actions,
+    };
+    const planFingerprint = qualityUpliftFingerprint(fingerprintSource);
 
     return {
       operation: "preview-quality-uplift",
       writes: false,
       destructive: false,
       readOnly: true,
+      minimumWords: Number(minimumWords || 120),
       ...plan,
+      planFingerprint,
       actions: actionPlan.actions,
       actionSummary: {
         actionCount: actionPlan.actionCount,
@@ -111,7 +125,7 @@ function installQualityUpliftPreview(ServiceClass) {
       );
     }
 
-    return {
+    const response = {
       version: "mse-25.31",
       operation: "preview-network-quality-uplift",
       writes: false,
@@ -168,6 +182,11 @@ function installQualityUpliftPreview(ServiceClass) {
           0
         ),
       },
+    };
+
+    return {
+      ...response,
+      planFingerprint: networkQualityUpliftFingerprint(response),
     };
   };
 
