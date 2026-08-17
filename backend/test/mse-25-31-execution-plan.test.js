@@ -84,11 +84,19 @@ function report() {
         },
       ],
     },
+    executionPayloadAudit: {
+      ok: true,
+      candidateCount: 2,
+      payloadCount: 2,
+      completePayloadCount: 1,
+      incompletePayloadCount: 1,
+    },
     determinism: {
       verified: true,
       previewCount: 2,
       firstFingerprint: FP,
       secondFingerprint: FP,
+      executionPayloadsVerified: true,
     },
   };
 }
