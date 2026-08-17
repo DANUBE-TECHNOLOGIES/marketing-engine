@@ -89,6 +89,10 @@ function installQualityUpliftPreview(ServiceClass) {
           (sum, agency) => sum + Number(agency.summary?.thinContentOpportunityCount || 0),
           0
         ),
+        internalLinkOpportunityCount: agencies.reduce(
+          (sum, agency) => sum + Number(agency.summary?.internalLinkOpportunityCount || 0),
+          0
+        ),
         totalOpportunityCount: agencies.reduce(
           (sum, agency) => sum + Number(agency.summary?.totalOpportunityCount || 0),
           0
