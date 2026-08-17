@@ -83,7 +83,7 @@ async function downloadAsset(url) {
   const response = await fetch(url, {
     redirect: "follow",
     headers: {
-      "user-agent": "Mozilla/5.0 (compatible; MondescalePartnerAssetAcquisition/2.0)",
+      "user-agent": "Mozilla/5.0 (compatible; MondescalePartnerAssetAcquisition/2.1)",
       accept: "image/svg+xml,image/webp,image/png,image/*;q=0.9,*/*;q=0.1",
     },
   });
@@ -101,7 +101,7 @@ function detectFormat(buffer, contentType, url) {
   throw new Error(`unsupported asset format: ${contentType || "unknown"}`);
 }
 
-async function svgToWebp(inputPath, outputPath) {
+async function convertToWebp(inputPath, outputPath, inputFormat) {
   if (commandExists("magick")) {
     run("magick", [inputPath, "-background", "none", "-resize", "520x180>", "-gravity", "center", "-extent", "600x240", "-quality", "88", outputPath]);
     return "imagemagick-magick";
@@ -110,14 +110,29 @@ async function svgToWebp(inputPath, outputPath) {
     run("convert", [inputPath, "-background", "none", "-resize", "520x180>", "-gravity", "center", "-extent", "600x240", "-quality", "88", outputPath]);
     return "imagemagick-convert";
   }
-  if (commandExists("rsvg-convert") && commandExists("cwebp")) {
+  if (inputFormat === "svg" && commandExists("rsvg-convert") && commandExists("cwebp")) {
     const pngPath = `${outputPath}.png`;
     run("rsvg-convert", ["-w", "520", "-h", "180", "-o", pngPath, inputPath]);
     run("cwebp", ["-quiet", "-q", "88", "-alpha_q", "100", pngPath, "-o", outputPath]);
     fs.rmSync(pngPath, { force: true });
     return "rsvg-cwebp";
   }
-  return null;
+  if (inputFormat === "png" && commandExists("cwebp")) {
+    run("cwebp", ["-quiet", "-q", "88", "-alpha_q", "100", inputPath, "-o", outputPath]);
+    return "cwebp";
+  }
+  try {
+    const sharpModule = await import("sharp");
+    const sharp = sharpModule.default || sharpModule;
+    await sharp(inputPath)
+      .resize(520, 180, { fit: "inside", withoutEnlargement: true })
+      .extend({ top: 30, bottom: 30, left: 40, right: 40, background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .webp({ quality: 88, alphaQuality: 100 })
+      .toFile(outputPath);
+    return "sharp";
+  } catch {
+    return null;
+  }
 }
 
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "mle-partner-logo-"));
@@ -131,16 +146,22 @@ try {
   let generatedPath = sourcePath;
   let converter = "none-required";
 
-  if (format === "svg") {
+  if (format === "svg" || format === "png") {
     const webpPath = path.join(tempDir, `${partnerId}.webp`);
-    const convertedBy = await svgToWebp(sourcePath, webpPath);
+    const convertedBy = await convertToWebp(sourcePath, webpPath, format);
     if (convertedBy) {
       outputFormat = "webp";
       generatedPath = webpPath;
       converter = convertedBy;
-    } else {
+    } else if (format === "svg") {
       converter = "none-keep-vetted-svg";
+    } else {
+      throw new Error("PNG source requires a WebP converter; refusing to publish PNG outside the accepted public asset policy");
     }
+  }
+
+  if (!["webp", "svg"].includes(outputFormat)) {
+    throw new Error(`output format ${outputFormat} violates accepted public asset policy`);
   }
 
   const targetName = `${partnerId}.${outputFormat}`;
