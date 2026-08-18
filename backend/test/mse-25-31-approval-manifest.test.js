@@ -10,9 +10,33 @@ const {
   writePreview,
 } = require("../scripts/mse-25-31-approval-manifest");
 const { EXPECTED_BRANCH } = require("../scripts/mse-25-31-preflight");
+const {
+  EXPECTED_WORKFLOW_BLOB_SHA,
+  GITHUB_REPOSITORY,
+  GITHUB_WORKFLOW_ID,
+  GITHUB_WORKFLOW_NAME,
+  GITHUB_WORKFLOW_PATH,
+} = require("../scripts/mse-25-31-ci-attestation");
 
 const FP = "a".repeat(64);
 const HEAD = "b".repeat(40);
+
+function ciAttestation() {
+  return {
+    ok: true,
+    repository: GITHUB_REPOSITORY,
+    workflowId: GITHUB_WORKFLOW_ID,
+    workflowName: GITHUB_WORKFLOW_NAME,
+    workflowPath: GITHUB_WORKFLOW_PATH,
+    workflowBlobSha: EXPECTED_WORKFLOW_BLOB_SHA,
+    runId: 321,
+    headSha: HEAD,
+    headBranch: EXPECTED_BRANCH,
+    event: "push",
+    status: "completed",
+    conclusion: "success",
+  };
+}
 
 function payloadForRow(row) {
   const types = row.operationTypes || [];
@@ -41,7 +65,14 @@ function preflightReport(rows) {
     readOnly: true,
     writes: false,
     destructive: false,
-    repository: { branch: EXPECTED_BRANCH, head: HEAD, dirty: false },
+    repository: {
+      branch: EXPECTED_BRANCH,
+      head: HEAD,
+      dirty: false,
+      workflowPath: GITHUB_WORKFLOW_PATH,
+      workflowBlobSha: EXPECTED_WORKFLOW_BLOB_SHA,
+      ciAttestation: ciAttestation(),
+    },
     context: {
       backendOrigin: "http://127.0.0.1:4000",
       tenantSlug: "mondescale",
