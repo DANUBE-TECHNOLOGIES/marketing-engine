@@ -3,13 +3,35 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const {
-  assertReport,
-} = require("../scripts/mse-25-31-preflight-check");
+const { assertReport } = require("../scripts/mse-25-31-preflight-check");
 const { EXPECTED_BRANCH } = require("../scripts/mse-25-31-preflight");
+const {
+  EXPECTED_WORKFLOW_BLOB_SHA,
+  GITHUB_REPOSITORY,
+  GITHUB_WORKFLOW_ID,
+  GITHUB_WORKFLOW_NAME,
+  GITHUB_WORKFLOW_PATH,
+} = require("../scripts/mse-25-31-ci-attestation");
 
 const FP = "c".repeat(64);
 const HEAD = "d".repeat(40);
+
+function ciAttestation() {
+  return {
+    ok: true,
+    repository: GITHUB_REPOSITORY,
+    workflowId: GITHUB_WORKFLOW_ID,
+    workflowName: GITHUB_WORKFLOW_NAME,
+    workflowPath: GITHUB_WORKFLOW_PATH,
+    workflowBlobSha: EXPECTED_WORKFLOW_BLOB_SHA,
+    runId: 321,
+    headSha: HEAD,
+    headBranch: EXPECTED_BRANCH,
+    event: "push",
+    status: "completed",
+    conclusion: "success",
+  };
+}
 
 function validReport() {
   return {
@@ -18,7 +40,14 @@ function validReport() {
     readOnly: true,
     writes: false,
     destructive: false,
-    repository: { branch: EXPECTED_BRANCH, head: HEAD, dirty: false },
+    repository: {
+      branch: EXPECTED_BRANCH,
+      head: HEAD,
+      dirty: false,
+      workflowPath: GITHUB_WORKFLOW_PATH,
+      workflowBlobSha: EXPECTED_WORKFLOW_BLOB_SHA,
+      ciAttestation: ciAttestation(),
+    },
     context: {
       backendOrigin: "http://127.0.0.1:4000",
       tenantSlug: "mondescale",
@@ -60,7 +89,7 @@ function validReport() {
   };
 }
 
-test("offline check accepts a coherent read-only preflight report", () => {
+test("offline check accepts a coherent read-only preflight report with push CI proof", () => {
   const result = assertReport(validReport(), {
     expectedHead: HEAD,
     backendOrigin: "http://127.0.0.1:4000/",
@@ -70,6 +99,7 @@ test("offline check accepts a coherent read-only preflight report", () => {
   assert.equal(result.ok, true);
   assert.equal(result.planFingerprint, FP);
   assert.equal(result.repository.head, HEAD);
+  assert.equal(result.repository.ciAttestation.runId, 321);
   assert.equal(result.executionPayloadAudit.completePayloadCount, 1);
 });
 
@@ -107,6 +137,22 @@ test("offline check rejects a stale recorded payload audit", () => {
   assert.throws(
     () => assertReport(report),
     (error) => error.code === "MSE_25_31_PREFLIGHT_REPORT_EXECUTION_PAYLOAD_AUDIT_INVALID"
+  );
+});
+
+test("offline check rejects substituted workflow or CI attestation", () => {
+  const workflow = validReport();
+  workflow.repository.workflowBlobSha = "f".repeat(40);
+  assert.throws(
+    () => assertReport(workflow),
+    (error) => error.code === "MSE_25_31_PREFLIGHT_REPORT_CI_WORKFLOW_MISMATCH"
+  );
+
+  const attestation = validReport();
+  attestation.repository.ciAttestation.headSha = "0".repeat(40);
+  assert.throws(
+    () => assertReport(attestation),
+    (error) => error.code === "MSE_25_31_CI_ATTESTATION_INVALID"
   );
 });
 
