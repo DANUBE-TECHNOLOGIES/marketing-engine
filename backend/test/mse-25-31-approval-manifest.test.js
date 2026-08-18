@@ -6,11 +6,37 @@ const assert = require("node:assert/strict");
 const {
   approvalCandidates,
   createApprovalManifest,
+  operationWritePreview,
+  writePreview,
 } = require("../scripts/mse-25-31-approval-manifest");
 const { EXPECTED_BRANCH } = require("../scripts/mse-25-31-preflight");
+const {
+  EXPECTED_WORKFLOW_BLOB_SHA,
+  GITHUB_REPOSITORY,
+  GITHUB_WORKFLOW_ID,
+  GITHUB_WORKFLOW_NAME,
+  GITHUB_WORKFLOW_PATH,
+} = require("../scripts/mse-25-31-ci-attestation");
 
 const FP = "a".repeat(64);
 const HEAD = "b".repeat(40);
+
+function ciAttestation() {
+  return {
+    ok: true,
+    repository: GITHUB_REPOSITORY,
+    workflowId: GITHUB_WORKFLOW_ID,
+    workflowName: GITHUB_WORKFLOW_NAME,
+    workflowPath: GITHUB_WORKFLOW_PATH,
+    workflowBlobSha: EXPECTED_WORKFLOW_BLOB_SHA,
+    runId: 321,
+    headSha: HEAD,
+    headBranch: EXPECTED_BRANCH,
+    event: "push",
+    status: "completed",
+    conclusion: "success",
+  };
+}
 
 function payloadForRow(row) {
   const types = row.operationTypes || [];
@@ -39,7 +65,14 @@ function preflightReport(rows) {
     readOnly: true,
     writes: false,
     destructive: false,
-    repository: { branch: EXPECTED_BRANCH, head: HEAD, dirty: false },
+    repository: {
+      branch: EXPECTED_BRANCH,
+      head: HEAD,
+      dirty: false,
+      workflowPath: GITHUB_WORKFLOW_PATH,
+      workflowBlobSha: EXPECTED_WORKFLOW_BLOB_SHA,
+      ciAttestation: ciAttestation(),
+    },
     context: {
       backendOrigin: "http://127.0.0.1:4000",
       tenantSlug: "mondescale",
@@ -117,9 +150,60 @@ test("approval manifest starts with every candidate explicitly unapproved and ex
   assert.match(bodyCandidate.writePayloadFingerprint, /^[0-9a-f]{64}$/);
   assert.equal(bodyCandidate.writePayloadComplete, true);
   assert.equal(bodyCandidate.writePreview.bodyCopy.html, "<p>Texte exact gien.</p>");
+  assert.deepEqual(bodyCandidate.writePreview.operations, [
+    { type: "enrich-body", target: null, finalValue: null },
+  ]);
   assert.equal(metaCandidate.writePayloadComplete, false);
   assert.equal(metaCandidate.writePreview.bodyCopy, null);
   assert.deepEqual(metaCandidate.writePreview.incompleteOperationTypes, ["strengthen-meta-description"]);
+  assert.deepEqual(metaCandidate.writePreview.operations, [
+    { type: "strengthen-meta-description", target: null, finalValue: null },
+  ]);
+});
+
+test("operation approval preview exposes exact metadata and internal-link write values", () => {
+  const metadata = operationWritePreview({
+    type: "strengthen-meta-description",
+    target: { scope: "page", field: "metaDescription" },
+    finalValue: "Votre agence de voyages à Gien vous accompagne dans vos projets.",
+  });
+  assert.deepEqual(metadata, {
+    type: "strengthen-meta-description",
+    target: { scope: "page", field: "metaDescription" },
+    finalValue: "Votre agence de voyages à Gien vous accompagne dans vos projets.",
+  });
+
+  const internalLink = operationWritePreview({
+    type: "add-internal-link",
+    target: { scope: "block", pageSlug: "home", blockType: "rich_text", blockId: "copy-home", field: "content.html" },
+    sourceValueFingerprint: "c".repeat(64),
+    link: { href: "/agence/gien/avis", label: "Découvrir Avis clients" },
+    finalValue: "<p>Accueil</p><p><a href=\"/agence/gien/avis\">Découvrir Avis clients</a></p>",
+  });
+  assert.equal(internalLink.target.blockId, "copy-home");
+  assert.equal(internalLink.sourceValueFingerprint, "c".repeat(64));
+  assert.deepEqual(internalLink.link, { href: "/agence/gien/avis", label: "Découvrir Avis clients" });
+  assert.match(internalLink.finalValue, /href=\"\/agence\/gien\/avis\"/);
+});
+
+test("write preview defensively copies exact operation targets and links", () => {
+  const payload = {
+    payloadComplete: true,
+    completeOperationTypes: ["add-internal-link"],
+    incompleteOperationTypes: [],
+    operations: [{
+      type: "add-internal-link",
+      target: { scope: "block", pageSlug: "home", blockType: "rich_text", blockId: "copy-home", field: "content.html" },
+      sourceValueFingerprint: "d".repeat(64),
+      link: { href: "/avis", label: "Avis" },
+      finalValue: "<p><a href=\"/avis\">Avis</a></p>",
+    }],
+  };
+  const preview = writePreview(payload);
+  payload.operations[0].target.blockId = "tampered";
+  payload.operations[0].link.href = "/tampered";
+  assert.equal(preview.operations[0].target.blockId, "copy-home");
+  assert.equal(preview.operations[0].link.href, "/avis");
 });
 
 test("candidate set fingerprint is stable regardless of incoming row order", () => {

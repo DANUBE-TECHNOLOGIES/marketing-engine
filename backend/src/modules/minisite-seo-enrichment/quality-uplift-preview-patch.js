@@ -1,5 +1,6 @@
 "use strict";
 
+const crypto = require("node:crypto");
 const { buildLocalSeoQualityUpliftPlan } = require("./quality-uplift-planner");
 const { consolidateQualityUpliftActions } = require("./quality-uplift-action-planner");
 const { buildQualityUpliftProposal } = require("./quality-uplift-proposal-planner");
@@ -7,6 +8,8 @@ const { buildBodyCopyPreview } = require("./quality-uplift-copy-preview");
 const { projectQualityUpliftImpact } = require("./quality-uplift-impact-preview");
 const { buildQualityUpliftOperatorReport } = require("./quality-uplift-operator-report");
 const { networkQualityUpliftFingerprint, qualityUpliftFingerprint } = require("./quality-uplift-fingerprint");
+const { titleForPage, descriptionForPage } = require("./generator");
+const { buildHeroTitle } = require("./content-optimizer");
 
 function siteFromAgencyPlan(plan = {}) {
   return {
@@ -23,10 +26,123 @@ function siteFromAgencyPlan(plan = {}) {
   };
 }
 
+function normalizedBlockType(block = {}) {
+  return String(block.blockType || block.type || "").trim().toLowerCase().replace(/[_\s]+/g, "-");
+}
+
+function exactHeroTarget(page = {}) {
+  const heroes = (page.blocks || []).filter((block) => normalizedBlockType(block).includes("hero"));
+  if (heroes.length !== 1) return null;
+  const hero = heroes[0];
+  return {
+    scope: "block",
+    blockType: "hero",
+    blockId: hero.id ?? null,
+    field: "title",
+  };
+}
+
+function sha256Text(value) {
+  return crypto.createHash("sha256").update(String(value ?? ""), "utf8").digest("hex");
+}
+
+function exactHeroSourceValue(page = {}, target = null) {
+  if (!target || target.blockId === null || target.blockId === undefined) return null;
+  const block = (page.blocks || []).find((item) => String(item?.id) === String(target.blockId));
+  if (!block || normalizedBlockType(block) !== "hero") return null;
+  return String(block.content?.title ?? "");
+}
+
+function sealOperationFinalValue(operation = {}, site = {}, page = {}) {
+  if (operation.type === "strengthen-title") {
+    return {
+      ...operation,
+      target: { scope: "page", field: "seoTitle" },
+      sourceValueFingerprint: sha256Text(page.seoTitle ?? ""),
+      finalValue: titleForPage({ agency: site.agency || {}, page }),
+    };
+  }
+  if (operation.type === "strengthen-meta-description") {
+    return {
+      ...operation,
+      target: { scope: "page", field: "metaDescription" },
+      sourceValueFingerprint: sha256Text(page.metaDescription ?? page.seoDescription ?? ""),
+      finalValue: descriptionForPage({ agency: site.agency || {}, page }),
+    };
+  }
+  if (operation.type === "strengthen-h1") {
+    const target = exactHeroTarget(page);
+    const sourceValue = exactHeroSourceValue(page, target);
+    return {
+      ...operation,
+      target,
+      sourceValueFingerprint: sourceValue === null ? null : sha256Text(sourceValue),
+      finalValue: buildHeroTitle({ agency: site.agency || {}, page }),
+    };
+  }
+  return { ...operation };
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function exactInternalLinkSource(site = {}, operation = {}) {
+  for (const sourceSlug of operation.suggestedSourceSlugs || []) {
+    const page = (site.pages || []).find((item) => String(item?.slug || "") === String(sourceSlug || ""));
+    if (!page) continue;
+    const block = (page.blocks || []).find((item) =>
+      item?.id !== null
+      && item?.id !== undefined
+      && normalizedBlockType(item).includes("rich-text")
+      && typeof item?.content?.html === "string"
+    );
+    if (block) return { page, block };
+  }
+  return null;
+}
+
+function sealInternalLinkOperation(operation = {}, proposal = {}, site = {}, targetPage = {}) {
+  const href = String(proposal?.diagnostics?.internalLink?.path || "").trim();
+  const source = exactInternalLinkSource(site, operation);
+  if (!href || !source) return { ...operation };
+
+  const sourceHtml = String(source.block.content?.html || "");
+  const targetLabel = String(targetPage.title || targetPage.slug || proposal.pageSlug || "cette page").trim();
+  const label = `Découvrir ${targetLabel}`;
+  const linkHtml = `<p><a href="${escapeHtml(href)}">${escapeHtml(label)}</a></p>`;
+
+  return {
+    ...operation,
+    target: {
+      scope: "block",
+      pageSlug: source.page.slug || null,
+      blockType: "rich_text",
+      blockId: source.block.id,
+      field: "content.html",
+    },
+    sourceValueFingerprint: sha256Text(sourceHtml),
+    link: { href, label },
+    finalValue: `${sourceHtml}${linkHtml}`,
+  };
+}
+
 function proposalWithCopyPreview(proposal, action, site) {
   const page = (site.pages || []).find((item) => String(item?.slug || "") === String(proposal?.pageSlug || "")) || null;
   return {
     ...proposal,
+    operations: page
+      ? (proposal.operations || []).map((operation) =>
+          operation.type === "add-internal-link"
+            ? sealInternalLinkOperation(operation, proposal, site, page)
+            : sealOperationFinalValue(operation, site, page)
+        )
+      : [...(proposal.operations || [])],
     bodyCopyPreview: page ? buildBodyCopyPreview({ agency: site.agency || {}, page, action }) : null,
   };
 }
@@ -88,6 +204,22 @@ function installQualityUpliftPreview(ServiceClass) {
         proposalCount: proposalPlan.proposalCount,
         operationCount: proposalPlan.operationCount,
         bodyCopyPreviewCount: proposals.filter((item) => item.bodyCopyPreview).length,
+        exactMetadataValueCount: proposals.reduce(
+          (count, proposal) => count + (proposal.operations || []).filter((operation) =>
+            ["strengthen-title", "strengthen-meta-description", "strengthen-h1"].includes(operation.type)
+            && String(operation.finalValue || "").trim()
+          ).length,
+          0
+        ),
+        exactInternalLinkValueCount: proposals.reduce(
+          (count, proposal) => count + (proposal.operations || []).filter((operation) =>
+            operation.type === "add-internal-link"
+            && String(operation.finalValue || "").trim()
+            && operation.target?.blockId !== null
+            && operation.target?.blockId !== undefined
+          ).length,
+          0
+        ),
       },
       impact,
       excludedPages: agencyPlan.excludedPages || [],
@@ -130,6 +262,8 @@ function installQualityUpliftPreview(ServiceClass) {
         proposalCount: sum(agencies, ["proposalSummary", "proposalCount"]),
         proposedOperationCount: sum(agencies, ["proposalSummary", "operationCount"]),
         bodyCopyPreviewCount: sum(agencies, ["proposalSummary", "bodyCopyPreviewCount"]),
+        exactMetadataValueCount: sum(agencies, ["proposalSummary", "exactMetadataValueCount"]),
+        exactInternalLinkValueCount: sum(agencies, ["proposalSummary", "exactInternalLinkValueCount"]),
         projectedOpportunityCount: sum(agencies, ["impact", "projected", "total"]),
         projectedWarningReduction: sum(agencies, ["impact", "projectedReduction", "total"]),
         projectionCompleteAgencyCount: agencies.filter((agency) => agency.impact?.projectionComplete === true).length,
@@ -150,4 +284,17 @@ function installQualityUpliftPreview(ServiceClass) {
   return ServiceClass;
 }
 
-module.exports = { installQualityUpliftPreview, projectedPages, proposalWithCopyPreview, siteFromAgencyPlan, sum };
+module.exports = {
+  exactHeroSourceValue,
+  exactHeroTarget,
+  exactInternalLinkSource,
+  installQualityUpliftPreview,
+  normalizedBlockType,
+  projectedPages,
+  proposalWithCopyPreview,
+  sealInternalLinkOperation,
+  sealOperationFinalValue,
+  sha256Text,
+  siteFromAgencyPlan,
+  sum,
+};

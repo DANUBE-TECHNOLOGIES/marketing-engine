@@ -52,6 +52,77 @@ function approvedExecutionRows(manifest = {}, preflightReport = {}) {
     .sort((left, right) => left.key.localeCompare(right.key, "fr"));
 }
 
+function operationWriteTarget(page = {}, operation = {}, index = 0) {
+  const siteSlug = String(page.siteSlug || "").trim();
+  const pageSlug = String(page.pageSlug || "home").trim() || "home";
+  if (!siteSlug || !operation?.type) return null;
+
+  if (operation.type === "enrich-body") {
+    return {
+      targetKey: `${siteSlug}:${pageSlug}:blocks:append-editorial-copy`,
+      candidateKey: page.key,
+      operationType: operation.type,
+      operationIndex: index,
+    };
+  }
+  if (operation.type === "strengthen-title") {
+    return {
+      targetKey: `${siteSlug}:${pageSlug}:page:seoTitle`,
+      candidateKey: page.key,
+      operationType: operation.type,
+      operationIndex: index,
+    };
+  }
+  if (operation.type === "strengthen-meta-description") {
+    return {
+      targetKey: `${siteSlug}:${pageSlug}:page:metaDescription`,
+      candidateKey: page.key,
+      operationType: operation.type,
+      operationIndex: index,
+    };
+  }
+  if (operation.type === "strengthen-h1") {
+    const blockId = operation.target?.blockId;
+    if (blockId === null || blockId === undefined) return null;
+    return {
+      targetKey: `${siteSlug}:${pageSlug}:block:${String(blockId)}:title`,
+      candidateKey: page.key,
+      operationType: operation.type,
+      operationIndex: index,
+    };
+  }
+  if (operation.type === "add-internal-link") {
+    const sourcePageSlug = String(operation.target?.pageSlug || "").trim();
+    const blockId = operation.target?.blockId;
+    if (!sourcePageSlug || blockId === null || blockId === undefined) return null;
+    return {
+      targetKey: `${siteSlug}:${sourcePageSlug}:block:${String(blockId)}:content.html`,
+      candidateKey: page.key,
+      operationType: operation.type,
+      operationIndex: index,
+    };
+  }
+  return null;
+}
+
+function writeTargetCollisions(pages = []) {
+  const byTarget = new Map();
+  for (const page of pages || []) {
+    const operations = page.executionPayload?.operations || [];
+    operations.forEach((operation, index) => {
+      const target = operationWriteTarget(page, operation, index);
+      if (!target) return;
+      const rows = byTarget.get(target.targetKey) || [];
+      rows.push(target);
+      byTarget.set(target.targetKey, rows);
+    });
+  }
+  return Array.from(byTarget.entries())
+    .filter(([, rows]) => rows.length > 1)
+    .map(([targetKey, rows]) => ({ targetKey, writes: rows }))
+    .sort((left, right) => left.targetKey.localeCompare(right.targetKey, "fr"));
+}
+
 function buildExecutionPlan(manifest = {}, preflightReport = {}) {
   const verifiedApproval = assertApprovalManifest(manifest, preflightReport);
   const pages = approvedExecutionRows(manifest, preflightReport);
@@ -65,6 +136,8 @@ function buildExecutionPlan(manifest = {}, preflightReport = {}) {
       note: page.approval.note,
     })),
   });
+  const incompletePages = pages.filter((page) => page.executionPayloadComplete !== true);
+  const collisions = writeTargetCollisions(pages);
 
   const executionPlanFingerprint = digest({
     version: "mse-25.31",
@@ -72,8 +145,8 @@ function buildExecutionPlan(manifest = {}, preflightReport = {}) {
     candidateSetFingerprint: verifiedApproval.candidateSetFingerprint,
     approvalDecisionFingerprint,
     pages,
+    writeTargetCollisions: collisions,
   });
-  const incompletePages = pages.filter((page) => page.executionPayloadComplete !== true);
 
   return {
     version: "mse-25.31",
@@ -83,7 +156,7 @@ function buildExecutionPlan(manifest = {}, preflightReport = {}) {
     writes: false,
     destructive: false,
     publicWrites: false,
-    executable: pages.length > 0 && incompletePages.length === 0,
+    executable: pages.length > 0 && incompletePages.length === 0 && collisions.length === 0,
     source: {
       repository: {
         branch: preflightReport.repository?.branch || null,
@@ -102,12 +175,14 @@ function buildExecutionPlan(manifest = {}, preflightReport = {}) {
       approvedManualReviewCount: pages.filter((page) => page.executionClass === "manual-review-needed").length,
       payloadCompleteCount: pages.length - incompletePages.length,
       payloadIncompleteCount: incompletePages.length,
+      writeTargetCollisionCount: collisions.length,
       projectedWarningReduction: pages.reduce((sum, page) => sum + Number(page.projectedReduction || 0), 0),
     },
     incompletePages: incompletePages.map((page) => ({
       key: page.key,
       incompleteOperationTypes: page.incompleteOperationTypes,
     })),
+    writeTargetCollisions: collisions,
     pages,
   };
 }
@@ -140,6 +215,7 @@ function run({ approvalManifestPath, preflightReportPath, output, emitOutput = t
     approvalDecisionFingerprint: plan.source.approvalDecisionFingerprint,
     summary: plan.summary,
     incompletePages: plan.incompletePages,
+    writeTargetCollisions: plan.writeTargetCollisions,
   };
   if (emitOutput) console.log(JSON.stringify(result, null, 2));
   return result;
@@ -164,5 +240,7 @@ module.exports = {
   buildExecutionPlan,
   defaultOutputPath,
   executionPayloadMap,
+  operationWriteTarget,
   run,
+  writeTargetCollisions,
 };

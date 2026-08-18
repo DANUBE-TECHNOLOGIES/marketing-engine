@@ -8,6 +8,11 @@ const {
   assertFingerprint,
   assertSafePreview,
 } = require("./mse-25-31-preflight");
+const {
+  EXPECTED_WORKFLOW_BLOB_SHA,
+  GITHUB_WORKFLOW_PATH,
+  assertAttestation,
+} = require("./mse-25-31-ci-attestation");
 const { normalizeOrigin } = require("./mse-25-31-network-preview");
 
 const COMMIT_SHA_PATTERN = /^[0-9a-f]{40}$/i;
@@ -99,6 +104,16 @@ function assertReport(report = {}, {
     error.details = { actualHead: head, expectedHead: String(expectedHead).trim().toLowerCase() };
     throw error;
   }
+  if (repository.workflowPath !== GITHUB_WORKFLOW_PATH || String(repository.workflowBlobSha || "").trim().toLowerCase() !== EXPECTED_WORKFLOW_BLOB_SHA) {
+    const error = new Error("Le workflow CI enregistré dans le preflight MSE-25.31 n'est pas la définition approuvée.");
+    error.code = "MSE_25_31_PREFLIGHT_REPORT_CI_WORKFLOW_MISMATCH";
+    throw error;
+  }
+  const ciAttestation = assertAttestation(repository.ciAttestation || {}, {
+    head,
+    branch: expectedBranch,
+    workflowBlobSha: EXPECTED_WORKFLOW_BLOB_SHA,
+  });
 
   const context = report.context || {};
   if (!String(context.tenantSlug || "").trim() || !String(context.backendOrigin || "").trim()) {
@@ -128,7 +143,7 @@ function assertReport(report = {}, {
     readOnly: true,
     writes: false,
     destructive: false,
-    repository: { branch: repository.branch, head },
+    repository: { branch: repository.branch, head, workflowPath: repository.workflowPath, workflowBlobSha: repository.workflowBlobSha, ciAttestation },
     context,
     planFingerprint,
     executionPayloadAudit,

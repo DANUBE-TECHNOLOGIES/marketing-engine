@@ -4,7 +4,11 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const {
+  exactHeroTarget,
   installQualityUpliftPreview,
+  sealInternalLinkOperation,
+  sealOperationFinalValue,
+  sha256Text,
   siteFromAgencyPlan,
 } = require("../src/modules/minisite-seo-enrichment/quality-uplift-preview-patch");
 
@@ -39,7 +43,7 @@ class FakeService {
             metaDescription: "Agence de voyages à Gien.",
           },
           currentBlocks: [
-            { blockType: "hero", content: { title: "Agence de voyages à Gien" } },
+            { id: "hero-home", blockType: "hero", content: { title: "Agence de voyages à Gien" } },
             { blockType: "rich_text", content: { html: "Conseils voyage à Gien." } },
           ],
         },
@@ -68,6 +72,120 @@ test("siteFromAgencyPlan exposes persisted blocks to the quality planner", () =>
   assert.equal(site.slug, "test-site");
   assert.equal(site.agency.city, "Nevers");
   assert.equal(site.pages[0].blocks[0].content.html, "Texte réel");
+});
+
+test("exact metadata operations seal deterministic write targets, source fingerprints and final values", () => {
+  const site = {
+    agency: { id: 1, name: "Mondescale Gien", city: "Gien" },
+  };
+  const page = {
+    slug: "croisieres",
+    title: "Croisières",
+    seoTitle: "Croisières",
+    metaDescription: "Découvrez nos croisières.",
+    blocks: [
+      { id: "hero-cruises", blockType: "hero", content: { title: "Croisières" } },
+      { id: "copy-cruises", blockType: "rich_text", content: { html: "Texte" } },
+    ],
+  };
+
+  const title = sealOperationFinalValue({ type: "strengthen-title" }, site, page);
+  const meta = sealOperationFinalValue({ type: "strengthen-meta-description" }, site, page);
+  const h1 = sealOperationFinalValue({ type: "strengthen-h1" }, site, page);
+
+  assert.deepEqual(title.target, { scope: "page", field: "seoTitle" });
+  assert.equal(title.sourceValueFingerprint, sha256Text("Croisières"));
+  assert.ok(String(title.finalValue || "").includes("Gien"));
+  assert.deepEqual(meta.target, { scope: "page", field: "metaDescription" });
+  assert.equal(meta.sourceValueFingerprint, sha256Text("Découvrez nos croisières."));
+  assert.ok(String(meta.finalValue || "").includes("Gien"));
+  assert.deepEqual(h1.target, {
+    scope: "block",
+    blockType: "hero",
+    blockId: "hero-cruises",
+    field: "title",
+  });
+  assert.equal(h1.sourceValueFingerprint, sha256Text("Croisières"));
+  assert.ok(String(h1.finalValue || "").includes("Gien"));
+});
+
+test("H1 sealing is fail-closed when the hero target is ambiguous or has no exact id", () => {
+  assert.equal(exactHeroTarget({ blocks: [] }), null);
+  assert.equal(exactHeroTarget({
+    blocks: [
+      { id: "hero-a", blockType: "hero", content: {} },
+      { id: "hero-b", blockType: "hero", content: {} },
+    ],
+  }), null);
+
+  const target = exactHeroTarget({ blocks: [{ blockType: "hero", content: {} }] });
+  assert.deepEqual(target, {
+    scope: "block",
+    blockType: "hero",
+    blockId: null,
+    field: "title",
+  });
+  const sealed = sealOperationFinalValue(
+    { type: "strengthen-h1" },
+    { agency: { city: "Gien" } },
+    { slug: "home", blocks: [{ blockType: "hero", content: { title: "Accueil" } }] }
+  );
+  assert.equal(sealed.sourceValueFingerprint, null);
+});
+
+test("internal-link sealing binds the exact persisted source block and source HTML", () => {
+  const sourceHtml = "<p>Bienvenue à Gien.</p>";
+  const site = {
+    pages: [
+      {
+        slug: "home",
+        title: "Accueil",
+        blocks: [{ id: "copy-home", blockType: "rich_text", content: { html: sourceHtml } }],
+      },
+      {
+        slug: "avis",
+        title: "Avis clients",
+        blocks: [{ id: "copy-avis", blockType: "rich_text", content: { html: "<p>Vos avis.</p>" } }],
+      },
+    ],
+  };
+  const proposal = { pageSlug: "avis", diagnostics: { internalLink: { path: "/agence/gien/avis" } } };
+  const operation = sealInternalLinkOperation(
+    { type: "add-internal-link", suggestedSourceSlugs: ["home"] },
+    proposal,
+    site,
+    site.pages[1]
+  );
+
+  assert.deepEqual(operation.target, {
+    scope: "block",
+    pageSlug: "home",
+    blockType: "rich_text",
+    blockId: "copy-home",
+    field: "content.html",
+  });
+  assert.equal(operation.sourceValueFingerprint, sha256Text(sourceHtml));
+  assert.deepEqual(operation.link, { href: "/agence/gien/avis", label: "Découvrir Avis clients" });
+  assert.equal(operation.finalValue, `${sourceHtml}<p><a href="/agence/gien/avis">Découvrir Avis clients</a></p>`);
+});
+
+test("internal-link sealing remains incomplete without a persisted rich-text block id", () => {
+  const site = {
+    pages: [
+      { slug: "home", title: "Accueil", blocks: [{ blockType: "rich_text", content: { html: "<p>Accueil</p>" } }] },
+      { slug: "avis", title: "Avis clients", blocks: [] },
+    ],
+  };
+  const operation = sealInternalLinkOperation(
+    { type: "add-internal-link", suggestedSourceSlugs: ["home"] },
+    { pageSlug: "avis", diagnostics: { internalLink: { path: "/agence/gien/avis" } } },
+    site,
+    site.pages[1]
+  );
+
+  assert.equal(operation.target, undefined);
+  assert.equal(operation.sourceValueFingerprint, undefined);
+  assert.equal(operation.finalValue, undefined);
 });
 
 test("network quality uplift preview excludes draft sites and remains read-only", async () => {

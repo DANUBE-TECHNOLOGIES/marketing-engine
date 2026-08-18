@@ -36,6 +36,15 @@ function assertApplyAuthorization({
     error.code = "MSE_25_31_APPLY_NO_APPROVED_PAGES";
     throw error;
   }
+  if (Number(verifiedPlan.summary.writeTargetCollisionCount || 0) > 0) {
+    const error = new Error("Le plan MSE-25.31 contient plusieurs écritures approuvées visant la même cible persistée.");
+    error.code = "MSE_25_31_APPLY_WRITE_TARGET_COLLISION";
+    error.details = {
+      approvedCount: verifiedPlan.summary.approvedCount,
+      writeTargetCollisionCount: Number(verifiedPlan.summary.writeTargetCollisionCount || 0),
+    };
+    throw error;
+  }
   if (!verifiedPlan.executable) {
     const error = new Error("Le plan contient au moins une opération approuvée dont le payload final d'écriture n'est pas entièrement scellé.");
     error.code = "MSE_25_31_APPLY_INCOMPLETE_WRITE_PAYLOAD";

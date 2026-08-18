@@ -7,6 +7,7 @@ const { buildLocalSeoQualityUpliftPlan } = require("../src/modules/minisite-seo-
 const {
   projectQualityUpliftImpact,
   projectedPageImpact,
+  sha256Text,
 } = require("../src/modules/minisite-seo-enrichment/quality-uplift-impact-preview");
 
 function site() {
@@ -22,8 +23,8 @@ function site() {
         metaDescription: "Agence de voyages à Gien pour préparer votre voyage.",
         published: true,
         blocks: [
-          { blockType: "hero", content: { title: "Agence de voyages à Gien" } },
-          { blockType: "rich_text", content: { html: Array.from({ length: 130 }, () => "voyage").join(" ") } },
+          { id: "hero-home", blockType: "hero", content: { title: "Agence de voyages à Gien" } },
+          { id: "copy-home", blockType: "rich_text", content: { html: Array.from({ length: 130 }, () => "voyage").join(" ") } },
         ],
       },
       {
@@ -31,20 +32,22 @@ function site() {
         title: "Avis clients",
         published: true,
         blocks: [
-          { blockType: "hero", content: { title: "Avis clients à Gien" } },
-          { blockType: "rich_text", content: { html: "Avis clients à Gien." } },
+          { id: "hero-avis", blockType: "hero", content: { title: "Avis clients à Gien" } },
+          { id: "copy-avis", blockType: "rich_text", content: { html: "Avis clients à Gien." } },
         ],
       },
     ],
   };
 }
 
-test("impact preview simulates body and internal-link work without mutating source", () => {
+test("impact preview simulates body and sealed internal-link work without mutating source", () => {
   const source = site();
   const snapshot = JSON.stringify(source);
   const currentPlan = buildLocalSeoQualityUpliftPlan(source, { minimumWords: 120 });
   const avisInternalLink = currentPlan.internalLinkOpportunities.find((item) => item.pageSlug === "avis");
   assert.ok(avisInternalLink?.path);
+  const sourceHtml = source.pages[0].blocks[1].content.html;
+  const finalHtml = `${sourceHtml}<p><a href="${avisInternalLink.path}">Découvrir Avis clients</a></p>`;
 
   const result = projectQualityUpliftImpact({
     site: source,
@@ -60,7 +63,19 @@ test("impact preview simulates body and internal-link work without mutating sour
         diagnostics: { internalLink: { path: avisInternalLink.path } },
         operations: [
           { type: "enrich-body" },
-          { type: "add-internal-link", suggestedSourceSlugs: ["home"] },
+          {
+            type: "add-internal-link",
+            target: {
+              scope: "block",
+              pageSlug: "home",
+              blockType: "rich_text",
+              blockId: "copy-home",
+              field: "content.html",
+            },
+            sourceValueFingerprint: sha256Text(sourceHtml),
+            link: { href: avisInternalLink.path, label: "Découvrir Avis clients" },
+            finalValue: finalHtml,
+          },
         ],
       },
     ],
@@ -84,6 +99,128 @@ test("impact preview simulates body and internal-link work without mutating sour
   assert.ok(avis.resolvedKinds.includes("thin-content"));
   assert.ok(avis.resolvedKinds.includes("internal-link"));
   assert.equal(avis.projectionComplete, true);
+});
+
+test("impact preview simulates exact title meta and H1 values without mutating source", () => {
+  const source = site();
+  const snapshot = JSON.stringify(source);
+  const currentPlan = buildLocalSeoQualityUpliftPlan(source, { minimumWords: 120 });
+  const result = projectQualityUpliftImpact({
+    site: source,
+    currentPlan,
+    minimumWords: 120,
+    proposals: [
+      {
+        pageSlug: "avis",
+        operations: [
+          {
+            type: "strengthen-title",
+            target: { scope: "page", field: "seoTitle" },
+            sourceValueFingerprint: sha256Text(""),
+            finalValue: "Avis clients sur votre agence de voyages à Gien",
+          },
+          {
+            type: "strengthen-meta-description",
+            target: { scope: "page", field: "metaDescription" },
+            sourceValueFingerprint: sha256Text(""),
+            finalValue: "Consultez les avis clients de votre agence de voyages à Gien et préparez votre prochain projet avec une équipe de proximité.",
+          },
+          {
+            type: "strengthen-h1",
+            target: { scope: "block", blockType: "hero", blockId: "hero-avis", field: "title" },
+            sourceValueFingerprint: sha256Text("Avis clients à Gien"),
+            finalValue: "Avis clients de votre agence de voyages à Gien",
+          },
+        ],
+      },
+    ],
+  });
+
+  assert.equal(JSON.stringify(source), snapshot);
+  assert.equal(result.projectionComplete, true);
+  assert.equal(result.simulation.simulatedMetadataOperations, 3);
+  assert.equal(result.simulation.nonSimulatedOperations, 0);
+  assert.deepEqual(result.simulation.nonSimulatedOperationTypes, []);
+
+  const avis = result.pages.find((page) => page.pageSlug === "avis");
+  assert.ok(avis);
+  assert.equal(avis.projectionComplete, true);
+  assert.deepEqual(avis.nonSimulatedOperationTypes, []);
+});
+
+test("impact preview refuses stale metadata source fingerprints", () => {
+  const source = site();
+  const currentPlan = buildLocalSeoQualityUpliftPlan(source, { minimumWords: 120 });
+  const result = projectQualityUpliftImpact({
+    site: source,
+    currentPlan,
+    proposals: [{
+      pageSlug: "avis",
+      operations: [{
+        type: "strengthen-h1",
+        target: { scope: "block", blockType: "hero", blockId: "hero-avis", field: "title" },
+        sourceValueFingerprint: sha256Text("Ancien H1"),
+        finalValue: "Avis clients de votre agence de voyages à Gien",
+      }],
+    }],
+  });
+
+  assert.equal(result.projectionComplete, false);
+  assert.equal(result.simulation.simulatedMetadataOperations, 0);
+  assert.equal(result.simulation.nonSimulatedOperations, 1);
+  assert.deepEqual(result.simulation.nonSimulatedOperationTypes, ["strengthen-h1"]);
+});
+
+test("impact preview refuses stale sealed internal-link source fingerprints", () => {
+  const source = site();
+  const currentPlan = buildLocalSeoQualityUpliftPlan(source, { minimumWords: 120 });
+  const avisInternalLink = currentPlan.internalLinkOpportunities.find((item) => item.pageSlug === "avis");
+  assert.ok(avisInternalLink?.path);
+
+  const result = projectQualityUpliftImpact({
+    site: source,
+    currentPlan,
+    proposals: [{
+      pageSlug: "avis",
+      operations: [{
+        type: "add-internal-link",
+        target: { scope: "block", pageSlug: "home", blockType: "rich_text", blockId: "copy-home", field: "content.html" },
+        sourceValueFingerprint: sha256Text("ancien contenu"),
+        link: { href: avisInternalLink.path, label: "Découvrir Avis clients" },
+        finalValue: `<p><a href="${avisInternalLink.path}">Découvrir Avis clients</a></p>`,
+      }],
+    }],
+  });
+
+  assert.equal(result.projectionComplete, false);
+  assert.equal(result.simulation.nonSimulatedOperations, 1);
+  assert.deepEqual(result.simulation.nonSimulatedOperationTypes, ["add-internal-link"]);
+});
+
+test("impact preview refuses sealed internal links that do not target a rich-text block contract", () => {
+  const source = site();
+  const currentPlan = buildLocalSeoQualityUpliftPlan(source, { minimumWords: 120 });
+  const avisInternalLink = currentPlan.internalLinkOpportunities.find((item) => item.pageSlug === "avis");
+  const sourceHtml = source.pages[0].blocks[1].content.html;
+
+  const result = projectQualityUpliftImpact({
+    site: source,
+    currentPlan,
+    proposals: [{
+      pageSlug: "avis",
+      operations: [{
+        type: "add-internal-link",
+        target: { scope: "block", pageSlug: "home", blockType: "hero", blockId: "copy-home", field: "content.html" },
+        sourceValueFingerprint: sha256Text(sourceHtml),
+        link: { href: avisInternalLink.path, label: "Découvrir Avis clients" },
+        finalValue: `${sourceHtml}<p><a href="${avisInternalLink.path}">Découvrir Avis clients</a></p>`,
+      }],
+    }],
+  });
+
+  assert.equal(result.projectionComplete, false);
+  assert.equal(result.simulation.simulatedInternalLinkOperations, 0);
+  assert.deepEqual(result.simulation.nonSimulatedOperationTypes, ["add-internal-link"]);
 });
 
 test("impact preview declares partial projection and exposes unsimulated operation types", () => {

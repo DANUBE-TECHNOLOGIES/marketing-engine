@@ -7,9 +7,16 @@ const { execFileSync } = require("node:child_process");
 const {
   DEFAULT_TOP_PAGES,
   normalizeOrigin,
+  operationPayloadComplete,
   positiveInteger,
   run: runPreview,
 } = require("./mse-25-31-network-preview");
+const {
+  EXPECTED_WORKFLOW_BLOB_SHA,
+  GITHUB_WORKFLOW_PATH,
+  assertAttestation,
+  attestHead,
+} = require("./mse-25-31-ci-attestation");
 
 const EXPECTED_BRANCH = "feature/mse-25-31-local-seo-quality-uplift";
 const DEFAULT_REPORT_DIR = path.join(os.homedir(), "mse-25-31-reports");
@@ -24,6 +31,8 @@ function repositoryState() {
     branch: gitValue(["branch", "--show-current"]),
     head: gitValue(["rev-parse", "HEAD"]),
     dirty: Boolean(gitValue(["status", "--porcelain"])),
+    workflowPath: GITHUB_WORKFLOW_PATH,
+    workflowBlobSha: gitValue(["rev-parse", `HEAD:${GITHUB_WORKFLOW_PATH}`]).toLowerCase(),
   };
 }
 
@@ -37,6 +46,22 @@ function assertRepositoryState(state, { expectedBranch = EXPECTED_BRANCH, allowD
   if (state.dirty && !allowDirty) {
     const error = new Error("Le working tree doit être propre avant le preflight MSE-25.31.");
     error.code = "MSE_25_31_PREFLIGHT_DIRTY_WORKTREE";
+    throw error;
+  }
+  return state;
+}
+
+function assertWorkflowDefinition(state = {}) {
+  const actual = String(state.workflowBlobSha || "").trim().toLowerCase();
+  if (state.workflowPath !== GITHUB_WORKFLOW_PATH || actual !== EXPECTED_WORKFLOW_BLOB_SHA) {
+    const error = new Error("La définition du workflow GitHub Actions MSE-25.31 ne correspond plus à la définition approuvée.");
+    error.code = "MSE_25_31_PREFLIGHT_CI_WORKFLOW_CHANGED";
+    error.details = {
+      workflowPath: state.workflowPath || null,
+      expectedWorkflowPath: GITHUB_WORKFLOW_PATH,
+      expectedBlobSha: EXPECTED_WORKFLOW_BLOB_SHA,
+      actualBlobSha: actual || null,
+    };
     throw error;
   }
   return state;
@@ -76,14 +101,22 @@ function sortedTypes(value) {
 }
 
 function expectedPayloadClassification(payload = {}) {
-  const types = sortedTypes((payload.operations || []).map((operation) => operation?.type));
+  const operations = Array.isArray(payload.operations) ? payload.operations : [];
+  const types = sortedTypes(operations.map((operation) => operation?.type));
   const complete = [];
   const incomplete = [];
-  for (const type of types) {
-    if (type === "enrich-body" && payload.bodyCopyPreview?.html && payload.bodyCopyPreview?.title) complete.push(type);
+  for (const operation of operations) {
+    const type = operation?.type;
+    if (!type) continue;
+    if (operationPayloadComplete(operation, payload.bodyCopyPreview || null)) complete.push(type);
     else incomplete.push(type);
   }
-  return { types, complete, incomplete, payloadComplete: types.length > 0 && incomplete.length === 0 };
+  return {
+    types,
+    complete: sortedTypes(complete),
+    incomplete: sortedTypes(incomplete),
+    payloadComplete: types.length > 0 && incomplete.length === 0,
+  };
 }
 
 function assertExecutionPayloadCoverage(preview = {}) {
@@ -149,13 +182,13 @@ function assertExecutionPayloadCoverage(preview = {}) {
 
 function assertDeterministicExecutionPayloads(first = {}, second = {}) {
   const firstAudit = assertExecutionPayloadCoverage(first);
-  const secondAudit = assertExecutionPayloadCoverage(second);
+  assertExecutionPayloadCoverage(second);
   if (JSON.stringify(first.executionPayloads || []) !== JSON.stringify(second.executionPayloads || [])) {
     const error = new Error("Deux previews successifs ont le même plan SEO mais des payloads d'exécution différents.");
     error.code = "MSE_25_31_PREFLIGHT_NON_DETERMINISTIC_EXECUTION_PAYLOAD";
     throw error;
   }
-  return firstAudit.completePayloadCount === secondAudit.completePayloadCount ? firstAudit : firstAudit;
+  return firstAudit;
 }
 
 function assertDeterministicPreview(first = {}, second = {}) {
@@ -191,11 +224,20 @@ async function run({
   emitOutput = true,
   previewRunner = runPreview,
   repositoryReader = repositoryState,
+  ciAttestor = attestHead,
 } = {}) {
+  const resolvedExpectedBranch = expectedBranch || process.env.MSE_25_31_EXPECTED_BRANCH || EXPECTED_BRANCH;
   const repo = assertRepositoryState(repositoryReader(), {
-    expectedBranch: expectedBranch || process.env.MSE_25_31_EXPECTED_BRANCH || EXPECTED_BRANCH,
+    expectedBranch: resolvedExpectedBranch,
     allowDirty,
   });
+  assertWorkflowDefinition(repo);
+  const ciAttestation = assertAttestation(
+    await ciAttestor(repo.head, { expectedBranch: resolvedExpectedBranch }),
+    { head: repo.head, branch: resolvedExpectedBranch }
+  );
+  repo.ciAttestation = JSON.parse(JSON.stringify(ciAttestation));
+
   const origin = normalizeOrigin(backendOrigin || process.env.BACKEND_ORIGIN);
   const tenant = String(tenantSlug || process.env.TENANT_SLUG || "mondescale").trim();
   const resolvedTopPages = positiveInteger(topPages ?? process.env.TOP_PAGES, DEFAULT_TOP_PAGES);
@@ -252,6 +294,7 @@ async function run({
     repository: repo,
     context,
     planFingerprint,
+    ciAttestation,
     candidatePageCount: Array.isArray(firstPreview.allPages) ? firstPreview.allPages.length : 0,
     executionPayloadAudit,
     previewSummary: firstPreview.summary || {},
@@ -283,6 +326,7 @@ module.exports = {
   assertFingerprint,
   assertRepositoryState,
   assertSafePreview,
+  assertWorkflowDefinition,
   expectedPayloadClassification,
   gitValue,
   pageKey,

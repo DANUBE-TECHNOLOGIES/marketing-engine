@@ -1,6 +1,12 @@
 "use strict";
 
-const SIMULATED_OPERATION_TYPES = new Set(["enrich-body", "add-internal-link"]);
+const SIMULATED_OPERATION_TYPES = new Set([
+  "enrich-body",
+  "add-internal-link",
+  "strengthen-title",
+  "strengthen-meta-description",
+  "strengthen-h1",
+]);
 
 function operationTypes(proposal = {}) {
   return Array.from(new Set((proposal.operations || []).map((operation) => operation?.type).filter(Boolean)));
