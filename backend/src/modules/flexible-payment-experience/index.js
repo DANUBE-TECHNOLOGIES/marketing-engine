@@ -6,5 +6,6 @@ module.exports = {
   ...require("./network-readiness"),
   ...require("./network-rollout"),
   ...require("./rollout-audit"),
+  ...require("./network-rollback"),
   routes: require("./routes"),
 };
