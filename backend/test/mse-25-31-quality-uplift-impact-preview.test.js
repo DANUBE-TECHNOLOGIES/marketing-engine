@@ -7,6 +7,7 @@ const { buildLocalSeoQualityUpliftPlan } = require("../src/modules/minisite-seo-
 const {
   projectQualityUpliftImpact,
   projectedPageImpact,
+  sha256Text,
 } = require("../src/modules/minisite-seo-enrichment/quality-uplift-impact-preview");
 
 function site() {
@@ -23,7 +24,7 @@ function site() {
         published: true,
         blocks: [
           { id: "hero-home", blockType: "hero", content: { title: "Agence de voyages à Gien" } },
-          { blockType: "rich_text", content: { html: Array.from({ length: 130 }, () => "voyage").join(" ") } },
+          { id: "copy-home", blockType: "rich_text", content: { html: Array.from({ length: 130 }, () => "voyage").join(" ") } },
         ],
       },
       {
@@ -32,19 +33,21 @@ function site() {
         published: true,
         blocks: [
           { id: "hero-avis", blockType: "hero", content: { title: "Avis clients à Gien" } },
-          { blockType: "rich_text", content: { html: "Avis clients à Gien." } },
+          { id: "copy-avis", blockType: "rich_text", content: { html: "Avis clients à Gien." } },
         ],
       },
     ],
   };
 }
 
-test("impact preview simulates body and internal-link work without mutating source", () => {
+test("impact preview simulates body and sealed internal-link work without mutating source", () => {
   const source = site();
   const snapshot = JSON.stringify(source);
   const currentPlan = buildLocalSeoQualityUpliftPlan(source, { minimumWords: 120 });
   const avisInternalLink = currentPlan.internalLinkOpportunities.find((item) => item.pageSlug === "avis");
   assert.ok(avisInternalLink?.path);
+  const sourceHtml = source.pages[0].blocks[1].content.html;
+  const finalHtml = `${sourceHtml}<p><a href="${avisInternalLink.path}">Découvrir Avis clients</a></p>`;
 
   const result = projectQualityUpliftImpact({
     site: source,
@@ -60,7 +63,19 @@ test("impact preview simulates body and internal-link work without mutating sour
         diagnostics: { internalLink: { path: avisInternalLink.path } },
         operations: [
           { type: "enrich-body" },
-          { type: "add-internal-link", suggestedSourceSlugs: ["home"] },
+          {
+            type: "add-internal-link",
+            target: {
+              scope: "block",
+              pageSlug: "home",
+              blockType: "rich_text",
+              blockId: "copy-home",
+              field: "content.html",
+            },
+            sourceValueFingerprint: sha256Text(sourceHtml),
+            link: { href: avisInternalLink.path, label: "Découvrir Avis clients" },
+            finalValue: finalHtml,
+          },
         ],
       },
     ],
@@ -128,6 +143,32 @@ test("impact preview simulates exact title meta and H1 values without mutating s
   assert.ok(avis);
   assert.equal(avis.projectionComplete, true);
   assert.deepEqual(avis.nonSimulatedOperationTypes, []);
+});
+
+test("impact preview refuses stale sealed internal-link source fingerprints", () => {
+  const source = site();
+  const currentPlan = buildLocalSeoQualityUpliftPlan(source, { minimumWords: 120 });
+  const avisInternalLink = currentPlan.internalLinkOpportunities.find((item) => item.pageSlug === "avis");
+  assert.ok(avisInternalLink?.path);
+
+  const result = projectQualityUpliftImpact({
+    site: source,
+    currentPlan,
+    proposals: [{
+      pageSlug: "avis",
+      operations: [{
+        type: "add-internal-link",
+        target: { scope: "block", pageSlug: "home", blockType: "rich_text", blockId: "copy-home", field: "content.html" },
+        sourceValueFingerprint: sha256Text("ancien contenu"),
+        link: { href: avisInternalLink.path, label: "Découvrir Avis clients" },
+        finalValue: `<p><a href="${avisInternalLink.path}">Découvrir Avis clients</a></p>`,
+      }],
+    }],
+  });
+
+  assert.equal(result.projectionComplete, false);
+  assert.equal(result.simulation.nonSimulatedOperations, 1);
+  assert.deepEqual(result.simulation.nonSimulatedOperationTypes, ["add-internal-link"]);
 });
 
 test("impact preview declares partial projection and exposes unsimulated operation types", () => {
