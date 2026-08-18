@@ -1,5 +1,6 @@
 "use strict";
 
+const crypto = require("node:crypto");
 const { buildLocalSeoQualityUpliftPlan } = require("./quality-uplift-planner");
 const { consolidateQualityUpliftActions } = require("./quality-uplift-action-planner");
 const { buildQualityUpliftProposal } = require("./quality-uplift-proposal-planner");
@@ -66,12 +67,69 @@ function sealOperationFinalValue(operation = {}, site = {}, page = {}) {
   return { ...operation };
 }
 
+function sha256Text(value) {
+  return crypto.createHash("sha256").update(String(value ?? ""), "utf8").digest("hex");
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function exactInternalLinkSource(site = {}, operation = {}) {
+  for (const sourceSlug of operation.suggestedSourceSlugs || []) {
+    const page = (site.pages || []).find((item) => String(item?.slug || "") === String(sourceSlug || ""));
+    if (!page) continue;
+    const block = (page.blocks || []).find((item) =>
+      item?.id !== null
+      && item?.id !== undefined
+      && normalizedBlockType(item).includes("rich-text")
+      && typeof item?.content?.html === "string"
+    );
+    if (block) return { page, block };
+  }
+  return null;
+}
+
+function sealInternalLinkOperation(operation = {}, proposal = {}, site = {}, targetPage = {}) {
+  const href = String(proposal?.diagnostics?.internalLink?.path || "").trim();
+  const source = exactInternalLinkSource(site, operation);
+  if (!href || !source) return { ...operation };
+
+  const sourceHtml = String(source.block.content?.html || "");
+  const targetLabel = String(targetPage.title || targetPage.slug || proposal.pageSlug || "cette page").trim();
+  const label = `Découvrir ${targetLabel}`;
+  const linkHtml = `<p><a href="${escapeHtml(href)}">${escapeHtml(label)}</a></p>`;
+
+  return {
+    ...operation,
+    target: {
+      scope: "block",
+      pageSlug: source.page.slug || null,
+      blockType: "rich_text",
+      blockId: source.block.id,
+      field: "content.html",
+    },
+    sourceValueFingerprint: sha256Text(sourceHtml),
+    link: { href, label },
+    finalValue: `${sourceHtml}${linkHtml}`,
+  };
+}
+
 function proposalWithCopyPreview(proposal, action, site) {
   const page = (site.pages || []).find((item) => String(item?.slug || "") === String(proposal?.pageSlug || "")) || null;
   return {
     ...proposal,
     operations: page
-      ? (proposal.operations || []).map((operation) => sealOperationFinalValue(operation, site, page))
+      ? (proposal.operations || []).map((operation) =>
+          operation.type === "add-internal-link"
+            ? sealInternalLinkOperation(operation, proposal, site, page)
+            : sealOperationFinalValue(operation, site, page)
+        )
       : [...(proposal.operations || [])],
     bodyCopyPreview: page ? buildBodyCopyPreview({ agency: site.agency || {}, page, action }) : null,
   };
@@ -141,6 +199,15 @@ function installQualityUpliftPreview(ServiceClass) {
           ).length,
           0
         ),
+        exactInternalLinkValueCount: proposals.reduce(
+          (count, proposal) => count + (proposal.operations || []).filter((operation) =>
+            operation.type === "add-internal-link"
+            && String(operation.finalValue || "").trim()
+            && operation.target?.blockId !== null
+            && operation.target?.blockId !== undefined
+          ).length,
+          0
+        ),
       },
       impact,
       excludedPages: agencyPlan.excludedPages || [],
@@ -184,6 +251,7 @@ function installQualityUpliftPreview(ServiceClass) {
         proposedOperationCount: sum(agencies, ["proposalSummary", "operationCount"]),
         bodyCopyPreviewCount: sum(agencies, ["proposalSummary", "bodyCopyPreviewCount"]),
         exactMetadataValueCount: sum(agencies, ["proposalSummary", "exactMetadataValueCount"]),
+        exactInternalLinkValueCount: sum(agencies, ["proposalSummary", "exactInternalLinkValueCount"]),
         projectedOpportunityCount: sum(agencies, ["impact", "projected", "total"]),
         projectedWarningReduction: sum(agencies, ["impact", "projectedReduction", "total"]),
         projectionCompleteAgencyCount: agencies.filter((agency) => agency.impact?.projectionComplete === true).length,
@@ -206,11 +274,14 @@ function installQualityUpliftPreview(ServiceClass) {
 
 module.exports = {
   exactHeroTarget,
+  exactInternalLinkSource,
   installQualityUpliftPreview,
   normalizedBlockType,
   projectedPages,
   proposalWithCopyPreview,
+  sealInternalLinkOperation,
   sealOperationFinalValue,
+  sha256Text,
   siteFromAgencyPlan,
   sum,
 };
