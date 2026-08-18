@@ -3,6 +3,7 @@
 const express = require("express");
 const PaymentPolicyRepository = require("./policy-repository");
 const { validatePaymentPolicyInput } = require("./payment-experience");
+const { buildFlexiblePaymentOperationalStatus } = require("./operational-status");
 const {
   applyPaymentPlacementPreview,
   buildPaymentPlacementPreview,
@@ -49,6 +50,28 @@ async function loadSite(prisma, siteKey, policyRepository = new PaymentPolicyRep
   return { ...site, paymentPolicy };
 }
 
+async function loadNetworkSites(prisma, policyRepository = new PaymentPolicyRepository(prisma)) {
+  const sites = await prisma.agencySite.findMany({
+    include: {
+      agency: true,
+      pages: {
+        include: {
+          blocks: {
+            orderBy: { displayOrder: "asc" },
+          },
+        },
+        orderBy: { displayOrder: "asc" },
+      },
+    },
+    orderBy: { slug: "asc" },
+  });
+
+  return Promise.all(sites.map(async (site) => ({
+    ...site,
+    paymentPolicy: await policyRepository.findBySiteId(site.id),
+  })));
+}
+
 function sendModuleError(res, error) {
   const status = Number(error?.status || error?.statusCode || 500);
   return res.status(status).json({
@@ -72,6 +95,16 @@ module.exports = function createFlexiblePaymentRoutes({ prisma }) {
 
   const router = express.Router();
   const policyRepository = new PaymentPolicyRepository(prisma);
+
+  router.get("/api/flexible-payment/operational-status", async (_req, res) => {
+    try {
+      const sites = await loadNetworkSites(prisma, policyRepository);
+      const status = buildFlexiblePaymentOperationalStatus(sites);
+      return res.json({ ok: true, ...status });
+    } catch (error) {
+      return sendModuleError(res, error);
+    }
+  });
 
   router.get("/api/agency-sites/:siteSlug/flexible-payment", async (req, res) => {
     try {
@@ -244,5 +277,6 @@ module.exports = function createFlexiblePaymentRoutes({ prisma }) {
 
 module.exports.assertPolicyWriteConfirmed = assertPolicyWriteConfirmed;
 module.exports.findSiteByKey = findSiteByKey;
+module.exports.loadNetworkSites = loadNetworkSites;
 module.exports.loadSite = loadSite;
 module.exports.normalizeSiteKey = normalizeSiteKey;
