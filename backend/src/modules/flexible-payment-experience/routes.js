@@ -18,7 +18,7 @@ async function findSiteByKey(prisma, siteKey, options = {}) {
   const key = normalizeSiteKey(siteKey);
   if (!key) return null;
 
-  const bySlug = await prisma.agencySite.findUnique({
+  const bySlug = await prisma.agencySite.findFirst({
     where: { slug: key.toLowerCase() },
     ...options,
   });
