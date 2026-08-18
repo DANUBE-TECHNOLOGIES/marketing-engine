@@ -55,6 +55,42 @@ function applyExactSeoOperation(page, operation = {}) {
   return false;
 }
 
+function operationSimulationReady(operation = {}, proposal = {}) {
+  if (operation.type === "enrich-body") {
+    return Boolean(String(proposal.bodyCopyPreview?.html || "").trim());
+  }
+  if (operation.type === "add-internal-link") {
+    return Boolean(
+      String((operation.suggestedSourceSlugs || [])[0] || "").trim()
+      && String(proposal.diagnostics?.internalLink?.path || "").trim()
+    );
+  }
+  if (operation.type === "strengthen-title") {
+    return Boolean(
+      String(operation.finalValue || "").trim()
+      && operation.target?.scope === "page"
+      && operation.target?.field === "seoTitle"
+    );
+  }
+  if (operation.type === "strengthen-meta-description") {
+    return Boolean(
+      String(operation.finalValue || "").trim()
+      && operation.target?.scope === "page"
+      && operation.target?.field === "metaDescription"
+    );
+  }
+  if (operation.type === "strengthen-h1") {
+    return Boolean(
+      String(operation.finalValue || "").trim()
+      && operation.target?.scope === "block"
+      && operation.target?.blockId !== null
+      && operation.target?.blockId !== undefined
+      && operation.target?.field === "title"
+    );
+  }
+  return false;
+}
+
 function counts(plan = {}) {
   return {
     intent: Number(plan.summary?.intentOpportunityCount || 0),
@@ -105,13 +141,6 @@ function projectedPageImpact(currentPlan = {}, projectedPlan = {}, proposals = [
   const afterByPage = pageWarningCounts(projectedPlan);
   const proposalByPage = new Map((proposals || []).map((proposal) => [String(proposal.pageSlug || "home"), proposal]));
   const slugs = new Set([...beforeByPage.keys(), ...afterByPage.keys(), ...proposalByPage.keys()]);
-  const simulatedTypes = new Set([
-    "enrich-body",
-    "add-internal-link",
-    "strengthen-title",
-    "strengthen-meta-description",
-    "strengthen-h1",
-  ]);
 
   return Array.from(slugs)
     .sort((left, right) => left.localeCompare(right, "fr"))
@@ -124,7 +153,7 @@ function projectedPageImpact(currentPlan = {}, projectedPlan = {}, proposals = [
       const proposal = proposalByPage.get(pageSlug) || null;
       const nonSimulatedOperationTypes = Array.from(new Set(
         (proposal?.operations || [])
-          .filter((operation) => !simulatedTypes.has(operation.type))
+          .filter((operation) => !operationSimulationReady(operation, proposal))
           .map((operation) => operation.type)
       ));
 
@@ -210,6 +239,7 @@ module.exports = {
   appendInternalLink,
   applyExactSeoOperation,
   counts,
+  operationSimulationReady,
   pageWarningCounts,
   projectQualityUpliftImpact,
   projectedPageImpact,
