@@ -3,6 +3,10 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
+const {
+  EXPECTED_WORKFLOW_BLOB_SHA,
+  assertAttestation,
+} = require("./mse-25-31-ci-attestation");
 
 function digest(value) {
   return crypto.createHash("sha256").update(JSON.stringify(value)).digest("hex");
@@ -39,8 +43,20 @@ function assertRolloutReport(report = {}) {
   if (report.proof?.writeIntentFingerprint !== report.result?.writeIntentFingerprint) {
     issues.push({ code: "write-intent-fingerprint-mismatch" });
   }
+  if (report.proof?.preflightCheck?.ok !== true) issues.push({ code: "preflight-check-missing" });
+  if (report.proof?.ciAttestationCheck?.ok !== true) issues.push({ code: "ci-attestation-check-missing" });
   if (report.proof?.applyAuthorization?.authorized !== true) issues.push({ code: "apply-authorization-missing" });
   if (report.proof?.writeIntentCheck?.ok !== true) issues.push({ code: "write-intent-check-missing" });
+
+  try {
+    assertAttestation(report.proof?.liveCiAttestation || {}, {
+      head: report.repository?.head,
+      branch: report.repository?.branch,
+      workflowBlobSha: EXPECTED_WORKFLOW_BLOB_SHA,
+    });
+  } catch (error) {
+    issues.push({ code: "live-ci-attestation-invalid", details: error.details || {} });
+  }
 
   const manifest = Array.isArray(report.rollbackManifest) ? report.rollbackManifest : [];
   if (report.result?.writes === true) {
@@ -72,6 +88,7 @@ function assertRolloutReport(report = {}) {
     reportFingerprint: recomputed,
     dryRun: report.result?.dryRun === true,
     writes: report.result?.writes === true,
+    ciRunId: report.proof.liveCiAttestation.runId,
     pagesWritten: Number(report.result?.pagesWritten || 0),
     rollbackSnapshots: Number(report.result?.rollbackSnapshots || 0),
     executionPlanFingerprint: report.result?.executionPlanFingerprint || null,
