@@ -18,7 +18,15 @@
     "mse-25.30:network-apply": "node src/modules/minisite-seo-enrichment/network-apply-audit.js",
     "mse-25.30:rollout-report-check": "node src/modules/minisite-seo-enrichment/rollout-report-check.js",
     "mse-25.30:network-rollback": "node src/modules/minisite-seo-enrichment/network-rollback-audit.js",
-    "mse-25.30:post-rollout-validate": "node src/modules/minisite-seo-enrichment/post-rollout-audit.js"
+    "mse-25.30:post-rollout-validate": "node src/modules/minisite-seo-enrichment/post-rollout-audit.js",
+    "mse-25.31:network-preview": "node scripts/mse-25-31-network-preview.js",
+    "mse-25.31:preflight": "node scripts/mse-25-31-preflight.js",
+    "mse-25.31:preflight-check": "node scripts/mse-25-31-preflight-check.js",
+    "mse-25.31:approval-manifest": "node scripts/mse-25-31-approval-manifest.js",
+    "mse-25.31:approval-check": "node scripts/mse-25-31-approval-check.js",
+    "mse-25.31:execution-plan": "node scripts/mse-25-31-execution-plan.js",
+    "mse-25.31:execution-plan-check": "node scripts/mse-25-31-execution-plan-check.js",
+    "mse-25.31:apply-gate": "node scripts/mse-25-31-apply-gate.js"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",

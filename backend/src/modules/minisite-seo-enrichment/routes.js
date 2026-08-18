@@ -9,6 +9,7 @@ const { installPlanFingerprintGuard } = require("./plan-fingerprint-patch");
 const { installSummaryConsistency } = require("./summary-consistency-patch");
 const { installPageBuilderContractNormalization } = require("./page-builder-contract-patch");
 const { installIdempotenceGuard } = require("./idempotence-patch");
+const { installQualityUpliftPreview } = require("./quality-uplift-preview-patch");
 const PageBuilderPersistenceService = require("../page-builder-persistence/service");
 const { MiniSiteStructuredDataService } = require("../minisite-structured-data/service");
 
@@ -19,6 +20,7 @@ installPageBuilderContractNormalization(MiniSiteSeoEnrichmentService);
 installIdempotenceGuard(MiniSiteSeoEnrichmentService);
 installPlanFingerprintGuard(MiniSiteSeoEnrichmentService);
 installSummaryConsistency(MiniSiteSeoEnrichmentService);
+installQualityUpliftPreview(MiniSiteSeoEnrichmentService);
 
 function sendError(response, error) {
   response.status(Number(error?.status || error?.statusCode || 500)).json({
@@ -99,6 +101,15 @@ function routes({ prisma, service } = {}) {
     } catch (error) { sendError(response, error); }
   });
 
+  router.post("/minisite-seo-enrichment/agencies/:agencyId/quality-uplift/preview", async (request, response) => {
+    try {
+      response.json(await scopedService({ prisma, request, service }).previewAgencyQualityUplift({
+        agencyId: request.params.agencyId,
+        minimumWords: request.body?.minimumWords,
+      }));
+    } catch (error) { sendError(response, error); }
+  });
+
   router.post("/minisite-seo-enrichment/network/preview", async (request, response) => {
     try { response.json(await scopedService({ prisma, request, service }).previewNetwork()); } catch (error) { sendError(response, error); }
   });
@@ -109,6 +120,14 @@ function routes({ prisma, service } = {}) {
         similarityThreshold: request.body?.similarityThreshold,
         minimumWords: request.body?.minimumWords,
         qualityMinimumWords: request.body?.qualityMinimumWords,
+      }));
+    } catch (error) { sendError(response, error); }
+  });
+
+  router.post("/minisite-seo-enrichment/network/quality-uplift/preview", async (request, response) => {
+    try {
+      response.json(await scopedService({ prisma, request, service }).previewNetworkQualityUplift({
+        minimumWords: request.body?.minimumWords,
       }));
     } catch (error) { sendError(response, error); }
   });
