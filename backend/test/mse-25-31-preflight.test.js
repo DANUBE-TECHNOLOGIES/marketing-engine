@@ -14,17 +14,44 @@ const {
   assertFingerprint,
   assertRepositoryState,
   assertSafePreview,
+  assertWorkflowDefinition,
   run,
 } = require("../scripts/mse-25-31-preflight");
+const {
+  EXPECTED_WORKFLOW_BLOB_SHA,
+  GITHUB_REPOSITORY,
+  GITHUB_WORKFLOW_ID,
+  GITHUB_WORKFLOW_NAME,
+  GITHUB_WORKFLOW_PATH,
+} = require("../scripts/mse-25-31-ci-attestation");
 
 const FP_A = "a".repeat(64);
 const FP_B = "b".repeat(64);
+const HEAD = "1".repeat(40);
 const safePreview = (fingerprint = FP_A) => ({
   readOnly: true,
   writes: false,
   destructive: false,
   planFingerprint: fingerprint,
 });
+
+function ciAttestation(head = HEAD) {
+  return {
+    ok: true,
+    repository: GITHUB_REPOSITORY,
+    workflowId: GITHUB_WORKFLOW_ID,
+    workflowName: GITHUB_WORKFLOW_NAME,
+    workflowPath: GITHUB_WORKFLOW_PATH,
+    workflowBlobSha: EXPECTED_WORKFLOW_BLOB_SHA,
+    runId: 12345,
+    headSha: head,
+    headBranch: EXPECTED_BRANCH,
+    event: "push",
+    status: "completed",
+    conclusion: "success",
+    htmlUrl: "https://github.com/example/actions/runs/12345",
+  };
+}
 
 function completePreviewPayload() {
   return {
@@ -111,20 +138,28 @@ test("preflight refuses two previews with different exact write payloads", () =>
 
 test("preflight requires the dedicated branch and a clean worktree", () => {
   assert.equal(
-    assertRepositoryState({ branch: EXPECTED_BRANCH, head: "1".repeat(40), dirty: false }).branch,
+    assertRepositoryState({ branch: EXPECTED_BRANCH, head: HEAD, dirty: false }).branch,
     EXPECTED_BRANCH
   );
   assert.throws(
-    () => assertRepositoryState({ branch: "main", head: "1".repeat(40), dirty: false }),
+    () => assertRepositoryState({ branch: "main", head: HEAD, dirty: false }),
     (error) => error.code === "MSE_25_31_PREFLIGHT_BRANCH_MISMATCH"
   );
   assert.throws(
-    () => assertRepositoryState({ branch: EXPECTED_BRANCH, head: "1".repeat(40), dirty: true }),
+    () => assertRepositoryState({ branch: EXPECTED_BRANCH, head: HEAD, dirty: true }),
     (error) => error.code === "MSE_25_31_PREFLIGHT_DIRTY_WORKTREE"
   );
 });
 
-test("preflight runs the read-only network preview twice and archives the complete candidate set", async () => {
+test("preflight pins the exact workflow definition", () => {
+  assert.equal(assertWorkflowDefinition({ workflowPath: GITHUB_WORKFLOW_PATH, workflowBlobSha: EXPECTED_WORKFLOW_BLOB_SHA }).workflowBlobSha, EXPECTED_WORKFLOW_BLOB_SHA);
+  assert.throws(
+    () => assertWorkflowDefinition({ workflowPath: GITHUB_WORKFLOW_PATH, workflowBlobSha: "f".repeat(40) }),
+    (error) => error.code === "MSE_25_31_PREFLIGHT_CI_WORKFLOW_CHANGED"
+  );
+});
+
+test("preflight runs the read-only network preview twice and archives the complete candidate set with push CI proof", async () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "mse-25-31-preflight-"));
   const output = path.join(directory, "report.json");
   const calls = [];
@@ -191,7 +226,8 @@ test("preflight runs the read-only network preview twice and archives the comple
     output,
     emitOutput: false,
     previewRunner,
-    repositoryReader: () => ({ branch: EXPECTED_BRANCH, head: "1".repeat(40), dirty: false }),
+    repositoryReader: () => ({ branch: EXPECTED_BRANCH, head: HEAD, dirty: false, workflowPath: GITHUB_WORKFLOW_PATH, workflowBlobSha: EXPECTED_WORKFLOW_BLOB_SHA }),
+    ciAttestor: async (head) => ciAttestation(head),
   });
 
   assert.equal(calls.length, 2);
@@ -209,6 +245,7 @@ test("preflight runs the read-only network preview twice and archives the comple
   assert.equal(result.candidatePageCount, 3);
   assert.equal(result.executionPayloadAudit.completePayloadCount, 2);
   assert.equal(result.executionPayloadAudit.incompletePayloadCount, 1);
+  assert.equal(result.ciAttestation.runId, 12345);
   assert.deepEqual(result.context, {
     backendOrigin: "http://127.0.0.1:4000",
     tenantSlug: "mondescale",
@@ -225,6 +262,8 @@ test("preflight runs the read-only network preview twice and archives the comple
   assert.equal(report.determinism.previewCount, 2);
   assert.equal(report.determinism.executionPayloadsVerified, true);
   assert.equal(report.repository.branch, EXPECTED_BRANCH);
+  assert.equal(report.repository.workflowBlobSha, EXPECTED_WORKFLOW_BLOB_SHA);
+  assert.equal(report.repository.ciAttestation.runId, 12345);
   assert.equal(report.preview.topPages.length, 1);
   assert.equal(report.preview.allPages.length, 3);
   assert.equal(report.preview.executionPayloads.length, 3);
