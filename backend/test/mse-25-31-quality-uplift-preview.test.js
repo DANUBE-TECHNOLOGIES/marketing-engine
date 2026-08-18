@@ -6,7 +6,9 @@ const assert = require("node:assert/strict");
 const {
   exactHeroTarget,
   installQualityUpliftPreview,
+  sealInternalLinkOperation,
   sealOperationFinalValue,
+  sha256Text,
   siteFromAgencyPlan,
 } = require("../src/modules/minisite-seo-enrichment/quality-uplift-preview-patch");
 
@@ -118,6 +120,61 @@ test("H1 sealing is fail-closed when the hero target is ambiguous or has no exac
     blockId: null,
     field: "title",
   });
+});
+
+test("internal-link sealing binds the exact persisted source block and source HTML", () => {
+  const sourceHtml = "<p>Bienvenue à Gien.</p>";
+  const site = {
+    pages: [
+      {
+        slug: "home",
+        title: "Accueil",
+        blocks: [{ id: "copy-home", blockType: "rich_text", content: { html: sourceHtml } }],
+      },
+      {
+        slug: "avis",
+        title: "Avis clients",
+        blocks: [{ id: "copy-avis", blockType: "rich_text", content: { html: "<p>Vos avis.</p>" } }],
+      },
+    ],
+  };
+  const proposal = { pageSlug: "avis", diagnostics: { internalLink: { path: "/agence/gien/avis" } } };
+  const operation = sealInternalLinkOperation(
+    { type: "add-internal-link", suggestedSourceSlugs: ["home"] },
+    proposal,
+    site,
+    site.pages[1]
+  );
+
+  assert.deepEqual(operation.target, {
+    scope: "block",
+    pageSlug: "home",
+    blockType: "rich_text",
+    blockId: "copy-home",
+    field: "content.html",
+  });
+  assert.equal(operation.sourceValueFingerprint, sha256Text(sourceHtml));
+  assert.deepEqual(operation.link, { href: "/agence/gien/avis", label: "Découvrir Avis clients" });
+  assert.equal(operation.finalValue, `${sourceHtml}<p><a href="/agence/gien/avis">Découvrir Avis clients</a></p>`);
+});
+
+test("internal-link sealing remains incomplete without a persisted rich-text block id", () => {
+  const site = {
+    pages: [
+      { slug: "home", title: "Accueil", blocks: [{ blockType: "rich_text", content: { html: "<p>Accueil</p>" } }] },
+      { slug: "avis", title: "Avis clients", blocks: [] },
+    ],
+  };
+  const operation = sealInternalLinkOperation(
+    { type: "add-internal-link", suggestedSourceSlugs: ["home"] },
+    { pageSlug: "avis", diagnostics: { internalLink: { path: "/agence/gien/avis" } } },
+    site,
+    site.pages[1]
+  );
+
+  assert.equal(operation.target, undefined);
+  assert.equal(operation.sourceValueFingerprint, undefined);
+  assert.equal(operation.finalValue, undefined);
 });
 
 test("network quality uplift preview excludes draft sites and remains read-only", async () => {
