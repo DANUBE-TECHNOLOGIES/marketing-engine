@@ -4,7 +4,9 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const {
+  exactHeroTarget,
   installQualityUpliftPreview,
+  sealOperationFinalValue,
   siteFromAgencyPlan,
 } = require("../src/modules/minisite-seo-enrichment/quality-uplift-preview-patch");
 
@@ -39,7 +41,7 @@ class FakeService {
             metaDescription: "Agence de voyages à Gien.",
           },
           currentBlocks: [
-            { blockType: "hero", content: { title: "Agence de voyages à Gien" } },
+            { id: "hero-home", blockType: "hero", content: { title: "Agence de voyages à Gien" } },
             { blockType: "rich_text", content: { html: "Conseils voyage à Gien." } },
           ],
         },
@@ -68,6 +70,54 @@ test("siteFromAgencyPlan exposes persisted blocks to the quality planner", () =>
   assert.equal(site.slug, "test-site");
   assert.equal(site.agency.city, "Nevers");
   assert.equal(site.pages[0].blocks[0].content.html, "Texte réel");
+});
+
+test("exact metadata operations seal deterministic write targets and final values", () => {
+  const site = {
+    agency: { id: 1, name: "Mondescale Gien", city: "Gien" },
+  };
+  const page = {
+    slug: "croisieres",
+    title: "Croisières",
+    blocks: [
+      { id: "hero-cruises", blockType: "hero", content: { title: "Croisières" } },
+      { id: "copy-cruises", blockType: "rich_text", content: { html: "Texte" } },
+    ],
+  };
+
+  const title = sealOperationFinalValue({ type: "strengthen-title" }, site, page);
+  const meta = sealOperationFinalValue({ type: "strengthen-meta-description" }, site, page);
+  const h1 = sealOperationFinalValue({ type: "strengthen-h1" }, site, page);
+
+  assert.deepEqual(title.target, { scope: "page", field: "seoTitle" });
+  assert.ok(String(title.finalValue || "").includes("Gien"));
+  assert.deepEqual(meta.target, { scope: "page", field: "metaDescription" });
+  assert.ok(String(meta.finalValue || "").includes("Gien"));
+  assert.deepEqual(h1.target, {
+    scope: "block",
+    blockType: "hero",
+    blockId: "hero-cruises",
+    field: "title",
+  });
+  assert.ok(String(h1.finalValue || "").includes("Gien"));
+});
+
+test("H1 sealing is fail-closed when the hero target is ambiguous or has no exact id", () => {
+  assert.equal(exactHeroTarget({ blocks: [] }), null);
+  assert.equal(exactHeroTarget({
+    blocks: [
+      { id: "hero-a", blockType: "hero", content: {} },
+      { id: "hero-b", blockType: "hero", content: {} },
+    ],
+  }), null);
+
+  const target = exactHeroTarget({ blocks: [{ blockType: "hero", content: {} }] });
+  assert.deepEqual(target, {
+    scope: "block",
+    blockType: "hero",
+    blockId: null,
+    field: "title",
+  });
 });
 
 test("network quality uplift preview excludes draft sites and remains read-only", async () => {
