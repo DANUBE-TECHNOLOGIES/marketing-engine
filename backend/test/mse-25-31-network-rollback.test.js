@@ -7,13 +7,33 @@ const os = require("node:os");
 const path = require("node:path");
 const { digest } = require("../scripts/mse-25-31-rollout-report-check");
 const { run } = require("../scripts/mse-25-31-network-rollback");
+const {
+  EXPECTED_WORKFLOW_BLOB_SHA,
+  GITHUB_REPOSITORY,
+  GITHUB_WORKFLOW_ID,
+  GITHUB_WORKFLOW_NAME,
+  GITHUB_WORKFLOW_PATH,
+} = require("../scripts/mse-25-31-ci-attestation");
 
+const BRANCH = "feature/mse-25-31-local-seo-quality-uplift";
+const HEAD = "a".repeat(40);
+function ciAttestation() {
+  return { ok: true, repository: GITHUB_REPOSITORY, workflowId: GITHUB_WORKFLOW_ID, workflowName: GITHUB_WORKFLOW_NAME, workflowPath: GITHUB_WORKFLOW_PATH, workflowBlobSha: EXPECTED_WORKFLOW_BLOB_SHA, runId: 123, headSha: HEAD, headBranch: BRANCH, event: "push", status: "completed", conclusion: "success" };
+}
 function rolloutReport() {
   const report = {
     type: "mse-25.31-network-rollout-report",
-    repository: { branch: "feature/mse-25-31-local-seo-quality-uplift", head: "a".repeat(40), dirty: false },
+    repository: { branch: BRANCH, head: HEAD, dirty: false },
     context: { tenantSlug: "mondescale" },
-    proof: { applyAuthorization: { authorized: true }, writeIntentCheck: { ok: true }, executionPlanFingerprint: "b".repeat(64), writeIntentFingerprint: "c".repeat(64) },
+    proof: {
+      preflightCheck: { ok: true },
+      ciAttestationCheck: { ok: true, runId: 123 },
+      liveCiAttestation: ciAttestation(),
+      applyAuthorization: { authorized: true },
+      writeIntentCheck: { ok: true },
+      executionPlanFingerprint: "b".repeat(64),
+      writeIntentFingerprint: "c".repeat(64),
+    },
     result: { ok: true, dryRun: false, writes: true, rollbackReady: true, executionPlanFingerprint: "b".repeat(64), writeIntentFingerprint: "c".repeat(64), pagesWritten: 2, rollbackSnapshots: 2 },
     rollbackManifest: [
       { agencyId: 1, siteSlug: "gien", pageSlug: "home", rollbackVersionId: "v-home" },
