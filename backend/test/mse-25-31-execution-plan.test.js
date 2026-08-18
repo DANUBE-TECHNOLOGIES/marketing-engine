@@ -3,7 +3,11 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { createApprovalManifest } = require("../scripts/mse-25-31-approval-manifest");
-const { buildExecutionPlan } = require("../scripts/mse-25-31-execution-plan");
+const {
+  buildExecutionPlan,
+  operationWriteTarget,
+  writeTargetCollisions,
+} = require("../scripts/mse-25-31-execution-plan");
 const { EXPECTED_BRANCH } = require("../scripts/mse-25-31-preflight");
 
 const FP = "a".repeat(64);
@@ -125,6 +129,8 @@ test("execution plan contains only explicitly approved pages with exact sealed p
   assert.equal(plan.summary.approvedCount, 1);
   assert.equal(plan.summary.payloadCompleteCount, 1);
   assert.equal(plan.summary.payloadIncompleteCount, 0);
+  assert.equal(plan.summary.writeTargetCollisionCount, 0);
+  assert.deepEqual(plan.writeTargetCollisions, []);
   assert.equal(plan.summary.skippedCount, 1);
   assert.match(plan.executionPlanFingerprint, /^[0-9a-f]{64}$/);
   assert.match(plan.source.approvalDecisionFingerprint, /^[0-9a-f]{64}$/);
@@ -173,4 +179,42 @@ test("approved manual-review page remains non-executable until its exact write p
   assert.equal(plan.pages[0].executionClass, "manual-review-needed");
   assert.deepEqual(plan.pages[0].manualReviewReasons, ["strengthen-meta-description"]);
   assert.deepEqual(plan.incompletePages[0].incompleteOperationTypes, ["strengthen-meta-description"]);
+});
+
+test("write target keys resolve internal links against their persisted source page", () => {
+  const target = operationWriteTarget(
+    { key: "gien:avis", siteSlug: "gien", pageSlug: "avis" },
+    {
+      type: "add-internal-link",
+      target: { pageSlug: "home", blockId: "copy-home" },
+    },
+    0
+  );
+  assert.equal(target.targetKey, "gien:home:block:copy-home:content.html");
+  assert.equal(target.candidateKey, "gien:avis");
+});
+
+test("execution collision detector rejects two approved operations replacing the same source field", () => {
+  const collisions = writeTargetCollisions([
+    {
+      key: "gien:avis",
+      siteSlug: "gien",
+      pageSlug: "avis",
+      executionPayload: {
+        operations: [{ type: "add-internal-link", target: { pageSlug: "home", blockId: "copy-home" } }],
+      },
+    },
+    {
+      key: "gien:croisieres",
+      siteSlug: "gien",
+      pageSlug: "croisieres",
+      executionPayload: {
+        operations: [{ type: "add-internal-link", target: { pageSlug: "home", blockId: "copy-home" } }],
+      },
+    },
+  ]);
+
+  assert.equal(collisions.length, 1);
+  assert.equal(collisions[0].targetKey, "gien:home:block:copy-home:content.html");
+  assert.deepEqual(collisions[0].writes.map((item) => item.candidateKey), ["gien:avis", "gien:croisieres"]);
 });
