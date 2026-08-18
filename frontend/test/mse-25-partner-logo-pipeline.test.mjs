@@ -29,8 +29,9 @@ test("generic partner logo discovery classifies candidates without auto-vetting 
   assert.match(discovery, /suggestedCandidate/);
   assert.match(discovery, /manual-masterbrand-review/);
   assert.match(discovery, /broaden-official-source-search/);
-  assert.doesNotMatch(discovery, /source-vetted/);
-  assert.doesNotMatch(discovery, /vetted-source/);
+  assert.match(discovery, /source\.status !== "vetted-source"/);
+  assert.doesNotMatch(discovery, /source\.status\s*=\s*["']vetted-source["']/);
+  assert.doesNotMatch(discovery, /backlog\.state\s*=\s*["']source-vetted["']/);
 });
 
 test("generic partner logo acquisition requires two-stage vetting and explicit overwrite", () => {
