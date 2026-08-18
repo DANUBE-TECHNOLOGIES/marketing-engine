@@ -6,6 +6,7 @@ const assert = require("node:assert/strict");
 const {
   exactHeroTarget,
   installQualityUpliftPreview,
+  internalLinkLabel,
   sealInternalLinkOperation,
   sealOperationFinalValue,
   sha256Text,
@@ -136,6 +137,8 @@ test("H1 sealing is fail-closed when the hero target is ambiguous or has no exac
 test("internal-link sealing binds the exact persisted source block and source HTML", () => {
   const sourceHtml = "<p>Bienvenue à Gien.</p>";
   const site = {
+    agencyId: 4,
+    agency: { id: 4, city: "Gien" },
     pages: [
       {
         slug: "home",
@@ -156,6 +159,7 @@ test("internal-link sealing binds the exact persisted source block and source HT
     site,
     site.pages[1]
   );
+  const expectedLabel = internalLinkLabel(site.pages[1], site);
 
   assert.deepEqual(operation.target, {
     scope: "block",
@@ -165,8 +169,16 @@ test("internal-link sealing binds the exact persisted source block and source HT
     field: "content.html",
   });
   assert.equal(operation.sourceValueFingerprint, sha256Text(sourceHtml));
-  assert.deepEqual(operation.link, { href: "/agence/gien/avis", label: "Découvrir Avis clients" });
-  assert.equal(operation.finalValue, `${sourceHtml}<p><a href="/agence/gien/avis">Découvrir Avis clients</a></p>`);
+  assert.deepEqual(operation.link, { href: "/agence/gien/avis", label: expectedLabel });
+  assert.equal(operation.finalValue, `${sourceHtml}<p><a href="/agence/gien/avis">${expectedLabel}</a></p>`);
+  assert.match(expectedLabel, /avis|retours/i);
+  assert.notEqual(expectedLabel, "Découvrir Avis clients");
+});
+
+test("internal-link anchor selection is deterministic for the same agency and page", () => {
+  const site = { agencyId: 4, agency: { id: 4, city: "Gien" } };
+  const page = { slug: "equipe", title: "Notre équipe" };
+  assert.equal(internalLinkLabel(page, site), internalLinkLabel(page, site));
 });
 
 test("internal-link sealing remains incomplete without a persisted rich-text block id", () => {
