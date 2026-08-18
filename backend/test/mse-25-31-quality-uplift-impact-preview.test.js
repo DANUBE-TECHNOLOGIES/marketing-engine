@@ -116,16 +116,19 @@ test("impact preview simulates exact title meta and H1 values without mutating s
           {
             type: "strengthen-title",
             target: { scope: "page", field: "seoTitle" },
+            sourceValueFingerprint: sha256Text(""),
             finalValue: "Avis clients sur votre agence de voyages à Gien",
           },
           {
             type: "strengthen-meta-description",
             target: { scope: "page", field: "metaDescription" },
+            sourceValueFingerprint: sha256Text(""),
             finalValue: "Consultez les avis clients de votre agence de voyages à Gien et préparez votre prochain projet avec une équipe de proximité.",
           },
           {
             type: "strengthen-h1",
             target: { scope: "block", blockType: "hero", blockId: "hero-avis", field: "title" },
+            sourceValueFingerprint: sha256Text("Avis clients à Gien"),
             finalValue: "Avis clients de votre agence de voyages à Gien",
           },
         ],
@@ -143,6 +146,29 @@ test("impact preview simulates exact title meta and H1 values without mutating s
   assert.ok(avis);
   assert.equal(avis.projectionComplete, true);
   assert.deepEqual(avis.nonSimulatedOperationTypes, []);
+});
+
+test("impact preview refuses stale metadata source fingerprints", () => {
+  const source = site();
+  const currentPlan = buildLocalSeoQualityUpliftPlan(source, { minimumWords: 120 });
+  const result = projectQualityUpliftImpact({
+    site: source,
+    currentPlan,
+    proposals: [{
+      pageSlug: "avis",
+      operations: [{
+        type: "strengthen-h1",
+        target: { scope: "block", blockType: "hero", blockId: "hero-avis", field: "title" },
+        sourceValueFingerprint: sha256Text("Ancien H1"),
+        finalValue: "Avis clients de votre agence de voyages à Gien",
+      }],
+    }],
+  });
+
+  assert.equal(result.projectionComplete, false);
+  assert.equal(result.simulation.simulatedMetadataOperations, 0);
+  assert.equal(result.simulation.nonSimulatedOperations, 1);
+  assert.deepEqual(result.simulation.nonSimulatedOperationTypes, ["strengthen-h1"]);
 });
 
 test("impact preview refuses stale sealed internal-link source fingerprints", () => {
