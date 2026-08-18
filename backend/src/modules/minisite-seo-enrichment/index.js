@@ -33,6 +33,10 @@ const {
   titleForPage,
 } = require("./generator");
 
+const {
+  buildQualityUpliftWriteIntents,
+} = require("./quality-uplift-write-intent");
+
 function routes(options = {}) {
   const router = express.Router();
   router.use(enrichmentRoutes(options));
@@ -49,6 +53,7 @@ module.exports = {
   buildSeoPlan,
   buildSeoUpdate,
   summarizeExecution,
+  buildQualityUpliftWriteIntents,
 
   descriptionForPage,
   generateSeoMetadata,
