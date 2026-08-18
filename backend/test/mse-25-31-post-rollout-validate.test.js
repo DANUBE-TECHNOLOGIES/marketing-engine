@@ -7,15 +7,35 @@ const os = require("node:os");
 const path = require("node:path");
 const { digest } = require("../scripts/mse-25-31-rollout-report-check");
 const { run } = require("../scripts/mse-25-31-post-rollout-validate");
+const {
+  EXPECTED_WORKFLOW_BLOB_SHA,
+  GITHUB_REPOSITORY,
+  GITHUB_WORKFLOW_ID,
+  GITHUB_WORKFLOW_NAME,
+  GITHUB_WORKFLOW_PATH,
+} = require("../scripts/mse-25-31-ci-attestation");
 
+const BRANCH = "feature/mse-25-31-local-seo-quality-uplift";
+const HEAD = "a".repeat(40);
+function ciAttestation() {
+  return { ok: true, repository: GITHUB_REPOSITORY, workflowId: GITHUB_WORKFLOW_ID, workflowName: GITHUB_WORKFLOW_NAME, workflowPath: GITHUB_WORKFLOW_PATH, workflowBlobSha: EXPECTED_WORKFLOW_BLOB_SHA, runId: 123, headSha: HEAD, headBranch: BRANCH, event: "push", status: "completed", conclusion: "success" };
+}
 function writeJson(dir, name, value) { const file = path.join(dir, name); fs.writeFileSync(file, JSON.stringify(value), "utf8"); return file; }
 
 function rollout() {
   const report = {
     type: "mse-25.31-network-rollout-report",
-    repository: { branch: "feature/mse-25-31-local-seo-quality-uplift", head: "a".repeat(40), dirty: false },
+    repository: { branch: BRANCH, head: HEAD, dirty: false },
     context: { tenantSlug: "mondescale" },
-    proof: { applyAuthorization: { authorized: true }, writeIntentCheck: { ok: true }, executionPlanFingerprint: "b".repeat(64), writeIntentFingerprint: "c".repeat(64) },
+    proof: {
+      preflightCheck: { ok: true },
+      ciAttestationCheck: { ok: true, runId: 123 },
+      liveCiAttestation: ciAttestation(),
+      applyAuthorization: { authorized: true },
+      writeIntentCheck: { ok: true },
+      executionPlanFingerprint: "b".repeat(64),
+      writeIntentFingerprint: "c".repeat(64),
+    },
     result: { ok: true, dryRun: false, writes: true, rollbackReady: true, executionPlanFingerprint: "b".repeat(64), writeIntentFingerprint: "c".repeat(64), pagesWritten: 1, rollbackSnapshots: 1 },
     rollbackManifest: [{ agencyId: 1, siteSlug: "gien", pageSlug: "avis", rollbackVersionId: "v1" }],
   };
@@ -26,7 +46,7 @@ function rollout() {
 function preflight() {
   return {
     version: "mse-25.31", operation: "preflight-quality-uplift", readOnly: true, writes: false, destructive: false,
-    repository: { branch: "feature/mse-25-31-local-seo-quality-uplift", head: "a".repeat(40), dirty: false },
+    repository: { branch: BRANCH, head: HEAD, dirty: false },
     context: { backendOrigin: "http://127.0.0.1:4000", tenantSlug: "mondescale", minimumWords: 120, topPages: 20 },
     planFingerprint: "d".repeat(64),
     preview: { readOnly: true, writes: false, destructive: false, planFingerprint: "d".repeat(64), allPages: [{ siteSlug: "gien", pageSlug: "avis", beforeWarnings: 2, projectedWarnings: 0 }], executionPayloads: [] },
