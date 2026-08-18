@@ -26,7 +26,7 @@ on:
       - 'frontend/app/indexation/**'
       - 'frontend/app/website-builder/editor/**'
       - 'frontend/components/page-builder-v2/**'
-      - 'frontend/components/public-site/renderers/**'
+      - 'frontend/components/public-site/**'
       - 'frontend/lib/page-builder-v2/**'
       - 'frontend/lib/indexation-api.js'
       - 'frontend/test/mse-25-*.test.mjs'
@@ -98,8 +98,11 @@ jobs:
       - name: Run MSE-25.32 flexible payment frontend tests
         run: node --test test/mse-25-32-flexible-payment-experience.test.mjs
 
-      - name: Lint MSE-25.32 flexible payment integration
-        run: npx eslint "app/api/agency-sites/[siteKey]/flexible-payment/[[...operation]]/route.js" "app/website-builder/editor/[siteId]/page.js" "components/page-builder-v2/FlexiblePaymentPolicyPanel.js" "components/public-site/renderers/FlexiblePaymentRenderer.js" "components/public-site/renderers/registry.js" "lib/page-builder-v2/block-catalog.js" "lib/page-builder-v2/flexible-payment-api.js"
+      - name: Run MSE-25.33 flexible payment conversion tests
+        run: node --test test/mse-25-33-flexible-payment-conversion-measurement.test.mjs
+
+      - name: Lint MSE-25.32/25.33 flexible payment integration
+        run: npx eslint "app/api/agency-sites/[siteKey]/flexible-payment/[[...operation]]/route.js" "app/website-builder/editor/[siteId]/page.js" "components/page-builder-v2/FlexiblePaymentPolicyPanel.js" "components/public-site/TrackedConversionLink.js" "components/public-site/renderers/FlexiblePaymentRenderer.js" "components/public-site/renderers/registry.js" "lib/page-builder-v2/block-catalog.js" "lib/page-builder-v2/flexible-payment-api.js"
 
       - name: Lint sitemap and indexation API
         run: npx eslint "app/agence/[siteSlug]/sitemap.xml/route.js" "app/api/indexation/route.js" "lib/indexation-api.js"

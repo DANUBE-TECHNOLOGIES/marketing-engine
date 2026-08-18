@@ -1,3 +1,4 @@
+import TrackedConversionLink from "../TrackedConversionLink";
 import {
   getSectionContent,
   getSectionTitle,
@@ -82,6 +83,12 @@ export default function FlexiblePaymentRenderer({
     "Contacter mon agence";
   const ctaHref =
     content.primaryCta?.href || "contact";
+  const installmentCounts = normalizeInstallmentCounts(
+    content.installmentCounts
+  );
+  const feeMode = ALLOWED_FEE_MODES.has(content.feeMode)
+    ? content.feeMode
+    : "unspecified";
 
   return (
     <section
@@ -109,16 +116,26 @@ export default function FlexiblePaymentRenderer({
         ) : null}
 
         <div className="public-site-hero-actions">
-          <a
+          <TrackedConversionLink
             className="public-site-button"
             href={resolvePublicCtaHref(
               site,
               ctaHref,
               "contact"
             )}
+            tracking={{
+              conversionType: "flexible_payment_cta",
+              siteId: site?.id,
+              siteSlug: site?.slug,
+              paymentVariant: variant,
+              paymentProducts: content.products,
+              paymentInstallments: installmentCounts,
+              paymentFeeMode: feeMode,
+              ctaLabel,
+            }}
           >
             {ctaLabel}
-          </a>
+          </TrackedConversionLink>
         </div>
       </div>
     </section>
