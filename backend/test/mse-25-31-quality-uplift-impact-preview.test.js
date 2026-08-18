@@ -171,6 +171,32 @@ test("impact preview refuses stale sealed internal-link source fingerprints", ()
   assert.deepEqual(result.simulation.nonSimulatedOperationTypes, ["add-internal-link"]);
 });
 
+test("impact preview refuses sealed internal links that do not target a rich-text block contract", () => {
+  const source = site();
+  const currentPlan = buildLocalSeoQualityUpliftPlan(source, { minimumWords: 120 });
+  const avisInternalLink = currentPlan.internalLinkOpportunities.find((item) => item.pageSlug === "avis");
+  const sourceHtml = source.pages[0].blocks[1].content.html;
+
+  const result = projectQualityUpliftImpact({
+    site: source,
+    currentPlan,
+    proposals: [{
+      pageSlug: "avis",
+      operations: [{
+        type: "add-internal-link",
+        target: { scope: "block", pageSlug: "home", blockType: "hero", blockId: "copy-home", field: "content.html" },
+        sourceValueFingerprint: sha256Text(sourceHtml),
+        link: { href: avisInternalLink.path, label: "Découvrir Avis clients" },
+        finalValue: `${sourceHtml}<p><a href="${avisInternalLink.path}">Découvrir Avis clients</a></p>`,
+      }],
+    }],
+  });
+
+  assert.equal(result.projectionComplete, false);
+  assert.equal(result.simulation.simulatedInternalLinkOperations, 0);
+  assert.deepEqual(result.simulation.nonSimulatedOperationTypes, ["add-internal-link"]);
+});
+
 test("impact preview declares partial projection and exposes unsimulated operation types", () => {
   const source = site();
   const currentPlan = buildLocalSeoQualityUpliftPlan(source, { minimumWords: 120 });
