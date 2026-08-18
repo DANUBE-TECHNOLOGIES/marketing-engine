@@ -38,7 +38,7 @@ test("MSE-25.39 validates the complete flexible payment module contract", () => 
 });
 
 test("MSE-25.39 normalizes PostgreSQL to_regclass results", () => {
-  assert.equal(normalizeTableResult([{ table_name: '"AgencyPaymentPolicy"' }]), '"AgencyPaymentPolicy"');
+  assert.equal(normalizeTableResult([{ table_name: '\"AgencyPaymentPolicy\"' }]), '\"AgencyPaymentPolicy\"');
   assert.equal(normalizeTableResult([{ table_name: null }]), null);
 });
 
@@ -47,7 +47,7 @@ test("MSE-25.39 reports a ready VM without performing writes", async () => {
   const prisma = {
     $queryRawUnsafe: async (sql) => {
       queries.push(sql);
-      if (sql.includes("to_regclass")) return [{ table_name: '"AgencyPaymentPolicy"' }];
+      if (sql.includes("to_regclass")) return [{ table_name: '\"AgencyPaymentPolicy\"' }];
       return [{ ok: 1 }];
     },
   };
@@ -59,6 +59,7 @@ test("MSE-25.39 reports a ready VM without performing writes", async () => {
   assert.equal(queries.length, 2);
   assert.match(queries[0], /SELECT 1/);
   assert.match(queries[1], /AgencyPaymentPolicy/);
+  assert.match(queries[1], /::text/);
 });
 
 test("MSE-25.39 fails closed when the payment policy migration is missing", async () => {
