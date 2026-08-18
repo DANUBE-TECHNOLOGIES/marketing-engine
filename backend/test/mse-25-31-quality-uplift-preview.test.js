@@ -74,13 +74,15 @@ test("siteFromAgencyPlan exposes persisted blocks to the quality planner", () =>
   assert.equal(site.pages[0].blocks[0].content.html, "Texte réel");
 });
 
-test("exact metadata operations seal deterministic write targets and final values", () => {
+test("exact metadata operations seal deterministic write targets, source fingerprints and final values", () => {
   const site = {
     agency: { id: 1, name: "Mondescale Gien", city: "Gien" },
   };
   const page = {
     slug: "croisieres",
     title: "Croisières",
+    seoTitle: "Croisières",
+    metaDescription: "Découvrez nos croisières.",
     blocks: [
       { id: "hero-cruises", blockType: "hero", content: { title: "Croisières" } },
       { id: "copy-cruises", blockType: "rich_text", content: { html: "Texte" } },
@@ -92,8 +94,10 @@ test("exact metadata operations seal deterministic write targets and final value
   const h1 = sealOperationFinalValue({ type: "strengthen-h1" }, site, page);
 
   assert.deepEqual(title.target, { scope: "page", field: "seoTitle" });
+  assert.equal(title.sourceValueFingerprint, sha256Text("Croisières"));
   assert.ok(String(title.finalValue || "").includes("Gien"));
   assert.deepEqual(meta.target, { scope: "page", field: "metaDescription" });
+  assert.equal(meta.sourceValueFingerprint, sha256Text("Découvrez nos croisières."));
   assert.ok(String(meta.finalValue || "").includes("Gien"));
   assert.deepEqual(h1.target, {
     scope: "block",
@@ -101,6 +105,7 @@ test("exact metadata operations seal deterministic write targets and final value
     blockId: "hero-cruises",
     field: "title",
   });
+  assert.equal(h1.sourceValueFingerprint, sha256Text("Croisières"));
   assert.ok(String(h1.finalValue || "").includes("Gien"));
 });
 
@@ -120,6 +125,12 @@ test("H1 sealing is fail-closed when the hero target is ambiguous or has no exac
     blockId: null,
     field: "title",
   });
+  const sealed = sealOperationFinalValue(
+    { type: "strengthen-h1" },
+    { agency: { city: "Gien" } },
+    { slug: "home", blocks: [{ blockType: "hero", content: { title: "Accueil" } }] }
+  );
+  assert.equal(sealed.sourceValueFingerprint, null);
 });
 
 test("internal-link sealing binds the exact persisted source block and source HTML", () => {
