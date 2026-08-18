@@ -37,6 +37,10 @@ const {
   buildQualityUpliftWriteIntents,
 } = require("./quality-uplift-write-intent");
 
+const {
+  applyQualityUpliftWriteIntent,
+} = require("./quality-uplift-apply-executor");
+
 function routes(options = {}) {
   const router = express.Router();
   router.use(enrichmentRoutes(options));
@@ -54,6 +58,7 @@ module.exports = {
   buildSeoUpdate,
   summarizeExecution,
   buildQualityUpliftWriteIntents,
+  applyQualityUpliftWriteIntent,
 
   descriptionForPage,
   generateSeoMetadata,
