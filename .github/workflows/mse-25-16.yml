@@ -10,16 +10,24 @@ on:
       - 'backend/src/modules/minisite-structured-data/**'
       - 'backend/src/modules/minisite-seo-enrichment/**'
       - 'backend/src/modules/agency-seo/**'
+      - 'backend/src/modules/flexible-payment-experience/**'
+      - 'backend/prisma/migrations/**'
       - 'backend/scripts/search-console-readiness-check.js'
       - 'backend/test/search-console-*.test.js'
       - 'backend/test/minisite-local-*.test.js'
       - 'backend/test/minisite-seo-*.test.js'
       - 'backend/test/mse-25-30-*.test.js'
       - 'backend/test/mse-25-31-*.test.js'
+      - 'backend/test/mse-25-32-*.test.js'
       - 'backend/test/agency-seo-*.test.js'
       - 'frontend/app/agence/[siteSlug]/sitemap.xml/route.js'
+      - 'frontend/app/api/agency-sites/**'
       - 'frontend/app/api/indexation/**'
       - 'frontend/app/indexation/**'
+      - 'frontend/app/website-builder/editor/**'
+      - 'frontend/components/page-builder-v2/**'
+      - 'frontend/components/public-site/renderers/**'
+      - 'frontend/lib/page-builder-v2/**'
       - 'frontend/lib/indexation-api.js'
       - 'frontend/test/mse-25-*.test.mjs'
       - 'frontend/package.json'
@@ -49,10 +57,13 @@ jobs:
       - name: Install backend dependencies
         run: npm ci
 
-      - name: Run Search Console, local SEO and optimizer backend tests
+      - name: Run Search Console, local SEO and MSE-25.30/25.31 backend tests
         env:
           SEARCH_CONSOLE_ENABLED: 'false'
         run: node --test test/search-console-*.test.js test/minisite-local-*.test.js test/minisite-seo-*.test.js test/mse-25-30-*.test.js test/mse-25-31-*.test.js test/agency-seo-*.test.js
+
+      - name: Run MSE-25.32 flexible payment backend tests
+        run: node --test test/mse-25-32-*.test.js
 
       - name: Verify Search Console module loads with provider disabled
         env:
@@ -83,6 +94,12 @@ jobs:
 
       - name: Run indexation contract tests
         run: npm run test:indexation
+
+      - name: Run MSE-25.32 flexible payment frontend tests
+        run: node --test test/mse-25-32-flexible-payment-experience.test.mjs
+
+      - name: Lint MSE-25.32 flexible payment integration
+        run: npx eslint "app/api/agency-sites/[siteKey]/flexible-payment/[[...operation]]/route.js" "app/website-builder/editor/[siteId]/page.js" "components/page-builder-v2/FlexiblePaymentPolicyPanel.js" "components/public-site/renderers/FlexiblePaymentRenderer.js" "components/public-site/renderers/registry.js" "lib/page-builder-v2/block-catalog.js" "lib/page-builder-v2/flexible-payment-api.js"
 
       - name: Lint sitemap and indexation API
         run: npx eslint "app/agence/[siteSlug]/sitemap.xml/route.js" "app/api/indexation/route.js" "lib/indexation-api.js"

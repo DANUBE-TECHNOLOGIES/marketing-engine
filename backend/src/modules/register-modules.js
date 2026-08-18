@@ -37,6 +37,8 @@ const minisiteBlueprintPersistence = require("./minisite-blueprint-persistence")
 const minisiteSeoEnrichment = require("./minisite-seo-enrichment");
 const minisiteStructuredData = require("./minisite-structured-data");
 const searchConsoleSubmission = require("./search-console-submission");
+const flexiblePaymentExperience = require("./flexible-payment-experience");
+
 module.exports = function registerModules(app, { prisma }) {
   if (tenantCore.routes) {
     app.use(tenantCore.routes({ prisma }));
@@ -217,5 +219,9 @@ module.exports = function registerModules(app, { prisma }) {
   if (searchConsoleSubmission.routes) {
     const provider = searchConsoleSubmission.createConfiguredSearchConsoleProvider();
     app.use(searchConsoleSubmission.routes({ prisma, provider }));
+  }
+
+  if (flexiblePaymentExperience.routes) {
+    app.use(flexiblePaymentExperience.routes({ prisma }));
   }
 };
