@@ -7,6 +7,10 @@ function clone(value) { return JSON.parse(JSON.stringify(value)); }
 function findPage(site, slug) { return (site.pages || []).find((page) => String(page?.slug || "") === String(slug || "")) || null; }
 function sha256Text(value) { return crypto.createHash("sha256").update(String(value ?? ""), "utf8").digest("hex"); }
 function normalizedBlockType(block = {}) { return String(block.blockType || block.type || "").trim().toLowerCase().replace(/[_\s]+/g, "-"); }
+function sourceFingerprintMatches(value, operation = {}) {
+  return /^[0-9a-f]{64}$/i.test(String(operation.sourceValueFingerprint || ""))
+    && sha256Text(value) === String(operation.sourceValueFingerprint).toLowerCase();
+}
 
 function appendBodyPreview(page, copyPreview) {
   if (!page || !copyPreview?.html) return false;
@@ -45,25 +49,31 @@ function applyExactInternalLinkOperation(site, operation = {}) {
   const block = (sourcePage.blocks || []).find((item) => String(item?.id) === String(operation.target?.blockId));
   if (!block || normalizedBlockType(block) !== "rich-text" || String(operation.target?.field || "") !== "content.html") return false;
   const currentHtml = String(block.content?.html || "");
-  if (sha256Text(currentHtml) !== String(operation.sourceValueFingerprint || "").toLowerCase()) return false;
+  if (!sourceFingerprintMatches(currentHtml, operation)) return false;
   block.content = { ...(block.content || {}), html: operation.finalValue };
   return true;
 }
 
 function applyExactSeoOperation(page, operation = {}) {
-  if (!page || !String(operation.finalValue || "").trim()) return false;
-  if (operation.type === "strengthen-title" && operation.target?.scope === "page" && operation.target?.field === "seoTitle") {
+  if (!page || !String(operation.finalValue || "").trim() || !operationSimulationReady(operation, { operations: [operation] })) return false;
+  if (operation.type === "strengthen-title") {
+    const current = String(page.seoTitle ?? "");
+    if (!sourceFingerprintMatches(current, operation)) return false;
     page.seoTitle = operation.finalValue;
     return true;
   }
-  if (operation.type === "strengthen-meta-description" && operation.target?.scope === "page" && operation.target?.field === "metaDescription") {
+  if (operation.type === "strengthen-meta-description") {
+    const current = String(page.metaDescription ?? page.seoDescription ?? "");
+    if (!sourceFingerprintMatches(current, operation)) return false;
     page.metaDescription = operation.finalValue;
     page.seoDescription = operation.finalValue;
     return true;
   }
-  if (operation.type === "strengthen-h1" && operation.target?.scope === "block" && operation.target?.blockId !== null && operation.target?.blockId !== undefined) {
+  if (operation.type === "strengthen-h1") {
     const block = (page.blocks || []).find((item) => String(item?.id) === String(operation.target.blockId));
-    if (!block || String(operation.target?.field || "") !== "title") return false;
+    if (!block || normalizedBlockType(block) !== "hero" || String(operation.target?.field || "") !== "title") return false;
+    const current = String(block.content?.title ?? "");
+    if (!sourceFingerprintMatches(current, operation)) return false;
     block.content = { ...(block.content || {}), title: operation.finalValue };
     return true;
   }
@@ -93,6 +103,7 @@ function operationSimulationReady(operation = {}, proposal = {}) {
       String(operation.finalValue || "").trim()
       && operation.target?.scope === "page"
       && operation.target?.field === "seoTitle"
+      && /^[0-9a-f]{64}$/i.test(String(operation.sourceValueFingerprint || ""))
     );
   }
   if (operation.type === "strengthen-meta-description") {
@@ -100,15 +111,18 @@ function operationSimulationReady(operation = {}, proposal = {}) {
       String(operation.finalValue || "").trim()
       && operation.target?.scope === "page"
       && operation.target?.field === "metaDescription"
+      && /^[0-9a-f]{64}$/i.test(String(operation.sourceValueFingerprint || ""))
     );
   }
   if (operation.type === "strengthen-h1") {
     return Boolean(
       String(operation.finalValue || "").trim()
       && operation.target?.scope === "block"
+      && operation.target?.blockType === "hero"
       && operation.target?.blockId !== null
       && operation.target?.blockId !== undefined
       && operation.target?.field === "title"
+      && /^[0-9a-f]{64}$/i.test(String(operation.sourceValueFingerprint || ""))
     );
   }
   return false;
@@ -270,6 +284,7 @@ module.exports = {
   projectedPageImpact,
   reduction,
   sha256Text,
+  sourceFingerprintMatches,
   warningKey,
   warningRows,
 };
