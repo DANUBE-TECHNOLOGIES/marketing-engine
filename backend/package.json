@@ -26,7 +26,8 @@
     "mse-25.31:approval-check": "node scripts/mse-25-31-approval-check.js",
     "mse-25.31:execution-plan": "node scripts/mse-25-31-execution-plan.js",
     "mse-25.31:execution-plan-check": "node scripts/mse-25-31-execution-plan-check.js",
-    "mse-25.31:apply-gate": "node scripts/mse-25-31-apply-gate.js"
+    "mse-25.31:apply-gate": "node scripts/mse-25-31-apply-gate.js",
+    "mse-25.31:write-intent": "node scripts/mse-25-31-write-intent.js"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",
