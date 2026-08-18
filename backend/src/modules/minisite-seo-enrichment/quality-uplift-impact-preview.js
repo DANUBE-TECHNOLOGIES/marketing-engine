@@ -6,6 +6,7 @@ const { buildLocalSeoQualityUpliftPlan } = require("./quality-uplift-planner");
 function clone(value) { return JSON.parse(JSON.stringify(value)); }
 function findPage(site, slug) { return (site.pages || []).find((page) => String(page?.slug || "") === String(slug || "")) || null; }
 function sha256Text(value) { return crypto.createHash("sha256").update(String(value ?? ""), "utf8").digest("hex"); }
+function normalizedBlockType(block = {}) { return String(block.blockType || block.type || "").trim().toLowerCase().replace(/[_\s]+/g, "-"); }
 
 function appendBodyPreview(page, copyPreview) {
   if (!page || !copyPreview?.html) return false;
@@ -42,7 +43,7 @@ function applyExactInternalLinkOperation(site, operation = {}) {
   const sourcePage = findPage(site, operation.target?.pageSlug);
   if (!sourcePage) return false;
   const block = (sourcePage.blocks || []).find((item) => String(item?.id) === String(operation.target?.blockId));
-  if (!block || String(operation.target?.field || "") !== "content.html") return false;
+  if (!block || normalizedBlockType(block) !== "rich-text" || String(operation.target?.field || "") !== "content.html") return false;
   const currentHtml = String(block.content?.html || "");
   if (sha256Text(currentHtml) !== String(operation.sourceValueFingerprint || "").toLowerCase()) return false;
   block.content = { ...(block.content || {}), html: operation.finalValue };
@@ -77,6 +78,7 @@ function operationSimulationReady(operation = {}, proposal = {}) {
     return Boolean(
       operation.target?.scope === "block"
       && String(operation.target?.pageSlug || "").trim()
+      && operation.target?.blockType === "rich_text"
       && operation.target?.blockId !== null
       && operation.target?.blockId !== undefined
       && operation.target?.field === "content.html"
@@ -261,6 +263,7 @@ module.exports = {
   applyExactInternalLinkOperation,
   applyExactSeoOperation,
   counts,
+  normalizedBlockType,
   operationSimulationReady,
   pageWarningCounts,
   projectQualityUpliftImpact,
