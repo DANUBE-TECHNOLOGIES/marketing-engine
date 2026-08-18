@@ -4,6 +4,12 @@ const crypto = require("node:crypto");
 const { validatePagePayload } = require("../page-builder-persistence/validation");
 
 function clone(value) { return JSON.parse(JSON.stringify(value)); }
+function stableValue(value) {
+  if (Array.isArray(value)) return value.map(stableValue);
+  if (value && typeof value === "object") return Object.fromEntries(Object.keys(value).sort().map((key) => [key, stableValue(value[key])]));
+  return value;
+}
+function digest(value) { return crypto.createHash("sha256").update(JSON.stringify(stableValue(value))).digest("hex"); }
 function sha256Text(value) { return crypto.createHash("sha256").update(String(value ?? ""), "utf8").digest("hex"); }
 function normalizedBlockType(block = {}) { return String(block.type || block.blockType || "").trim().toLowerCase().replace(/[_\s]+/g, "-"); }
 function normalizedPageSlug(value) {
@@ -98,11 +104,8 @@ function saveBody(page = {}) {
   };
 }
 function validatedSaveBody(page = {}, details = {}) {
-  try {
-    return validatePagePayload(saveBody(page));
-  } catch (cause) {
-    throw error("MSE_25_31_WRITE_INTENT_PAGE_BUILDER_CONTRACT_INVALID", "Le body final ne respecte pas le contrat Website Designer V2.", { ...details, causeCode: cause?.code || null, causeMessage: cause?.message || String(cause) });
-  }
+  try { return validatePagePayload(saveBody(page)); }
+  catch (cause) { throw error("MSE_25_31_WRITE_INTENT_PAGE_BUILDER_CONTRACT_INVALID", "Le body final ne respecte pas le contrat Website Designer V2.", { ...details, causeCode: cause?.code || null, causeMessage: cause?.message || String(cause) }); }
 }
 function buildQualityUpliftWriteIntents({ executionPlan = {}, currentPages = [] } = {}) {
   if (executionPlan.version !== "mse-25.31" || executionPlan.operation !== "quality-uplift-execution-plan" || executionPlan.readOnly !== true || executionPlan.writes !== false || executionPlan.publicWrites !== false || executionPlan.executable !== true) {
@@ -125,7 +128,8 @@ function buildQualityUpliftWriteIntents({ executionPlan = {}, currentPages = [] 
     const row = map.get(key);
     return { key, agencyId: row.agencyId, siteSlug: row.siteSlug, pageSlug: row.pageSlug, persistence: { method: "PageBuilderPersistenceService.save", agencyId: row.agencyId, pageSlug: row.pageSlug, body: validatedSaveBody(row.page, { key }) } };
   });
-  return { version: "mse-25.31", operation: "quality-uplift-write-intent", readOnly: true, writes: false, publicWrites: false, persistenceCallsPerformed: 0, executionPlanFingerprint: executionPlan.executionPlanFingerprint, summary: { approvedCandidateCount: (executionPlan.pages || []).length, touchedPageCount: intents.length }, intents };
+  const writeIntentFingerprint = digest({ version: "mse-25.31", executionPlanFingerprint: executionPlan.executionPlanFingerprint, intents });
+  return { version: "mse-25.31", operation: "quality-uplift-write-intent", readOnly: true, writes: false, publicWrites: false, persistenceCallsPerformed: 0, executionPlanFingerprint: executionPlan.executionPlanFingerprint, writeIntentFingerprint, summary: { approvedCandidateCount: (executionPlan.pages || []).length, touchedPageCount: intents.length }, intents };
 }
 
-module.exports = { buildQualityUpliftWriteIntents, assertSourceFingerprint, currentPageMap, nextBlockPosition, normalizedBlockType, normalizedPageSlug, pageKey, saveBody, sha256Text, validatedSaveBody };
+module.exports = { buildQualityUpliftWriteIntents, assertSourceFingerprint, currentPageMap, digest, nextBlockPosition, normalizedBlockType, normalizedPageSlug, pageKey, saveBody, sha256Text, stableValue, validatedSaveBody };
