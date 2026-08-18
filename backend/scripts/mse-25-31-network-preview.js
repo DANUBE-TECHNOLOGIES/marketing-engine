@@ -70,6 +70,18 @@ function operationPayloadComplete(operation = {}, bodyCopyPreview = null) {
   if (operation.type === "enrich-body") {
     return Boolean(bodyCopyPreview?.html && bodyCopyPreview?.title);
   }
+  if (operation.type === "add-internal-link") {
+    return operation.target?.scope === "block"
+      && Boolean(String(operation.target?.pageSlug || "").trim())
+      && operation.target?.blockType === "rich_text"
+      && operation.target?.field === "content.html"
+      && operation.target?.blockId !== null
+      && operation.target?.blockId !== undefined
+      && /^[0-9a-f]{64}$/i.test(String(operation.sourceValueFingerprint || ""))
+      && Boolean(String(operation.link?.href || "").trim())
+      && Boolean(String(operation.link?.label || "").trim())
+      && Boolean(String(operation.finalValue || "").trim());
+  }
   if (operation.type === "strengthen-title") {
     return operation.target?.scope === "page"
       && operation.target?.field === "seoTitle"
