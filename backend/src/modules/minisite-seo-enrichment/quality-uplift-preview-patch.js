@@ -42,11 +42,23 @@ function exactHeroTarget(page = {}) {
   };
 }
 
+function sha256Text(value) {
+  return crypto.createHash("sha256").update(String(value ?? ""), "utf8").digest("hex");
+}
+
+function exactHeroSourceValue(page = {}, target = null) {
+  if (!target || target.blockId === null || target.blockId === undefined) return null;
+  const block = (page.blocks || []).find((item) => String(item?.id) === String(target.blockId));
+  if (!block || normalizedBlockType(block) !== "hero") return null;
+  return String(block.content?.title ?? "");
+}
+
 function sealOperationFinalValue(operation = {}, site = {}, page = {}) {
   if (operation.type === "strengthen-title") {
     return {
       ...operation,
       target: { scope: "page", field: "seoTitle" },
+      sourceValueFingerprint: sha256Text(page.seoTitle ?? ""),
       finalValue: titleForPage({ agency: site.agency || {}, page }),
     };
   }
@@ -54,21 +66,21 @@ function sealOperationFinalValue(operation = {}, site = {}, page = {}) {
     return {
       ...operation,
       target: { scope: "page", field: "metaDescription" },
+      sourceValueFingerprint: sha256Text(page.metaDescription ?? page.seoDescription ?? ""),
       finalValue: descriptionForPage({ agency: site.agency || {}, page }),
     };
   }
   if (operation.type === "strengthen-h1") {
+    const target = exactHeroTarget(page);
+    const sourceValue = exactHeroSourceValue(page, target);
     return {
       ...operation,
-      target: exactHeroTarget(page),
+      target,
+      sourceValueFingerprint: sourceValue === null ? null : sha256Text(sourceValue),
       finalValue: buildHeroTitle({ agency: site.agency || {}, page }),
     };
   }
   return { ...operation };
-}
-
-function sha256Text(value) {
-  return crypto.createHash("sha256").update(String(value ?? ""), "utf8").digest("hex");
 }
 
 function escapeHtml(value) {
@@ -273,6 +285,7 @@ function installQualityUpliftPreview(ServiceClass) {
 }
 
 module.exports = {
+  exactHeroSourceValue,
   exactHeroTarget,
   exactInternalLinkSource,
   installQualityUpliftPreview,
