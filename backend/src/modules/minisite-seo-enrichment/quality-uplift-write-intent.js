@@ -79,10 +79,16 @@ function applyInternalLink(map, page, operation) {
   block.content = { ...(block.content || {}), html: operation.finalValue };
   return row;
 }
+function nextBlockPosition(blocks = []) {
+  return blocks.reduce((max, block, index) => {
+    const position = Number(block?.position ?? block?.displayOrder);
+    return Math.max(max, Number.isFinite(position) ? position : index);
+  }, -1) + 1;
+}
 function appendBody(row, payload, candidateKey) {
   const preview = payload.bodyCopyPreview;
   if (!String(preview?.title || "").trim() || !String(preview?.html || "").trim()) throw error("MSE_25_31_WRITE_INTENT_BODY_MISSING", "Le body approuvé est incomplet.", { candidateKey });
-  row.page.blocks.push({ type: "rich_text", status: "published", position: row.page.blocks.length, content: { title: preview.title, html: preview.html }, settings: {}, seo: { generatedBy: "mse-25.31", purpose: "local-seo-quality-uplift" }, visibleDesktop: true, visibleMobile: true });
+  row.page.blocks.push({ type: "rich_text", status: "published", position: nextBlockPosition(row.page.blocks), content: { title: preview.title, html: preview.html, alignment: "left" }, settings: {}, seo: { generatedBy: "mse-25.31", purpose: "local-seo-quality-uplift" }, visibleDesktop: true, visibleMobile: true });
 }
 function saveBody(page = {}) {
   return {
@@ -114,4 +120,4 @@ function buildQualityUpliftWriteIntents({ executionPlan = {}, currentPages = [] 
   return { version: "mse-25.31", operation: "quality-uplift-write-intent", readOnly: true, writes: false, publicWrites: false, persistenceCallsPerformed: 0, executionPlanFingerprint: executionPlan.executionPlanFingerprint, summary: { approvedCandidateCount: (executionPlan.pages || []).length, touchedPageCount: intents.length }, intents };
 }
 
-module.exports = { buildQualityUpliftWriteIntents, assertSourceFingerprint, currentPageMap, normalizedBlockType, normalizedPageSlug, pageKey, saveBody, sha256Text };
+module.exports = { buildQualityUpliftWriteIntents, assertSourceFingerprint, currentPageMap, nextBlockPosition, normalizedBlockType, normalizedPageSlug, pageKey, saveBody, sha256Text };
