@@ -146,6 +146,25 @@ export const BLOCK_CATALOG = Object.freeze([
     },
   },
   {
+    type: "flexible_payment",
+    label: "Paiement en plusieurs fois",
+    category: "Conversion",
+    icon: "€",
+    defaults: {
+      variant: "enriched",
+      title: "Vos billets d’avion, payables en plusieurs fois",
+      text: "Selon votre réservation et les possibilités proposées par votre agence, un règlement échelonné peut être disponible.",
+      disclaimer: "",
+      products: ["flight"],
+      installmentCounts: [],
+      feeMode: "unspecified",
+      primaryCta: {
+        label: "Contacter mon agence",
+        href: "contact",
+      },
+    },
+  },
+  {
     type: "agency",
     label: "Votre agence",
     category: "Conversion",
