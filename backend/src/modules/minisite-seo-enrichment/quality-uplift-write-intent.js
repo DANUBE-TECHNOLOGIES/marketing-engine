@@ -1,6 +1,7 @@
 "use strict";
 
 const crypto = require("node:crypto");
+const { validatePagePayload } = require("../page-builder-persistence/validation");
 
 function clone(value) { return JSON.parse(JSON.stringify(value)); }
 function sha256Text(value) { return crypto.createHash("sha256").update(String(value ?? ""), "utf8").digest("hex"); }
@@ -96,6 +97,13 @@ function saveBody(page = {}) {
     blocks: (page.blocks || []).map((block, index) => ({ type: block.type || block.blockType, status: block.status || "published", position: Number.isFinite(Number(block.position ?? block.displayOrder)) ? Number(block.position ?? block.displayOrder) : index, content: clone(block.content || {}), settings: clone(block.settings || {}), seo: clone(block.seo || {}), visibleDesktop: block.visibleDesktop !== false, visibleMobile: block.visibleMobile !== false })),
   };
 }
+function validatedSaveBody(page = {}, details = {}) {
+  try {
+    return validatePagePayload(saveBody(page));
+  } catch (cause) {
+    throw error("MSE_25_31_WRITE_INTENT_PAGE_BUILDER_CONTRACT_INVALID", "Le body final ne respecte pas le contrat Website Designer V2.", { ...details, causeCode: cause?.code || null, causeMessage: cause?.message || String(cause) });
+  }
+}
 function buildQualityUpliftWriteIntents({ executionPlan = {}, currentPages = [] } = {}) {
   if (executionPlan.version !== "mse-25.31" || executionPlan.operation !== "quality-uplift-execution-plan" || executionPlan.readOnly !== true || executionPlan.writes !== false || executionPlan.publicWrites !== false || executionPlan.executable !== true) {
     throw error("MSE_25_31_WRITE_INTENT_PLAN_NOT_EXECUTABLE", "Le write-intent exige un plan scellé et exécutable.", { executionPlanFingerprint: executionPlan.executionPlanFingerprint || null });
@@ -115,9 +123,9 @@ function buildQualityUpliftWriteIntents({ executionPlan = {}, currentPages = [] 
   }
   const intents = [...touched].sort((a, b) => a.localeCompare(b, "fr")).map((key) => {
     const row = map.get(key);
-    return { key, agencyId: row.agencyId, siteSlug: row.siteSlug, pageSlug: row.pageSlug, persistence: { method: "PageBuilderPersistenceService.save", agencyId: row.agencyId, pageSlug: row.pageSlug, body: saveBody(row.page) } };
+    return { key, agencyId: row.agencyId, siteSlug: row.siteSlug, pageSlug: row.pageSlug, persistence: { method: "PageBuilderPersistenceService.save", agencyId: row.agencyId, pageSlug: row.pageSlug, body: validatedSaveBody(row.page, { key }) } };
   });
   return { version: "mse-25.31", operation: "quality-uplift-write-intent", readOnly: true, writes: false, publicWrites: false, persistenceCallsPerformed: 0, executionPlanFingerprint: executionPlan.executionPlanFingerprint, summary: { approvedCandidateCount: (executionPlan.pages || []).length, touchedPageCount: intents.length }, intents };
 }
 
-module.exports = { buildQualityUpliftWriteIntents, assertSourceFingerprint, currentPageMap, nextBlockPosition, normalizedBlockType, normalizedPageSlug, pageKey, saveBody, sha256Text };
+module.exports = { buildQualityUpliftWriteIntents, assertSourceFingerprint, currentPageMap, nextBlockPosition, normalizedBlockType, normalizedPageSlug, pageKey, saveBody, sha256Text, validatedSaveBody };
