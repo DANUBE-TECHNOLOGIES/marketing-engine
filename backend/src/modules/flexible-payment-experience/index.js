@@ -8,5 +8,6 @@ module.exports = {
   ...require("./rollout-audit"),
   ...require("./network-rollback"),
   ...require("./operational-status"),
+  ...require("./runtime-readiness"),
   routes: require("./routes"),
 };
