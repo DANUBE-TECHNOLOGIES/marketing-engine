@@ -130,7 +130,7 @@ test("deletes only verified flexible payment blocks and is absence-tolerant", as
     id: "block-1",
     pageId: "page-1",
     blockType: "flexible_payment",
-    seo: { purpose: "flexible-payment", source: "mse-25.32" },
+    seo: { purpose: "flexible-payment-experience", source: "mse-25.32" },
   });
   const result = await applyFlexiblePaymentNetworkRollback(repository, {
     receipt,
