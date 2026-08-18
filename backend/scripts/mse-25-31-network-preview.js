@@ -66,6 +66,10 @@ function compactRow(row = {}) {
   };
 }
 
+function hasSourceFingerprint(operation = {}) {
+  return /^[0-9a-f]{64}$/i.test(String(operation.sourceValueFingerprint || ""));
+}
+
 function operationPayloadComplete(operation = {}, bodyCopyPreview = null) {
   if (operation.type === "enrich-body") {
     return Boolean(bodyCopyPreview?.html && bodyCopyPreview?.title);
@@ -77,7 +81,7 @@ function operationPayloadComplete(operation = {}, bodyCopyPreview = null) {
       && operation.target?.field === "content.html"
       && operation.target?.blockId !== null
       && operation.target?.blockId !== undefined
-      && /^[0-9a-f]{64}$/i.test(String(operation.sourceValueFingerprint || ""))
+      && hasSourceFingerprint(operation)
       && Boolean(String(operation.link?.href || "").trim())
       && Boolean(String(operation.link?.label || "").trim())
       && Boolean(String(operation.finalValue || "").trim());
@@ -85,11 +89,13 @@ function operationPayloadComplete(operation = {}, bodyCopyPreview = null) {
   if (operation.type === "strengthen-title") {
     return operation.target?.scope === "page"
       && operation.target?.field === "seoTitle"
+      && hasSourceFingerprint(operation)
       && Boolean(String(operation.finalValue || "").trim());
   }
   if (operation.type === "strengthen-meta-description") {
     return operation.target?.scope === "page"
       && operation.target?.field === "metaDescription"
+      && hasSourceFingerprint(operation)
       && Boolean(String(operation.finalValue || "").trim());
   }
   if (operation.type === "strengthen-h1") {
@@ -98,6 +104,7 @@ function operationPayloadComplete(operation = {}, bodyCopyPreview = null) {
       && operation.target?.field === "title"
       && operation.target?.blockId !== null
       && operation.target?.blockId !== undefined
+      && hasSourceFingerprint(operation)
       && Boolean(String(operation.finalValue || "").trim());
   }
   return false;
@@ -205,6 +212,7 @@ module.exports = {
   assertSafePreview,
   compactRow,
   executionPayloads,
+  hasSourceFingerprint,
   isSafePreview,
   jsonRequest,
   normalizeOrigin,
