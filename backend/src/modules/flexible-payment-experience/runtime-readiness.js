@@ -46,7 +46,7 @@ async function checkFlexiblePaymentVmReadiness({ prisma, moduleExports } = {}) {
 
   if (checks.database) {
     try {
-      const rows = await prisma.$queryRawUnsafe("SELECT to_regclass('public.\"AgencyPaymentPolicy\"') AS table_name");
+      const rows = await prisma.$queryRawUnsafe("SELECT to_regclass('public.\"AgencyPaymentPolicy\"')::text AS table_name");
       const tableName = normalizeTableResult(rows);
       details.paymentPolicyTable = tableName;
       checks.paymentPolicyTable = Boolean(tableName);
