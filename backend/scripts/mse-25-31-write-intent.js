@@ -40,7 +40,7 @@ async function fetchCurrentPages(executionPlan, { backendOrigin, tenantSlug, req
 
 function defaultOutputPath(executionPlanPath, result) {
   const directory = path.dirname(path.resolve(executionPlanPath));
-  return path.join(directory, `mse-25-31-write-intent-${String(result.executionPlanFingerprint || "unknown").slice(0, 12)}.json`);
+  return path.join(directory, `mse-25-31-write-intent-${String(result.writeIntentFingerprint || "unknown").slice(0, 12)}.json`);
 }
 
 async function run({ executionPlanPath, approvalManifestPath, preflightReportPath, backendOrigin, tenantSlug, output, emitOutput = true, request = jsonRequest } = {}) {
@@ -64,7 +64,17 @@ async function run({ executionPlanPath, approvalManifestPath, preflightReportPat
   const result = buildQualityUpliftWriteIntents({ executionPlan, currentPages });
   const target = path.resolve(output || process.env.MSE_25_31_WRITE_INTENT_OUTPUT || defaultOutputPath(executionFile, result));
   fs.writeFileSync(target, JSON.stringify(result, null, 2) + "\n", "utf8");
-  const summary = { ok: true, readOnly: true, writes: false, publicWrites: false, persistenceCallsPerformed: 0, executionPlanFingerprint: result.executionPlanFingerprint, touchedPageCount: result.summary.touchedPageCount, writeIntentPath: target };
+  const summary = {
+    ok: true,
+    readOnly: true,
+    writes: false,
+    publicWrites: false,
+    persistenceCallsPerformed: 0,
+    executionPlanFingerprint: result.executionPlanFingerprint,
+    writeIntentFingerprint: result.writeIntentFingerprint,
+    touchedPageCount: result.summary.touchedPageCount,
+    writeIntentPath: target,
+  };
   if (emitOutput) console.log(JSON.stringify(summary, null, 2));
   return { ...summary, result };
 }
