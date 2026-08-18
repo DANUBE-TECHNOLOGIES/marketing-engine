@@ -1,9 +1,11 @@
 "use strict";
 
+const crypto = require("node:crypto");
 const { buildLocalSeoQualityUpliftPlan } = require("./quality-uplift-planner");
 
 function clone(value) { return JSON.parse(JSON.stringify(value)); }
 function findPage(site, slug) { return (site.pages || []).find((page) => String(page?.slug || "") === String(slug || "")) || null; }
+function sha256Text(value) { return crypto.createHash("sha256").update(String(value ?? ""), "utf8").digest("hex"); }
 
 function appendBodyPreview(page, copyPreview) {
   if (!page || !copyPreview?.html) return false;
@@ -35,6 +37,18 @@ function appendInternalLink(site, proposal, operation) {
   return true;
 }
 
+function applyExactInternalLinkOperation(site, operation = {}) {
+  if (!site || !operationSimulationReady(operation, { operations: [operation] })) return false;
+  const sourcePage = findPage(site, operation.target?.pageSlug);
+  if (!sourcePage) return false;
+  const block = (sourcePage.blocks || []).find((item) => String(item?.id) === String(operation.target?.blockId));
+  if (!block || String(operation.target?.field || "") !== "content.html") return false;
+  const currentHtml = String(block.content?.html || "");
+  if (sha256Text(currentHtml) !== String(operation.sourceValueFingerprint || "").toLowerCase()) return false;
+  block.content = { ...(block.content || {}), html: operation.finalValue };
+  return true;
+}
+
 function applyExactSeoOperation(page, operation = {}) {
   if (!page || !String(operation.finalValue || "").trim()) return false;
   if (operation.type === "strengthen-title" && operation.target?.scope === "page" && operation.target?.field === "seoTitle") {
@@ -61,8 +75,15 @@ function operationSimulationReady(operation = {}, proposal = {}) {
   }
   if (operation.type === "add-internal-link") {
     return Boolean(
-      String((operation.suggestedSourceSlugs || [])[0] || "").trim()
-      && String(proposal.diagnostics?.internalLink?.path || "").trim()
+      operation.target?.scope === "block"
+      && String(operation.target?.pageSlug || "").trim()
+      && operation.target?.blockId !== null
+      && operation.target?.blockId !== undefined
+      && operation.target?.field === "content.html"
+      && /^[0-9a-f]{64}$/i.test(String(operation.sourceValueFingerprint || ""))
+      && String(operation.link?.href || "").trim()
+      && String(operation.link?.label || "").trim()
+      && String(operation.finalValue || "").trim()
     );
   }
   if (operation.type === "strengthen-title") {
@@ -190,7 +211,7 @@ function projectQualityUpliftImpact({ site = {}, currentPlan = {}, proposals = [
           if (!nonSimulatedOperationTypes.includes(operation.type)) nonSimulatedOperationTypes.push(operation.type);
         }
       } else if (operation.type === "add-internal-link") {
-        if (appendInternalLink(projectedSite, proposal, operation)) simulatedInternalLinkOperations += 1;
+        if (applyExactInternalLinkOperation(projectedSite, operation)) simulatedInternalLinkOperations += 1;
         else {
           nonSimulatedOperations += 1;
           if (!nonSimulatedOperationTypes.includes(operation.type)) nonSimulatedOperationTypes.push(operation.type);
@@ -237,6 +258,7 @@ function projectQualityUpliftImpact({ site = {}, currentPlan = {}, proposals = [
 module.exports = {
   appendBodyPreview,
   appendInternalLink,
+  applyExactInternalLinkOperation,
   applyExactSeoOperation,
   counts,
   operationSimulationReady,
@@ -244,6 +266,7 @@ module.exports = {
   projectQualityUpliftImpact,
   projectedPageImpact,
   reduction,
+  sha256Text,
   warningKey,
   warningRows,
 };
