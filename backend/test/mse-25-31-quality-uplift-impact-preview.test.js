@@ -22,7 +22,7 @@ function site() {
         metaDescription: "Agence de voyages à Gien pour préparer votre voyage.",
         published: true,
         blocks: [
-          { blockType: "hero", content: { title: "Agence de voyages à Gien" } },
+          { id: "hero-home", blockType: "hero", content: { title: "Agence de voyages à Gien" } },
           { blockType: "rich_text", content: { html: Array.from({ length: 130 }, () => "voyage").join(" ") } },
         ],
       },
@@ -31,7 +31,7 @@ function site() {
         title: "Avis clients",
         published: true,
         blocks: [
-          { blockType: "hero", content: { title: "Avis clients à Gien" } },
+          { id: "hero-avis", blockType: "hero", content: { title: "Avis clients à Gien" } },
           { blockType: "rich_text", content: { html: "Avis clients à Gien." } },
         ],
       },
@@ -84,6 +84,50 @@ test("impact preview simulates body and internal-link work without mutating sour
   assert.ok(avis.resolvedKinds.includes("thin-content"));
   assert.ok(avis.resolvedKinds.includes("internal-link"));
   assert.equal(avis.projectionComplete, true);
+});
+
+test("impact preview simulates exact title meta and H1 values without mutating source", () => {
+  const source = site();
+  const snapshot = JSON.stringify(source);
+  const currentPlan = buildLocalSeoQualityUpliftPlan(source, { minimumWords: 120 });
+  const result = projectQualityUpliftImpact({
+    site: source,
+    currentPlan,
+    minimumWords: 120,
+    proposals: [
+      {
+        pageSlug: "avis",
+        operations: [
+          {
+            type: "strengthen-title",
+            target: { scope: "page", field: "seoTitle" },
+            finalValue: "Avis clients sur votre agence de voyages à Gien",
+          },
+          {
+            type: "strengthen-meta-description",
+            target: { scope: "page", field: "metaDescription" },
+            finalValue: "Consultez les avis clients de votre agence de voyages à Gien et préparez votre prochain projet avec une équipe de proximité.",
+          },
+          {
+            type: "strengthen-h1",
+            target: { scope: "block", blockType: "hero", blockId: "hero-avis", field: "title" },
+            finalValue: "Avis clients de votre agence de voyages à Gien",
+          },
+        ],
+      },
+    ],
+  });
+
+  assert.equal(JSON.stringify(source), snapshot);
+  assert.equal(result.projectionComplete, true);
+  assert.equal(result.simulation.simulatedMetadataOperations, 3);
+  assert.equal(result.simulation.nonSimulatedOperations, 0);
+  assert.deepEqual(result.simulation.nonSimulatedOperationTypes, []);
+
+  const avis = result.pages.find((page) => page.pageSlug === "avis");
+  assert.ok(avis);
+  assert.equal(avis.projectionComplete, true);
+  assert.deepEqual(avis.nonSimulatedOperationTypes, []);
 });
 
 test("impact preview declares partial projection and exposes unsimulated operation types", () => {
