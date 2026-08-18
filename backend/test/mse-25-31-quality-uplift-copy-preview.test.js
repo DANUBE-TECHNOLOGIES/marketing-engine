@@ -3,11 +3,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const {
-  buildBodyCopyPreview,
-  pageProfile,
-  selectParagraphs,
-} = require("../src/modules/minisite-seo-enrichment/quality-uplift-copy-preview");
+const { buildBodyCopyPreview, pageProfile, selectParagraphs } = require("../src/modules/minisite-seo-enrichment/quality-uplift-copy-preview");
 
 test("pageProfile recognizes thin editorial page families deterministically", () => {
   assert.equal(pageProfile({ slug: "equipe", title: "Notre équipe" }), "team");
@@ -16,15 +12,7 @@ test("pageProfile recognizes thin editorial page families deterministically", ()
 });
 
 test("body preview uses only supplied agency/page context and does not invent local facts", () => {
-  const preview = buildBodyCopyPreview({
-    agency: { name: "Mondescale Gien", city: "Gien" },
-    page: { slug: "avis", title: "Avis clients" },
-    action: {
-      recommendedFields: ["body"],
-      thinContent: { missingWords: 60 },
-    },
-  });
-
+  const preview = buildBodyCopyPreview({ agency: { id: 4, name: "Mondescale Gien", city: "Gien" }, page: { slug: "avis", title: "Avis clients" }, action: { recommendedFields: ["body"], thinContent: { missingWords: 60 } } });
   assert.equal(preview.generatedBy, "mse-25.31");
   assert.equal(preview.factualPolicy, "agency-and-page-context-only");
   assert.equal(preview.sourceFacts.agencyName, "Mondescale Gien");
@@ -33,15 +21,27 @@ test("body preview uses only supplied agency/page context and does not invent lo
   assert.equal(preview.paragraphCount, 2);
   assert.match(preview.html, /Gien/);
   assert.doesNotMatch(preview.html, /Montargis|Orléans|Briare|Loiret/i);
+  assert.doesNotMatch(preview.title, /Mondescale Gien à Gien/i);
+});
+
+test("body preview is deterministic for the same agency and page", () => {
+  const input = { agency: { id: 4, name: "Mondescale Gien", city: "Gien" }, page: { slug: "equipe", title: "Notre équipe" }, action: { recommendedFields: ["body"], thinContent: { missingWords: 60 } } };
+  assert.deepEqual(buildBodyCopyPreview(input), buildBodyCopyPreview(input));
+});
+
+test("body preview varies across agencies without inventing neighboring locations", () => {
+  const action = { recommendedFields: ["body"], thinContent: { missingWords: 60 } };
+  const gien = buildBodyCopyPreview({ agency: { id: 4, name: "Mondescale Gien", city: "Gien" }, page: { slug: "partenaires", title: "Nos partenaires" }, action });
+  const nevers = buildBodyCopyPreview({ agency: { id: 2, name: "Mondescale Nevers", city: "Nevers" }, page: { slug: "partenaires", title: "Nos partenaires" }, action });
+  assert.notEqual(gien.html, nevers.html);
+  assert.match(gien.html, /Gien/);
+  assert.match(nevers.html, /Nevers/);
+  assert.doesNotMatch(gien.html, /Nevers/i);
+  assert.doesNotMatch(nevers.html, /Gien/i);
 });
 
 test("body preview is absent when body uplift was not recommended", () => {
-  const preview = buildBodyCopyPreview({
-    agency: { name: "Mondescale", city: "Gien" },
-    page: { slug: "services", title: "Services" },
-    action: { recommendedFields: ["internal-link"] },
-  });
-
+  const preview = buildBodyCopyPreview({ agency: { name: "Mondescale", city: "Gien" }, page: { slug: "services", title: "Services" }, action: { recommendedFields: ["internal-link"] } });
   assert.equal(preview, null);
 });
 
