@@ -58,6 +58,9 @@ function packageJson() {
 const SAFE_ROUTES = `
 router.post("/minisite-seo-enrichment/agencies/:agencyId/quality-uplift/preview", handler);
 router.post("/minisite-seo-enrichment/network/quality-uplift/preview", handler);
+router.get("/minisite-seo-quality-uplift/health", handler);
+router.post("/minisite-seo-quality-uplift/agencies/:agencyId/preview", handler);
+router.post("/minisite-seo-quality-uplift/network/preview", handler);
 `;
 
 test("VM readiness accepts clean attested branch and strictly read-only runtime preview", async () => {
@@ -88,6 +91,7 @@ test("VM readiness accepts clean attested branch and strictly read-only runtime 
   assert.equal(result.ciAttestation.event, "push");
   assert.equal(result.checks.scripts.requiredScriptCount, REQUIRED_SCRIPTS.length);
   assert.equal(result.checks.modules.loadedModuleCount, REQUIRED_MODULES.length);
+  assert.equal(result.checks.routes.previewRoutes.length, 5);
 });
 
 test("VM readiness refuses missing operator commands", () => {
@@ -97,9 +101,17 @@ test("VM readiness refuses missing operator commands", () => {
   );
 });
 
-test("VM readiness refuses HTTP quality-uplift apply routes", () => {
+test("VM readiness refuses missing preview routes or HTTP quality-uplift apply routes", () => {
+  assert.throws(
+    () => assertRouteSafety(SAFE_ROUTES.replace('/minisite-seo-quality-uplift/health', '/missing-health')),
+    (error) => error.code === "MSE_25_31_VM_ROUTE_SAFETY_INVALID"
+  );
   assert.throws(
     () => assertRouteSafety(`${SAFE_ROUTES}\nrouter.post("/minisite-seo-enrichment/network/quality-uplift/apply", handler);`),
+    (error) => error.code === "MSE_25_31_VM_ROUTE_SAFETY_INVALID"
+  );
+  assert.throws(
+    () => assertRouteSafety(`${SAFE_ROUTES}\nrouter.post("/minisite-seo-quality-uplift/network/apply", handler);`),
     (error) => error.code === "MSE_25_31_VM_ROUTE_SAFETY_INVALID"
   );
 });
