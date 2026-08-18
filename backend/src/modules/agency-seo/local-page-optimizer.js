@@ -31,4 +31,90 @@ function buildOptimizationPatch(page, proposal) {
   return { seoTitle: proposal.seoTitle, seoDescription: proposal.seoDescription, introduction: proposal.introduction, localCity: proposal.localCity, content: { ...content, h1: proposal.h1, seoOptimization: proposal.optimization } };
 }
 
-module.exports = { buildLocalPageOptimization, buildOptimizationPatch, intentFor };
+function wordCount(value) {
+  const text = clean(value).replace(/<[^>]+>/g, " ");
+  return text ? text.split(/\s+/).filter(Boolean).length : 0;
+}
+
+function isPublishedIndexablePage(page) {
+  if (!page || page.published === false || page.isPublished === false) return false;
+  if (page.noindex === true || page.indexable === false) return false;
+  const slug = clean(page.slug).replace(/^\/+|\/+$/g, "");
+  return Boolean(slug);
+}
+
+function pageHref(page) {
+  const explicit = clean(page.path || page.href || page.publicPath);
+  if (explicit) return explicit.startsWith("/") ? explicit : `/${explicit}`;
+  const slug = clean(page.slug).replace(/^\/+|\/+$/g, "");
+  return slug ? `/${slug}` : "/";
+}
+
+function buildQualityParagraph(site, page) {
+  const city = cityName(site, page);
+  const brand = agencyName(site);
+  const intent = intentFor(page);
+  if (!city) throw new Error("LOCAL_SEO_QUALITY_CITY_REQUIRED");
+  return `${brand} à ${city} vous aide à comparer les options de ${intent.service} selon vos dates, votre budget et vos priorités. Votre conseiller peut aussi coordonner les prestations complémentaires utiles au voyage et vous accompagner jusqu’au départ, avec un interlocuteur local pour vos questions et ajustements.`;
+}
+
+function buildInternalLinkSuggestions(page, publishedPages = []) {
+  const currentHref = pageHref(page);
+  const existingText = clean([page?.introduction, page?.body, page?.text, page?.content?.html, page?.content?.text].filter(Boolean).join(" ")).toLowerCase();
+  const candidates = publishedPages
+    .filter(isPublishedIndexablePage)
+    .filter((candidate) => pageHref(candidate) !== currentHref)
+    .map((candidate) => ({
+      id: candidate.id || null,
+      href: pageHref(candidate),
+      title: clean(candidate.title || intentFor(candidate).noun),
+      intent: intentFor(candidate).service,
+    }))
+    .filter((candidate) => candidate.title && !existingText.includes(candidate.href.toLowerCase()))
+    .sort((a, b) => a.href.localeCompare(b.href));
+
+  const priority = ["voyages sur mesure", "séjours", "circuits", "croisières", "billetterie et vols", "voyages"];
+  candidates.sort((a, b) => {
+    const ai = priority.indexOf(a.intent); const bi = priority.indexOf(b.intent);
+    const ar = ai === -1 ? 99 : ai; const br = bi === -1 ? 99 : bi;
+    return ar - br || a.href.localeCompare(b.href);
+  });
+
+  const seenAnchors = new Set();
+  return candidates.filter((candidate) => {
+    const anchor = clean(candidate.title).toLowerCase();
+    if (seenAnchors.has(anchor)) return false;
+    seenAnchors.add(anchor);
+    return true;
+  }).slice(0, 3);
+}
+
+function buildLocalQualityUplift(site, page, options = {}) {
+  const thresholdWords = Number.isFinite(options.thinContentThresholdWords) ? options.thinContentThresholdWords : 90;
+  const existingBody = clean([page?.introduction, page?.body, page?.text, page?.content?.html, page?.content?.text].filter(Boolean).join(" "));
+  const existingWords = wordCount(existingBody);
+  const thinContent = existingWords < thresholdWords;
+  const manualIntroductionPresent = clean(page?.introduction).length > 0 && page?.content?.seoOptimization?.version !== "mse-25.30";
+  const qualityParagraph = thinContent && !manualIntroductionPresent ? buildQualityParagraph(site, page) : null;
+  const internalLinks = buildInternalLinkSuggestions(page, Array.isArray(options.publishedPages) ? options.publishedPages : []);
+
+  return {
+    version: "mse-25.31",
+    mode: "deterministic-quality-uplift",
+    existingWords,
+    thinContentThresholdWords: thresholdWords,
+    thinContent,
+    preservesManualIntroduction: manualIntroductionPresent,
+    suggestedParagraph: qualityParagraph,
+    internalLinks,
+    warningsTargeted: [
+      ...(thinContent ? ["THIN_CONTENT"] : []),
+      ...(internalLinks.length ? ["EDITORIAL_INTERNAL_LINK_MISSING"] : []),
+      "local-secondary-intent-target-quality-weak",
+    ],
+    requiresHumanReview: true,
+    autoPublish: false,
+  };
+}
+
+module.exports = { buildLocalPageOptimization, buildOptimizationPatch, buildLocalQualityUplift, buildInternalLinkSuggestions, wordCount, intentFor };
