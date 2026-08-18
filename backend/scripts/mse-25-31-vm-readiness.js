@@ -18,6 +18,7 @@ const {
 } = require("./mse-25-31-network-preview");
 
 const REQUIRED_SCRIPTS = [
+  "mse-25.31:vm-readiness",
   "mse-25.31:network-preview",
   "mse-25.31:preflight",
   "mse-25.31:preflight-check",
@@ -48,6 +49,14 @@ function readPackageJson(packagePath = path.join(__dirname, "..", "package.json"
   return JSON.parse(fs.readFileSync(packagePath, "utf8"));
 }
 
+function readRouteSources() {
+  const base = path.join(__dirname, "..", "src", "modules");
+  return [
+    path.join(base, "minisite-seo-enrichment", "routes.js"),
+    path.join(base, "minisite-seo-quality-uplift", "routes.js"),
+  ].map((file) => fs.readFileSync(file, "utf8")).join("\n");
+}
+
 function assertRequiredScripts(pkg = {}) {
   const scripts = pkg.scripts || {};
   const missing = REQUIRED_SCRIPTS.filter((name) => !String(scripts[name] || "").trim());
@@ -62,15 +71,23 @@ function assertRequiredScripts(pkg = {}) {
 
 function assertRouteSafety(routesSource) {
   const source = String(routesSource || "");
-  const agencyPreview = "/minisite-seo-enrichment/agencies/:agencyId/quality-uplift/preview";
-  const networkPreview = "/minisite-seo-enrichment/network/quality-uplift/preview";
+  const required = [
+    "/minisite-seo-enrichment/agencies/:agencyId/quality-uplift/preview",
+    "/minisite-seo-enrichment/network/quality-uplift/preview",
+    "/minisite-seo-quality-uplift/health",
+    "/minisite-seo-quality-uplift/agencies/:agencyId/preview",
+    "/minisite-seo-quality-uplift/network/preview",
+  ];
   const forbidden = [
     "/minisite-seo-enrichment/agencies/:agencyId/quality-uplift/apply",
     "/minisite-seo-enrichment/network/quality-uplift/apply",
+    "/minisite-seo-quality-uplift/agencies/:agencyId/apply",
+    "/minisite-seo-quality-uplift/network/apply",
   ];
   const issues = [];
-  if (!source.includes(agencyPreview)) issues.push({ code: "agency-preview-route-missing" });
-  if (!source.includes(networkPreview)) issues.push({ code: "network-preview-route-missing" });
+  for (const route of required) {
+    if (!source.includes(route)) issues.push({ code: "required-preview-route-missing", route });
+  }
   for (const route of forbidden) {
     if (source.includes(route)) issues.push({ code: "forbidden-http-apply-route", route });
   }
@@ -80,7 +97,7 @@ function assertRouteSafety(routesSource) {
     error.details = { issues };
     throw error;
   }
-  return { ok: true, previewRoutes: [agencyPreview, networkPreview], forbiddenApplyRoutesPresent: false };
+  return { ok: true, previewRoutes: required, forbiddenApplyRoutesPresent: false };
 }
 
 function assertModulesLoad(moduleLoader = require) {
@@ -126,7 +143,7 @@ async function run({
   ciAttestor = attestHead,
   previewRunner = runNetworkPreview,
   packageReader = readPackageJson,
-  routesReader = () => fs.readFileSync(path.join(__dirname, "..", "src", "modules", "minisite-seo-enrichment", "routes.js"), "utf8"),
+  routesReader = readRouteSources,
   moduleLoader = require,
 } = {}) {
   const repository = assertRepositoryState(repositoryReader(), { expectedBranch: EXPECTED_BRANCH, allowDirty: false });
@@ -192,5 +209,6 @@ module.exports = {
   assertRouteSafety,
   assertSafeRuntimePreview,
   readPackageJson,
+  readRouteSources,
   run,
 };
