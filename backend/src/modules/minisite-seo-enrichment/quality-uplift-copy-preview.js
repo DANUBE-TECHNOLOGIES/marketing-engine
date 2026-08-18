@@ -1,25 +1,26 @@
 "use strict";
 
+const crypto = require("node:crypto");
+
 function clean(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
 }
-
 function normalize(value) {
-  return clean(value)
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
+  return clean(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
-
 function escapeHtml(value) {
-  return clean(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/\"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+  return clean(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#39;");
 }
-
+function stableIndex(seed, length) {
+  if (!length) return 0;
+  const hex = crypto.createHash("sha256").update(String(seed || "mse-25.31")).digest("hex").slice(0, 8);
+  return parseInt(hex, 16) % length;
+}
+function rotate(values, seed) {
+  if (!values.length) return [];
+  const offset = stableIndex(seed, values.length);
+  return values.slice(offset).concat(values.slice(0, offset));
+}
 function pageProfile(page = {}) {
   const source = normalize(`${page.slug || ""} ${page.title || ""}`);
   if (!source || ["home", "accueil"].includes(normalize(page.slug))) return "home";
@@ -37,133 +38,74 @@ function pageProfile(page = {}) {
   if (source.includes("billet") || source.includes("vol")) return "ticketing";
   return "generic";
 }
-
 function agencyIdentity(agency = {}) {
   const city = clean(agency.city);
   const name = clean(agency.name) || (city ? `Mondescale ${city}` : "Mondescale");
-  return { city, name };
+  const shortName = city && normalize(name).endsWith(normalize(city)) ? name.slice(0, Math.max(0, name.length - city.length)).replace(/[\s-]+$/, "") : name;
+  return { city, name, shortName: clean(shortName) || name };
 }
-
-function paragraphsForProfile(profile, { name, city, pageTitle, intentLabel } = {}) {
-  const place = city ? ` à ${city}` : "";
-  const agency = name || "notre agence";
-  const label = clean(intentLabel);
-
+function variantsForProfile(profile, { name, city, pageTitle } = {}) {
+  const localAgency = city ? `${name}, votre agence de voyages à ${city}` : name;
   const profiles = {
-    home: [
-      `${agency}${place} vous permet de préparer votre voyage avec un interlocuteur de proximité. Cette page rassemble les principales façons de voyager et les informations utiles pour passer d’une première idée à un projet plus précis.`,
-      `Selon vos dates, votre budget et le type de séjour recherché, l’échange avec l’agence permet de comparer les solutions pertinentes et de clarifier les étapes de préparation avant la réservation.`,
-    ],
-    agency: [
-      `Cette page présente ${agency}${place} et les informations utiles pour préparer un échange avec l’agence. Elle complète les coordonnées et les éléments pratiques déjà affichés sur le mini-site.`,
-      `Pour un projet de voyage, vous pouvez partir de vos dates, de votre budget et de vos priorités afin de préciser votre demande avant de comparer les solutions disponibles avec l’agence.`,
-    ],
     team: [
-      `Cette page est consacrée à l’équipe de ${agency}${place}. Elle vous aide à identifier l’agence qui accompagnera votre projet et à retrouver les informations utiles avant de prendre contact.`,
-      `Préparer vos dates, votre budget, le nombre de voyageurs et vos principales envies permet de rendre le premier échange plus concret et de faciliter la recherche de solutions adaptées à votre demande.`,
+      [`Derrière chaque projet confié à ${localAgency}, l’échange avec l’équipe permet de préciser les attentes avant d’étudier les solutions de voyage. Cette page vous présente les conseillers qui accompagnent les demandes de l’agence.`, `Dates possibles, budget, composition des voyageurs et envies de séjour constituent une bonne base pour préparer le rendez-vous. Ces repères permettent à l’équipe de mieux cibler les recherches et les propositions à comparer.`],
+      [`Faire connaissance avec l’équipe de ${name} permet de savoir à qui confier votre prochain projet de voyage${city ? ` à ${city}` : ""}. Les conseillers peuvent partir de vos premières idées pour organiser une recherche plus précise.`, `Avant votre échange, réunir les périodes de départ envisagées, le nombre de voyageurs, le budget et vos priorités aide à cadrer la demande. L’agence peut ensuite étudier les solutions correspondant à ces critères.`],
+      [`L’équipe de ${name}${city ? ` vous accueille à ${city}` : ""} pour transformer une envie de départ en projet concret. Cette présentation complète les coordonnées et informations pratiques disponibles sur le mini-site.`, `Un premier échange est plus efficace lorsque les dates, le budget et le style de voyage souhaité sont déjà identifiés, même approximativement. Les conseillers peuvent alors concentrer leurs recherches sur les options les plus pertinentes.`],
     ],
     partners: [
-      `Cette page rassemble les partenaires présentés par ${agency}${place}. Les marques et voyagistes affichés permettent de mieux comprendre l’éventail des solutions qui peuvent être étudiées selon votre projet.`,
-      `Le choix d’un partenaire dépend notamment de la destination, des dates, du budget, du niveau de prestations et du type de voyage recherché. L’agence peut vous aider à comparer les options pertinentes pour votre demande.`,
+      [`Les partenaires référencés par ${localAgency} illustrent les différentes solutions que l’équipe peut étudier pour construire un voyage. Selon le projet, plusieurs voyagistes ou marques peuvent répondre à des attentes différentes.`, `Destination, période, budget, formule et niveau de prestations sont autant de critères utiles pour comparer ces offres. Le rôle de l’agence est de mettre ces éléments en perspective plutôt que de limiter la recherche à une seule marque.`],
+      [`Cette sélection de partenaires donne un aperçu des voyagistes avec lesquels ${name} peut rechercher des solutions${city ? ` depuis son agence de ${city}` : ""}. Elle ne remplace pas l’étude personnalisée d’un projet, qui dépend des critères propres à chaque voyage.`, `Une même destination peut être proposée avec des durées, hébergements, transports ou services très différents. Comparer les partenaires permet donc d’examiner les offres au regard de vos dates, de votre budget et de vos priorités.`],
+      [`Pour élargir les possibilités de voyage, ${name} s’appuie sur plusieurs partenaires et spécialistes. Cette diversité permet d’étudier différentes formules avant de retenir celle qui correspond le mieux au projet préparé${city ? ` avec l’agence de ${city}` : ""}.`, `Le choix se fait notamment en fonction de la destination, des disponibilités, du niveau de confort recherché et des prestations incluses. L’équipe peut vous aider à lire ces différences et à comparer les propositions pertinentes.`],
     ],
     reviews: [
-      `Cette page rassemble les avis associés à ${agency}${place}. Ils complètent les informations du mini-site en donnant accès aux retours publiés par les clients de l’agence.`,
-      `Pour préparer votre propre projet, les avis peuvent être consultés avec les informations pratiques, les services et les pages de voyage du site avant de contacter l’agence pour une demande personnalisée.`,
-    ],
-    commitments: [
-      `Cette page précise les engagements présentés par ${agency}${place}. Elle complète les informations pratiques du mini-site et permet de mieux comprendre le cadre d’accompagnement proposé autour d’un projet de voyage.`,
-      `Un projet peut ensuite être précisé à partir de critères concrets comme les dates, le budget, le rythme souhaité et les prestations recherchées afin de faciliter la comparaison des solutions disponibles.`,
-    ],
-    services: [
-      `Les services présentés par ${agency}${place} couvrent les différentes étapes utiles à la préparation d’un voyage. Cette page aide à identifier le type d’accompagnement à mobiliser selon votre demande.`,
-      `Dates de départ, budget, transport, hébergement et rythme du séjour constituent des points de comparaison utiles avant de retenir une solution et de poursuivre la préparation avec l’agence.`,
-    ],
-    destinations: [
-      `Les destinations présentées par ${agency}${place} servent de point de départ pour explorer différentes possibilités de voyage. Cette page permet d’orienter la recherche avant de préciser les dates et le format du séjour.`,
-      `La saison, la durée disponible, le budget et les expériences recherchées peuvent ensuite être mis en perspective pour sélectionner les pistes les plus cohérentes avec votre projet.`,
-    ],
-    cruise: [
-      `${agency}${place} peut être consultée pour préparer un projet de croisière et comparer les éléments qui structurent le voyage : itinéraire, durée, ports, dates et niveau de prestations.`,
-      `Clarifier ces critères en amont facilite la comparaison des solutions et permet d’identifier les options qui correspondent le mieux au budget et au rythme de voyage recherchés.`,
-    ],
-    circuit: [
-      `${agency}${place} peut vous aider à préparer un projet de circuit en comparant le rythme, les étapes, les transports, les hébergements et les prestations incluses dans les différentes propositions.`,
-      `La durée disponible, les dates, le budget et le niveau d’accompagnement recherché permettent ensuite de mieux cibler les circuits à étudier pour votre voyage.`,
-    ],
-    custom: [
-      `Un voyage sur mesure se construit à partir de critères concrets : dates, durée, budget, rythme et expériences recherchées. ${agency}${place} peut être consultée pour structurer ces éléments avant de comparer les solutions.`,
-      `Cette préparation permet de transformer une idée générale en demande plus précise, puis d’étudier les transports, hébergements et étapes utiles à la construction du projet.`,
-    ],
-    stay: [
-      `Pour préparer un séjour, ${agency}${place} peut être consultée afin de comparer destination, période de départ, durée, hébergement et formule selon vos priorités.`,
-      `Le budget, le niveau de confort et le rythme souhaité permettent de réduire progressivement le choix et d’identifier les solutions qui méritent d’être étudiées plus en détail.`,
-    ],
-    ticketing: [
-      `Pour un besoin de billetterie ou de vols, ${agency}${place} peut être consultée afin de comparer les itinéraires, horaires et conditions correspondant aux dates du projet.`,
-      `Les correspondances, la durée du trajet et les conditions tarifaires font partie des éléments à examiner avant de retenir une solution adaptée au voyage prévu.`,
-    ],
-    generic: [
-      `${clean(pageTitle) || "Cette page"} complète les informations proposées par ${agency}${place}. Elle permet de mieux situer ce sujet dans la préparation d’un projet de voyage avant de poursuivre vers les pages et services correspondants.`,
-      `Pour avancer dans votre recherche, vos dates, votre budget et vos principales priorités constituent des repères utiles avant de comparer les solutions disponibles et de contacter l’agence si nécessaire.`,
+      [`Les avis publiés au sujet de ${localAgency} permettent de découvrir l’expérience de voyageurs ayant déjà sollicité l’équipe. Ils apportent un éclairage complémentaire aux informations pratiques et aux services présentés sur le mini-site.`, `Ces retours peuvent vous aider à préparer votre prise de contact et à comprendre la manière dont l’agence accompagne les projets. Pour votre propre voyage, l’étude reste naturellement adaptée à vos dates, votre budget et vos attentes.`],
+      [`Avant de confier un projet à ${name}, les témoignages de clients donnent un aperçu concret de leur expérience avec l’agence${city ? ` de ${city}` : ""}. Cette page les rassemble pour faciliter leur consultation.`, `Les avis constituent un point de repère parmi d’autres : vous pouvez également consulter les services, l’équipe et les inspirations de voyage avant de présenter votre demande et d’obtenir un accompagnement adapté à votre projet.`],
+      [`Cette page réunit les retours laissés par des clients de ${name}${city ? ` à ${city}` : ""}. Ils permettent d’apprécier l’expérience vécue avec l’agence et complètent la présentation de l’équipe et de ses services.`, `Pour préparer votre voyage, ces témoignages peuvent être mis en regard des informations du mini-site avant un échange avec un conseiller. Votre demande sera ensuite étudiée selon vos propres contraintes et priorités.`],
     ],
   };
-
-  const paragraphs = profiles[profile] || profiles.generic;
-  if (label && !paragraphs.join(" ").toLowerCase().includes(label.toLowerCase())) {
-    return [
-      ...paragraphs,
-      `La recherche peut également être précisée autour de l’intention « ${label} » lorsque celle-ci correspond à votre projet.`,
-    ];
-  }
-  return paragraphs;
+  const fallback = [[`${clean(pageTitle) || "Cette page"} complète les informations proposées par ${localAgency}. Elle aide à situer ce sujet dans la préparation d’un projet de voyage avant de poursuivre vers les services correspondants.`, `Dates, budget et priorités constituent des repères utiles pour préciser la recherche et comparer les solutions disponibles avant de contacter l’agence.`]];
+  return profiles[profile] || fallback;
 }
-
+function titleForProfile(profile, { name, city } = {}, seed = "") {
+  const titles = {
+    team: city ? [`Rencontrez notre équipe à ${city}`, `Votre équipe voyage à ${city}`, `Des conseillers pour votre projet à ${city}`] : ["Rencontrez notre équipe"],
+    partners: city ? [`Nos partenaires voyage à ${city}`, `Des partenaires sélectionnés pour vos voyages`, `Comparer les solutions avec notre agence de ${city}`] : ["Nos partenaires voyage"],
+    reviews: city ? [`Les avis sur notre agence de ${city}`, `L’expérience de nos clients à ${city}`, `Ce que nos clients disent de l’agence`] : ["Les avis de nos clients"],
+  };
+  const values = titles[profile] || [`Informations utiles avec ${name}`];
+  return values[stableIndex(`${seed}:title`, values.length)];
+}
+function paragraphsForProfile(profile, context = {}) {
+  const variants = variantsForProfile(profile, context);
+  const seed = `${context.name || ""}|${context.city || ""}|${context.pageTitle || ""}|${profile}`;
+  const selected = variants[stableIndex(seed, variants.length)] || variants[0] || [];
+  const label = clean(context.intentLabel);
+  if (label && !selected.join(" ").toLowerCase().includes(label.toLowerCase())) return [...selected, `Votre recherche peut aussi être précisée autour de « ${label} » lorsque cette intention correspond au voyage envisagé.`];
+  return selected;
+}
 function selectParagraphs(paragraphs = [], missingWords = 0) {
   if (!paragraphs.length) return [];
   if (Number(missingWords || 0) <= 35) return [paragraphs[0]];
   if (Number(missingWords || 0) <= 80) return paragraphs.slice(0, 2);
   return paragraphs.slice(0, 3);
 }
-
 function buildBodyCopyPreview({ agency = {}, page = {}, action = {} } = {}) {
   if (!(action.recommendedFields || []).includes("body")) return null;
-
   const identity = agencyIdentity(agency);
   const profile = pageProfile(page);
-  const paragraphs = paragraphsForProfile(profile, {
-    ...identity,
-    pageTitle: page.title,
-    intentLabel: action.intentQuality?.label || null,
-  });
-  const selected = selectParagraphs(
-    paragraphs,
-    action.thinContent?.missingWords || 0
-  );
-
+  const seed = `${agency.id || agency.agencyId || identity.name}|${page.slug || page.title || "home"}|${profile}`;
+  const paragraphs = paragraphsForProfile(profile, { ...identity, pageTitle: page.title, intentLabel: action.intentQuality?.label || null });
+  const selected = selectParagraphs(paragraphs, action.thinContent?.missingWords || 0);
   return {
     generatedBy: "mse-25.31",
     purpose: "local-seo-quality-uplift",
     profile,
-    sourceFacts: {
-      agencyName: identity.name,
-      city: identity.city || null,
-      pageSlug: page.slug || null,
-      pageTitle: page.title || null,
-      intent: action.intentQuality?.intent || null,
-    },
+    variantIndex: stableIndex(seed, Math.max(1, variantsForProfile(profile, { ...identity, pageTitle: page.title }).length)),
+    sourceFacts: { agencyName: identity.name, city: identity.city || null, pageSlug: page.slug || null, pageTitle: page.title || null, intent: action.intentQuality?.intent || null },
     factualPolicy: "agency-and-page-context-only",
-    title: identity.city
-      ? `Informations utiles pour votre projet avec ${identity.name} à ${identity.city}`
-      : `Informations utiles pour votre projet avec ${identity.name}`,
+    title: titleForProfile(profile, identity, seed),
     html: selected.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join(""),
     paragraphCount: selected.length,
   };
 }
-
-module.exports = {
-  agencyIdentity,
-  buildBodyCopyPreview,
-  pageProfile,
-  paragraphsForProfile,
-  selectParagraphs,
-};
+module.exports = { agencyIdentity, buildBodyCopyPreview, pageProfile, paragraphsForProfile, selectParagraphs, stableIndex, titleForProfile, variantsForProfile, rotate };
