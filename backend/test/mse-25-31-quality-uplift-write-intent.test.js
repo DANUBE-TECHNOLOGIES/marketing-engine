@@ -53,11 +53,11 @@ function plan(pages) {
   };
 }
 
-test("write-intent builds Website Designer V2 bodies without persistence calls", () => {
+test("write-intent builds validated Website Designer V2 bodies without persistence calls", () => {
   const current = [
     page("avis", [
       { id: "hero-avis", type: "hero", status: "published", position: 0, content: { title: "Avis clients" } },
-      { id: "copy-avis", type: "rich_text", status: "published", position: 1, content: { html: "<p>Avis actuels.</p>" } },
+      { id: "copy-avis", type: "rich_text", status: "published", position: 2, content: { html: "<p>Avis actuels.</p>" } },
     ], { seoTitle: "Avis", metaDescription: "Avis actuels" }),
   ];
   const operations = [
@@ -74,6 +74,7 @@ test("write-intent builds Website Designer V2 bodies without persistence calls",
   assert.equal(result.writes, false);
   assert.equal(result.publicWrites, false);
   assert.equal(result.persistenceCallsPerformed, 0);
+  assert.match(result.writeIntentFingerprint, /^[0-9a-f]{64}$/);
   assert.equal(result.summary.touchedPageCount, 1);
   const intent = result.intents[0];
   assert.equal(intent.persistence.method, "PageBuilderPersistenceService.save");
@@ -82,6 +83,8 @@ test("write-intent builds Website Designer V2 bodies without persistence calls",
   assert.equal(intent.persistence.body.blocks.find((block) => block.type === "hero").content.title, "Avis clients de votre agence de voyages à Gien");
   assert.equal(intent.persistence.body.blocks.at(-1).type, "rich_text");
   assert.equal(intent.persistence.body.blocks.at(-1).content.html, "<p>Conseils et accompagnement.</p>");
+  assert.equal(intent.persistence.body.blocks.at(-1).position, 3);
+  assert.deepEqual(intent.persistence.body.blocks.map((block) => block.position), [0, 2, 3]);
 });
 
 test("write-intent supports one approved candidate touching another page for internal linking", () => {
@@ -102,6 +105,19 @@ test("write-intent supports one approved candidate touching another page for int
   assert.equal(result.summary.touchedPageCount, 1);
   assert.equal(result.intents[0].pageSlug, "home");
   assert.equal(result.intents[0].persistence.body.blocks[0].content.html, link.finalValue);
+});
+
+test("write-intent fingerprint changes with the final Website Designer body", () => {
+  const operation = { type: "enrich-body" };
+  const first = buildQualityUpliftWriteIntents({
+    executionPlan: plan([executionPage({ operations: [operation], bodyCopyPreview: { title: "Informations", html: "<p>Version A</p>" } })]),
+    currentPages: [page("avis", [])],
+  });
+  const second = buildQualityUpliftWriteIntents({
+    executionPlan: plan([executionPage({ operations: [operation], bodyCopyPreview: { title: "Informations", html: "<p>Version B</p>" } })]),
+    currentPages: [page("avis", [])],
+  });
+  assert.notEqual(first.writeIntentFingerprint, second.writeIntentFingerprint);
 });
 
 test("write-intent fails closed when persisted metadata changed after approval", () => {
