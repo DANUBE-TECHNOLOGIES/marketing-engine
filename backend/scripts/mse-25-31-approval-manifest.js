@@ -29,12 +29,24 @@ function executionPayloadMap(report = {}) {
   );
 }
 
+function operationWritePreview(operation = {}) {
+  const preview = {
+    type: operation.type || null,
+    target: operation.target ? JSON.parse(JSON.stringify(operation.target)) : null,
+    finalValue: operation.finalValue ?? null,
+  };
+  if (operation.sourceValueFingerprint) preview.sourceValueFingerprint = operation.sourceValueFingerprint;
+  if (operation.link) preview.link = JSON.parse(JSON.stringify(operation.link));
+  return preview;
+}
+
 function writePreview(payload = {}) {
   const bodyCopyPreview = payload.bodyCopyPreview || null;
   return {
     payloadComplete: payload.payloadComplete === true,
     completeOperationTypes: Array.isArray(payload.completeOperationTypes) ? [...payload.completeOperationTypes] : [],
     incompleteOperationTypes: Array.isArray(payload.incompleteOperationTypes) ? [...payload.incompleteOperationTypes] : [],
+    operations: (Array.isArray(payload.operations) ? payload.operations : []).map(operationWritePreview),
     bodyCopy: bodyCopyPreview ? {
       title: bodyCopyPreview.title || null,
       html: bodyCopyPreview.html || null,
@@ -163,6 +175,7 @@ module.exports = {
   defaultOutputPath,
   digest,
   executionPayloadMap,
+  operationWritePreview,
   run,
   stableValue,
   writePreview,
