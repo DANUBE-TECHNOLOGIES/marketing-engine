@@ -23,6 +23,7 @@ on:
       - 'backend/test/mse-25-35-*.test.js'
       - 'backend/test/mse-25-36-*.test.js'
       - 'backend/test/mse-25-37-*.test.js'
+      - 'backend/test/mse-25-38-*.test.js'
       - 'backend/test/agency-seo-*.test.js'
       - 'frontend/app/agence/[siteSlug]/sitemap.xml/route.js'
       - 'frontend/app/api/agency-sites/**'
@@ -80,6 +81,9 @@ jobs:
 
       - name: Run MSE-25.37 flexible payment network rollback tests
         run: node --test test/mse-25-37-*.test.js
+
+      - name: Run MSE-25.38 flexible payment operational status tests
+        run: node --test test/mse-25-38-*.test.js
 
       - name: Verify Search Console module loads with provider disabled
         env:
