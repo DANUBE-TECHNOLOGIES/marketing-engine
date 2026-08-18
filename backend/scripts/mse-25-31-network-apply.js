@@ -6,9 +6,14 @@ const crypto = require("node:crypto");
 const { PrismaClient } = require("@prisma/client");
 const PageBuilderPersistenceService = require("../src/modules/page-builder-persistence/service");
 const { loadJson } = require("./mse-25-31-approval-check");
-const { loadReport } = require("./mse-25-31-preflight-check");
+const { loadReport, assertReport: assertPreflightReport } = require("./mse-25-31-preflight-check");
 const { assertApplyAuthorization } = require("./mse-25-31-apply-gate");
 const { repositoryState, EXPECTED_BRANCH } = require("./mse-25-31-preflight");
+const {
+  EXPECTED_WORKFLOW_BLOB_SHA,
+  assertSameAttestation,
+  attestHead,
+} = require("./mse-25-31-ci-attestation");
 const { run: checkWriteIntent } = require("./mse-25-31-write-intent-check");
 const { executeQualityUpliftWriteIntent } = require("../src/modules/minisite-seo-enrichment/quality-uplift-executor");
 
@@ -50,6 +55,7 @@ async function run({
   reportPath,
   emitOutput = true,
   repositoryReader = repositoryState,
+  ciAttestor = attestHead,
   request,
   service,
   prisma,
@@ -65,6 +71,23 @@ async function run({
   const { value: writeIntent } = loadJson(writeIntentSource, "MSE_25_31_WRITE_INTENT_NOT_FOUND");
 
   const repository = repositoryReader();
+  const expectedBranch = process.env.MSE_25_31_EXPECTED_BRANCH || EXPECTED_BRANCH;
+  const effectiveBackendOrigin = backendOrigin || process.env.BACKEND_ORIGIN || preflightReport.context?.backendOrigin;
+  const effectiveTenantSlug = tenantSlug || process.env.TENANT_SLUG || preflightReport.context?.tenantSlug || "mondescale";
+  const preflightCheck = assertPreflightReport(preflightReport, {
+    expectedBranch,
+    expectedHead: repository.head,
+    backendOrigin: effectiveBackendOrigin,
+    tenantSlug: effectiveTenantSlug,
+    minimumWords: preflightReport.context?.minimumWords,
+  });
+  const liveCiAttestation = await ciAttestor(repository.head, { expectedBranch });
+  const ciAttestationCheck = assertSameAttestation(
+    preflightReport.repository?.ciAttestation,
+    liveCiAttestation,
+    { head: repository.head, branch: expectedBranch, workflowBlobSha: EXPECTED_WORKFLOW_BLOB_SHA }
+  );
+
   const applyAuthorization = assertApplyAuthorization({
     executionPlan,
     approvalManifest,
@@ -72,7 +95,7 @@ async function run({
     repository,
     confirm: confirm ?? process.env.MSE_25_31_CONFIRM,
     approvedExecutionPlanFingerprint: approvedExecutionPlanFingerprint || process.env.MSE_25_31_APPROVED_EXECUTION_FINGERPRINT,
-    expectedBranch: process.env.MSE_25_31_EXPECTED_BRANCH || EXPECTED_BRANCH,
+    expectedBranch,
   });
 
   const writeIntentCheck = await checkWriteIntent({
@@ -80,15 +103,14 @@ async function run({
     executionPlanPath: executionSource,
     approvalManifestPath: approvalSource,
     preflightReportPath: preflightSource,
-    backendOrigin: backendOrigin || process.env.BACKEND_ORIGIN || preflightReport.context?.backendOrigin,
-    tenantSlug: tenantSlug || process.env.TENANT_SLUG || preflightReport.context?.tenantSlug,
+    backendOrigin: effectiveBackendOrigin,
+    tenantSlug: effectiveTenantSlug,
     emitOutput: false,
     ...(request ? { request } : {}),
   });
 
   const approvedWriteFingerprint = approvedWriteIntentFingerprint || process.env.MSE_25_31_APPROVED_WRITE_INTENT_FINGERPRINT;
   let persistence = { service, prisma, ownsPrisma: false, tenantId: null };
-  const effectiveTenantSlug = tenantSlug || process.env.TENANT_SLUG || preflightReport.context?.tenantSlug || "mondescale";
   if (!service && dryRun === false) persistence = await persistenceServiceForTenant(effectiveTenantSlug, { prisma });
 
   try {
@@ -114,11 +136,14 @@ async function run({
       generatedAt: new Date().toISOString(),
       repository,
       context: {
-        backendOrigin: backendOrigin || process.env.BACKEND_ORIGIN || preflightReport.context?.backendOrigin || null,
+        backendOrigin: effectiveBackendOrigin || null,
         tenantSlug: effectiveTenantSlug,
         tenantId: persistence.tenantId || null,
       },
       proof: {
+        preflightCheck,
+        ciAttestationCheck,
+        liveCiAttestation,
         applyAuthorization,
         writeIntentCheck,
         preflightPlanFingerprint: preflightReport.planFingerprint,
@@ -148,6 +173,7 @@ async function run({
       publicWrites: result.publicWrites === true,
       pagesWritten: result.pagesWritten || 0,
       rollbackSnapshots: result.rollbackSnapshots || 0,
+      ciRunId: liveCiAttestation.runId,
       executionPlanFingerprint: executionPlan.executionPlanFingerprint,
       writeIntentFingerprint: writeIntent.writeIntentFingerprint,
       reportFingerprint: report.reportFingerprint,
