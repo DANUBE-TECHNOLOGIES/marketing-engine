@@ -1,6 +1,7 @@
 "use strict";
 
 const { pageSlugCandidates } = require("./page-slug");
+const { partnerPageReadiness } = require("./partner-page-rollout");
 
 const PAGE_STATUSES = new Set(["draft", "review", "published", "archived"]);
 const BLOCK_STATUSES = new Set(["draft", "published", "hidden"]);
@@ -68,6 +69,31 @@ function primaryHeading(blocks, fallback = "") {
     return type === "page-header" || type === "hero";
   });
   return text(header?.jsonContent?.title, fallback);
+}
+
+function assertPartnerPagePublishable({ slug, status, title, seoTitle, metaDescription, h1, blocks }) {
+  const normalizedSlug = text(slug).replace(/^\/+|\/+$/g, "").toLowerCase();
+  if (normalizedSlug !== "partenaires" || status !== "published") return null;
+
+  const readiness = partnerPageReadiness({
+    title,
+    slug: normalizedSlug,
+    status,
+    published: true,
+    seoTitle,
+    metaDescription,
+    h1,
+    sections: blocks,
+  });
+  if (readiness.ready) return readiness;
+
+  const error = new Error(
+    "La page Partenaires ne peut pas être publiée tant que les contrôles de readiness sont bloquants."
+  );
+  error.statusCode = 409;
+  error.code = "PARTNER_PAGE_PUBLICATION_NOT_READY";
+  error.details = readiness;
+  throw error;
 }
 
 function pageSnapshot(page = {}) {
@@ -163,8 +189,18 @@ async function saveDesignerPage({ prisma, tenantId, agencyId, slug, input = {} }
   );
   const h1 = primaryHeading(blocks, page.h1 || title);
   const published = status === "published";
-  let version = null;
 
+  assertPartnerPagePublishable({
+    slug: page.slug,
+    status,
+    title,
+    seoTitle,
+    metaDescription,
+    h1,
+    blocks,
+  });
+
+  let version = null;
   await prisma.$transaction(async (tx) => {
     version = await createNextVersion(tx, page, {
       reason: input.reason || "visual-editor-save",
@@ -199,7 +235,7 @@ async function saveDesignerPage({ prisma, tenantId, agencyId, slug, input = {} }
   });
 
   return {
-    version: "1.0",
+    version: "1.1",
     operation: "designer-page-save",
     savedVersion: version ? { id: version.id, version: version.version } : null,
     page: saved,
@@ -214,6 +250,7 @@ async function saveDesignerPage({ prisma, tenantId, agencyId, slug, input = {} }
 module.exports = {
   BLOCK_STATUSES,
   PAGE_STATUSES,
+  assertPartnerPagePublishable,
   createNextVersion,
   normalizeDesignerBlocks,
   pageSnapshot,
