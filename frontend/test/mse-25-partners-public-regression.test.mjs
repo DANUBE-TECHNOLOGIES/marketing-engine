@@ -58,6 +58,12 @@ test("Website Designer exposes at most three agency-specific partners", () => {
 
   assert.match(state, /\["logos", "partners", "partner-logos"\]/);
   assert.match(state, /return "partner-logos"/);
+  assert.match(state, /function normalizeAgencyPartners/);
+  assert.match(state, /\.slice\(0, 3\)/);
+  assert.match(state, /catalogPartnerId/);
+  assert.match(state, /source: catalogPartnerId \? "catalog" : "custom"/);
+  assert.match(state, /maxAgencyPartners: 3/);
+  assert.match(state, /content: normalizeBlockContent\(block\.type, block\.content\)/);
 
   assert.match(renderer, /selectAgencyPartners\(candidates/);
   assert.match(renderer, /max:\s*Number\(content\.maxAgencyPartners\) \|\| 3/);
