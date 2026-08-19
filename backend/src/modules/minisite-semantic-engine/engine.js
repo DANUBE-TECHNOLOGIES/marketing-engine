@@ -59,6 +59,19 @@ function includesPhrase(haystack, needle) {
   return Boolean(phrase && (` ${haystack} `).includes(` ${phrase} `));
 }
 
+function localityScore(page = {}, city = "") {
+  const place = normalize(city);
+  if (!place) return { score: 0, matches: [] };
+  const signals = pageSignals(page);
+  let score = 0;
+  const matches = [];
+  if (includesPhrase(signals.title, place)) { score += 35; matches.push("title"); }
+  if (includesPhrase(signals.h1, place)) { score += 30; matches.push("h1"); }
+  if (includesPhrase(signals.meta, place)) { score += 20; matches.push("meta"); }
+  if (includesPhrase(signals.body, place)) { score += 15; matches.push("body"); }
+  return { score: Math.min(100, score), matches };
+}
+
 function intentScore(page = {}, intent = {}) {
   const signals = pageSignals(page);
   let score = 0;
@@ -75,7 +88,8 @@ function intentScore(page = {}, intent = {}) {
   return { score: Math.min(100, score), matches: [...new Set(matches)] };
 }
 
-function analyzePage(page = {}) {
+function analyzePage(page = {}, { city = "" } = {}) {
+  const locality = localityScore(page, city);
   const intents = INTENT_CATALOG
     .map((intent) => ({ ...intent, ...intentScore(page, intent) }))
     .filter((row) => row.score > 0)
@@ -86,6 +100,8 @@ function analyzePage(page = {}) {
     title: page.title || null,
     seoTitle: page.seoTitle || null,
     published: page.published === true || String(page.status || "").toLowerCase() === "published",
+    localityScore: locality.score,
+    localityMatches: locality.matches,
     primaryIntent: intents[0]?.key || null,
     primaryIntentScore: intents[0]?.score || 0,
     intents: intents.map(({ key, label, commercial, priority, score, matches }) => ({ key, label, commercial, priority, score, matches })),
@@ -96,18 +112,27 @@ function coverageForIntent(intent, pages) {
   const candidates = pages
     .map((page) => ({ page, row: page.intents.find((item) => item.key === intent.key) }))
     .filter((item) => item.row)
-    .sort((a, b) => b.row.score - a.row.score || String(a.page.slug).localeCompare(String(b.page.slug), "fr"));
+    .sort((a, b) => b.row.score - a.row.score || b.page.localityScore - a.page.localityScore || String(a.page.slug).localeCompare(String(b.page.slug), "fr"));
   const best = candidates[0] || null;
   const score = best?.row?.score || 0;
+  const localScore = best?.page?.localityScore || 0;
+  const strong = score >= STRONG_COVERAGE_THRESHOLD && (!intent.commercial || localScore >= 50);
+  const covered = score >= DEFAULT_COVERAGE_THRESHOLD && (!intent.commercial || localScore >= 30);
+  let gapReason = null;
+  if (!strong && intent.commercial && score >= DEFAULT_COVERAGE_THRESHOLD && localScore < 30) gapReason = "locality-weak";
+  else if (!strong && score < DEFAULT_COVERAGE_THRESHOLD) gapReason = "intent-weak";
+  else if (!strong && intent.commercial && localScore < 50) gapReason = "locality-partial";
   return {
     intentKey: intent.key,
     label: intent.label,
     commercial: intent.commercial,
     priority: intent.priority,
-    status: score >= STRONG_COVERAGE_THRESHOLD ? "strong" : score >= DEFAULT_COVERAGE_THRESHOLD ? "covered" : "gap",
+    status: strong ? "strong" : covered ? "covered" : "gap",
+    gapReason,
     bestPageSlug: best?.page?.slug || null,
     bestScore: score,
-    candidatePages: candidates.map((item) => ({ slug: item.page.slug, score: item.row.score })),
+    bestLocalityScore: localScore,
+    candidatePages: candidates.map((item) => ({ slug: item.page.slug, score: item.row.score, localityScore: item.page.localityScore })),
   };
 }
 
@@ -115,19 +140,12 @@ function buildCannibalization(pages) {
   const conflicts = [];
   for (const intent of INTENT_CATALOG) {
     const candidates = pages
-      .map((page) => ({ slug: page.slug, score: page.intents.find((item) => item.key === intent.key)?.score || 0 }))
+      .map((page) => ({ slug: page.slug, score: page.intents.find((item) => item.key === intent.key)?.score || 0, localityScore: page.localityScore || 0 }))
       .filter((row) => row.score >= CANNIBALIZATION_THRESHOLD)
-      .sort((a, b) => b.score - a.score || a.slug.localeCompare(b.slug, "fr"));
+      .sort((a, b) => b.score - a.score || b.localityScore - a.localityScore || a.slug.localeCompare(b.slug, "fr"));
     if (candidates.length < 2) continue;
     const delta = Math.abs(candidates[0].score - candidates[1].score);
-    conflicts.push({
-      intentKey: intent.key,
-      label: intent.label,
-      severity: delta <= 12 ? "medium" : "low",
-      blocking: false,
-      pages: candidates,
-      recommendation: "clarify-primary-target",
-    });
+    conflicts.push({ intentKey: intent.key, label: intent.label, severity: delta <= 12 ? "medium" : "low", blocking: false, pages: candidates, recommendation: "clarify-primary-target" });
   }
   return conflicts;
 }
@@ -142,7 +160,10 @@ function opportunityForCoverage(row, { city }) {
       pageSlug: row.bestPageSlug,
       priority: row.commercial ? "high" : "medium",
       currentScore: row.bestScore,
+      currentLocalityScore: row.bestLocalityScore,
       targetScore: STRONG_COVERAGE_THRESHOLD,
+      targetLocalityScore: row.commercial ? 50 : null,
+      reason: row.gapReason,
       locationScope: city || null,
       autoCreate: false,
     };
@@ -154,7 +175,10 @@ function opportunityForCoverage(row, { city }) {
     pageSlug: null,
     priority: row.commercial ? "medium" : "low",
     currentScore: 0,
+    currentLocalityScore: 0,
     targetScore: STRONG_COVERAGE_THRESHOLD,
+    targetLocalityScore: row.commercial ? 50 : null,
+    reason: "intent-absent",
     locationScope: city || null,
     autoCreate: false,
     requiresHumanReview: true,
@@ -162,11 +186,11 @@ function opportunityForCoverage(row, { city }) {
 }
 
 function semanticPlan(site = {}) {
+  const city = String(site.agency?.city || site.city || "").trim();
   const publishedPages = (site.pages || []).filter((page) => page.published === true || String(page.status || "").toLowerCase() === "published");
-  const pages = publishedPages.map(analyzePage);
+  const pages = publishedPages.map((page) => analyzePage(page, { city }));
   const coverage = INTENT_CATALOG.map((intent) => coverageForIntent(intent, pages));
   const cannibalization = buildCannibalization(pages);
-  const city = String(site.agency?.city || site.city || "").trim();
   const opportunities = coverage.map((row) => opportunityForCoverage(row, { city })).filter(Boolean);
   const result = {
     version: "mse-25.40",
@@ -174,25 +198,15 @@ function semanticPlan(site = {}) {
     readOnly: true,
     writes: false,
     destructive: false,
-    site: {
-      id: site.id || null,
-      slug: site.slug || null,
-      agencyId: site.agencyId || site.agency?.id || null,
-      city: city || null,
-    },
-    policy: {
-      doorwayGuard: true,
-      locationExpansion: false,
-      allowedLocationScope: city ? [city] : [],
-      autoCreatePages: false,
-      autoPublishPages: false,
-    },
+    site: { id: site.id || null, slug: site.slug || null, agencyId: site.agencyId || site.agency?.id || null, city: city || null },
+    policy: { doorwayGuard: true, locationExpansion: false, allowedLocationScope: city ? [city] : [], autoCreatePages: false, autoPublishPages: false },
     summary: {
       publishedPageCount: pages.length,
       strongIntentCount: coverage.filter((row) => row.status === "strong").length,
       coveredIntentCount: coverage.filter((row) => row.status === "covered").length,
       semanticGapCount: coverage.filter((row) => row.status === "gap").length,
       commercialGapCount: coverage.filter((row) => row.status === "gap" && row.commercial).length,
+      localQualificationGapCount: coverage.filter((row) => row.commercial && ["locality-weak", "locality-partial"].includes(row.gapReason)).length,
       opportunityCount: opportunities.length,
       cannibalizationConflictCount: cannibalization.length,
       blockingConflictCount: 0,
@@ -226,6 +240,7 @@ function networkSemanticPlan(sites = []) {
       coveredIntentCount: agencies.reduce((sum, row) => sum + row.summary.coveredIntentCount, 0),
       semanticGapCount: agencies.reduce((sum, row) => sum + row.summary.semanticGapCount, 0),
       commercialGapCount: agencies.reduce((sum, row) => sum + row.summary.commercialGapCount, 0),
+      localQualificationGapCount: agencies.reduce((sum, row) => sum + row.summary.localQualificationGapCount, 0),
       opportunityCount: agencies.reduce((sum, row) => sum + row.summary.opportunityCount, 0),
       cannibalizationConflictCount: agencies.reduce((sum, row) => sum + row.summary.cannibalizationConflictCount, 0),
       blockingConflictCount: 0,
@@ -241,6 +256,7 @@ module.exports = {
   coverageForIntent,
   fingerprint,
   intentScore,
+  localityScore,
   networkSemanticPlan,
   normalize,
   pageSignals,
