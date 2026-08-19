@@ -1,7 +1,7 @@
 const express = require("express");
 const AgencySiteService = require("./service");
 const { auditDraft, proposeLocalRewrite } = require("./local-rewrite-service");
-const { buildPartnerPageRolloutStatus, ensureNetworkPartnerPages } = require("./partner-page-rollout");
+const { buildPartnerPageRolloutStatus, ensureNetworkPartnerPages, ensurePartnerPageOnly } = require("./partner-page-rollout");
 
 module.exports = ({ prisma }) => {
   const router = express.Router();
@@ -45,7 +45,8 @@ module.exports = ({ prisma }) => {
   });
   router.post("/agencies/:id/site/partners/ensure", async (req, res, next) => {
     try {
-      const result = await serviceFor(req).ensurePartnerPage(req.params.id, req.body || {});
+      const service = serviceFor(req);
+      const result = await ensurePartnerPageOnly(service, req.params.id, req.body || {});
       res.status(result.created > 0 ? 201 : 200).json(result);
     } catch (e) { next(e); }
   });
