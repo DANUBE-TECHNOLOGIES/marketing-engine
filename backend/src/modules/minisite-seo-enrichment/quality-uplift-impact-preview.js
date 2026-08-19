@@ -34,8 +34,7 @@ function appendInternalLink(site, proposal, operation) {
     blockType: "rich_text",
     status: "published",
     content: {
-      html: `<p>Découvrir cette page</p>`,
-      links: [{ label: "Découvrir cette page", href: targetPath }],
+      html: `<p><a href="${targetPath}">Découvrir cette page</a></p>`,
     },
     seo: { generatedBy: "mse-25.31-impact-preview", purpose: "editorial-internal-link-simulation" },
   });
@@ -51,27 +50,9 @@ function applyExactInternalLinkOperation(site, operation = {}) {
   const currentHtml = String(block.content?.html || "");
   if (!sourceFingerprintMatches(currentHtml, operation)) return false;
 
-  /*
-   * Le write-intent réel remplace uniquement content.html. Le quality gate,
-   * lui, lit volontairement les href/url structurés et ne parse pas le HTML.
-   * La simulation travaille sur une copie profonde du site : on conserve donc
-   * le HTML final exactement scellé ET on ajoute une projection structurée du
-   * même lien afin que collectLinks() puisse mesurer son effet. Ce champ
-   * auxiliaire n'entre jamais dans le payload Website Designer V2 persisté.
-   */
-  const links = Array.isArray(block.content?.links)
-    ? block.content.links.map((item) => ({ ...item }))
-    : [];
-  if (!links.some((item) => String(item?.href || "") === String(operation.link?.href || ""))) {
-    links.push({
-      label: String(operation.link?.label || "").trim(),
-      href: String(operation.link?.href || "").trim(),
-    });
-  }
   block.content = {
     ...(block.content || {}),
     html: operation.finalValue,
-    links,
   };
   return true;
 }
