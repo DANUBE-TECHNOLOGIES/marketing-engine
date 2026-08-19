@@ -2,12 +2,14 @@
 
 const { MiniSiteSeoRepository } = require("../minisite-seo-enrichment/repository");
 const { MiniSiteSeoEnrichmentService } = require("../minisite-seo-enrichment/service");
+const PageBuilderPersistenceService = require("../page-builder-persistence/service");
 const { networkSemanticPlan, semanticPlan } = require("./engine");
 
 class MiniSiteSemanticEngineService {
   constructor({ prisma, repository, enrichmentService } = {}) {
+    this.prisma = prisma || null;
     this.repository = repository || new MiniSiteSeoRepository(prisma);
-    this.enrichmentService = enrichmentService || new MiniSiteSeoEnrichmentService({ prisma, repository: this.repository });
+    this.enrichmentService = enrichmentService || null;
   }
 
   health() {
@@ -25,6 +27,35 @@ class MiniSiteSemanticEngineService {
     };
   }
 
+  async resolveTenantId(summary) {
+    if (summary?.tenantId) return summary.tenantId;
+    if (!this.prisma || !summary?.id) return null;
+    const row = await this.prisma.agencySite.findUnique({
+      where: { id: summary.id },
+      select: { tenantId: true },
+    });
+    return row?.tenantId || null;
+  }
+
+  async contentServiceForSite(summary) {
+    if (this.enrichmentService) return this.enrichmentService;
+    const tenantId = await this.resolveTenantId(summary);
+    if (!tenantId) {
+      const error = new Error("tenantId introuvable pour le mini-site MSE-25.40.");
+      error.code = "MSE_25_40_TENANT_ID_REQUIRED";
+      error.status = 500;
+      throw error;
+    }
+    return new MiniSiteSeoEnrichmentService({
+      prisma: this.prisma,
+      repository: this.repository,
+      pageBuilderPersistenceService: new PageBuilderPersistenceService({
+        prisma: this.prisma,
+        tenantId,
+      }),
+    });
+  }
+
   async siteWithContent(agencyId) {
     const summary = await this.repository.findSiteByAgency(agencyId);
     if (!summary) {
@@ -33,7 +64,8 @@ class MiniSiteSemanticEngineService {
       error.status = 404;
       throw error;
     }
-    const content = await this.enrichmentService.buildAgencyContentOptimization({ agencyId });
+    const enrichmentService = await this.contentServiceForSite(summary);
+    const content = await enrichmentService.buildAgencyContentOptimization({ agencyId });
     return {
       ...summary,
       pages: (content.pages || []).map((row) => ({
