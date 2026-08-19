@@ -40,6 +40,28 @@ test("body preview varies across agencies without inventing neighboring location
   assert.doesNotMatch(nevers.html, /Gien/i);
 });
 
+test("review copy avoids broken apposition agreement and duplicate city wording", () => {
+  const action = { recommendedFields: ["body"], thinContent: { missingWords: 60 } };
+  for (const agency of [
+    { id: 1, name: "Mondescale Maurepas", city: "Maurepas" },
+    { id: 7, name: "Mondescale Lamorlaye", city: "Lamorlaye" },
+    { id: 5, name: "Mondescale Ozoir la Ferrière", city: "Ozoir la Ferrière" },
+  ]) {
+    const preview = buildBodyCopyPreview({ agency, page: { slug: "avis", title: "Avis clients" }, action });
+    assert.doesNotMatch(preview.html, /votre agence de voyages à [^<]+ permettent/i);
+    assert.doesNotMatch(preview.html, /Mondescale ([^,<]+), votre agence de voyages à \1/i);
+  }
+});
+
+test("team and partner copy avoids mechanical agency-city repetition", () => {
+  const action = { recommendedFields: ["body"], thinContent: { missingWords: 60 } };
+  const agency = { id: 5, name: "Mondescale Ozoir la Ferrière", city: "Ozoir la Ferrière" };
+  const team = buildBodyCopyPreview({ agency, page: { slug: "equipe", title: "Notre équipe" }, action });
+  const partners = buildBodyCopyPreview({ agency, page: { slug: "partenaires", title: "Nos partenaires" }, action });
+  assert.doesNotMatch(team.html, /Mondescale Ozoir la Ferrière[^<]{0,100}à Ozoir la Ferrière[^<]{0,100}Ozoir la Ferrière/i);
+  assert.doesNotMatch(partners.html, /agence de Ozoir la Ferrière[^<]{0,80}Ozoir la Ferrière/i);
+});
+
 test("body preview is absent when body uplift was not recommended", () => {
   const preview = buildBodyCopyPreview({ agency: { name: "Mondescale", city: "Gien" }, page: { slug: "services", title: "Services" }, action: { recommendedFields: ["internal-link"] } });
   assert.equal(preview, null);
