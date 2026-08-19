@@ -4,7 +4,7 @@ const crypto = require("node:crypto");
 const { buildLocalSeoQualityUpliftPlan } = require("./quality-uplift-planner");
 const { consolidateQualityUpliftActions } = require("./quality-uplift-action-planner");
 const { buildQualityUpliftProposal } = require("./quality-uplift-proposal-planner");
-const { buildBodyCopyPreview, pageProfile, stableIndex } = require("./quality-uplift-copy-preview");
+const { buildBodyCopyPreview, deCity, pageProfile, stableIndex } = require("./quality-uplift-copy-preview");
 const { projectQualityUpliftImpact } = require("./quality-uplift-impact-preview");
 const { buildQualityUpliftOperatorReport } = require("./quality-uplift-operator-report");
 const { networkQualityUpliftFingerprint, qualityUpliftFingerprint } = require("./quality-uplift-fingerprint");
@@ -42,11 +42,11 @@ function genericInternalLinkLabels(targetPage = {}) {
 function internalLinkLabel(targetPage = {}, site = {}) {
   const profile = pageProfile(targetPage); const city = String(site.agency?.city || "").trim();
   const labels = {
-    reviews: ["Consulter les avis de nos clients", "Voir les retours de nos voyageurs", city ? `Découvrir les avis sur notre agence de ${city}` : "Découvrir les avis sur notre agence"],
+    reviews: ["Consulter les avis de nos clients", "Voir les retours de nos voyageurs", city ? `Découvrir les avis sur notre agence ${deCity(city)}` : "Découvrir les avis sur notre agence"],
     team: ["Rencontrer notre équipe", "Découvrir les conseillers de l’agence", city ? `Faire connaissance avec notre équipe à ${city}` : "Faire connaissance avec notre équipe"],
     partners: ["Découvrir nos partenaires voyage", "Voir les voyagistes avec lesquels nous travaillons", "Explorer notre sélection de partenaires"],
     services: ["Découvrir les services de l’agence", "Voir comment nous pouvons vous accompagner", city ? `Explorer nos services à ${city}` : "Explorer nos services"],
-    agency: ["Découvrir notre agence", city ? `En savoir plus sur notre agence de ${city}` : "En savoir plus sur notre agence"],
+    agency: ["Découvrir notre agence", city ? `En savoir plus sur notre agence ${deCity(city)}` : "En savoir plus sur notre agence"],
     destinations: ["Explorer nos destinations", "Trouver une idée de destination", "Découvrir nos inspirations de voyage"],
   };
   const values = labels[profile] || genericInternalLinkLabels(targetPage);
