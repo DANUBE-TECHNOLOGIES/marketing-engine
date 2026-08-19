@@ -2,6 +2,7 @@ const express = require("express");
 const AgencySiteService = require("./service");
 const { auditDraft, proposeLocalRewrite } = require("./local-rewrite-service");
 const { buildPartnerPageRolloutStatus, ensureNetworkPartnerPages, ensurePartnerPageOnly } = require("./partner-page-rollout");
+const { saveDesignerPage } = require("./page-builder-save");
 
 module.exports = ({ prisma }) => {
   const router = express.Router();
@@ -13,6 +14,13 @@ module.exports = ({ prisma }) => {
     slug,
     draftPage: req.body?.page || null,
     blockId: req.body?.blockId || null,
+  });
+  const designerSaveArgs = (req, slug) => ({
+    prisma,
+    tenantId: req.tenantId,
+    agencyId: req.params.id,
+    slug,
+    input: req.body || {},
   });
   const publicPagePayload = (page) => {
     if (!page || typeof page !== "object") return page;
@@ -79,6 +87,12 @@ module.exports = ({ prisma }) => {
     } catch (e) { next(e); }
   });
 
+  router.put("/agencies/:id/site/pages/home/blocks", async (req, res, next) => {
+    try { res.json(await saveDesignerPage(designerSaveArgs(req, "home"))); } catch (e) { next(e); }
+  });
+  router.put("/agencies/:id/site/pages/:slug/blocks", async (req, res, next) => {
+    try { res.json(await saveDesignerPage(designerSaveArgs(req, req.params.slug))); } catch (e) { next(e); }
+  });
   router.get("/agencies/:id/site/pages/home", async (req, res, next) => {
     try { res.json(await serviceFor(req).page(req.params.id, "home")); } catch (e) { next(e); }
   });
