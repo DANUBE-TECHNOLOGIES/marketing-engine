@@ -16,10 +16,14 @@ test("website builder exposes a safe network partner page rollout cockpit", () =
   assert.match(launcher, /body: JSON\.stringify\(\{ confirmed: true \}\)/);
   assert.match(launcher, /Crée uniquement les pages/);
   assert.match(launcher, /aucune publication n’est automatique/);
-  assert.match(launcher, /partnerRollout\.summary\.missing/);
+  assert.match(launcher, /summary\?\.eligibleMissing/);
+  assert.match(launcher, /summary\?\.blockedMissing/);
   assert.match(launcher, /partnerRollout\.summary\.published/);
   assert.match(launcher, /partnerRollout\.summary\.draftOrReview/);
+  assert.match(launcher, /Rollout bloqué/);
+  assert.match(launcher, /page \/agence est absente/);
   assert.match(launcher, /partnerStateLabel/);
+  assert.match(launcher, /partnerRow\?\.rolloutEligible/);
   assert.match(launcher, /data-partner-state=\{partnerState \|\| "unknown"\}/);
   assert.doesNotMatch(launcher, /publishPartner/);
 
