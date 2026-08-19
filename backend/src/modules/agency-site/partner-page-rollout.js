@@ -1,5 +1,13 @@
 "use strict";
 
+const REQUIRED_PARTNER_SECTIONS = Object.freeze([
+  "page-header",
+  "partners-introduction",
+  "partner-directory",
+  "contact-cta",
+]);
+const SINGLETON_PARTNER_SECTIONS = new Set(REQUIRED_PARTNER_SECTIONS);
+
 function pageFromSite(site, slug) {
   const expected = String(slug || "").trim().toLowerCase();
   return (Array.isArray(site?.pages) ? site.pages : []).find(
@@ -21,11 +29,100 @@ function partnerPageState(page) {
   return page.status || "draft";
 }
 
+function normalizedSectionType(section = {}) {
+  const content = section?.jsonContent || section?.content || {};
+  return String(
+    content?.__builderType ||
+      section?.sectionType ||
+      section?.blockType ||
+      section?.type ||
+      ""
+  )
+    .trim()
+    .toLowerCase()
+    .replace(/--\d+$/, "");
+}
+
+function canonicalPageSections(page = {}) {
+  if (Array.isArray(page.sections) && page.sections.length) return page.sections;
+  if (Array.isArray(page.blocks) && page.blocks.length) return page.blocks;
+  if (Array.isArray(page.sections)) return page.sections;
+  if (Array.isArray(page.blocks)) return page.blocks;
+  return [];
+}
+
+function partnerPageReadiness(page) {
+  if (!page) {
+    return {
+      ready: false,
+      issues: [{ code: "PARTNER_PAGE_MISSING", severity: "blocking" }],
+      missingSections: [...REQUIRED_PARTNER_SECTIONS],
+      duplicateSections: [],
+    };
+  }
+
+  const sections = canonicalPageSections(page);
+  const counts = new Map();
+  for (const section of sections) {
+    const type = normalizedSectionType(section);
+    if (!type) continue;
+    counts.set(type, (counts.get(type) || 0) + 1);
+  }
+  const missingSections = REQUIRED_PARTNER_SECTIONS.filter((type) => !counts.has(type));
+  const duplicateSections = [...counts.entries()]
+    .filter(([type, count]) => SINGLETON_PARTNER_SECTIONS.has(type) && count > 1)
+    .map(([type, count]) => ({ type, count }));
+  const issues = [];
+
+  for (const type of missingSections) {
+    issues.push({ code: "PARTNER_PAGE_SECTION_MISSING", severity: "blocking", sectionType: type });
+  }
+  for (const duplicate of duplicateSections) {
+    issues.push({ code: "PARTNER_PAGE_SINGLETON_DUPLICATED", severity: "blocking", ...duplicate });
+  }
+
+  const h1 = String(page.h1 || "").trim();
+  const seoTitle = String(page.seoTitle || "").trim();
+  const metaDescription = String(page.metaDescription || page.seoDescription || "").trim();
+  if (!h1) issues.push({ code: "PARTNER_PAGE_H1_MISSING", severity: "blocking" });
+  if (!seoTitle) issues.push({ code: "PARTNER_PAGE_SEO_TITLE_MISSING", severity: "blocking" });
+  if (!metaDescription) issues.push({ code: "PARTNER_PAGE_META_DESCRIPTION_MISSING", severity: "blocking" });
+  if (seoTitle && (seoTitle.length < 25 || seoTitle.length > 70)) {
+    issues.push({ code: "PARTNER_PAGE_SEO_TITLE_LENGTH", severity: "warning", length: seoTitle.length });
+  }
+  if (metaDescription && (metaDescription.length < 100 || metaDescription.length > 170)) {
+    issues.push({ code: "PARTNER_PAGE_META_DESCRIPTION_LENGTH", severity: "warning", length: metaDescription.length });
+  }
+
+  const blocking = issues.filter((issue) => issue.severity === "blocking");
+  return {
+    ready: blocking.length === 0,
+    issues,
+    blockingCount: blocking.length,
+    warningCount: issues.length - blocking.length,
+    missingSections,
+    duplicateSections,
+    sectionTypes: [...counts.keys()],
+  };
+}
+
+async function detailedPartnerPage(service, site, summaryPage) {
+  if (!summaryPage) return null;
+  if (typeof service.page !== "function") return summaryPage;
+  try {
+    return await service.page(site.agencyId, "partenaires");
+  } catch {
+    return summaryPage;
+  }
+}
+
 async function buildPartnerPageRolloutStatus(service) {
   const sites = await service.listSites();
-  const rows = sites.map((site) => {
+  const rows = await Promise.all(sites.map(async (site) => {
     const page = partnerPageFromSite(site);
+    const detailedPage = await detailedPartnerPage(service, site, page);
     const agencyPage = agencyPageFromSite(site);
+    const readiness = page ? partnerPageReadiness(detailedPage) : null;
     return {
       siteId: site.id,
       siteName: site.name,
@@ -36,6 +133,8 @@ async function buildPartnerPageRolloutStatus(service) {
       city: site.agency?.city || "",
       agencyPagePresent: Boolean(agencyPage),
       partnerPageState: partnerPageState(page),
+      partnerPageReady: readiness?.ready === true,
+      partnerPageReadiness: readiness,
       rolloutEligible: !page && Boolean(agencyPage),
       rolloutBlockReason: !page && !agencyPage ? "AGENCY_PAGE_MISSING" : null,
       partnerPage: page
@@ -49,17 +148,20 @@ async function buildPartnerPageRolloutStatus(service) {
           }
         : null,
     };
-  });
+  }));
 
   return {
-    version: "1.1",
+    version: "1.2",
     summary: {
       totalSites: rows.length,
       missing: rows.filter((row) => row.partnerPageState === "missing").length,
       eligibleMissing: rows.filter((row) => row.rolloutEligible).length,
       blockedMissing: rows.filter((row) => row.partnerPageState === "missing" && !row.rolloutEligible).length,
       published: rows.filter((row) => row.partnerPageState === "published").length,
+      publishedReady: rows.filter((row) => row.partnerPageState === "published" && row.partnerPageReady).length,
+      publishedNotReady: rows.filter((row) => row.partnerPageState === "published" && !row.partnerPageReady).length,
       draftOrReview: rows.filter((row) => !["missing", "published"].includes(row.partnerPageState)).length,
+      draftOrReviewReady: rows.filter((row) => !["missing", "published"].includes(row.partnerPageState) && row.partnerPageReady).length,
     },
     sites: rows,
   };
@@ -136,7 +238,7 @@ async function ensureNetworkPartnerPages(service, input = {}) {
 
   const after = await buildPartnerPageRolloutStatus(service);
   return {
-    version: "1.1",
+    version: "1.2",
     dryRun: false,
     createdSiteCount: results.filter((result) => Number(result.created || 0) > 0).length,
     blockedSiteCount: blocked.length,
@@ -148,12 +250,17 @@ async function ensureNetworkPartnerPages(service, input = {}) {
 }
 
 module.exports = {
+  REQUIRED_PARTNER_SECTIONS,
   agencyPageFromSite,
   buildPartnerPageRolloutStatus,
+  canonicalPageSections,
+  detailedPartnerPage,
   ensureNetworkPartnerPages,
   ensurePartnerPageOnly,
+  normalizedSectionType,
   pageFromSite,
   partnerPageFromSite,
+  partnerPageReadiness,
   partnerPageState,
   partnerRolloutScopeError,
 };
