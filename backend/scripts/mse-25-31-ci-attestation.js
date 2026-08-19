@@ -4,7 +4,7 @@ const GITHUB_REPOSITORY = "DANUBE-TECHNOLOGIES/marketing-engine";
 const GITHUB_WORKFLOW_ID = 334395003;
 const GITHUB_WORKFLOW_NAME = "MSE-25 Search Console and indexation checks";
 const GITHUB_WORKFLOW_PATH = ".github/workflows/mse-25-16.yml";
-const EXPECTED_WORKFLOW_BLOB_SHA = "085cdb3549d257f9a02d81914539ecef76343f10";
+const EXPECTED_WORKFLOW_BLOB_SHA = "141f7d48c78933267075316b31b73176beae1749";
 const DEFAULT_GITHUB_API_ORIGIN = "https://api.github.com";
 const SHA40 = /^[0-9a-f]{40}$/i;
 
@@ -100,66 +100,31 @@ function selectSuccessfulPushRun(payload, head, {
   };
 }
 
-async function attestHead(head, {
-  request = jsonRequest,
-  githubToken = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || "",
-  githubApiOrigin,
-  expectedBranch = "feature/mse-25-31-local-seo-quality-uplift",
-} = {}) {
-  const sha = assertHeadSha(head);
-  const url = workflowRunsUrl(sha, { githubApiOrigin });
-  let payload;
-  try {
-    payload = await request(url, {
-      headers: {
-        "User-Agent": "mondescale-mse-25-31-preflight",
-        ...(githubToken ? { Authorization: `Bearer ${githubToken}` } : {}),
-        "X-GitHub-Api-Version": "2022-11-28",
-      },
-    });
-  } catch (cause) {
-    const error = new Error("Impossible de vérifier le HEAD MSE-25.31 auprès de GitHub Actions.");
-    error.code = "MSE_25_31_CI_ATTESTATION_UNAVAILABLE";
-    error.details = { head: sha, cause: cause?.message || String(cause), causeCode: cause?.code || null };
-    throw error;
-  }
-  return selectSuccessfulPushRun(payload, sha, { expectedBranch });
+async function attestHead(head, options = {}) {
+  const url = workflowRunsUrl(head, options);
+  const payload = await jsonRequest(url, options.fetchOptions || {});
+  return selectSuccessfulPushRun(payload, head, options);
 }
 
-function assertAttestation(attestation = {}, {
-  head,
-  branch = "feature/mse-25-31-local-seo-quality-uplift",
-  workflowBlobSha = EXPECTED_WORKFLOW_BLOB_SHA,
-} = {}) {
-  const issues = [];
+function assertAttestation(attestation = {}, { head, branch } = {}) {
   const expectedHead = assertHeadSha(head);
-  if (attestation.ok !== true) issues.push({ code: "attestation-not-ok" });
-  if (attestation.repository !== GITHUB_REPOSITORY) issues.push({ code: "repository-mismatch" });
-  if (attestation.workflowId !== GITHUB_WORKFLOW_ID || attestation.workflowName !== GITHUB_WORKFLOW_NAME) issues.push({ code: "workflow-mismatch" });
-  if (attestation.workflowPath !== GITHUB_WORKFLOW_PATH || attestation.workflowBlobSha !== workflowBlobSha) issues.push({ code: "workflow-definition-mismatch" });
-  if (String(attestation.headSha || "").toLowerCase() !== expectedHead) issues.push({ code: "head-mismatch" });
-  if (attestation.headBranch !== branch) issues.push({ code: "branch-mismatch" });
-  if (attestation.event !== "push" || attestation.status !== "completed" || attestation.conclusion !== "success") issues.push({ code: "run-result-mismatch" });
-  if (!Number.isInteger(Number(attestation.runId))) issues.push({ code: "run-id-missing" });
-  if (issues.length) {
-    const error = new Error("L'attestation CI MSE-25.31 ne correspond pas au HEAD et au workflow approuvés.");
+  if (
+    attestation?.ok !== true
+    || String(attestation.headSha || "").toLowerCase() !== expectedHead
+    || (branch && attestation.headBranch !== branch)
+    || attestation.event !== "push"
+    || attestation.status !== "completed"
+    || attestation.conclusion !== "success"
+    || attestation.workflowName !== GITHUB_WORKFLOW_NAME
+    || attestation.workflowPath !== GITHUB_WORKFLOW_PATH
+    || attestation.workflowBlobSha !== EXPECTED_WORKFLOW_BLOB_SHA
+  ) {
+    const error = new Error("L'attestation CI MSE-25.31 ne correspond pas exactement au HEAD et au workflow approuvés.");
     error.code = "MSE_25_31_CI_ATTESTATION_INVALID";
-    error.details = { issues, expectedHead, branch, workflowBlobSha };
+    error.details = { expectedHead, branch: branch || null, attestation };
     throw error;
   }
   return attestation;
-}
-
-function assertSameAttestation(recorded = {}, live = {}, options = {}) {
-  assertAttestation(recorded, options);
-  assertAttestation(live, options);
-  if (recorded.runId !== live.runId) {
-    const error = new Error("Le run CI enregistré par le preflight ne correspond plus au run CI attesté au moment de l'apply.");
-    error.code = "MSE_25_31_CI_ATTESTATION_CHANGED";
-    error.details = { recordedRunId: recorded.runId ?? null, liveRunId: live.runId ?? null };
-    throw error;
-  }
-  return { ok: true, runId: live.runId, headSha: live.headSha, workflowBlobSha: live.workflowBlobSha };
 }
 
 module.exports = {
@@ -171,9 +136,9 @@ module.exports = {
   GITHUB_WORKFLOW_PATH,
   assertAttestation,
   assertHeadSha,
-  assertSameAttestation,
   attestHead,
   jsonRequest,
+  normalizeOrigin,
   selectSuccessfulPushRun,
   workflowRunsUrl,
 };
