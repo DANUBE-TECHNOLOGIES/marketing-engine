@@ -10,6 +10,7 @@ const {
 
 function fakePrisma() {
   const state = {
+    versions: [],
     page: {
       id: "page-partners",
       siteId: "site-gien",
@@ -46,13 +47,24 @@ function fakePrisma() {
       return { count: data.length };
     },
   };
+  const agencySitePageVersion = {
+    async aggregate() {
+      return { _max: { version: state.versions.reduce((max, item) => Math.max(max, item.version), 0) || null } };
+    },
+    async create({ data }) {
+      const version = { id: `version-${state.versions.length + 1}`, ...structuredClone(data) };
+      state.versions.push(version);
+      return structuredClone(version);
+    },
+  };
 
   return {
     state,
     agencySitePage,
     agencySiteSection,
+    agencySitePageVersion,
     async $transaction(callback) {
-      return callback({ agencySitePage, agencySiteSection });
+      return callback({ agencySitePage, agencySiteSection, agencySitePageVersion });
     },
   };
 }
@@ -91,11 +103,9 @@ test("designer save keeps partner page private while status is draft", async () 
   assert.equal(result.publication.publicEligible, false);
   assert.equal(result.page.h1, "Nos partenaires de voyage à Gien");
   assert.equal(result.page.metaDescription, "Nouvelle description locale de la page partenaires.");
+  assert.equal(prisma.state.versions.length, 1);
   assert.deepEqual(result.page.sections.map((section) => section.sectionType), [
-    "page-header",
-    "partners-introduction",
-    "partner-directory",
-    "contact-cta",
+    "page-header", "partners-introduction", "partner-directory", "contact-cta",
   ]);
 });
 
@@ -115,6 +125,7 @@ test("designer save publishes partner page only on explicit published status", a
   assert.equal(result.page.status, "published");
   assert.equal(result.page.published, true);
   assert.equal(result.publication.publicEligible, true);
+  assert.equal(prisma.state.versions.length, 1);
 });
 
 test("designer save rejects silent slug mutation", async () => {
@@ -125,10 +136,7 @@ test("designer save rejects silent slug mutation", async () => {
       tenantId: "tenant-1",
       agencyId: 1,
       slug: "partenaires",
-      input: {
-        page: { slug: "partenaires-2", title: "Nos partenaires", status: "draft" },
-        blocks: partnerBlocks(),
-      },
+      input: { page: { slug: "partenaires-2", title: "Nos partenaires", status: "draft" }, blocks: partnerBlocks() },
     }),
     (error) => error?.code === "AGENCY_SITE_PAGE_SLUG_CHANGE_REQUIRES_DEDICATED_ACTION"
   );
@@ -138,9 +146,6 @@ test("designer block normalization preserves generated partner page types and H1
   const blocks = normalizeDesignerBlocks(partnerBlocks());
   assert.equal(primaryHeading(blocks), "Nos partenaires de voyage à Gien");
   assert.deepEqual(blocks.map((block) => block.sectionType), [
-    "page-header",
-    "partners-introduction",
-    "partner-directory",
-    "contact-cta",
+    "page-header", "partners-introduction", "partner-directory", "contact-cta",
   ]);
 });
