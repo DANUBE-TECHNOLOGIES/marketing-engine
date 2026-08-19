@@ -59,7 +59,7 @@ test("Website Designer exposes at most three agency-specific partners", () => {
   assert.match(state, /\["logos", "partners", "partner-logos"\]/);
   assert.match(state, /return "partner-logos"/);
 
-  assert.match(renderer, /selectAgencyPartners\(content\.agencyPartners/);
+  assert.match(renderer, /selectAgencyPartners\(candidates/);
   assert.match(renderer, /max:\s*Number\(content\.maxAgencyPartners\) \|\| 3/);
 });
 
@@ -82,6 +82,26 @@ test("Website Designer agency partner slots prefer verified canonical partners w
   assert.match(editor, /logoUrl: partner\.logoUrl/);
   assert.match(editor, /summary: partner\.summary/);
   assert.match(editor, /tags: \[\.\.\.partner\.tags\]/);
+});
+
+test("catalogue-backed agency partners are rehydrated from verified source before public rendering", () => {
+  const resolver = read("components/page-builder/shared/agencyPartnerCatalog.js");
+  const renderer = read("components/public-site/renderers/PartnersRenderer.js");
+
+  assert.match(resolver, /FULL_PARTNERS/);
+  assert.match(resolver, /getPartnerProfile/);
+  assert.match(resolver, /partner\?\.publishable && partner\?\.readyForPublication/);
+  assert.match(resolver, /export function resolveAgencyPartnerCandidates/);
+  assert.match(resolver, /const catalogPartnerId = text\(item\.catalogPartnerId\)/);
+  assert.match(resolver, /const partner = canonical\.get\(catalogPartnerId\)/);
+  assert.match(resolver, /if \(!partner\) continue/);
+  assert.match(resolver, /name: partner\.name/);
+  assert.match(resolver, /logoUrl: partner\.logoUrl \|\| ""/);
+  assert.match(resolver, /source: "catalog"/);
+  assert.match(resolver, /source: "custom"/);
+
+  assert.match(renderer, /resolveAgencyPartnerCandidates\(content\.agencyPartners\)/);
+  assert.match(renderer, /selectAgencyPartners\(candidates/);
 });
 
 test("public agency partner selection is deterministic, deduplicated and URL-safe", () => {
