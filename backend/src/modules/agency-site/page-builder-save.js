@@ -70,6 +70,42 @@ function primaryHeading(blocks, fallback = "") {
   return text(header?.jsonContent?.title, fallback);
 }
 
+function pageSnapshot(page = {}) {
+  return {
+    page: {
+      title: page.title,
+      slug: page.slug,
+      status: page.status,
+      published: page.published === true,
+      seoTitle: page.seoTitle,
+      metaDescription: page.metaDescription,
+      h1: page.h1,
+    },
+    sections: (page.sections || []).map((section) => ({
+      sectionType: section.sectionType,
+      jsonContent: section.jsonContent || {},
+      displayOrder: section.displayOrder,
+      status: section.status || "draft",
+    })),
+  };
+}
+
+async function createNextVersion(tx, page, { reason = "visual-editor-save", createdBy = null } = {}) {
+  const aggregate = await tx.agencySitePageVersion.aggregate({
+    where: { pageId: page.id },
+    _max: { version: true },
+  });
+  return tx.agencySitePageVersion.create({
+    data: {
+      pageId: page.id,
+      version: Number(aggregate?._max?.version || 0) + 1,
+      snapshot: pageSnapshot(page),
+      reason: text(reason, "visual-editor-save"),
+      createdBy: createdBy ? text(createdBy) : null,
+    },
+  });
+}
+
 async function saveDesignerPage({ prisma, tenantId, agencyId, slug, input = {} }) {
   const id = Number(agencyId);
   if (!Number.isInteger(id)) {
@@ -127,8 +163,13 @@ async function saveDesignerPage({ prisma, tenantId, agencyId, slug, input = {} }
   );
   const h1 = primaryHeading(blocks, page.h1 || title);
   const published = status === "published";
+  let version = null;
 
   await prisma.$transaction(async (tx) => {
+    version = await createNextVersion(tx, page, {
+      reason: input.reason || "visual-editor-save",
+      createdBy: input.createdBy || null,
+    });
     await tx.agencySitePage.update({
       where: { id: page.id },
       data: {
@@ -160,6 +201,7 @@ async function saveDesignerPage({ prisma, tenantId, agencyId, slug, input = {} }
   return {
     version: "1.0",
     operation: "designer-page-save",
+    savedVersion: version ? { id: version.id, version: version.version } : null,
     page: saved,
     publication: {
       status: saved.status,
@@ -172,7 +214,9 @@ async function saveDesignerPage({ prisma, tenantId, agencyId, slug, input = {} }
 module.exports = {
   BLOCK_STATUSES,
   PAGE_STATUSES,
+  createNextVersion,
   normalizeDesignerBlocks,
+  pageSnapshot,
   primaryHeading,
   saveDesignerPage,
 };
