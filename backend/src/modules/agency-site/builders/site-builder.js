@@ -24,7 +24,7 @@ class SiteBuilder {
           : isPartners
             ? `Découvrez les tour-opérateurs, croisiéristes et spécialistes sélectionnés par ${agencyName} à ${city} pour construire votre prochain voyage.`
             : `${page.title} chez ${agencyName}, votre agence de voyages à ${city}.`,
-        h1: isHome ? agencyName : isPartners ? `Nos partenaires voyage à ${city}` : page.title,
+        h1: isHome ? agencyName : isPartners ? `Nos partenaires de voyage à ${city}` : page.title,
         schemaType: isHome ? "TravelAgency" : "WebPage"
       };
     });
