@@ -192,6 +192,19 @@
   color: #315e46;
 }
 
+.badges span[data-partner-state="draft"][data-partner-ready="true"],
+.badges span[data-partner-state="review"][data-partner-ready="true"] {
+  background: #eaf6ee;
+  color: #315e46;
+}
+
+.badges span[data-partner-state="published"][data-partner-ready="false"],
+.badges span[data-partner-state="draft"][data-partner-ready="false"],
+.badges span[data-partner-state="review"][data-partner-ready="false"] {
+  background: #fff0ee;
+  color: #9a3a2a;
+}
+
 .badges span[data-partner-state="missing"] {
   background: #fff1df;
   color: #8c5519;
