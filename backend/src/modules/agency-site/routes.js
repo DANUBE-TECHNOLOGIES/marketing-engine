@@ -33,6 +33,12 @@ module.exports = ({ prisma }) => {
   router.post("/agencies/:id/site/rebuild", async (req, res, next) => {
     try { res.json(await serviceFor(req).rebuild(req.params.id, req.body || {})); } catch (e) { next(e); }
   });
+  router.post("/agencies/:id/site/partners/ensure", async (req, res, next) => {
+    try {
+      const result = await serviceFor(req).ensurePartnerPage(req.params.id, req.body || {});
+      res.status(result.created > 0 ? 201 : 200).json(result);
+    } catch (e) { next(e); }
+  });
   router.post("/agencies/:id/site/seo-draft-pages", async (req, res, next) => {
     try {
       const result = await serviceFor(req).createSeoDraftPage(req.params.id, req.body || {});
