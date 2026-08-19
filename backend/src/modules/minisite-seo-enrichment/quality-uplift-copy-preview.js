@@ -7,6 +7,11 @@ function normalize(value) { return clean(value).normalize("NFD").replace(/[\u030
 function escapeHtml(value) { return clean(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#39;"); }
 function stableIndex(seed, length) { if (!length) return 0; const hex = crypto.createHash("sha256").update(String(seed || "mse-25.31")).digest("hex").slice(0, 8); return parseInt(hex, 16) % length; }
 function rotate(values, seed) { if (!values.length) return []; const offset = stableIndex(seed, values.length); return values.slice(offset).concat(values.slice(0, offset)); }
+function deCity(city) {
+  const value = clean(city);
+  if (!value) return "";
+  return /^[aeiouyàâäéèêëîïôöùûüÿh]/i.test(value) ? `d’${value}` : `de ${value}`;
+}
 function pageProfile(page = {}) {
   const source = normalize(`${page.slug || ""} ${page.title || ""}`);
   if (!source || ["home", "accueil"].includes(normalize(page.slug))) return "home";
@@ -31,7 +36,7 @@ function agencyIdentity(agency = {}) {
   return { city, name, shortName: clean(shortName) || name };
 }
 function variantsForProfile(profile, { name, city, pageTitle } = {}) {
-  const agencyAtCity = city ? `l’agence de ${city}` : "l’agence";
+  const agencyAtCity = city ? `l’agence ${deCity(city)}` : "l’agence";
   const profiles = {
     team: [
       [`Derrière chaque projet confié à ${name}, l’échange avec l’équipe permet de préciser les attentes avant d’étudier les solutions de voyage. Cette page vous présente les conseillers qui accompagnent les demandes de ${agencyAtCity}.`, `Dates possibles, budget, composition des voyageurs et envies de séjour constituent une bonne base pour préparer le rendez-vous. Ces repères permettent à l’équipe de mieux cibler les recherches et les propositions à comparer.`],
@@ -41,7 +46,7 @@ function variantsForProfile(profile, { name, city, pageTitle } = {}) {
     partners: [
       [`Les partenaires référencés par ${name} illustrent les différentes solutions que l’équipe peut étudier pour construire un voyage. Selon le projet, plusieurs voyagistes ou marques peuvent répondre à des attentes différentes.`, `Destination, période, budget, formule et niveau de prestations sont autant de critères utiles pour comparer ces offres. Le rôle de l’agence est de mettre ces éléments en perspective plutôt que de limiter la recherche à une seule marque.`],
       [`Cette sélection donne un aperçu des voyagistes avec lesquels ${name} peut rechercher des solutions. Elle ne remplace pas l’étude personnalisée menée${city ? ` par ${agencyAtCity}` : " par l’agence"}, qui dépend des critères propres à chaque voyage.`, `Une même destination peut être proposée avec des durées, hébergements, transports ou services très différents. Comparer les partenaires permet donc d’examiner les offres au regard de vos dates, de votre budget et de vos priorités.`],
-      [`Pour élargir les possibilités de voyage, ${name} s’appuie sur plusieurs partenaires et spécialistes. Cette diversité permet d’étudier différentes formules avant de retenir celle qui correspond le mieux à votre projet.`, `Le choix se fait notamment en fonction de la destination, des disponibilités, du niveau de confort recherché et des prestations incluses. L’équipe${city ? ` de ${agencyAtCity}` : ""} peut vous aider à lire ces différences et à comparer les propositions pertinentes.`],
+      [`Pour élargir les possibilités de voyage, ${name} s’appuie sur plusieurs partenaires et spécialistes. Cette diversité permet d’étudier différentes formules avant de retenir celle qui correspond le mieux à votre projet.`, `Le choix se fait notamment en fonction de la destination, des disponibilités, du niveau de confort recherché et des prestations incluses. Les conseillers${city ? ` de ${agencyAtCity}` : " de l’agence"} peuvent vous aider à lire ces différences et à comparer les propositions pertinentes.`],
     ],
     reviews: [
       [`Les avis publiés au sujet de ${name} permettent de découvrir l’expérience de voyageurs ayant déjà sollicité l’équipe${city ? ` à ${city}` : ""}. Ils apportent un éclairage complémentaire aux informations pratiques et aux services présentés sur le mini-site.`, `Ces retours peuvent vous aider à préparer votre prise de contact et à comprendre la manière dont l’agence accompagne les projets. Pour votre propre voyage, l’étude reste naturellement adaptée à vos dates, votre budget et vos attentes.`],
@@ -55,8 +60,8 @@ function variantsForProfile(profile, { name, city, pageTitle } = {}) {
 function titleForProfile(profile, { name, city } = {}, seed = "") {
   const titles = {
     team: city ? [`Rencontrez notre équipe à ${city}`, `Votre équipe voyage à ${city}`, `Des conseillers pour votre projet à ${city}`] : ["Rencontrez notre équipe"],
-    partners: city ? [`Nos partenaires voyage à ${city}`, "Des partenaires sélectionnés pour vos voyages", `Comparer les solutions avec notre agence de ${city}`] : ["Nos partenaires voyage"],
-    reviews: city ? [`Les avis sur notre agence de ${city}`, `L’expérience de nos clients à ${city}`, "Ce que nos clients disent de l’agence"] : ["Les avis de nos clients"],
+    partners: city ? [`Nos partenaires voyage à ${city}`, "Des partenaires sélectionnés pour vos voyages", `Comparer les solutions avec notre agence ${deCity(city)}`] : ["Nos partenaires voyage"],
+    reviews: city ? [`Les avis sur notre agence ${deCity(city)}`, `L’expérience de nos clients à ${city}`, "Ce que nos clients disent de l’agence"] : ["Les avis de nos clients"],
   };
   const values = titles[profile] || [`Informations utiles avec ${name}`];
   return values[stableIndex(`${seed}:title`, values.length)];
@@ -79,4 +84,4 @@ function buildBodyCopyPreview({ agency = {}, page = {}, action = {} } = {}) {
   const selected = selectParagraphs(paragraphs, action.thinContent?.missingWords || 0);
   return { generatedBy: "mse-25.31", purpose: "local-seo-quality-uplift", profile, variantIndex: stableIndex(seed, Math.max(1, variantsForProfile(profile, { ...identity, pageTitle: page.title }).length)), sourceFacts: { agencyName: identity.name, city: identity.city || null, pageSlug: page.slug || null, pageTitle: page.title || null, intent: action.intentQuality?.intent || null }, factualPolicy: "agency-and-page-context-only", title: titleForProfile(profile, identity, seed), html: selected.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join(""), paragraphCount: selected.length };
 }
-module.exports = { agencyIdentity, buildBodyCopyPreview, pageProfile, paragraphsForProfile, selectParagraphs, stableIndex, titleForProfile, variantsForProfile, rotate };
+module.exports = { agencyIdentity, buildBodyCopyPreview, deCity, pageProfile, paragraphsForProfile, selectParagraphs, stableIndex, titleForProfile, variantsForProfile, rotate };
