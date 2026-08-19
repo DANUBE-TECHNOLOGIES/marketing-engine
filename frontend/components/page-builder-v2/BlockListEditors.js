@@ -8,6 +8,7 @@ import { getCommonPartners } from "../page-builder/shared/commonPartners";
 import { FULL_PARTNERS, PARTNER_DIRECTORY_CATEGORIES } from "../page-builder/shared/fullPartners";
 import { getPartnerProfile } from "../page-builder/shared/partnerProfile";
 import { partnerKey } from "../page-builder/shared/partnerSelection";
+import { recommendAgencyPartners } from "../page-builder/shared/partnerRecommendations";
 
 function moveItem(items, index, direction) {
   const target = index + direction;
@@ -88,9 +89,19 @@ function canonicalPartnerValue(partner, current = {}) {
   };
 }
 
+const RECOMMENDATION_FOCUS = Object.freeze([
+  { value: "", label: "Déduire de la sélection actuelle" },
+  { value: "croisières croisiere fluvial navire bateau", label: "Croisières" },
+  { value: "circuits circuit autotour itineraire accompagne aventure", label: "Circuits & autotours" },
+  { value: "séjours sejours club soleil famille balneaire hotel", label: "Séjours & clubs" },
+  { value: "sur mesure long-courrier premium luxe combiné", label: "Sur mesure & long-courrier" },
+  { value: "France Europe montagne residence camping thalasso Corse", label: "France & Europe" },
+]);
+
 export function PartnerLogosEditor({ networkItems, agencyPartners, maxAgencyPartners = 3, assets = [], loading = false, onChange }) {
   const [partnerAssets, setPartnerAssets] = useState(assets);
   const [partnerLoading, setPartnerLoading] = useState(loading || assets.length === 0);
+  const [recommendationFocus, setRecommendationFocus] = useState("");
 
   useEffect(() => {
     if (assets.length) {
@@ -115,8 +126,25 @@ export function PartnerLogosEditor({ networkItems, agencyPartners, maxAgencyPart
   const agency = Array.isArray(agencyPartners) ? agencyPartners.slice(0, maxAgencyPartners) : [];
   const canonicalOptions = useMemo(() => canonicalAgencyPartnerOptions(locked), [locked]);
   const categories = useMemo(() => new Map(PARTNER_DIRECTORY_CATEGORIES.map((category) => [category.id, category.label])), []);
+  const recommendationSignals = useMemo(() => {
+    if (recommendationFocus) return [recommendationFocus];
+    return agency.flatMap((item) => [item?.name, item?.category, item?.summary, ...(Array.isArray(item?.tags) ? item.tags : [])]).filter(Boolean);
+  }, [agency, recommendationFocus]);
+  const recommendations = useMemo(() => recommendAgencyPartners({
+    signals: recommendationSignals,
+    selected: agency,
+    networkItems: locked,
+    max: Math.max(0, maxAgencyPartners - agency.length),
+  }), [recommendationSignals, agency, locked, maxAgencyPartners]);
 
-  return <div className={styles.partnerEditor}><div className={styles.partnerLockedPanel}><strong>Socle réseau Mondescale</strong><p>Ces partenaires sont communs à tous les mini-sites et ne peuvent pas être modifiés ici.</p><div className={styles.partnerLockedList}>{locked.map((item) => <span key={item.id || item.name}>{item.name || item.title}</span>)}</div></div><div className={styles.partnerAgencyHeader}><strong>Partenaires de l’agence</strong><small>{agency.length}/{maxAgencyPartners} emplacement{maxAgencyPartners > 1 ? "s" : ""}</small></div><ListEditor items={agency} onChange={(items) => onChange(items.slice(0, maxAgencyPartners).map((item) => ({ ...item, scope: "agency" })))} maxItems={maxAgencyPartners} addLabel="Ajouter un partenaire agence" createItem={() => ({ id: `agency-partner-${Date.now()}`, catalogPartnerId: "", name: "", logoAssetId: "", logoUrl: "", alt: "", href: "", scope: "agency", source: "custom" })}>{({ item, index, update }) => {
+  const addRecommendation = (entry) => {
+    if (!entry?.partner || agency.length >= maxAgencyPartners) return;
+    const option = canonicalOptions.find((partner) => partner.id === entry.partner.id);
+    if (!option) return;
+    onChange([...agency, canonicalPartnerValue(option)].slice(0, maxAgencyPartners));
+  };
+
+  return <div className={styles.partnerEditor}><div className={styles.partnerLockedPanel}><strong>Socle réseau Mondescale</strong><p>Ces partenaires sont communs à tous les mini-sites et ne peuvent pas être modifiés ici.</p><div className={styles.partnerLockedList}>{locked.map((item) => <span key={item.id || item.name}>{item.name || item.title}</span>)}</div></div><div className={styles.partnerAgencyHeader}><strong>Partenaires de l’agence</strong><small>{agency.length}/{maxAgencyPartners} emplacement{maxAgencyPartners > 1 ? "s" : ""}</small></div><div className={styles.partnerLockedPanel}><strong>Suggestions pour l’agence</strong><p>Le moteur propose uniquement des partenaires vérifiés et n’applique jamais un choix sans action de votre part.</p><SelectField label="Orientation commerciale" value={recommendationFocus} onChange={setRecommendationFocus}>{RECOMMENDATION_FOCUS.map((option) => <option key={option.label} value={option.value}>{option.label}</option>)}</SelectField>{recommendations.length ? <div className={styles.partnerLockedList}>{recommendations.map((entry) => <button type="button" key={entry.partner.id} className={styles.addListItem} onClick={() => addRecommendation(entry)} disabled={agency.length >= maxAgencyPartners} title={entry.reason}>+ {entry.partner.name}</button>)}</div> : <small>{agency.length >= maxAgencyPartners ? "Les trois emplacements sont déjà utilisés." : recommendationSignals.length ? "Aucune autre recommandation pertinente avec ces critères." : "Choisissez une orientation ou sélectionnez un premier partenaire pour obtenir des suggestions."}</small>}</div><ListEditor items={agency} onChange={(items) => onChange(items.slice(0, maxAgencyPartners).map((item) => ({ ...item, scope: "agency" })))} maxItems={maxAgencyPartners} addLabel="Ajouter un partenaire agence" createItem={() => ({ id: `agency-partner-${Date.now()}`, catalogPartnerId: "", name: "", logoAssetId: "", logoUrl: "", alt: "", href: "", scope: "agency", source: "custom" })}>{({ item, index, update }) => {
     const catalogPartnerId = item.catalogPartnerId || (item.source === "catalog" ? item.id : "");
     const selectedCatalogPartner = canonicalOptions.find((partner) => partner.id === catalogPartnerId) || null;
     const selectedElsewhere = new Set(agency.filter((_, currentIndex) => currentIndex !== index).map((candidate) => candidate.catalogPartnerId || (candidate.source === "catalog" ? candidate.id : "")).filter(Boolean));
