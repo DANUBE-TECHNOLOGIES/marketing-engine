@@ -57,6 +57,10 @@ export function buildPartnerRecommendationSignals(site, activePage) {
 }
 
 export function recommendAgencyPartners({ signals = [], selected = [], networkItems = getCommonPartners(), max = 3 } = {}) {
+  const requestedMax = Number(max);
+  const limit = Math.max(0, Math.min(3, Number.isFinite(requestedMax) ? requestedMax : 3));
+  if (limit === 0) return [];
+
   const haystack = normalize((Array.isArray(signals) ? signals : [signals]).join(" "));
   if (!haystack) return [];
 
@@ -102,7 +106,6 @@ export function recommendAgencyPartners({ signals = [], selected = [], networkIt
     .filter((entry) => entry.score >= 100)
     .sort((a, b) => b.score - a.score || a.partner.name.localeCompare(b.partner.name, "fr"));
 
-  const limit = Math.max(0, Math.min(3, Number(max) || 3));
   const selectedRecommendations = [];
   const usedCategories = new Set();
 
