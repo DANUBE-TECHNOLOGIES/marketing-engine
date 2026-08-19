@@ -80,6 +80,15 @@ test("internal-link anchor selection is deterministic for the same agency and pa
   assert.equal(internalLinkLabel(page, site), internalLinkLabel(page, site));
 });
 
+test("local agency anchors contract de before vowel-starting cities", () => {
+  const site = { agencyId: 5, agency: { id: 5, city: "Ozoir la Ferrière" } };
+  const labels = [
+    internalLinkLabel({ slug: "avis", title: "Avis clients" }, site),
+    internalLinkLabel({ slug: "agence", title: "Notre agence" }, site),
+  ];
+  for (const label of labels) assert.doesNotMatch(label, /agence de Ozoir/i);
+});
+
 test("Budapest and commitments anchors remain natural and purpose-specific", () => {
   const site = { agencyId: 5, agency: { id: 5, city: "Ozoir la Ferrière" } };
   const cases = [
