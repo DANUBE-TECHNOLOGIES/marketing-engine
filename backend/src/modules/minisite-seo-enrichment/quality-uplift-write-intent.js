@@ -76,15 +76,68 @@ function applyMetadata(row, operation, candidateKey) {
     block.content = { ...(block.content || {}), title: operation.finalValue };
   }
 }
-function applyInternalLink(map, page, operation) {
+function internalLinkTargetKey(page = {}, operation = {}) {
   const target = operation.target || {};
-  if (target.scope !== "block" || target.blockType !== "rich_text" || target.field !== "content.html" || !String(target.pageSlug || "").trim() || target.blockId == null) throw error("MSE_25_31_WRITE_INTENT_TARGET_INVALID", "Cible de maillage interne invalide.", { candidateKey: page.key });
-  const row = requirePage(map, page.siteSlug, target.pageSlug, page.key);
-  const block = requireBlock(row, target, page.key);
-  if (normalizedBlockType(block) !== "rich-text") throw error("MSE_25_31_WRITE_INTENT_TARGET_INVALID", "Le bloc de maillage n'est plus un rich_text.", { candidateKey: page.key, pageKey: row.key, blockId: block.id });
-  assertSourceFingerprint(block.content?.html ?? "", operation, { candidateKey: page.key, pageKey: row.key, blockId: block.id, field: "content.html" });
-  block.content = { ...(block.content || {}), html: operation.finalValue };
-  return row;
+  return `${String(page.siteSlug || "").trim()}:${normalizedPageSlug(target.pageSlug)}:block:${String(target.blockId ?? "")}:content.html`;
+}
+function assertInternalLinkTarget(operation = {}, candidateKey) {
+  const target = operation.target || {};
+  if (target.scope !== "block" || target.blockType !== "rich_text" || target.field !== "content.html" || !String(target.pageSlug || "").trim() || target.blockId == null) {
+    throw error("MSE_25_31_WRITE_INTENT_TARGET_INVALID", "Cible de maillage interne invalide.", { candidateKey });
+  }
+}
+function collectInternalLinkGroups(executionPlan = {}) {
+  const groups = new Map();
+  for (const page of executionPlan.pages || []) {
+    (page.executionPayload?.operations || []).forEach((operation, operationIndex) => {
+      if (operation.type !== "add-internal-link") return;
+      assertInternalLinkTarget(operation, page.key);
+      const key = internalLinkTargetKey(page, operation);
+      const rows = groups.get(key) || [];
+      rows.push({ page, operation, operationIndex });
+      groups.set(key, rows);
+    });
+  }
+  for (const rows of groups.values()) {
+    rows.sort((left, right) => left.page.key.localeCompare(right.page.key, "fr") || left.operationIndex - right.operationIndex);
+  }
+  return groups;
+}
+function approvedLinkSuffix(sourceHtml, operation = {}, details = {}) {
+  const finalValue = String(operation.finalValue ?? "");
+  if (!finalValue.startsWith(sourceHtml)) {
+    throw error("MSE_25_31_WRITE_INTENT_LINK_MERGE_INVALID", "Le HTML final approuvé ne prolonge pas exactement la source scellée.", details);
+  }
+  const suffix = finalValue.slice(sourceHtml.length);
+  const href = String(operation.link?.href || "").trim();
+  if (!suffix || !href || !suffix.includes(href)) {
+    throw error("MSE_25_31_WRITE_INTENT_LINK_MERGE_INVALID", "Le suffixe de lien approuvé est incomplet ou incohérent.", { ...details, href: href || null });
+  }
+  return { suffix, href };
+}
+function applyInternalLinkGroups(map, executionPlan, touched) {
+  const groups = collectInternalLinkGroups(executionPlan);
+  for (const [targetKey, items] of [...groups.entries()].sort(([left], [right]) => left.localeCompare(right, "fr"))) {
+    const first = items[0];
+    const target = first.operation.target;
+    const row = requirePage(map, first.page.siteSlug, target.pageSlug, first.page.key);
+    const block = requireBlock(row, target, first.page.key);
+    if (normalizedBlockType(block) !== "rich-text") throw error("MSE_25_31_WRITE_INTENT_TARGET_INVALID", "Le bloc de maillage n'est plus un rich_text.", { candidateKey: first.page.key, pageKey: row.key, blockId: block.id });
+    const sourceHtml = String(block.content?.html ?? "");
+    const hrefs = new Set();
+    const suffixes = [];
+    for (const item of items) {
+      const itemTargetKey = internalLinkTargetKey(item.page, item.operation);
+      if (itemTargetKey !== targetKey) throw error("MSE_25_31_WRITE_INTENT_LINK_MERGE_INVALID", "Le groupe de liens contient plusieurs cibles.", { targetKey, itemTargetKey, candidateKey: item.page.key });
+      assertSourceFingerprint(sourceHtml, item.operation, { candidateKey: item.page.key, pageKey: row.key, blockId: block.id, field: "content.html" });
+      const approved = approvedLinkSuffix(sourceHtml, item.operation, { targetKey, candidateKey: item.page.key });
+      if (hrefs.has(approved.href)) throw error("MSE_25_31_WRITE_INTENT_LINK_MERGE_INVALID", "Deux liens approuvés du même bloc possèdent le même href.", { targetKey, href: approved.href });
+      hrefs.add(approved.href);
+      suffixes.push(approved.suffix);
+    }
+    block.content = { ...(block.content || {}), html: `${sourceHtml}${suffixes.join("")}` };
+    touched.add(row.key);
+  }
 }
 function nextBlockPosition(blocks = []) {
   return blocks.reduce((max, block, index) => {
@@ -120,10 +173,10 @@ function buildQualityUpliftWriteIntents({ executionPlan = {}, currentPages = [] 
     for (const operation of page.executionPayload.operations || []) {
       if (operation.type === "enrich-body") { appendBody(primary, page.executionPayload, page.key); touched.add(primary.key); }
       else if (["strengthen-title", "strengthen-meta-description", "strengthen-h1"].includes(operation.type)) { applyMetadata(primary, operation, page.key); touched.add(primary.key); }
-      else if (operation.type === "add-internal-link") { touched.add(applyInternalLink(map, page, operation).key); }
-      else throw error("MSE_25_31_WRITE_INTENT_OPERATION_UNSUPPORTED", "Une opération approuvée n'est pas prise en charge.", { candidateKey: page.key, operationType: operation.type || null });
+      else if (operation.type !== "add-internal-link") throw error("MSE_25_31_WRITE_INTENT_OPERATION_UNSUPPORTED", "Une opération approuvée n'est pas prise en charge.", { candidateKey: page.key, operationType: operation.type || null });
     }
   }
+  applyInternalLinkGroups(map, executionPlan, touched);
   const intents = [...touched].sort((a, b) => a.localeCompare(b, "fr")).map((key) => {
     const row = map.get(key);
     return { key, agencyId: row.agencyId, siteSlug: row.siteSlug, pageSlug: row.pageSlug, persistence: { method: "PageBuilderPersistenceService.save", agencyId: row.agencyId, pageSlug: row.pageSlug, body: validatedSaveBody(row.page, { key }) } };
@@ -132,4 +185,4 @@ function buildQualityUpliftWriteIntents({ executionPlan = {}, currentPages = [] 
   return { version: "mse-25.31", operation: "quality-uplift-write-intent", readOnly: true, writes: false, publicWrites: false, persistenceCallsPerformed: 0, executionPlanFingerprint: executionPlan.executionPlanFingerprint, writeIntentFingerprint, summary: { approvedCandidateCount: (executionPlan.pages || []).length, touchedPageCount: intents.length }, intents };
 }
 
-module.exports = { buildQualityUpliftWriteIntents, assertSourceFingerprint, currentPageMap, digest, nextBlockPosition, normalizedBlockType, normalizedPageSlug, pageKey, saveBody, sha256Text, stableValue, validatedSaveBody };
+module.exports = { approvedLinkSuffix, applyInternalLinkGroups, assertInternalLinkTarget, buildQualityUpliftWriteIntents, collectInternalLinkGroups, currentPageMap, digest, internalLinkTargetKey, nextBlockPosition, normalizedBlockType, normalizedPageSlug, pageKey, saveBody, sha256Text, stableValue, validatedSaveBody };
