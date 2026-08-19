@@ -30,7 +30,10 @@ test("partner recommendations derive weighted signals from the full minisite", (
 test("partner editor consumes minisite signals while keeping manual focus as an override", () => {
   const editor = read("components/page-builder-v2/BlockListEditors.js");
 
-  assert.match(editor, /recommendationSignals: minisiteRecommendationSignals = \[\]/);
+  assert.match(editor, /recommendationSignals: providedRecommendationSignals = \[\]/);
+  assert.match(editor, /minisiteSignals = null/);
+  assert.match(editor, /Array\.isArray\(minisiteSignals\)/);
+  assert.match(editor, /: providedRecommendationSignals/);
   assert.match(editor, /Déduire du mini-site/);
   assert.match(editor, /source: "manual-focus", weight: 8/);
   assert.match(editor, /source: "selected-partner", weight: 2/);
