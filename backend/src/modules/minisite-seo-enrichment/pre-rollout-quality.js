@@ -15,7 +15,23 @@ function blockType(block) {
   return normalize(block?.blockType || block?.type).replace(/\s+/g, "-");
 }
 
+function collectHtmlHrefs(value, output = []) {
+  const html = String(value || "");
+  if (!/<a\b/i.test(html) || !/\bhref\s*=/i.test(html)) return output;
+  const pattern = /<a\b[^>]*\bhref\s*=\s*(?:(["'])(.*?)\1|([^\s>]+))/gi;
+  let match;
+  while ((match = pattern.exec(html)) !== null) {
+    const href = String(match[2] || match[3] || "").trim().replace(/&amp;/gi, "&");
+    if (href) output.push(href);
+  }
+  return output;
+}
+
 function collectLinks(value, output = []) {
+  if (typeof value === "string") {
+    collectHtmlHrefs(value, output);
+    return output;
+  }
   if (!value || typeof value !== "object") return output;
   if (Array.isArray(value)) {
     value.forEach((item) => collectLinks(item, output));
@@ -23,7 +39,7 @@ function collectLinks(value, output = []) {
   }
   for (const [key, item] of Object.entries(value)) {
     if ((key === "href" || key === "url") && typeof item === "string" && item.trim()) output.push(item.trim());
-    else if (item && typeof item === "object") collectLinks(item, output);
+    else collectLinks(item, output);
   }
   return output;
 }
@@ -164,4 +180,4 @@ function preRolloutQualityReport(plans, options = {}) {
   };
 }
 
-module.exports = { collectLinks, editorialLinkingIssues, imageIssues, pageKind, pageQuality, preRolloutQualityReport };
+module.exports = { collectHtmlHrefs, collectLinks, editorialLinkingIssues, imageIssues, pageKind, pageQuality, preRolloutQualityReport };
