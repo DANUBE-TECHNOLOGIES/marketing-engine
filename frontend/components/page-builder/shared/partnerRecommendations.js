@@ -13,6 +13,27 @@ const INTENT_RULES = Object.freeze([
   { category: "france-europe", terms: ["france", "europe", "montagne", "camping", "residence", "résidence", "thalasso", "bien etre", "bien-être", "corse"] },
 ]);
 
+const SIGNAL_BLOCK_TYPES = Object.freeze(new Set([
+  "destinations",
+  "destination",
+  "destination-grid",
+  "destinations-grid",
+  "destinations-highlight",
+  "destination-recommendations",
+  "offers",
+  "inspirations",
+  "features",
+  "services",
+  "services-grid",
+  "services-highlight",
+  "rich_text",
+  "rich-text",
+  "text",
+  "intro",
+  "agency-introduction",
+  "agency-story",
+]));
+
 function normalize(value) {
   return String(value || "")
     .normalize("NFD")
@@ -21,6 +42,31 @@ function normalize(value) {
     .replace(/[^a-z0-9]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function addSignal(target, value, source, weight = 1) {
+  const normalized = normalize(value);
+  if (!normalized) return;
+  target.push({ value: normalized, source, weight: Math.max(1, Number(weight) || 1) });
+}
+
+function flattenContent(value, target = [], depth = 0) {
+  if (depth > 5 || value === null || value === undefined) return target;
+  if (typeof value === "string" || typeof value === "number") {
+    target.push(String(value));
+    return target;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) flattenContent(item, target, depth + 1);
+    return target;
+  }
+  if (typeof value === "object") {
+    for (const [key, child] of Object.entries(value)) {
+      if (["imageUrl", "logoUrl", "href", "url", "imageAssetId", "logoAssetId"].includes(key)) continue;
+      flattenContent(child, target, depth + 1);
+    }
+  }
+  return target;
 }
 
 function networkKeys(items = getCommonPartners()) {
@@ -41,19 +87,59 @@ function networkKeys(items = getCommonPartners()) {
 }
 
 export function buildPartnerRecommendationSignals(site, activePage) {
-  const values = [];
-  if (site?.name) values.push(site.name);
-  for (const page of Array.isArray(site?.pages) ? site.pages : []) {
-    values.push(page?.title, page?.seoTitle, page?.seoDescription);
-  }
-  if (activePage) {
-    values.push(activePage.title, activePage.seoTitle, activePage.seoDescription);
-    for (const block of Array.isArray(activePage.blocks) ? activePage.blocks : []) {
-      if (block?.type === "partner-logos") continue;
-      try { values.push(JSON.stringify(block?.content || {})); } catch { /* ignore non-serializable content */ }
+  const signals = [];
+  addSignal(signals, site?.name, "site-name", 1);
+
+  const pages = Array.isArray(site?.pages) ? site.pages : [];
+  for (const page of pages) {
+    const isActive = activePage && String(activePage.id) === String(page?.id);
+    const pageWeight = isActive ? 3 : 2;
+    addSignal(signals, page?.title, "page-title", pageWeight);
+    addSignal(signals, page?.seoTitle, "page-seo-title", pageWeight);
+    addSignal(signals, page?.seoDescription, "page-seo-description", pageWeight);
+    addSignal(signals, page?.slug, "page-slug", 1);
+
+    for (const block of Array.isArray(page?.blocks) ? page.blocks : []) {
+      const type = String(block?.type || "").toLowerCase();
+      if (type === "partner-logos" || type === "partners" || type === "logos") continue;
+      if (!SIGNAL_BLOCK_TYPES.has(type)) continue;
+      const values = flattenContent(block?.content || {});
+      for (const value of values) addSignal(signals, value, `block:${type}`, isActive ? 4 : 3);
     }
   }
-  return values.map(normalize).filter(Boolean);
+
+  if (activePage && !pages.some((page) => String(page?.id) === String(activePage.id))) {
+    addSignal(signals, activePage.title, "active-page-title", 3);
+    addSignal(signals, activePage.seoTitle, "active-page-seo-title", 3);
+    addSignal(signals, activePage.seoDescription, "active-page-seo-description", 3);
+    for (const block of Array.isArray(activePage.blocks) ? activePage.blocks : []) {
+      const type = String(block?.type || "").toLowerCase();
+      if (!SIGNAL_BLOCK_TYPES.has(type)) continue;
+      for (const value of flattenContent(block?.content || {})) addSignal(signals, value, `active-block:${type}`, 4);
+    }
+  }
+
+  const deduplicated = new Map();
+  for (const signal of signals) {
+    const key = `${signal.source}:${signal.value}`;
+    const current = deduplicated.get(key);
+    if (!current || signal.weight > current.weight) deduplicated.set(key, signal);
+  }
+  return [...deduplicated.values()];
+}
+
+function normalizeSignals(signals = []) {
+  const normalized = [];
+  for (const signal of Array.isArray(signals) ? signals : [signals]) {
+    if (signal && typeof signal === "object" && "value" in signal) {
+      const value = normalize(signal.value);
+      if (value) normalized.push({ value, weight: Math.max(1, Number(signal.weight) || 1), source: signal.source || "structured" });
+    } else {
+      const value = normalize(signal);
+      if (value) normalized.push({ value, weight: 1, source: "legacy" });
+    }
+  }
+  return normalized;
 }
 
 export function recommendAgencyPartners({ signals = [], selected = [], networkItems = getCommonPartners(), max = 3 } = {}) {
@@ -61,15 +147,18 @@ export function recommendAgencyPartners({ signals = [], selected = [], networkIt
   const limit = Math.max(0, Math.min(3, Number.isFinite(requestedMax) ? requestedMax : 3));
   if (limit === 0) return [];
 
-  const haystack = normalize((Array.isArray(signals) ? signals : [signals]).join(" "));
-  if (!haystack) return [];
+  const normalizedSignals = normalizeSignals(signals);
+  if (!normalizedSignals.length) return [];
+  const haystack = normalizedSignals.map((signal) => signal.value).join(" ");
 
   const categoryScores = new Map();
   for (const rule of INTENT_RULES) {
     let score = 0;
-    for (const term of rule.terms) {
-      const normalizedTerm = normalize(term);
-      if (normalizedTerm && haystack.includes(normalizedTerm)) score += 1;
+    for (const signal of normalizedSignals) {
+      for (const term of rule.terms) {
+        const normalizedTerm = normalize(term);
+        if (normalizedTerm && signal.value.includes(normalizedTerm)) score += signal.weight;
+      }
     }
     if (score > 0) categoryScores.set(rule.category, score);
   }
