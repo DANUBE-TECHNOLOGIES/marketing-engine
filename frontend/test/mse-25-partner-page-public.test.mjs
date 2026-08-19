@@ -34,6 +34,18 @@ test("designer catalogue recognizes generated partner page structure as singleto
   assert.match(catalogue, /label: "CTA contact agence"/);
 });
 
+test("partner directory styling follows public brand runtime variables", () => {
+  const styles = read("components/public-site/renderers/PartnerDirectoryRenderer.module.css");
+
+  assert.match(styles, /var\(--public-primary/);
+  assert.match(styles, /var\(--public-secondary/);
+  assert.match(styles, /var\(--public-accent/);
+  assert.match(styles, /var\(--public-background/);
+  assert.match(styles, /var\(--public-text/);
+  assert.match(styles, /var\(--brand-button-radius/);
+  assert.match(styles, /color-mix\(/);
+});
+
 test("public navigation promotes the partner page without exposing all secondary pages", () => {
   const header = read("components/public-site/PublicSiteHeader.js");
 
