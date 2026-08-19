@@ -66,19 +66,7 @@ function selectSuccessfulPushRun(payload, head, {
   if (!run) {
     const error = new Error(`Aucun run push GitHub Actions réussi ne certifie le HEAD ${sha}.`);
     error.code = "MSE_25_31_CI_NOT_ATTESTED";
-    error.details = {
-      head: sha,
-      expectedBranch,
-      candidateRuns: runs.map((item) => ({
-        id: item?.id ?? null,
-        headSha: item?.head_sha ?? null,
-        headBranch: item?.head_branch ?? null,
-        event: item?.event ?? null,
-        status: item?.status ?? null,
-        conclusion: item?.conclusion ?? null,
-        name: item?.name ?? null,
-      })),
-    };
+    error.details = { head: sha, expectedBranch };
     throw error;
   }
   return {
@@ -127,6 +115,20 @@ function assertAttestation(attestation = {}, { head, branch } = {}) {
   return attestation;
 }
 
+function assertSameAttestation(sealed = {}, live = {}, context = {}) {
+  const sealedProof = assertAttestation(sealed, context);
+  const liveProof = assertAttestation(live, context);
+  const same = ["repository", "workflowId", "workflowName", "workflowPath", "workflowBlobSha", "runId", "headSha", "headBranch", "event", "status", "conclusion"]
+    .every((key) => sealedProof[key] === liveProof[key]);
+  if (!same) {
+    const error = new Error("L'attestation CI active diffère de celle scellée au preflight MSE-25.31.");
+    error.code = "MSE_25_31_CI_ATTESTATION_CHANGED";
+    error.details = { sealed: sealedProof, live: liveProof };
+    throw error;
+  }
+  return liveProof;
+}
+
 module.exports = {
   DEFAULT_GITHUB_API_ORIGIN,
   EXPECTED_WORKFLOW_BLOB_SHA,
@@ -135,6 +137,7 @@ module.exports = {
   GITHUB_WORKFLOW_NAME,
   GITHUB_WORKFLOW_PATH,
   assertAttestation,
+  assertSameAttestation,
   assertHeadSha,
   attestHead,
   jsonRequest,
