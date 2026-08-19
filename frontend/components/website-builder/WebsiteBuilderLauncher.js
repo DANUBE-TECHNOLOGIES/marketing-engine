@@ -18,12 +18,12 @@ function homeState(site) {
   return "Accueil en brouillon";
 }
 
-function partnerStateLabel(state, rolloutEligible = true) {
-  if (state === "published") return "Partenaires publiée";
+function partnerStateLabel(state, rolloutEligible = true, ready = false) {
+  if (state === "published") return ready ? "Partenaires publiée — prête" : "Partenaires publiée — à corriger";
   if (state === "missing" && rolloutEligible === false) return "Partenaires bloquée : page agence absente";
   if (state === "missing") return "Partenaires à créer";
-  if (state === "review") return "Partenaires en révision";
-  if (state === "draft") return "Partenaires en brouillon";
+  if (state === "review") return ready ? "Partenaires en révision — prête" : "Partenaires en révision — à corriger";
+  if (state === "draft") return ready ? "Partenaires en brouillon — prête à publier" : "Partenaires en brouillon — à corriger";
   return state ? `Partenaires : ${state}` : "Partenaires : état inconnu";
 }
 
@@ -107,6 +107,9 @@ export default function WebsiteBuilderLauncher() {
 
   const eligibleMissing = Number(partnerRollout?.summary?.eligibleMissing || 0);
   const blockedMissing = Number(partnerRollout?.summary?.blockedMissing || 0);
+  const publishedReady = Number(partnerRollout?.summary?.publishedReady || 0);
+  const publishedNotReady = Number(partnerRollout?.summary?.publishedNotReady || 0);
+  const draftOrReviewReady = Number(partnerRollout?.summary?.draftOrReviewReady || 0);
 
   const applyPartnerRollout = useCallback(async () => {
     if (partnerApplying || eligibleMissing <= 0) return;
@@ -183,7 +186,12 @@ export default function WebsiteBuilderLauncher() {
           <div className={styles.rolloutStats}>
             <span><strong>{partnerRollout.summary.totalSites}</strong> mini-sites</span>
             <span><strong>{partnerRollout.summary.published}</strong> publiées</span>
+            <span><strong>{publishedReady}</strong> publiées prêtes</span>
+            {publishedNotReady > 0 ? (
+              <span data-alert="true"><strong>{publishedNotReady}</strong> publiées à corriger</span>
+            ) : null}
             <span><strong>{partnerRollout.summary.draftOrReview}</strong> en brouillon/révision</span>
+            <span><strong>{draftOrReviewReady}</strong> brouillons prêts</span>
             <span data-alert={eligibleMissing > 0 ? "true" : "false"}><strong>{eligibleMissing}</strong> éligibles à créer</span>
             {blockedMissing > 0 ? (
               <span data-alert="true"><strong>{blockedMissing}</strong> bloquées (/agence absente)</span>
@@ -217,6 +225,7 @@ export default function WebsiteBuilderLauncher() {
             {filteredSites.map((site) => {
               const partnerRow = partnerRowBySiteId.get(String(site.id));
               const partnerState = partnerRow?.partnerPageState;
+              const partnerReady = partnerRow?.partnerPageReady === true;
               return (
                 <article className={styles.card} key={site.id}>
                   <div>
@@ -225,8 +234,11 @@ export default function WebsiteBuilderLauncher() {
                     <div className={styles.badges}>
                       <span>{statusLabel(site)}</span>
                       <span>{homeState(site)}</span>
-                      <span data-partner-state={partnerState || "unknown"}>
-                        {partnerStateLabel(partnerState, partnerRow?.rolloutEligible)}
+                      <span
+                        data-partner-state={partnerState || "unknown"}
+                        data-partner-ready={partnerReady ? "true" : "false"}
+                      >
+                        {partnerStateLabel(partnerState, partnerRow?.rolloutEligible, partnerReady)}
                       </span>
                     </div>
                   </div>
