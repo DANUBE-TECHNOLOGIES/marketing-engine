@@ -5,6 +5,7 @@ const assert = require("node:assert/strict");
 const { createApprovalManifest } = require("../scripts/mse-25-31-approval-manifest");
 const {
   buildExecutionPlan,
+  mergeableWriteTargetGroups,
   operationWriteTarget,
   writeTargetCollisions,
 } = require("../scripts/mse-25-31-execution-plan");
@@ -160,7 +161,9 @@ test("execution plan contains only explicitly approved pages with exact sealed p
   assert.equal(plan.summary.approvedCount, 1);
   assert.equal(plan.summary.payloadCompleteCount, 1);
   assert.equal(plan.summary.payloadIncompleteCount, 0);
+  assert.equal(plan.summary.mergeableWriteTargetGroupCount, 0);
   assert.equal(plan.summary.writeTargetCollisionCount, 0);
+  assert.deepEqual(plan.mergeableWriteTargets, []);
   assert.deepEqual(plan.writeTargetCollisions, []);
   assert.equal(plan.summary.skippedCount, 1);
   assert.match(plan.executionPlanFingerprint, /^[0-9a-f]{64}$/);
@@ -225,7 +228,45 @@ test("write target keys resolve internal links against their persisted source pa
   assert.equal(target.candidateKey, "gien:avis");
 });
 
-test("execution collision detector rejects two approved operations replacing the same source field", () => {
+test("compatible internal-link writes sharing one sealed source are mergeable instead of blocking execution", () => {
+  const sourceFingerprint = "c".repeat(64);
+  const pages = [
+    {
+      key: "gien:avis",
+      siteSlug: "gien",
+      pageSlug: "avis",
+      executionPayload: {
+        operations: [{
+          type: "add-internal-link",
+          sourceValueFingerprint: sourceFingerprint,
+          link: { href: "/avis" },
+          target: { pageSlug: "home", blockId: "copy-home" },
+        }],
+      },
+    },
+    {
+      key: "gien:equipe",
+      siteSlug: "gien",
+      pageSlug: "equipe",
+      executionPayload: {
+        operations: [{
+          type: "add-internal-link",
+          sourceValueFingerprint: sourceFingerprint,
+          link: { href: "/equipe" },
+          target: { pageSlug: "home", blockId: "copy-home" },
+        }],
+      },
+    },
+  ];
+
+  assert.deepEqual(writeTargetCollisions(pages), []);
+  const groups = mergeableWriteTargetGroups(pages);
+  assert.equal(groups.length, 1);
+  assert.equal(groups[0].targetKey, "gien:home:block:copy-home:content.html");
+  assert.deepEqual(groups[0].writes.map((item) => item.linkHref), ["/avis", "/equipe"]);
+});
+
+test("execution collision detector still rejects incompatible writes replacing the same source field", () => {
   const collisions = writeTargetCollisions([
     {
       key: "gien:avis",
