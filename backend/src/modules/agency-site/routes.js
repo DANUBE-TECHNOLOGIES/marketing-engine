@@ -4,6 +4,15 @@ const { auditDraft, proposeLocalRewrite } = require("./local-rewrite-service");
 const { buildPartnerPageRolloutStatus, ensureNetworkPartnerPages, ensurePartnerPageOnly } = require("./partner-page-rollout");
 const { saveDesignerPage } = require("./page-builder-save");
 
+function publicPagePayload(page) {
+  if (!page || typeof page !== "object") return page;
+  if (Array.isArray(page.sections) && page.sections.length) return page;
+  if (Array.isArray(page.blocks) && page.blocks.length) {
+    return { ...page, sections: page.blocks };
+  }
+  return page;
+}
+
 module.exports = ({ prisma }) => {
   const router = express.Router();
   const serviceFor = (req) => new AgencySiteService(prisma, req.tenantId);
@@ -22,13 +31,6 @@ module.exports = ({ prisma }) => {
     slug,
     input: req.body || {},
   });
-  const publicPagePayload = (page) => {
-    if (!page || typeof page !== "object") return page;
-    if (Array.isArray(page.blocks) && page.blocks.length) {
-      return { ...page, sections: page.blocks };
-    }
-    return page;
-  };
 
   router.get("/agency-sites", async (req, res, next) => {
     try { res.json(await serviceFor(req).listSites()); } catch (e) { next(e); }
@@ -123,3 +125,5 @@ module.exports = ({ prisma }) => {
 
   return router;
 };
+
+module.exports.publicPagePayload = publicPagePayload;
