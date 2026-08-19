@@ -60,3 +60,29 @@ test("agency preview fails closed for an unknown mini-site", async () => {
   const service = new MiniSiteSemanticEngineService({ repository, enrichmentService });
   await assert.rejects(() => service.previewAgency({ agencyId: 404 }), { code: "MSE_25_40_SITE_NOT_FOUND" });
 });
+
+test("service resolves tenantId before constructing persisted content reader", async () => {
+  const { repository } = fixtures();
+  const prisma = {
+    agencySite: {
+      findUnique: async ({ where, select }) => {
+        assert.deepEqual(where, { id: "site-4" });
+        assert.deepEqual(select, { tenantId: true });
+        return { tenantId: "tenant_mondescale" };
+      },
+    },
+  };
+  const service = new MiniSiteSemanticEngineService({ prisma, repository });
+  const tenantId = await service.resolveTenantId(await repository.findSiteByAgency(4));
+  assert.equal(tenantId, "tenant_mondescale");
+});
+
+test("service fails closed when tenantId cannot be resolved", async () => {
+  const { repository } = fixtures();
+  const prisma = { agencySite: { findUnique: async () => null } };
+  const service = new MiniSiteSemanticEngineService({ prisma, repository });
+  await assert.rejects(
+    () => service.contentServiceForSite({ id: "site-4" }),
+    { code: "MSE_25_40_TENANT_ID_REQUIRED" }
+  );
+});
