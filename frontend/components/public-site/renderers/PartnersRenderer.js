@@ -5,27 +5,20 @@ import {
 import {
   getCommonPartners,
 } from "../../page-builder/shared/commonPartners";
+import {
+  resolveAgencyPartnerCandidates,
+} from "../../page-builder/shared/agencyPartnerCatalog";
+import {
+  safePartnerAssetUrl,
+  selectAgencyPartners,
+} from "../../page-builder/shared/partnerSelection";
 import styles from "./PartnersRenderer.module.css";
 
-function safePartnerHref(value) {
-  const href = String(value || "").trim();
-  if (!href) return "";
-  if (href.startsWith("/") || href.startsWith("#")) return href;
-  try {
-    const url = new URL(href);
-    return ["http:", "https:"].includes(url.protocol) ? url.toString() : "";
-  } catch {
-    return "";
-  }
-}
-
-function NetworkPartnerGrid() {
-  const items = getCommonPartners();
-
+function NetworkPartnerGrid({ items }) {
   return (
     <div className={`${styles.networkGrid} public-site-partners-grid public-site-partners-grid--network`}>
       {items.map((item, index) => {
-        const logo = item.logoUrl || item.logo || item.imageUrl || null;
+        const logo = safePartnerAssetUrl(item.logoUrl || item.logo || item.imageUrl);
         const name = item.name || item.title || "Partenaire voyage";
         const isTui = item.group === "tui";
 
@@ -39,7 +32,7 @@ function NetworkPartnerGrid() {
               <>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={item.logoUrl}
+                  src={safePartnerAssetUrl(item.logoUrl)}
                   alt={item.alt || "Logo TUI"}
                   loading="lazy"
                   decoding="async"
@@ -51,7 +44,7 @@ function NetworkPartnerGrid() {
                     <div key={child.id} className={styles.tuiChild}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src={child.logoUrl}
+                        src={safePartnerAssetUrl(child.logoUrl)}
                         alt={`Logo ${child.name}`}
                         loading="lazy"
                         decoding="async"
@@ -88,10 +81,10 @@ function AgencyPartnerGrid({ items }) {
       <p className={styles.agencyLabel}>Également sélectionnés par votre agence</p>
       <div className={`public-site-agency-partners-grid ${styles.agencyGrid}`}>
         {items.map((item, index) => {
-          const logo = item.logo || item.logoUrl || item.imageUrl || null;
-          const name = item.name || item.title || "Partenaire voyage";
-          const alt = String(item.alt || `Logo ${name}`).trim();
-          const href = safePartnerHref(item.href || item.url || item.link);
+          const logo = item.logoUrl || null;
+          const name = item.name || "Partenaire voyage";
+          const alt = item.alt || `Logo ${name}`;
+          const href = item.href || "";
 
           const mark = logo ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -132,19 +125,19 @@ function AgencyPartnerGrid({ items }) {
 
 export default function PartnersRenderer({ section }) {
   const content = getSectionContent(section);
-  const agencyItems = Array.isArray(content.agencyPartners)
-    ? content.agencyPartners
-        .filter((item) => item && (item.name || item.title || item.logo || item.logoUrl || item.imageUrl))
-        .slice(0, Number(content.maxAgencyPartners) || 3)
-        .map((item) => ({ ...item, scope: "agency" }))
-    : [];
+  const networkItems = getCommonPartners();
+  const candidates = resolveAgencyPartnerCandidates(content.agencyPartners);
+  const agencyItems = selectAgencyPartners(candidates, {
+    networkItems,
+    max: Number(content.maxAgencyPartners) || 3,
+  });
 
   return (
     <section className="public-site-section public-site-partners">
       <div className="public-site-container">
         <h2>{getSectionTitle(section, "Des partenaires de confiance")}</h2>
         {content.text ? <p className="public-site-section-intro">{content.text}</p> : null}
-        <NetworkPartnerGrid />
+        <NetworkPartnerGrid items={networkItems} />
         <AgencyPartnerGrid items={agencyItems} />
       </div>
     </section>

@@ -46,7 +46,6 @@ test("Website Designer exposes at most three agency-specific partners", () => {
   assert.match(editor, /maxAgencyPartners = 3/);
   assert.match(editor, /getCommonPartners\(\)/);
   assert.match(editor, /logoAssetId/);
-  assert.match(editor, /Texte alternatif/);
   assert.match(editor, /Lien facultatif/);
 
   assert.match(builder, /PartnerLogosEditor/);
@@ -59,10 +58,103 @@ test("Website Designer exposes at most three agency-specific partners", () => {
 
   assert.match(state, /\["logos", "partners", "partner-logos"\]/);
   assert.match(state, /return "partner-logos"/);
+  assert.match(state, /function normalizeAgencyPartners/);
+  assert.match(state, /\.slice\(0, 3\)/);
+  assert.match(state, /catalogPartnerId/);
+  assert.match(state, /source: catalogPartnerId \? "catalog" : "custom"/);
+  assert.match(state, /maxAgencyPartners: 3/);
+  assert.match(state, /content: normalizeBlockContent\(block\.type, block\.content\)/);
 
-  assert.match(renderer, /content\.agencyPartners/);
-  assert.match(renderer, /maxAgencyPartners/);
-  assert.match(renderer, /item\.href/);
+  assert.match(renderer, /selectAgencyPartners\(candidates/);
+  assert.match(renderer, /max:\s*Number\(content\.maxAgencyPartners\) \|\| 3/);
+});
+
+test("Website Designer agency partner slots prefer verified canonical partners with a custom fallback", () => {
+  const editor = read("components/page-builder-v2/BlockListEditors.js");
+
+  assert.match(editor, /FULL_PARTNERS/);
+  assert.match(editor, /PARTNER_DIRECTORY_CATEGORIES/);
+  assert.match(editor, /getPartnerProfile/);
+  assert.match(editor, /partner\?\.publishable && partner\?\.readyForPublication/);
+  assert.match(editor, /canonicalAgencyPartnerOptions/);
+  assert.match(editor, /catalogPartnerId/);
+  assert.match(editor, /source: "catalog"/);
+  assert.match(editor, /source: "custom"/);
+  assert.match(editor, /Partenaire du catalogue Mondescale/);
+  assert.match(editor, /Partenaire personnalisé/);
+  assert.match(editor, /selectedElsewhere\.has\(partner\.id\)/);
+  assert.match(editor, /disabled=\{selectedElsewhere\.has\(partner\.id\)\}/);
+  assert.match(editor, /canonicalPartnerValue/);
+  assert.match(editor, /logoUrl: partner\.logoUrl/);
+  assert.match(editor, /summary: partner\.summary/);
+  assert.match(editor, /tags: \[\.\.\.partner\.tags\]/);
+});
+
+test("agency partner recommendation engine is deterministic, explainable and opt-in", () => {
+  const recommendation = read("components/page-builder/shared/partnerRecommendations.js");
+  const editor = read("components/page-builder-v2/BlockListEditors.js");
+
+  assert.match(recommendation, /INTENT_RULES/);
+  for (const category of ["croisieres", "circuits", "sejours", "sur-mesure", "france-europe"]) assert.match(recommendation, new RegExp(`category: "${category}"`));
+  assert.match(recommendation, /getPartnerProfile/);
+  assert.match(recommendation, /partner\?\.publishable && partner\?\.readyForPublication/);
+  assert.match(recommendation, /alreadySelected/);
+  assert.match(recommendation, /categoryScore \* 100/);
+  assert.match(recommendation, /usedCategories/);
+  assert.match(recommendation, /export function recommendAgencyPartners/);
+  assert.match(recommendation, /export function buildPartnerRecommendationSignals/);
+  assert.match(recommendation, /if \(!categoryScores\.size\) return \[\]/);
+
+  assert.match(editor, /recommendAgencyPartners/);
+  assert.match(editor, /Suggestions pour l’agence/);
+  assert.match(editor, /Orientation commerciale/);
+  assert.match(editor, /Le moteur propose uniquement des partenaires vérifiés et n’applique jamais un choix sans action de votre part/);
+  assert.match(editor, /const addRecommendation/);
+  assert.match(editor, /onClick=\{\(\) => addRecommendation\(entry\)\}/);
+  assert.match(editor, /maxAgencyPartners - agency\.length/);
+});
+
+test("catalogue-backed agency partners are rehydrated from verified source before public rendering", () => {
+  const resolver = read("components/page-builder/shared/agencyPartnerCatalog.js");
+  const renderer = read("components/public-site/renderers/PartnersRenderer.js");
+
+  assert.match(resolver, /FULL_PARTNERS/);
+  assert.match(resolver, /getPartnerProfile/);
+  assert.match(resolver, /partner\?\.publishable && partner\?\.readyForPublication/);
+  assert.match(resolver, /export function resolveAgencyPartnerCandidates/);
+  assert.match(resolver, /const catalogPartnerId = text\(item\.catalogPartnerId\)/);
+  assert.match(resolver, /const partner = canonical\.get\(catalogPartnerId\)/);
+  assert.match(resolver, /if \(!partner\) continue/);
+  assert.match(resolver, /name: partner\.name/);
+  assert.match(resolver, /logoUrl: partner\.logoUrl \|\| ""/);
+  assert.match(resolver, /source: "catalog"/);
+  assert.match(resolver, /source: "custom"/);
+
+  assert.match(renderer, /resolveAgencyPartnerCandidates\(content\.agencyPartners\)/);
+  assert.match(renderer, /selectAgencyPartners\(candidates/);
+});
+
+test("public agency partner selection is deterministic, deduplicated and URL-safe", () => {
+  const selection = read("components/page-builder/shared/partnerSelection.js");
+  const renderer = read("components/public-site/renderers/PartnersRenderer.js");
+  const directory = read("components/public-site/renderers/PartnerDirectoryRenderer.js");
+
+  assert.match(selection, /NETWORK_PARTNER_ALIASES/);
+  assert.match(selection, /"tui-france"/);
+  assert.match(selection, /"club-lookea"/);
+  assert.match(selection, /export function selectAgencyPartners/);
+  assert.match(selection, /Math\.min\(3,/);
+  assert.match(selection, /reserved\.has\(id\) \|\| reserved\.has\(nameKey\)/);
+  assert.match(selection, /seen\.has\(id\) \|\| seen\.has\(nameKey\)/);
+  assert.match(selection, /\["http:", "https:"\]\.includes\(url\.protocol\)/);
+  assert.match(selection, /scope: "agency"/);
+
+  assert.match(renderer, /safePartnerAssetUrl/);
+  assert.match(renderer, /selectAgencyPartners/);
+  assert.doesNotMatch(renderer, /function safePartnerHref/);
+
+  assert.match(directory, /safePartnerHref\(profile\.details\?\.website, \{ allowInternal: false \}\)/);
+  assert.match(directory, /rel="noopener noreferrer"/);
 });
 
 test("public minisite proxy exposes partner assets", () => {

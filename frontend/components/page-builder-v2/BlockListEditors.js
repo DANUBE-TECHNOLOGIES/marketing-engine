@@ -1,10 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import styles from "./VisualPageBuilder.module.css";
 import MediaPicker from "./MediaPicker";
 import { fetchPublishedMediaImages } from "../../lib/page-builder-v2/media-library-api";
 import { getCommonPartners } from "../page-builder/shared/commonPartners";
+import { FULL_PARTNERS, PARTNER_DIRECTORY_CATEGORIES } from "../page-builder/shared/fullPartners";
+import { getPartnerProfile } from "../page-builder/shared/partnerProfile";
+import { partnerKey } from "../page-builder/shared/partnerSelection";
+import { recommendAgencyPartners } from "../page-builder/shared/partnerRecommendations";
 
 function moveItem(items, index, direction) {
   const target = index + direction;
@@ -22,6 +26,10 @@ function Field({ label, value, onChange, multiline = false, type = "text" }) {
   return <label className={styles.field}><span>{label}</span>{multiline ? <textarea rows={4} value={value ?? ""} onChange={(event) => onChange(event.target.value)} /> : <input type={type} value={value ?? ""} onChange={(event) => onChange(event.target.value)} />}</label>;
 }
 
+function SelectField({ label, value, onChange, children }) {
+  return <label className={styles.field}><span>{label}</span><select value={value ?? ""} onChange={(event) => onChange(event.target.value)}>{children}</select></label>;
+}
+
 function ListEditor({ items, onChange, createItem, addLabel, maxItems = null, children }) {
   const safeItems = Array.isArray(items) ? items : [];
   const updateItem = (index, value) => onChange(safeItems.map((item, currentIndex) => currentIndex === index ? value : item));
@@ -31,9 +39,69 @@ function ListEditor({ items, onChange, createItem, addLabel, maxItems = null, ch
   return <div className={styles.listEditor}>{safeItems.map((item, index) => <section className={styles.listEditorItem} key={item.id || `${index}`}><ItemToolbar index={index} count={safeItems.length} onMove={(direction) => move(index, direction)} onDelete={() => deleteItem(index)} />{children({ item, index, update: (value) => updateItem(index, value) })}</section>)}{canAdd ? <button type="button" className={styles.addListItem} onClick={() => onChange([...safeItems, createItem()])}>+ {addLabel}</button> : null}</div>;
 }
 
-export function PartnerLogosEditor({ networkItems, agencyPartners, maxAgencyPartners = 3, assets = [], loading = false, onChange }) {
+function lockedPartnerKeys(items = []) {
+  const keys = new Set();
+  for (const item of items) {
+    for (const candidate of [item?.id, item?.name, item?.title]) {
+      const key = partnerKey(candidate);
+      if (key) keys.add(key);
+    }
+    for (const child of Array.isArray(item?.children) ? item.children : []) {
+      for (const candidate of [child?.id, child?.name, child?.title]) {
+        const key = partnerKey(candidate);
+        if (key) keys.add(key);
+      }
+    }
+  }
+  return keys;
+}
+
+function canonicalAgencyPartnerOptions(networkItems = []) {
+  const reserved = lockedPartnerKeys(networkItems);
+  return FULL_PARTNERS
+    .map(getPartnerProfile)
+    .filter((partner) => partner?.publishable && partner?.readyForPublication)
+    .filter((partner) => !reserved.has(partnerKey(partner.id)) && !reserved.has(partnerKey(partner.name)))
+    .map((partner) => ({
+      id: partner.id,
+      name: partner.name,
+      category: partner.category,
+      summary: partner.summary,
+      tags: Array.isArray(partner.tags) ? partner.tags : [],
+      logoUrl: partner.logoUrl || "",
+    }));
+}
+
+function canonicalPartnerValue(partner, current = {}) {
+  return {
+    id: partner.id,
+    catalogPartnerId: partner.id,
+    name: partner.name,
+    category: partner.category,
+    summary: partner.summary,
+    tags: [...partner.tags],
+    logoAssetId: "",
+    logoUrl: partner.logoUrl,
+    alt: `Logo ${partner.name}`,
+    href: current.href || "",
+    scope: "agency",
+    source: "catalog",
+  };
+}
+
+const RECOMMENDATION_FOCUS = Object.freeze([
+  { value: "", label: "Déduire du mini-site" },
+  { value: "croisières croisiere fluvial navire bateau", label: "Croisières" },
+  { value: "circuits circuit autotour itineraire accompagne aventure", label: "Circuits & autotours" },
+  { value: "séjours sejours club soleil famille balneaire hotel", label: "Séjours & clubs" },
+  { value: "sur mesure long-courrier premium luxe combiné", label: "Sur mesure & long-courrier" },
+  { value: "France Europe montagne residence camping thalasso Corse", label: "France & Europe" },
+]);
+
+export function PartnerLogosEditor({ networkItems, agencyPartners, recommendationSignals: minisiteRecommendationSignals = [], maxAgencyPartners = 3, assets = [], loading = false, onChange }) {
   const [partnerAssets, setPartnerAssets] = useState(assets);
   const [partnerLoading, setPartnerLoading] = useState(loading || assets.length === 0);
+  const [recommendationFocus, setRecommendationFocus] = useState("");
 
   useEffect(() => {
     if (assets.length) {
@@ -56,8 +124,45 @@ export function PartnerLogosEditor({ networkItems, agencyPartners, maxAgencyPart
     : [];
   const locked = suppliedNetwork.length ? suppliedNetwork : getCommonPartners();
   const agency = Array.isArray(agencyPartners) ? agencyPartners.slice(0, maxAgencyPartners) : [];
+  const canonicalOptions = useMemo(() => canonicalAgencyPartnerOptions(locked), [locked]);
+  const categories = useMemo(() => new Map(PARTNER_DIRECTORY_CATEGORIES.map((category) => [category.id, category.label])), []);
+  const recommendationSignals = useMemo(() => {
+    if (recommendationFocus) return [{ value: recommendationFocus, source: "manual-focus", weight: 8 }];
+    const siteSignals = Array.isArray(minisiteRecommendationSignals) ? minisiteRecommendationSignals : [];
+    const selectedSignals = agency.flatMap((item) => [item?.name, item?.category, item?.summary, ...(Array.isArray(item?.tags) ? item.tags : [])]).filter(Boolean).map((value) => ({ value, source: "selected-partner", weight: 2 }));
+    return [...siteSignals, ...selectedSignals];
+  }, [agency, minisiteRecommendationSignals, recommendationFocus]);
+  const recommendations = useMemo(() => recommendAgencyPartners({
+    signals: recommendationSignals,
+    selected: agency,
+    networkItems: locked,
+    max: Math.max(0, maxAgencyPartners - agency.length),
+  }), [recommendationSignals, agency, locked, maxAgencyPartners]);
 
-  return <div className={styles.partnerEditor}><div className={styles.partnerLockedPanel}><strong>Socle réseau Mondescale</strong><p>Ces partenaires sont communs à tous les mini-sites et ne peuvent pas être modifiés ici.</p><div className={styles.partnerLockedList}>{locked.map((item) => <span key={item.id || item.name}>{item.name || item.title}</span>)}</div></div><div className={styles.partnerAgencyHeader}><strong>Partenaires de l’agence</strong><small>{agency.length}/{maxAgencyPartners} emplacement{maxAgencyPartners > 1 ? "s" : ""}</small></div><ListEditor items={agency} onChange={(items) => onChange(items.slice(0, maxAgencyPartners).map((item) => ({ ...item, scope: "agency" })))} maxItems={maxAgencyPartners} addLabel="Ajouter un partenaire agence" createItem={() => ({ id: `agency-partner-${Date.now()}`, name: "", logoAssetId: "", logoUrl: "", alt: "", href: "", scope: "agency" })}>{({ item, update }) => { const selectedAsset = item.logoAssetId ? partnerAssets.find((asset) => asset.id === item.logoAssetId) || null : null; const previewUrl = selectedAsset?.url || item.logoUrl || item.logo || ""; return <>{previewUrl ? <img className={styles.editorThumbnail} src={previewUrl} alt={item.alt || item.name || "Logo partenaire"} /> : null}<Field label="Nom du partenaire" value={item.name} onChange={(name) => update({ ...item, name, scope: "agency" })} /><MediaPicker assets={partnerAssets} loading={partnerLoading} selectedAssetId={item.logoAssetId || ""} onSelect={(asset) => update({ ...item, logoAssetId: asset.id, logoUrl: asset.url, alt: item.alt || asset.altText || (item.name ? `Logo ${item.name}` : ""), scope: "agency" })} onClear={() => { const { logoAssetId: _assetId, logoUrl: _logoUrl, logo: _logo, ...rest } = item; update({ ...rest, scope: "agency" }); }} /><Field label="Texte alternatif" value={item.alt || ""} onChange={(alt) => update({ ...item, alt, scope: "agency" })} /><Field label="Lien facultatif" value={item.href || ""} onChange={(href) => update({ ...item, href, scope: "agency" })} /><details><summary>URL de logo héritée</summary><Field label="URL du logo" value={item.logoUrl || item.logo || ""} onChange={(logoUrl) => update({ ...item, logoAssetId: "", logoUrl, scope: "agency" })} /></details></>; }}</ListEditor></div>;
+  const addRecommendation = (entry) => {
+    if (!entry?.partner || agency.length >= maxAgencyPartners) return;
+    const option = canonicalOptions.find((partner) => partner.id === entry.partner.id);
+    if (!option) return;
+    onChange([...agency, canonicalPartnerValue(option)].slice(0, maxAgencyPartners));
+  };
+
+  return <div className={styles.partnerEditor}><div className={styles.partnerLockedPanel}><strong>Socle réseau Mondescale</strong><p>Ces partenaires sont communs à tous les mini-sites et ne peuvent pas être modifiés ici.</p><div className={styles.partnerLockedList}>{locked.map((item) => <span key={item.id || item.name}>{item.name || item.title}</span>)}</div></div><div className={styles.partnerAgencyHeader}><strong>Partenaires de l’agence</strong><small>{agency.length}/{maxAgencyPartners} emplacement{maxAgencyPartners > 1 ? "s" : ""}</small></div><div className={styles.partnerLockedPanel}><strong>Suggestions pour l’agence</strong><p>Le moteur analyse les contenus du mini-site et propose uniquement des partenaires vérifiés. L’orientation ci-dessous reste un override manuel et aucun choix n’est appliqué sans votre action.</p><SelectField label="Orientation commerciale" value={recommendationFocus} onChange={setRecommendationFocus}>{RECOMMENDATION_FOCUS.map((option) => <option key={option.label} value={option.value}>{option.label}</option>)}</SelectField>{recommendations.length ? <div className={styles.partnerLockedList}>{recommendations.map((entry) => <button type="button" key={entry.partner.id} className={styles.addListItem} onClick={() => addRecommendation(entry)} disabled={agency.length >= maxAgencyPartners} title={entry.reason}>+ {entry.partner.name}</button>)}</div> : <small>{agency.length >= maxAgencyPartners ? "Les trois emplacements sont déjà utilisés." : recommendationSignals.length ? "Aucune autre recommandation pertinente avec ces critères." : "Ajoutez du contenu au mini-site ou choisissez une orientation pour obtenir des suggestions."}</small>}</div><ListEditor items={agency} onChange={(items) => onChange(items.slice(0, maxAgencyPartners).map((item) => ({ ...item, scope: "agency" })))} maxItems={maxAgencyPartners} addLabel="Ajouter un partenaire agence" createItem={() => ({ id: `agency-partner-${Date.now()}`, catalogPartnerId: "", name: "", logoAssetId: "", logoUrl: "", alt: "", href: "", scope: "agency", source: "custom" })}>{({ item, index, update }) => {
+    const catalogPartnerId = item.catalogPartnerId || (item.source === "catalog" ? item.id : "");
+    const selectedCatalogPartner = canonicalOptions.find((partner) => partner.id === catalogPartnerId) || null;
+    const selectedElsewhere = new Set(agency.filter((_, currentIndex) => currentIndex !== index).map((candidate) => candidate.catalogPartnerId || (candidate.source === "catalog" ? candidate.id : "")).filter(Boolean));
+    const selectedAsset = item.logoAssetId ? partnerAssets.find((asset) => asset.id === item.logoAssetId) || null : null;
+    const previewUrl = selectedCatalogPartner?.logoUrl || selectedAsset?.url || item.logoUrl || item.logo || "";
+    const switchPartner = (partnerId) => {
+      if (!partnerId) {
+        update({ id: item.source === "catalog" ? `agency-partner-${Date.now()}` : item.id, catalogPartnerId: "", name: item.source === "catalog" ? "" : item.name, logoAssetId: "", logoUrl: item.source === "catalog" ? "" : item.logoUrl, alt: item.source === "catalog" ? "" : item.alt, href: item.href || "", scope: "agency", source: "custom" });
+        return;
+      }
+      const partner = canonicalOptions.find((candidate) => candidate.id === partnerId);
+      if (partner) update(canonicalPartnerValue(partner, item));
+    };
+
+    return <><SelectField label="Partenaire du catalogue Mondescale" value={catalogPartnerId} onChange={switchPartner}><option value="">Partenaire personnalisé</option>{canonicalOptions.map((partner) => <option key={partner.id} value={partner.id} disabled={selectedElsewhere.has(partner.id)}>{partner.name} — {categories.get(partner.category) || partner.category}</option>)}</SelectField>{previewUrl ? <img className={styles.editorThumbnail} src={previewUrl} alt={item.alt || item.name || "Logo partenaire"} /> : null}{selectedCatalogPartner ? <div className={styles.partnerLockedPanel}><strong>{selectedCatalogPartner.name}</strong><p>{selectedCatalogPartner.summary}</p>{selectedCatalogPartner.tags.length ? <small>{selectedCatalogPartner.tags.join(" · ")}</small> : null}</div> : <><Field label="Nom du partenaire" value={item.name} onChange={(name) => update({ ...item, name, catalogPartnerId: "", source: "custom", scope: "agency" })} /><MediaPicker assets={partnerAssets} loading={partnerLoading} selectedAssetId={item.logoAssetId || ""} onSelect={(asset) => update({ ...item, catalogPartnerId: "", source: "custom", logoAssetId: asset.id, logoUrl: asset.url, alt: item.alt || asset.altText || (item.name ? `Logo ${item.name}` : ""), scope: "agency" })} onClear={() => { const { logoAssetId: _assetId, logoUrl: _logoUrl, logo: _logo, ...rest } = item; update({ ...rest, catalogPartnerId: "", source: "custom", scope: "agency" }); }} /><Field label="Texte alternatif" value={item.alt || ""} onChange={(alt) => update({ ...item, alt, catalogPartnerId: "", source: "custom", scope: "agency" })} /><details><summary>URL de logo héritée</summary><Field label="URL du logo" value={item.logoUrl || item.logo || ""} onChange={(logoUrl) => update({ ...item, catalogPartnerId: "", source: "custom", logoAssetId: "", logoUrl, scope: "agency" })} /></details></>}<Field label="Lien facultatif" value={item.href || ""} onChange={(href) => update({ ...item, href, scope: "agency" })} /></>;
+  }}</ListEditor></div>;
 }
 
 export function FaqEditor({ items, onChange }) { return <ListEditor items={items} onChange={onChange} addLabel="Ajouter une question" createItem={() => ({ question: "Nouvelle question", answer: "Nouvelle réponse" })}>{({ item, update }) => <><Field label="Question" value={item.question} onChange={(question) => update({ ...item, question })} /><Field label="Réponse" value={item.answer} multiline onChange={(answer) => update({ ...item, answer })} /></>}</ListEditor>; }

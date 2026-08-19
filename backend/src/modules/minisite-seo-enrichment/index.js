@@ -1,8 +1,14 @@
 "use strict";
 
+const express = require("express");
+
 const {
-  routes,
+  routes: enrichmentRoutes,
 } = require("./routes");
+
+const {
+  routes: qualityUpliftRoutes,
+} = require("../minisite-seo-quality-uplift/routes");
 
 const {
   MiniSiteSeoEnrichmentService,
@@ -27,6 +33,21 @@ const {
   titleForPage,
 } = require("./generator");
 
+const {
+  buildQualityUpliftWriteIntents,
+} = require("./quality-uplift-write-intent");
+
+const {
+  applyQualityUpliftWriteIntent,
+} = require("./quality-uplift-apply-executor");
+
+function routes(options = {}) {
+  const router = express.Router();
+  router.use(enrichmentRoutes(options));
+  router.use(qualityUpliftRoutes(options));
+  return router;
+}
+
 module.exports = {
   routes,
 
@@ -36,6 +57,8 @@ module.exports = {
   buildSeoPlan,
   buildSeoUpdate,
   summarizeExecution,
+  buildQualityUpliftWriteIntents,
+  applyQualityUpliftWriteIntent,
 
   descriptionForPage,
   generateSeoMetadata,

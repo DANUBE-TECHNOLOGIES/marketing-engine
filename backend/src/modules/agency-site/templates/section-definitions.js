@@ -3,7 +3,7 @@ module.exports = {
   AGENCY: ["page-header", "agency-story", "agency-details", "trust", "contact-cta"],
   TEAM: ["page-header", "team-introduction", "expertise", "contact-cta"],
   COMMITMENTS: ["page-header", "commitments", "trust", "contact-cta"],
-  PARTNERS: ["page-header", "partners-introduction", "partner-categories", "contact-cta"],
+  PARTNERS: ["page-header", "partners-introduction", "partner-directory", "contact-cta"],
   SERVICES: ["page-header", "services-grid", "custom-travel", "booking-support", "contact-cta"],
   DESTINATIONS: ["page-header", "destinations-introduction", "destination-families", "advisor-help", "contact-cta"],
   INSPIRATIONS: ["page-header", "inspiration-introduction", "travel-themes", "advisor-help", "contact-cta"],

@@ -1,0 +1,292 @@
+"use strict";
+
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const { createApprovalManifest } = require("../scripts/mse-25-31-approval-manifest");
+const {
+  buildExecutionPlan,
+  mergeableWriteTargetGroups,
+  operationWriteTarget,
+  writeTargetCollisions,
+} = require("../scripts/mse-25-31-execution-plan");
+const { EXPECTED_BRANCH } = require("../scripts/mse-25-31-preflight");
+const {
+  EXPECTED_WORKFLOW_BLOB_SHA,
+  GITHUB_REPOSITORY,
+  GITHUB_WORKFLOW_ID,
+  GITHUB_WORKFLOW_NAME,
+  GITHUB_WORKFLOW_PATH,
+} = require("../scripts/mse-25-31-ci-attestation");
+
+const FP = "a".repeat(64);
+const HEAD = "b".repeat(40);
+
+function ciAttestation() {
+  return {
+    ok: true,
+    repository: GITHUB_REPOSITORY,
+    workflowId: GITHUB_WORKFLOW_ID,
+    workflowName: GITHUB_WORKFLOW_NAME,
+    workflowPath: GITHUB_WORKFLOW_PATH,
+    workflowBlobSha: EXPECTED_WORKFLOW_BLOB_SHA,
+    runId: 321,
+    headSha: HEAD,
+    headBranch: EXPECTED_BRANCH,
+    event: "push",
+    status: "completed",
+    conclusion: "success",
+  };
+}
+
+function report() {
+  return {
+    version: "mse-25.31",
+    operation: "preflight-quality-uplift",
+    readOnly: true,
+    writes: false,
+    destructive: false,
+    repository: {
+      branch: EXPECTED_BRANCH,
+      head: HEAD,
+      dirty: false,
+      workflowPath: GITHUB_WORKFLOW_PATH,
+      workflowBlobSha: EXPECTED_WORKFLOW_BLOB_SHA,
+      ciAttestation: ciAttestation(),
+    },
+    context: {
+      backendOrigin: "http://127.0.0.1:4000",
+      tenantSlug: "mondescale",
+      minimumWords: 120,
+      topPages: 20,
+    },
+    planFingerprint: FP,
+    preview: {
+      readOnly: true,
+      writes: false,
+      destructive: false,
+      planFingerprint: FP,
+      allPages: [
+        {
+          agencyId: 1,
+          siteSlug: "gien",
+          city: "Gien",
+          pageSlug: "avis",
+          priority: "high",
+          priorityScore: 70,
+          executionClass: "simulation-ready",
+          projectedReduction: 2,
+          operationTypes: ["enrich-body"],
+          manualReviewReasons: [],
+        },
+        {
+          agencyId: 2,
+          siteSlug: "nevers",
+          city: "Nevers",
+          pageSlug: "services",
+          priority: "medium",
+          priorityScore: 40,
+          executionClass: "manual-review-needed",
+          projectedReduction: 1,
+          operationTypes: ["strengthen-meta-description"],
+          manualReviewReasons: ["strengthen-meta-description"],
+        },
+      ],
+      executionPayloads: [
+        {
+          key: "gien:avis",
+          agencyId: 1,
+          siteSlug: "gien",
+          city: "Gien",
+          pageSlug: "avis",
+          operations: [{ type: "enrich-body", strategy: "append-or-enrich-existing-editorial-copy", preserveExisting: true }],
+          bodyCopyPreview: { title: "Informations utiles", html: "<p>Texte exact approuvé.</p>" },
+          safeguards: { preserveManualCopy: true },
+          completeOperationTypes: ["enrich-body"],
+          incompleteOperationTypes: [],
+          payloadComplete: true,
+        },
+        {
+          key: "nevers:services",
+          agencyId: 2,
+          siteSlug: "nevers",
+          city: "Nevers",
+          pageSlug: "services",
+          operations: [{ type: "strengthen-meta-description" }],
+          bodyCopyPreview: null,
+          safeguards: {},
+          completeOperationTypes: [],
+          incompleteOperationTypes: ["strengthen-meta-description"],
+          payloadComplete: false,
+        },
+      ],
+    },
+    executionPayloadAudit: {
+      ok: true,
+      candidateCount: 2,
+      payloadCount: 2,
+      completePayloadCount: 1,
+      incompletePayloadCount: 1,
+    },
+    determinism: {
+      verified: true,
+      previewCount: 2,
+      firstFingerprint: FP,
+      secondFingerprint: FP,
+      executionPayloadsVerified: true,
+    },
+  };
+}
+
+function approvedManifest(sourceReport = report()) {
+  const manifest = createApprovalManifest(sourceReport);
+  manifest.candidates[0].approved = true;
+  manifest.candidates[0].reviewer = "operator@example.test";
+  manifest.candidates[0].reviewedAt = "2026-08-17T20:30:00.000Z";
+  manifest.candidates[0].note = "validated";
+  return manifest;
+}
+
+test("execution plan contains only explicitly approved pages with exact sealed payload and never writes", () => {
+  const source = report();
+  const plan = buildExecutionPlan(approvedManifest(source), source);
+  assert.equal(plan.readOnly, true);
+  assert.equal(plan.writes, false);
+  assert.equal(plan.destructive, false);
+  assert.equal(plan.publicWrites, false);
+  assert.equal(plan.executable, true);
+  assert.equal(plan.pages.length, 1);
+  assert.equal(plan.pages[0].key, "gien:avis");
+  assert.equal(plan.pages[0].executionPayloadComplete, true);
+  assert.equal(plan.pages[0].executionPayload.bodyCopyPreview.html, "<p>Texte exact approuvé.</p>");
+  assert.equal(plan.summary.approvedCount, 1);
+  assert.equal(plan.summary.payloadCompleteCount, 1);
+  assert.equal(plan.summary.payloadIncompleteCount, 0);
+  assert.equal(plan.summary.mergeableWriteTargetGroupCount, 0);
+  assert.equal(plan.summary.writeTargetCollisionCount, 0);
+  assert.deepEqual(plan.mergeableWriteTargets, []);
+  assert.deepEqual(plan.writeTargetCollisions, []);
+  assert.equal(plan.summary.skippedCount, 1);
+  assert.match(plan.executionPlanFingerprint, /^[0-9a-f]{64}$/);
+  assert.match(plan.source.approvalDecisionFingerprint, /^[0-9a-f]{64}$/);
+});
+
+test("execution plan is non-executable when no page is approved", () => {
+  const source = report();
+  const plan = buildExecutionPlan(createApprovalManifest(source), source);
+  assert.equal(plan.executable, false);
+  assert.equal(plan.pages.length, 0);
+  assert.equal(plan.summary.approvedCount, 0);
+  assert.equal(plan.summary.skippedCount, 2);
+});
+
+test("execution plan fingerprint changes when an approval audit decision changes", () => {
+  const source = report();
+  const firstManifest = approvedManifest(source);
+  const first = buildExecutionPlan(firstManifest, source);
+  const secondManifest = approvedManifest(source);
+  secondManifest.candidates[0].reviewer = "second-reviewer@example.test";
+  const second = buildExecutionPlan(secondManifest, source);
+  assert.notEqual(first.source.approvalDecisionFingerprint, second.source.approvalDecisionFingerprint);
+  assert.notEqual(first.executionPlanFingerprint, second.executionPlanFingerprint);
+});
+
+test("execution plan refuses approval candidate mutation inherited from manifest", () => {
+  const source = report();
+  const manifest = approvedManifest(source);
+  manifest.candidates[0].operationTypes = ["rewrite-everything"];
+  assert.throws(
+    () => buildExecutionPlan(manifest, source),
+    (error) => error.code === "MSE_25_31_APPROVAL_MANIFEST_CANDIDATE_SET_MISMATCH"
+  );
+});
+
+test("approved manual-review page remains non-executable until its exact write payload exists", () => {
+  const source = report();
+  const manifest = createApprovalManifest(source);
+  manifest.candidates[1].approved = true;
+  manifest.candidates[1].reviewer = "seo-review@example.test";
+  manifest.candidates[1].reviewedAt = "2026-08-17T20:31:00.000Z";
+  const plan = buildExecutionPlan(manifest, source);
+  assert.equal(plan.summary.approvedManualReviewCount, 1);
+  assert.equal(plan.summary.payloadIncompleteCount, 1);
+  assert.equal(plan.executable, false);
+  assert.equal(plan.pages[0].executionClass, "manual-review-needed");
+  assert.deepEqual(plan.pages[0].manualReviewReasons, ["strengthen-meta-description"]);
+  assert.deepEqual(plan.incompletePages[0].incompleteOperationTypes, ["strengthen-meta-description"]);
+});
+
+test("write target keys resolve internal links against their persisted source page", () => {
+  const target = operationWriteTarget(
+    { key: "gien:avis", siteSlug: "gien", pageSlug: "avis" },
+    {
+      type: "add-internal-link",
+      target: { pageSlug: "home", blockId: "copy-home" },
+    },
+    0
+  );
+  assert.equal(target.targetKey, "gien:home:block:copy-home:content.html");
+  assert.equal(target.candidateKey, "gien:avis");
+});
+
+test("compatible internal-link writes sharing one sealed source are mergeable instead of blocking execution", () => {
+  const sourceFingerprint = "c".repeat(64);
+  const pages = [
+    {
+      key: "gien:avis",
+      siteSlug: "gien",
+      pageSlug: "avis",
+      executionPayload: {
+        operations: [{
+          type: "add-internal-link",
+          sourceValueFingerprint: sourceFingerprint,
+          link: { href: "/avis" },
+          target: { pageSlug: "home", blockId: "copy-home" },
+        }],
+      },
+    },
+    {
+      key: "gien:equipe",
+      siteSlug: "gien",
+      pageSlug: "equipe",
+      executionPayload: {
+        operations: [{
+          type: "add-internal-link",
+          sourceValueFingerprint: sourceFingerprint,
+          link: { href: "/equipe" },
+          target: { pageSlug: "home", blockId: "copy-home" },
+        }],
+      },
+    },
+  ];
+
+  assert.deepEqual(writeTargetCollisions(pages), []);
+  const groups = mergeableWriteTargetGroups(pages);
+  assert.equal(groups.length, 1);
+  assert.equal(groups[0].targetKey, "gien:home:block:copy-home:content.html");
+  assert.deepEqual(groups[0].writes.map((item) => item.linkHref), ["/avis", "/equipe"]);
+});
+
+test("execution collision detector still rejects incompatible writes replacing the same source field", () => {
+  const collisions = writeTargetCollisions([
+    {
+      key: "gien:avis",
+      siteSlug: "gien",
+      pageSlug: "avis",
+      executionPayload: {
+        operations: [{ type: "add-internal-link", target: { pageSlug: "home", blockId: "copy-home" } }],
+      },
+    },
+    {
+      key: "gien:croisieres",
+      siteSlug: "gien",
+      pageSlug: "croisieres",
+      executionPayload: {
+        operations: [{ type: "add-internal-link", target: { pageSlug: "home", blockId: "copy-home" } }],
+      },
+    },
+  ]);
+
+  assert.equal(collisions.length, 1);
+  assert.equal(collisions[0].targetKey, "gien:home:block:copy-home:content.html");
+  assert.deepEqual(collisions[0].writes.map((item) => item.candidateKey), ["gien:avis", "gien:croisieres"]);
+});
