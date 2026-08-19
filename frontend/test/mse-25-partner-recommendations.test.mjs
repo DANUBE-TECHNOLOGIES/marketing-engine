@@ -40,3 +40,14 @@ test("partner editor consumes minisite signals while keeping manual focus as an 
   assert.match(editor, /onClick=\{\(\) => addRecommendation\(entry\)\}/);
   assert.doesNotMatch(editor, /useEffect\([^]*addRecommendation\(/);
 });
+
+test("VisualPageBuilder wires live minisite signals into PartnerLogosEditor", () => {
+  const builder = read("components/page-builder-v2/VisualPageBuilder.js");
+
+  assert.match(builder, /buildPartnerRecommendationSignals/);
+  assert.match(builder, /const partnerRecommendationSignals = useMemo\(/);
+  assert.match(builder, /buildPartnerRecommendationSignals\(site, activePage\)/);
+  assert.match(builder, /partnerRecommendationSignals = \[\]/);
+  assert.match(builder, /minisiteSignals=\{partnerRecommendationSignals\}/);
+  assert.match(builder, /partnerRecommendationSignals=\{partnerRecommendationSignals\}/);
+});
