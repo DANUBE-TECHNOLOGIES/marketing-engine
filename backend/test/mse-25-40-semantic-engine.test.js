@@ -65,6 +65,18 @@ test("semantic plan distinguishes dedicated coverage from incidental mentions", 
   assert.equal(result.summary.blockingConflictCount, 0);
 });
 
+test("commercial coverage cannot be strong without local qualification", () => {
+  const input = site();
+  input.pages.push(page("croisieres", "Croisières et voyages en mer", "Découvrez nos croisières et compagnies de croisière."));
+  const result = semanticPlan(input);
+  const cruise = result.coverage.find((row) => row.intentKey === "cruise");
+  assert.equal(cruise.bestPageSlug, "croisieres");
+  assert.notEqual(cruise.status, "strong");
+  assert.equal(cruise.bestLocalityScore, 0);
+  assert.equal(cruise.gapReason, "locality-weak");
+  assert.ok(result.summary.localQualificationGapCount >= 1);
+});
+
 test("missing commercial intent is review-only and never auto-created", () => {
   const input = site();
   input.pages = input.pages.filter((item) => item.slug !== "services");
