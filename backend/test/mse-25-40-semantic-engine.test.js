@@ -10,7 +10,7 @@ function page(slug, title, body = "") {
     slug,
     title,
     seoTitle: title,
-    metaDescription: `${title}. Conseils personnalisés.` ,
+    metaDescription: `${title}. Conseils personnalisés.`,
     published: true,
     blocks: [
       { id: `hero-${slug}`, blockType: "hero", content: { title } },
@@ -48,14 +48,20 @@ test("semantic plan is deterministic, read-only and forbids doorway expansion", 
   assert.doesNotMatch(JSON.stringify(first), /Montargis|Orléans|Briare/i);
 });
 
-test("semantic plan maps strong explicit pages and surfaces controlled gaps", () => {
+test("semantic plan distinguishes dedicated coverage from incidental mentions", () => {
   const result = semanticPlan(site());
   const agency = result.coverage.find((row) => row.intentKey === "agency");
   const reviews = result.coverage.find((row) => row.intentKey === "reviews");
   const ticketing = result.coverage.find((row) => row.intentKey === "ticketing");
   assert.equal(agency.status, "strong");
   assert.equal(reviews.status, "strong");
-  assert.ok(["covered", "strong"].includes(ticketing.status));
+  assert.equal(ticketing.status, "gap");
+  assert.equal(ticketing.bestPageSlug, "services");
+  assert.ok(ticketing.bestScore > 0);
+  const opportunity = result.opportunities.find((row) => row.intentKey === "ticketing");
+  assert.equal(opportunity.type, "strengthen-existing-page");
+  assert.equal(opportunity.pageSlug, "services");
+  assert.equal(opportunity.autoCreate, false);
   assert.equal(result.summary.blockingConflictCount, 0);
 });
 
