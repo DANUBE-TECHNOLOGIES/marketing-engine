@@ -22,6 +22,18 @@ test("public partner page has explicit header, introduction and directory render
   assert.match(directory, /Catégories de partenaires/);
 });
 
+test("designer catalogue recognizes generated partner page structure as singleton blocks", () => {
+  const catalogue = read("lib/page-builder-v2/block-catalog.js");
+
+  for (const type of ["page-header", "partners-introduction", "partner-directory", "contact-cta"]) {
+    assert.match(catalogue, new RegExp(`type: "${type}"[\\s\\S]*?singleton: true`));
+  }
+  assert.match(catalogue, /label: "En-tête de page"/);
+  assert.match(catalogue, /label: "Introduction partenaires"/);
+  assert.match(catalogue, /label: "Annuaire complet des partenaires"/);
+  assert.match(catalogue, /label: "CTA contact agence"/);
+});
+
 test("public navigation promotes the partner page without exposing all secondary pages", () => {
   const header = read("components/public-site/PublicSiteHeader.js");
 
