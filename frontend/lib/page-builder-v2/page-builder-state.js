@@ -90,20 +90,18 @@ export function normalizeBlock(block, index = 0) {
   };
 }
 
-export function pageBlocksSource(page) {
-  if (Array.isArray(page?.blocks) && page.blocks.length > 0) return page.blocks;
-  if (Array.isArray(page?.sections) && page.sections.length > 0) return page.sections;
-  if (Array.isArray(page?.content?.blocks) && page.content.blocks.length > 0) {
-    return page.content.blocks;
-  }
-  if (Array.isArray(page?.blocks)) return page.blocks;
+function canonicalPageBlocks(page) {
+  if (Array.isArray(page?.sections) && page.sections.length) return page.sections;
+  if (Array.isArray(page?.blocks) && page.blocks.length) return page.blocks;
+  if (Array.isArray(page?.content?.blocks) && page.content.blocks.length) return page.content.blocks;
   if (Array.isArray(page?.sections)) return page.sections;
+  if (Array.isArray(page?.blocks)) return page.blocks;
   if (Array.isArray(page?.content?.blocks)) return page.content.blocks;
   return [];
 }
 
 export function normalizePage(page, index = 0) {
-  const blocks = pageBlocksSource(page);
+  const blocks = canonicalPageBlocks(page);
   const status = String(page?.status || "draft");
   const hasExplicitSlug =
     page &&
@@ -121,12 +119,12 @@ export function normalizePage(page, index = 0) {
         ? page.published
         : status === "published",
     seoTitle: String(page?.seoTitle || page?.title || ""),
-    seoDescription: String(
-      page?.seoDescription || page?.seoDesc || page?.metaDescription || ""
-    ),
-    blocks: blocks
-      .map(normalizeBlock)
-      .sort((a, b) => a.position - b.position),
+    seoDescription: String(page?.seoDescription || page?.metaDescription || page?.seoDesc || ""),
+    blocks: Array.isArray(blocks)
+      ? blocks
+          .map(normalizeBlock)
+          .sort((a, b) => a.position - b.position)
+      : [],
   };
 }
 
