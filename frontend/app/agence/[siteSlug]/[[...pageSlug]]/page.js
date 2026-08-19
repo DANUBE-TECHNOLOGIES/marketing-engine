@@ -95,13 +95,26 @@ function pageSections(page) {
   return [];
 }
 
+function sectionType(section) {
+  return String(
+    section?.type ||
+    section?.blockType ||
+    section?.kind ||
+    section?.sectionType ||
+    section?.jsonContent?.__builderType ||
+    ""
+  ).trim().toLowerCase().replace(/--\d+$/, "");
+}
+
 function pageHasHero(page) {
   return pageSections(page).some((section) => {
-    const type = String(section?.type || section?.blockType || section?.kind || "")
-      .trim()
-      .toLowerCase();
+    const type = sectionType(section);
     return type === "hero" || type.includes("hero-") || type.includes("-hero");
   });
+}
+
+function pageHasPrimaryHeadingSection(page) {
+  return pageSections(page).some((section) => sectionType(section) === "page-header");
 }
 
 function canonicalPath({ siteSlug, pageSlug }) {
@@ -241,7 +254,7 @@ export default async function AgencySitePage({ params }) {
     image: localSeo.image,
   });
   const pageSemanticsSchema = buildPageSemanticsSchema({ page, url: currentUrl });
-  const needsFallbackHeading = !legalPage && !pageHasHero(page);
+  const needsFallbackHeading = !legalPage && !pageHasHero(page) && !pageHasPrimaryHeadingSection(page);
   let legalRuntimeHtml = null;
   if (legalPage) {
     const runtime = await fetchPublicBrandLegalRuntime(resolved.siteSlug);
@@ -300,5 +313,7 @@ export {
   isLegalPage,
   isServicesPage,
   pageHasHero,
+  pageHasPrimaryHeadingSection,
   pageSections,
+  sectionType,
 };
