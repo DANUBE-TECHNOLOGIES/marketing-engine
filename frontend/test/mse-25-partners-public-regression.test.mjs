@@ -60,9 +60,31 @@ test("Website Designer exposes at most three agency-specific partners", () => {
   assert.match(state, /\["logos", "partners", "partner-logos"\]/);
   assert.match(state, /return "partner-logos"/);
 
-  assert.match(renderer, /content\.agencyPartners/);
-  assert.match(renderer, /maxAgencyPartners/);
-  assert.match(renderer, /item\.href/);
+  assert.match(renderer, /selectAgencyPartners\(content\.agencyPartners/);
+  assert.match(renderer, /max:\s*Number\(content\.maxAgencyPartners\) \|\| 3/);
+});
+
+test("public agency partner selection is deterministic, deduplicated and URL-safe", () => {
+  const selection = read("components/page-builder/shared/partnerSelection.js");
+  const renderer = read("components/public-site/renderers/PartnersRenderer.js");
+  const directory = read("components/public-site/renderers/PartnerDirectoryRenderer.js");
+
+  assert.match(selection, /NETWORK_PARTNER_ALIASES/);
+  assert.match(selection, /"tui-france"/);
+  assert.match(selection, /"club-lookea"/);
+  assert.match(selection, /export function selectAgencyPartners/);
+  assert.match(selection, /Math\.min\(3,/);
+  assert.match(selection, /reserved\.has\(id\) \|\| reserved\.has\(nameKey\)/);
+  assert.match(selection, /seen\.has\(id\) \|\| seen\.has\(nameKey\)/);
+  assert.match(selection, /\["http:", "https:"\]\.includes\(url\.protocol\)/);
+  assert.match(selection, /scope: "agency"/);
+
+  assert.match(renderer, /safePartnerAssetUrl/);
+  assert.match(renderer, /selectAgencyPartners/);
+  assert.doesNotMatch(renderer, /function safePartnerHref/);
+
+  assert.match(directory, /safePartnerHref\(profile\.details\?\.website, \{ allowInternal: false \}\)/);
+  assert.match(directory, /rel="noopener noreferrer"/);
 });
 
 test("public minisite proxy exposes partner assets", () => {
