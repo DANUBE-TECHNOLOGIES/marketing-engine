@@ -3,6 +3,7 @@ const AgencySiteService = require("./service");
 const { auditDraft, proposeLocalRewrite } = require("./local-rewrite-service");
 const { buildPartnerPageRolloutStatus, ensureNetworkPartnerPages, ensurePartnerPageOnly } = require("./partner-page-rollout");
 const { saveDesignerPage } = require("./page-builder-save");
+const { listPageVersions, rollbackPageVersion } = require("./page-versions");
 
 function publicPagePayload(page) {
   if (!page || typeof page !== "object") return page;
@@ -24,11 +25,14 @@ module.exports = ({ prisma }) => {
     draftPage: req.body?.page || null,
     blockId: req.body?.blockId || null,
   });
-  const designerSaveArgs = (req, slug) => ({
+  const pageVersionArgs = (req, slug) => ({
     prisma,
     tenantId: req.tenantId,
     agencyId: req.params.id,
     slug,
+  });
+  const designerSaveArgs = (req, slug) => ({
+    ...pageVersionArgs(req, slug),
     input: req.body || {},
   });
 
@@ -86,6 +90,31 @@ module.exports = ({ prisma }) => {
     try {
       const args = rewriteArgs(req, req.params.slug);
       res.json(req.body?.action === "rewrite" ? await proposeLocalRewrite(args) : await auditDraft(args));
+    } catch (e) { next(e); }
+  });
+
+  router.get("/agencies/:id/site/pages/home/versions", async (req, res, next) => {
+    try { res.json(await listPageVersions(pageVersionArgs(req, "home"))); } catch (e) { next(e); }
+  });
+  router.get("/agencies/:id/site/pages/:slug/versions", async (req, res, next) => {
+    try { res.json(await listPageVersions(pageVersionArgs(req, req.params.slug))); } catch (e) { next(e); }
+  });
+  router.post("/agencies/:id/site/pages/home/versions/:versionId/rollback", async (req, res, next) => {
+    try {
+      res.json(await rollbackPageVersion({
+        ...pageVersionArgs(req, "home"),
+        versionId: req.params.versionId,
+        input: req.body || {},
+      }));
+    } catch (e) { next(e); }
+  });
+  router.post("/agencies/:id/site/pages/:slug/versions/:versionId/rollback", async (req, res, next) => {
+    try {
+      res.json(await rollbackPageVersion({
+        ...pageVersionArgs(req, req.params.slug),
+        versionId: req.params.versionId,
+        input: req.body || {},
+      }));
     } catch (e) { next(e); }
   });
 
