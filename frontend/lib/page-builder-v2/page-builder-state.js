@@ -33,6 +33,32 @@ function canonicalBlockType(value) {
   return type;
 }
 
+function normalizeAgencyPartners(items) {
+  if (!Array.isArray(items)) return [];
+  return items
+    .filter((item) => item && typeof item === "object")
+    .slice(0, 3)
+    .map((item) => {
+      const catalogPartnerId = String(item.catalogPartnerId || "").trim();
+      return {
+        ...deepClone(item),
+        catalogPartnerId,
+        scope: "agency",
+        source: catalogPartnerId ? "catalog" : "custom",
+      };
+    });
+}
+
+function normalizeBlockContent(type, content) {
+  const normalized = content && typeof content === "object" ? deepClone(content) : {};
+  if (type !== "partner-logos") return normalized;
+  return {
+    ...normalized,
+    agencyPartners: normalizeAgencyPartners(normalized.agencyPartners),
+    maxAgencyPartners: 3,
+  };
+}
+
 export function normalizeBlock(block, index = 0) {
   const type = canonicalBlockType(
     block?.type || block?.blockType || block?.sectionType || "rich_text"
@@ -40,6 +66,14 @@ export function normalizeBlock(block, index = 0) {
 
   const definition = getBlockDefinition(type);
   const rawPosition = block?.position ?? block?.displayOrder ?? index;
+  const rawContent = {
+    ...(definition?.defaults ? deepClone(definition.defaults) : {}),
+    ...(block?.content && typeof block.content === "object"
+      ? deepClone(block.content)
+      : block?.jsonContent && typeof block.jsonContent === "object"
+        ? deepClone(block.jsonContent)
+        : {}),
+  };
 
   return {
     id: String(block?.id || createLocalId()),
@@ -48,14 +82,7 @@ export function normalizeBlock(block, index = 0) {
     position: Number.isFinite(Number(rawPosition))
       ? Number(rawPosition)
       : index,
-    content: {
-      ...(definition?.defaults ? deepClone(definition.defaults) : {}),
-      ...(block?.content && typeof block.content === "object"
-        ? deepClone(block.content)
-        : block?.jsonContent && typeof block.jsonContent === "object"
-          ? deepClone(block.jsonContent)
-          : {}),
-    },
+    content: normalizeBlockContent(type, rawContent),
     settings:
       block?.settings && typeof block.settings === "object"
         ? deepClone(block.settings)
@@ -166,7 +193,7 @@ export function serializePage(page) {
       type: block.type,
       status: block.status,
       position: Number.isFinite(Number(block.position)) ? Number(block.position) : 0,
-      content: deepClone(block.content),
+      content: normalizeBlockContent(block.type, block.content),
       settings: deepClone(block.settings || {}),
     })),
   };
