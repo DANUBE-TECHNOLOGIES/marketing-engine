@@ -10,11 +10,7 @@ const NAVIGATION_ALIASES = Object.freeze({
   inspirations: "inspiration",
 });
 
-function normalizeNavigation(site) {
-  if (Array.isArray(site.navigation)) return site.navigation;
-  if (Array.isArray(site.navigation?.main)) return site.navigation.main;
-  return [];
-}
+const PROMOTED_SECONDARY_SLUGS = Object.freeze(new Set(["partenaires"]));
 
 function extractSlug(path = "") {
   const parts = String(path).split("/").filter(Boolean);
@@ -36,6 +32,15 @@ function pageSlug(page) {
   return canonicalNavigationSlug(
     page?.slug !== undefined ? page.slug : extractSlug(page?.path)
   );
+}
+
+function normalizeNavigation(site) {
+  if (Array.isArray(site.navigation)) return site.navigation;
+  const main = Array.isArray(site.navigation?.main) ? site.navigation.main : [];
+  const promotedSecondary = Array.isArray(site.navigation?.secondary)
+    ? site.navigation.secondary.filter((page) => PROMOTED_SECONDARY_SLUGS.has(pageSlug(page)))
+    : [];
+  return [...main, ...promotedSecondary];
 }
 
 function pageHref(siteSlug, page) {
@@ -164,6 +169,7 @@ export default function PublicSiteHeader({ site, hours, brand, brandRuntime, bra
 
 export {
   NAVIGATION_ALIASES,
+  PROMOTED_SECONDARY_SLUGS,
   canonicalNavigationSlug,
   extractSlug,
   normalizeNavigation,
