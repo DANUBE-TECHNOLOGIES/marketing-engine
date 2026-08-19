@@ -21,6 +21,17 @@ export const BLOCK_CATALOG = Object.freeze([
     },
   },
   {
+    type: "page-header",
+    label: "En-tête de page",
+    category: "Structure",
+    icon: "▤",
+    singleton: true,
+    defaults: {
+      title: "Titre de la page",
+      introduction: "",
+    },
+  },
+  {
     type: "rich_text",
     label: "Texte enrichi",
     category: "Contenu",
@@ -29,6 +40,17 @@ export const BLOCK_CATALOG = Object.freeze([
       title: "Présentation",
       html: "<p>Ajoutez votre contenu éditorial.</p>",
       alignment: "left",
+    },
+  },
+  {
+    type: "partners-introduction",
+    label: "Introduction partenaires",
+    category: "Contenu",
+    icon: "¶",
+    singleton: true,
+    defaults: {
+      title: "Des partenaires sélectionnés par votre agence",
+      text: "Présentez ici la manière dont votre agence sélectionne et compare ses partenaires voyage.",
     },
   },
   {
@@ -143,6 +165,18 @@ export const BLOCK_CATALOG = Object.freeze([
       },
       secondaryCta: null,
       style: "primary",
+    },
+  },
+  {
+    type: "contact-cta",
+    label: "CTA contact agence",
+    category: "Conversion",
+    icon: "→",
+    singleton: true,
+    defaults: {
+      title: "Parlons de votre prochain voyage",
+      text: "Contactez votre agence pour obtenir un conseil personnalisé.",
+      actions: [],
     },
   },
   {
