@@ -62,31 +62,11 @@ function canonicalAgencyPartnerOptions(networkItems = []) {
     .map(getPartnerProfile)
     .filter((partner) => partner?.publishable && partner?.readyForPublication)
     .filter((partner) => !reserved.has(partnerKey(partner.id)) && !reserved.has(partnerKey(partner.name)))
-    .map((partner) => ({
-      id: partner.id,
-      name: partner.name,
-      category: partner.category,
-      summary: partner.summary,
-      tags: Array.isArray(partner.tags) ? partner.tags : [],
-      logoUrl: partner.logoUrl || "",
-    }));
+    .map((partner) => ({ id: partner.id, name: partner.name, category: partner.category, summary: partner.summary, tags: Array.isArray(partner.tags) ? partner.tags : [], logoUrl: partner.logoUrl || "" }));
 }
 
 function canonicalPartnerValue(partner, current = {}) {
-  return {
-    id: partner.id,
-    catalogPartnerId: partner.id,
-    name: partner.name,
-    category: partner.category,
-    summary: partner.summary,
-    tags: [...partner.tags],
-    logoAssetId: "",
-    logoUrl: partner.logoUrl,
-    alt: `Logo ${partner.name}`,
-    href: current.href || "",
-    scope: "agency",
-    source: "catalog",
-  };
+  return { id: partner.id, catalogPartnerId: partner.id, name: partner.name, category: partner.category, summary: partner.summary, tags: [...partner.tags], logoAssetId: "", logoUrl: partner.logoUrl, alt: `Logo ${partner.name}`, href: current.href || "", scope: "agency", source: "catalog" };
 }
 
 const RECOMMENDATION_FOCUS = Object.freeze([
@@ -99,32 +79,25 @@ const RECOMMENDATION_FOCUS = Object.freeze([
 ]);
 
 export function PartnerLogosEditor({ networkItems, agencyPartners, recommendationSignals: providedRecommendationSignals = [], minisiteSignals = null, maxAgencyPartners = 3, assets = [], loading = false, onChange }) {
-  const [partnerAssets, setPartnerAssets] = useState(assets);
-  const [partnerLoading, setPartnerLoading] = useState(loading || assets.length === 0);
+  const [loadedPartnerAssets, setLoadedPartnerAssets] = useState([]);
+  const [partnerLoading, setPartnerLoading] = useState(false);
   const [recommendationFocus, setRecommendationFocus] = useState("");
-  const minisiteRecommendationSignals = Array.isArray(minisiteSignals)
-    ? minisiteSignals
-    : providedRecommendationSignals;
+  const hasProvidedAssets = assets.length > 0;
+  const partnerAssets = hasProvidedAssets ? assets : loadedPartnerAssets;
+  const effectivePartnerLoading = hasProvidedAssets ? loading : partnerLoading;
+  const minisiteRecommendationSignals = Array.isArray(minisiteSignals) ? minisiteSignals : providedRecommendationSignals;
 
   useEffect(() => {
-    if (assets.length) {
-      setPartnerAssets(assets);
-      setPartnerLoading(loading);
-      return undefined;
-    }
-
+    if (hasProvidedAssets) return undefined;
     let cancelled = false;
-    setPartnerLoading(true);
     fetchPublishedMediaImages()
-      .then((items) => { if (!cancelled) setPartnerAssets(items); })
-      .catch(() => { if (!cancelled) setPartnerAssets([]); })
+      .then((items) => { if (!cancelled) setLoadedPartnerAssets(items); })
+      .catch(() => { if (!cancelled) setLoadedPartnerAssets([]); })
       .finally(() => { if (!cancelled) setPartnerLoading(false); });
     return () => { cancelled = true; };
-  }, [assets, loading]);
+  }, [hasProvidedAssets]);
 
-  const suppliedNetwork = Array.isArray(networkItems)
-    ? networkItems.filter((item) => item?.scope !== "agency")
-    : [];
+  const suppliedNetwork = Array.isArray(networkItems) ? networkItems.filter((item) => item?.scope !== "agency") : [];
   const locked = suppliedNetwork.length ? suppliedNetwork : getCommonPartners();
   const agency = Array.isArray(agencyPartners) ? agencyPartners.slice(0, maxAgencyPartners) : [];
   const canonicalOptions = useMemo(() => canonicalAgencyPartnerOptions(locked), [locked]);
@@ -135,12 +108,7 @@ export function PartnerLogosEditor({ networkItems, agencyPartners, recommendatio
     const selectedSignals = agency.flatMap((item) => [item?.name, item?.category, item?.summary, ...(Array.isArray(item?.tags) ? item.tags : [])]).filter(Boolean).map((value) => ({ value, source: "selected-partner", weight: 2 }));
     return [...siteSignals, ...selectedSignals];
   }, [agency, minisiteRecommendationSignals, recommendationFocus]);
-  const recommendations = useMemo(() => recommendAgencyPartners({
-    signals: recommendationSignals,
-    selected: agency,
-    networkItems: locked,
-    max: Math.max(0, maxAgencyPartners - agency.length),
-  }), [recommendationSignals, agency, locked, maxAgencyPartners]);
+  const recommendations = useMemo(() => recommendAgencyPartners({ signals: recommendationSignals, selected: agency, networkItems: locked, max: Math.max(0, maxAgencyPartners - agency.length) }), [recommendationSignals, agency, locked, maxAgencyPartners]);
 
   const addRecommendation = (entry) => {
     if (!entry?.partner || agency.length >= maxAgencyPartners) return;
@@ -156,21 +124,15 @@ export function PartnerLogosEditor({ networkItems, agencyPartners, recommendatio
     const selectedAsset = item.logoAssetId ? partnerAssets.find((asset) => asset.id === item.logoAssetId) || null : null;
     const previewUrl = selectedCatalogPartner?.logoUrl || selectedAsset?.url || item.logoUrl || item.logo || "";
     const switchPartner = (partnerId) => {
-      if (!partnerId) {
-        update({ id: item.source === "catalog" ? `agency-partner-${Date.now()}` : item.id, catalogPartnerId: "", name: item.source === "catalog" ? "" : item.name, logoAssetId: "", logoUrl: item.source === "catalog" ? "" : item.logoUrl, alt: item.source === "catalog" ? "" : item.alt, href: item.href || "", scope: "agency", source: "custom" });
-        return;
-      }
+      if (!partnerId) { update({ id: item.source === "catalog" ? `agency-partner-${Date.now()}` : item.id, catalogPartnerId: "", name: item.source === "catalog" ? "" : item.name, logoAssetId: "", logoUrl: item.source === "catalog" ? "" : item.logoUrl, alt: item.source === "catalog" ? "" : item.alt, href: item.href || "", scope: "agency", source: "custom" }); return; }
       const partner = canonicalOptions.find((candidate) => candidate.id === partnerId);
       if (partner) update(canonicalPartnerValue(partner, item));
     };
-
-    return <><SelectField label="Partenaire du catalogue Mondescale" value={catalogPartnerId} onChange={switchPartner}><option value="">Partenaire personnalisé</option>{canonicalOptions.map((partner) => <option key={partner.id} value={partner.id} disabled={selectedElsewhere.has(partner.id)}>{partner.name} — {categories.get(partner.category) || partner.category}</option>)}</SelectField>{previewUrl ? <img className={styles.editorThumbnail} src={previewUrl} alt={item.alt || item.name || "Logo partenaire"} /> : null}{selectedCatalogPartner ? <div className={styles.partnerLockedPanel}><strong>{selectedCatalogPartner.name}</strong><p>{selectedCatalogPartner.summary}</p>{selectedCatalogPartner.tags.length ? <small>{selectedCatalogPartner.tags.join(" · ")}</small> : null}</div> : <><Field label="Nom du partenaire" value={item.name} onChange={(name) => update({ ...item, name, catalogPartnerId: "", source: "custom", scope: "agency" })} /><MediaPicker assets={partnerAssets} loading={partnerLoading} selectedAssetId={item.logoAssetId || ""} onSelect={(asset) => update({ ...item, catalogPartnerId: "", source: "custom", logoAssetId: asset.id, logoUrl: asset.url, alt: item.alt || asset.altText || (item.name ? `Logo ${item.name}` : ""), scope: "agency" })} onClear={() => { const { logoAssetId: _assetId, logoUrl: _logoUrl, logo: _logo, ...rest } = item; update({ ...rest, catalogPartnerId: "", source: "custom", scope: "agency" }); }} /><Field label="Texte alternatif" value={item.alt || ""} onChange={(alt) => update({ ...item, alt, catalogPartnerId: "", source: "custom", scope: "agency" })} /><details><summary>URL de logo héritée</summary><Field label="URL du logo" value={item.logoUrl || item.logo || ""} onChange={(logoUrl) => update({ ...item, catalogPartnerId: "", source: "custom", logoAssetId: "", logoUrl, scope: "agency" })} /></details></>}<Field label="Lien facultatif" value={item.href || ""} onChange={(href) => update({ ...item, href, scope: "agency" })} /></>;
+    return <><SelectField label="Partenaire du catalogue Mondescale" value={catalogPartnerId} onChange={switchPartner}><option value="">Partenaire personnalisé</option>{canonicalOptions.map((partner) => <option key={partner.id} value={partner.id} disabled={selectedElsewhere.has(partner.id)}>{partner.name} — {categories.get(partner.category) || partner.category}</option>)}</SelectField>{previewUrl ? <img className={styles.editorThumbnail} src={previewUrl} alt={item.alt || item.name || "Logo partenaire"} /> : null}{selectedCatalogPartner ? <div className={styles.partnerLockedPanel}><strong>{selectedCatalogPartner.name}</strong><p>{selectedCatalogPartner.summary}</p>{selectedCatalogPartner.tags.length ? <small>{selectedCatalogPartner.tags.join(" · ")}</small> : null}</div> : <><Field label="Nom du partenaire" value={item.name} onChange={(name) => update({ ...item, name, catalogPartnerId: "", source: "custom", scope: "agency" })} /><MediaPicker assets={partnerAssets} loading={effectivePartnerLoading} selectedAssetId={item.logoAssetId || ""} onSelect={(asset) => update({ ...item, catalogPartnerId: "", source: "custom", logoAssetId: asset.id, logoUrl: asset.url, alt: item.alt || asset.altText || (item.name ? `Logo ${item.name}` : ""), scope: "agency" })} onClear={() => { const { logoAssetId: _assetId, logoUrl: _logoUrl, logo: _logo, ...rest } = item; update({ ...rest, catalogPartnerId: "", source: "custom", scope: "agency" }); }} /><Field label="Texte alternatif" value={item.alt || ""} onChange={(alt) => update({ ...item, alt, catalogPartnerId: "", source: "custom", scope: "agency" })} /><details><summary>URL de logo héritée</summary><Field label="URL du logo" value={item.logoUrl || item.logo || ""} onChange={(logoUrl) => update({ ...item, catalogPartnerId: "", source: "custom", logoAssetId: "", logoUrl, scope: "agency" })} /></details></>}<Field label="Lien facultatif" value={item.href || ""} onChange={(href) => update({ ...item, href, scope: "agency" })} /></>;
   }}</ListEditor></div>;
 }
 
 export function FaqEditor({ items, onChange }) { return <ListEditor items={items} onChange={onChange} addLabel="Ajouter une question" createItem={() => ({ question: "Nouvelle question", answer: "Nouvelle réponse" })}>{({ item, update }) => <><Field label="Question" value={item.question} onChange={(question) => update({ ...item, question })} /><Field label="Réponse" value={item.answer} multiline onChange={(answer) => update({ ...item, answer })} /></>}</ListEditor>; }
 export function FeaturesEditor({ items, onChange }) { return <ListEditor items={items} onChange={onChange} addLabel="Ajouter un point fort" createItem={() => ({ icon: "✦", title: "Nouveau point fort", text: "Description du point fort." })}>{({ item, update }) => <><Field label="Icône" value={item.icon} onChange={(icon) => update({ ...item, icon })} /><Field label="Titre" value={item.title} onChange={(title) => update({ ...item, title })} /><Field label="Description" value={item.text} multiline onChange={(text) => update({ ...item, text })} /></>}</ListEditor>; }
-export function GalleryEditor({ images, onChange, assets = [], loading = false }) { return <ListEditor items={images} onChange={onChange} addLabel="Ajouter une image" createItem={() => ({ imageAssetId: "", url: "", alt: "", caption: "" })}>{({ item, update }) => { const selectedAsset = item.imageAssetId ? assets.find((asset) => asset.id === item.imageAssetId) || null : null; const previewUrl = item.url || selectedAsset?.url || ""; return <>{previewUrl ? <img className={styles.editorThumbnail} src={previewUrl} alt={item.alt || ""} /> : null}<MediaPicker assets={assets} loading={loading} selectedAssetId={item.imageAssetId || ""} onSelect={(asset) => update({ ...item, imageAssetId: asset.id, url: null, alt: item.alt || asset.altText || "" })} onClear={() => update({ ...item, imageAssetId: "" })} /><details><summary>URL d’image héritée</summary><Field label="URL de l’image" value={item.url} onChange={(url) => update({ ...item, url })} /></details><Field label="Texte alternatif" value={item.alt} onChange={(alt) => update({ ...item, alt })} /><Field label="Légende" value={item.caption} multiline onChange={(caption) => update({ ...item, caption })} /></>; }}</ListEditor>; }
-export function TestimonialsEditor({ items, onChange }) { return <ListEditor items={items} onChange={onChange} addLabel="Ajouter un témoignage" createItem={() => ({ author: "Client", text: "Un excellent accompagnement.", rating: 5 })}>{({ item, update }) => <><Field label="Auteur" value={item.author} onChange={(author) => update({ ...item, author })} /><Field label="Témoignage" value={item.text} multiline onChange={(text) => update({ ...item, text })} /><Field label="Note" type="number" value={item.rating} onChange={(rating) => update({ ...item, rating: Math.max(1, Math.min(5, Number(rating) || 1)) })} /></>}</ListEditor>; }
-export function TeamEditor({ members, onChange, assets = [], loading = false }) { return <ListEditor items={members} onChange={onChange} addLabel="Ajouter un membre" createItem={() => ({ id: `team-${Date.now()}`, name: "", role: "Conseiller voyage", imageAssetId: "", imageUrl: "", imageAlt: "", bio: "" })}>{({ item, update }) => { const selectedAsset = item.imageAssetId ? assets.find((asset) => asset.id === item.imageAssetId) || null : null; const previewUrl = item.imageUrl || selectedAsset?.url || ""; return <>{previewUrl ? <img className={styles.editorThumbnail} src={previewUrl} alt={item.imageAlt || item.name || "Membre de l'équipe"} /> : null}<Field label="Nom" value={item.name} onChange={(name) => update({ ...item, name })} /><Field label="Fonction" value={item.role} onChange={(role) => update({ ...item, role })} /><MediaPicker assets={assets} loading={loading} selectedAssetId={item.imageAssetId || ""} onSelect={(asset) => update({ ...item, imageAssetId: asset.id, imageAlt: item.imageAlt || asset.altText || (item.name ? `Portrait de ${item.name}` : "") })} onClear={() => { const { imageAssetId: _a, imageUrl: _b, __mediaSource: _c, __mediaVersion: _d, ...rest } = item; update(rest); }} /><Field label="Texte alternatif de la photo" value={item.imageAlt} onChange={(imageAlt) => update({ ...item, imageAlt })} /><details><summary>URL de photo héritée</summary><Field label="URL de la photo" value={item.imageUrl} onChange={(imageUrl) => update({ ...item, imageUrl })} /></details><Field label="Présentation" value={item.bio} multiline onChange={(bio) => update({ ...item, bio })} /></>; }}</ListEditor>; }
-export function StringListEditor({ items, onChange, label, addLabel }) { return <ListEditor items={(items || []).map((value) => ({ value }))} onChange={(nextItems) => onChange(nextItems.map((item) => item.value))} addLabel={addLabel} createItem={() => ({ value: "" })}>{({ item, update }) => <Field label={label} value={item.value} onChange={(value) => update({ value })} />}</ListEditor>; }
+export function GalleryEditor({ images, onChange, assets = [], loading = false }) { return <ListEditor items={images} onChange={onChange} addLabel="Ajouter une image" createItem={() => ({ imageAssetId: "", url: "", alt: "", caption: "" })}>{({ item, update }) => { const selectedAsset = item.imageAssetId ? assets.find((asset) => asset.id === item.imageAssetId) || null : null; const previewUrl = item.url || selectedAsset?.url || ""; return <>{previewUrl ? <img className={styles.editorThumbnail} src={previewUrl} alt={item.alt || ""} /> : null}<MediaPicker assets={assets} loading={loading} selectedAssetId={item.imageAssetId || ""} onSelect={(asset) => update({ ...item, imageAssetId: asset.id, url: null, alt: item.alt || asset.altText || "", caption: item.caption || "" })} onClear={() => { const { imageAssetId: _imageAssetId, ...rest } = item; onChange({ ...rest, imageAssetId: "" }); }} /><Field label="Texte alternatif" value={item.alt || ""} onChange={(alt) => update({ ...item, alt })} /><Field label="Légende" value={item.caption || ""} onChange={(caption) => update({ ...item, caption })} /></>; }}</ListEditor>; }
+export function CtaEditor({ content, onChange }) { return <div className={styles.stack}><Field label="Titre" value={content.title} onChange={(title) => onChange({ ...content, title })} /><Field label="Texte" value={content.text} multiline onChange={(text) => onChange({ ...content, text })} /><Field label="Libellé du bouton" value={content.buttonLabel} onChange={(buttonLabel) => onChange({ ...content, buttonLabel })} /><Field label="Lien" value={content.buttonHref} onChange={(buttonHref) => onChange({ ...content, buttonHref })} /></div>; }
