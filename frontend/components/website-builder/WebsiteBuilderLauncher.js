@@ -18,8 +18,9 @@ function homeState(site) {
   return "Accueil en brouillon";
 }
 
-function partnerStateLabel(state) {
+function partnerStateLabel(state, rolloutEligible = true) {
   if (state === "published") return "Partenaires publiée";
+  if (state === "missing" && rolloutEligible === false) return "Partenaires bloquée : page agence absente";
   if (state === "missing") return "Partenaires à créer";
   if (state === "review") return "Partenaires en révision";
   if (state === "draft") return "Partenaires en brouillon";
@@ -87,8 +88,8 @@ export default function WebsiteBuilderLauncher() {
     };
   }, [loadPartnerRollout]);
 
-  const partnerStateBySiteId = useMemo(
-    () => new Map((partnerRollout?.sites || []).map((row) => [String(row.siteId), row.partnerPageState])),
+  const partnerRowBySiteId = useMemo(
+    () => new Map((partnerRollout?.sites || []).map((row) => [String(row.siteId), row])),
     [partnerRollout]
   );
 
@@ -104,8 +105,11 @@ export default function WebsiteBuilderLauncher() {
     });
   }, [query, sites]);
 
+  const eligibleMissing = Number(partnerRollout?.summary?.eligibleMissing || 0);
+  const blockedMissing = Number(partnerRollout?.summary?.blockedMissing || 0);
+
   const applyPartnerRollout = useCallback(async () => {
-    if (partnerApplying || !partnerRollout?.summary?.missing) return;
+    if (partnerApplying || eligibleMissing <= 0) return;
     setPartnerApplying(true);
     setPartnerNotice("");
     setError(null);
@@ -117,10 +121,13 @@ export default function WebsiteBuilderLauncher() {
       });
       const result = await readJson(response);
       const created = Number(result?.createdSiteCount || 0);
+      const blocked = Number(result?.blockedSiteCount || 0);
       setPartnerNotice(
         created
-          ? `${created} mini-site${created > 1 ? "s" : ""} équipé${created > 1 ? "s" : ""} d’une page Partenaires en brouillon. Aucune page n’a été publiée automatiquement.`
-          : "Aucune page Partenaires manquante : aucun changement appliqué."
+          ? `${created} mini-site${created > 1 ? "s" : ""} équipé${created > 1 ? "s" : ""} d’une page Partenaires en brouillon. Aucune page n’a été publiée automatiquement.${blocked ? ` ${blocked} mini-site${blocked > 1 ? "s" : ""} reste${blocked > 1 ? "nt" : ""} bloqué${blocked > 1 ? "s" : ""} car la page /agence est absente.` : ""}`
+          : blocked
+            ? `Aucune page créée. ${blocked} mini-site${blocked > 1 ? "s" : ""} reste${blocked > 1 ? "nt" : ""} bloqué${blocked > 1 ? "s" : ""} car la page /agence est absente.`
+            : "Aucune page Partenaires manquante : aucun changement appliqué."
       );
       await loadPartnerRollout();
       const sitesResponse = await fetch("/api/website-builder/sites", { cache: "no-store" });
@@ -131,7 +138,7 @@ export default function WebsiteBuilderLauncher() {
     } finally {
       setPartnerApplying(false);
     }
-  }, [loadPartnerRollout, partnerApplying, partnerRollout]);
+  }, [eligibleMissing, loadPartnerRollout, partnerApplying]);
 
   return (
     <main className={styles.root}>
@@ -157,14 +164,16 @@ export default function WebsiteBuilderLauncher() {
           <button
             type="button"
             className={styles.rolloutButton}
-            disabled={partnerLoading || partnerApplying || !partnerRollout?.summary?.missing}
+            disabled={partnerLoading || partnerApplying || eligibleMissing <= 0}
             onClick={applyPartnerRollout}
           >
             {partnerApplying
               ? "Création des brouillons…"
-              : partnerRollout?.summary?.missing
-                ? `Créer ${partnerRollout.summary.missing} page${partnerRollout.summary.missing > 1 ? "s" : ""} manquante${partnerRollout.summary.missing > 1 ? "s" : ""}`
-                : "Réseau déjà équipé"}
+              : eligibleMissing > 0
+                ? `Créer ${eligibleMissing} page${eligibleMissing > 1 ? "s" : ""} éligible${eligibleMissing > 1 ? "s" : ""}`
+                : blockedMissing > 0
+                  ? "Rollout bloqué"
+                  : "Réseau déjà équipé"}
           </button>
         </div>
 
@@ -175,7 +184,10 @@ export default function WebsiteBuilderLauncher() {
             <span><strong>{partnerRollout.summary.totalSites}</strong> mini-sites</span>
             <span><strong>{partnerRollout.summary.published}</strong> publiées</span>
             <span><strong>{partnerRollout.summary.draftOrReview}</strong> en brouillon/révision</span>
-            <span data-alert={partnerRollout.summary.missing > 0 ? "true" : "false"}><strong>{partnerRollout.summary.missing}</strong> manquantes</span>
+            <span data-alert={eligibleMissing > 0 ? "true" : "false"}><strong>{eligibleMissing}</strong> éligibles à créer</span>
+            {blockedMissing > 0 ? (
+              <span data-alert="true"><strong>{blockedMissing}</strong> bloquées (/agence absente)</span>
+            ) : null}
           </div>
         ) : null}
 
@@ -203,7 +215,8 @@ export default function WebsiteBuilderLauncher() {
         {!loading && !error ? (
           <div className={styles.grid}>
             {filteredSites.map((site) => {
-              const partnerState = partnerStateBySiteId.get(String(site.id));
+              const partnerRow = partnerRowBySiteId.get(String(site.id));
+              const partnerState = partnerRow?.partnerPageState;
               return (
                 <article className={styles.card} key={site.id}>
                   <div>
@@ -212,7 +225,9 @@ export default function WebsiteBuilderLauncher() {
                     <div className={styles.badges}>
                       <span>{statusLabel(site)}</span>
                       <span>{homeState(site)}</span>
-                      <span data-partner-state={partnerState || "unknown"}>{partnerStateLabel(partnerState)}</span>
+                      <span data-partner-state={partnerState || "unknown"}>
+                        {partnerStateLabel(partnerState, partnerRow?.rolloutEligible)}
+                      </span>
                     </div>
                   </div>
                   <Link className={styles.open} href={`/website-builder/editor/${encodeURIComponent(site.id)}`}>
