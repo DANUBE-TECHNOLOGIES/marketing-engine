@@ -57,38 +57,38 @@ function operationWriteTarget(page = {}, operation = {}, index = 0) {
   const pageSlug = String(page.pageSlug || "home").trim() || "home";
   if (!siteSlug || !operation?.type) return null;
 
+  const base = {
+    candidateKey: page.key,
+    operationType: operation.type,
+    operationIndex: index,
+    sourceValueFingerprint: operation.sourceValueFingerprint || null,
+    linkHref: operation.link?.href || null,
+  };
+
   if (operation.type === "enrich-body") {
     return {
+      ...base,
       targetKey: `${siteSlug}:${pageSlug}:blocks:append-editorial-copy`,
-      candidateKey: page.key,
-      operationType: operation.type,
-      operationIndex: index,
     };
   }
   if (operation.type === "strengthen-title") {
     return {
+      ...base,
       targetKey: `${siteSlug}:${pageSlug}:page:seoTitle`,
-      candidateKey: page.key,
-      operationType: operation.type,
-      operationIndex: index,
     };
   }
   if (operation.type === "strengthen-meta-description") {
     return {
+      ...base,
       targetKey: `${siteSlug}:${pageSlug}:page:metaDescription`,
-      candidateKey: page.key,
-      operationType: operation.type,
-      operationIndex: index,
     };
   }
   if (operation.type === "strengthen-h1") {
     const blockId = operation.target?.blockId;
     if (blockId === null || blockId === undefined) return null;
     return {
+      ...base,
       targetKey: `${siteSlug}:${pageSlug}:block:${String(blockId)}:title`,
-      candidateKey: page.key,
-      operationType: operation.type,
-      operationIndex: index,
     };
   }
   if (operation.type === "add-internal-link") {
@@ -96,16 +96,24 @@ function operationWriteTarget(page = {}, operation = {}, index = 0) {
     const blockId = operation.target?.blockId;
     if (!sourcePageSlug || blockId === null || blockId === undefined) return null;
     return {
+      ...base,
       targetKey: `${siteSlug}:${sourcePageSlug}:block:${String(blockId)}:content.html`,
-      candidateKey: page.key,
-      operationType: operation.type,
-      operationIndex: index,
     };
   }
   return null;
 }
 
-function writeTargetCollisions(pages = []) {
+function mergeableInternalLinkGroup(rows = []) {
+  if (rows.length < 2 || !rows.every((row) => row.operationType === "add-internal-link")) return false;
+  const fingerprints = new Set(rows.map((row) => String(row.sourceValueFingerprint || "").toLowerCase()));
+  const hrefs = rows.map((row) => String(row.linkHref || "").trim());
+  return fingerprints.size === 1
+    && /^[0-9a-f]{64}$/.test([...fingerprints][0] || "")
+    && hrefs.every(Boolean)
+    && new Set(hrefs).size === hrefs.length;
+}
+
+function writeTargetGroups(pages = []) {
   const byTarget = new Map();
   for (const page of pages || []) {
     const operations = page.executionPayload?.operations || [];
@@ -117,10 +125,26 @@ function writeTargetCollisions(pages = []) {
       byTarget.set(target.targetKey, rows);
     });
   }
-  return Array.from(byTarget.entries())
-    .filter(([, rows]) => rows.length > 1)
-    .map(([targetKey, rows]) => ({ targetKey, writes: rows }))
-    .sort((left, right) => left.targetKey.localeCompare(right.targetKey, "fr"));
+
+  const mergeable = [];
+  const collisions = [];
+  for (const [targetKey, writes] of byTarget.entries()) {
+    if (writes.length <= 1) continue;
+    const group = { targetKey, writes };
+    if (mergeableInternalLinkGroup(writes)) mergeable.push(group);
+    else collisions.push(group);
+  }
+
+  const sort = (left, right) => left.targetKey.localeCompare(right.targetKey, "fr");
+  return { mergeable: mergeable.sort(sort), collisions: collisions.sort(sort) };
+}
+
+function writeTargetCollisions(pages = []) {
+  return writeTargetGroups(pages).collisions;
+}
+
+function mergeableWriteTargetGroups(pages = []) {
+  return writeTargetGroups(pages).mergeable;
 }
 
 function buildExecutionPlan(manifest = {}, preflightReport = {}) {
@@ -137,7 +161,9 @@ function buildExecutionPlan(manifest = {}, preflightReport = {}) {
     })),
   });
   const incompletePages = pages.filter((page) => page.executionPayloadComplete !== true);
-  const collisions = writeTargetCollisions(pages);
+  const groups = writeTargetGroups(pages);
+  const collisions = groups.collisions;
+  const mergeableWriteTargets = groups.mergeable;
 
   const executionPlanFingerprint = digest({
     version: "mse-25.31",
@@ -145,6 +171,7 @@ function buildExecutionPlan(manifest = {}, preflightReport = {}) {
     candidateSetFingerprint: verifiedApproval.candidateSetFingerprint,
     approvalDecisionFingerprint,
     pages,
+    mergeableWriteTargets,
     writeTargetCollisions: collisions,
   });
 
@@ -175,6 +202,8 @@ function buildExecutionPlan(manifest = {}, preflightReport = {}) {
       approvedManualReviewCount: pages.filter((page) => page.executionClass === "manual-review-needed").length,
       payloadCompleteCount: pages.length - incompletePages.length,
       payloadIncompleteCount: incompletePages.length,
+      mergeableWriteTargetGroupCount: mergeableWriteTargets.length,
+      mergedInternalLinkOperationCount: mergeableWriteTargets.reduce((sum, group) => sum + group.writes.length, 0),
       writeTargetCollisionCount: collisions.length,
       projectedWarningReduction: pages.reduce((sum, page) => sum + Number(page.projectedReduction || 0), 0),
     },
@@ -182,6 +211,7 @@ function buildExecutionPlan(manifest = {}, preflightReport = {}) {
       key: page.key,
       incompleteOperationTypes: page.incompleteOperationTypes,
     })),
+    mergeableWriteTargets,
     writeTargetCollisions: collisions,
     pages,
   };
@@ -215,6 +245,7 @@ function run({ approvalManifestPath, preflightReportPath, output, emitOutput = t
     approvalDecisionFingerprint: plan.source.approvalDecisionFingerprint,
     summary: plan.summary,
     incompletePages: plan.incompletePages,
+    mergeableWriteTargets: plan.mergeableWriteTargets,
     writeTargetCollisions: plan.writeTargetCollisions,
   };
   if (emitOutput) console.log(JSON.stringify(result, null, 2));
@@ -240,7 +271,10 @@ module.exports = {
   buildExecutionPlan,
   defaultOutputPath,
   executionPayloadMap,
+  mergeableInternalLinkGroup,
+  mergeableWriteTargetGroups,
   operationWriteTarget,
   run,
   writeTargetCollisions,
+  writeTargetGroups,
 };
