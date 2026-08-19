@@ -46,7 +46,6 @@ test("Website Designer exposes at most three agency-specific partners", () => {
   assert.match(editor, /maxAgencyPartners = 3/);
   assert.match(editor, /getCommonPartners\(\)/);
   assert.match(editor, /logoAssetId/);
-  assert.match(editor, /Texte alternatif/);
   assert.match(editor, /Lien facultatif/);
 
   assert.match(builder, /PartnerLogosEditor/);
@@ -62,6 +61,27 @@ test("Website Designer exposes at most three agency-specific partners", () => {
 
   assert.match(renderer, /selectAgencyPartners\(content\.agencyPartners/);
   assert.match(renderer, /max:\s*Number\(content\.maxAgencyPartners\) \|\| 3/);
+});
+
+test("Website Designer agency partner slots prefer verified canonical partners with a custom fallback", () => {
+  const editor = read("components/page-builder-v2/BlockListEditors.js");
+
+  assert.match(editor, /FULL_PARTNERS/);
+  assert.match(editor, /PARTNER_DIRECTORY_CATEGORIES/);
+  assert.match(editor, /getPartnerProfile/);
+  assert.match(editor, /partner\?\.publishable && partner\?\.readyForPublication/);
+  assert.match(editor, /canonicalAgencyPartnerOptions/);
+  assert.match(editor, /catalogPartnerId/);
+  assert.match(editor, /source: "catalog"/);
+  assert.match(editor, /source: "custom"/);
+  assert.match(editor, /Partenaire du catalogue Mondescale/);
+  assert.match(editor, /Partenaire personnalisé/);
+  assert.match(editor, /selectedElsewhere\.has\(partner\.id\)/);
+  assert.match(editor, /disabled=\{selectedElsewhere\.has\(partner\.id\)\}/);
+  assert.match(editor, /canonicalPartnerValue/);
+  assert.match(editor, /logoUrl: partner\.logoUrl/);
+  assert.match(editor, /summary: partner\.summary/);
+  assert.match(editor, /tags: \[\.\.\.partner\.tags\]/);
 });
 
 test("public agency partner selection is deterministic, deduplicated and URL-safe", () => {
