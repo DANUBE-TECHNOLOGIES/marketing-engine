@@ -108,7 +108,8 @@ test("agency partner recommendation engine is deterministic, explainable and opt
   assert.match(editor, /recommendAgencyPartners/);
   assert.match(editor, /Suggestions pour l’agence/);
   assert.match(editor, /Orientation commerciale/);
-  assert.match(editor, /Le moteur propose uniquement des partenaires vérifiés et n’applique jamais un choix sans action de votre part/);
+  assert.match(editor, /propose uniquement des partenaires vérifiés/);
+  assert.match(editor, /aucun choix n’est appliqué sans votre action/);
   assert.match(editor, /const addRecommendation/);
   assert.match(editor, /onClick=\{\(\) => addRecommendation\(entry\)\}/);
   assert.match(editor, /maxAgencyPartners - agency\.length/);
