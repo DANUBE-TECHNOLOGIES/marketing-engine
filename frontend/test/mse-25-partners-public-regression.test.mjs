@@ -90,6 +90,30 @@ test("Website Designer agency partner slots prefer verified canonical partners w
   assert.match(editor, /tags: \[\.\.\.partner\.tags\]/);
 });
 
+test("agency partner recommendation engine is deterministic, explainable and opt-in", () => {
+  const recommendation = read("components/page-builder/shared/partnerRecommendations.js");
+  const editor = read("components/page-builder-v2/BlockListEditors.js");
+
+  assert.match(recommendation, /INTENT_RULES/);
+  for (const category of ["croisieres", "circuits", "sejours", "sur-mesure", "france-europe"]) assert.match(recommendation, new RegExp(`category: "${category}"`));
+  assert.match(recommendation, /getPartnerProfile/);
+  assert.match(recommendation, /partner\?\.publishable && partner\?\.readyForPublication/);
+  assert.match(recommendation, /alreadySelected/);
+  assert.match(recommendation, /categoryScore \* 100/);
+  assert.match(recommendation, /usedCategories/);
+  assert.match(recommendation, /export function recommendAgencyPartners/);
+  assert.match(recommendation, /export function buildPartnerRecommendationSignals/);
+  assert.match(recommendation, /if \(!categoryScores\.size\) return \[\]/);
+
+  assert.match(editor, /recommendAgencyPartners/);
+  assert.match(editor, /Suggestions pour l’agence/);
+  assert.match(editor, /Orientation commerciale/);
+  assert.match(editor, /Le moteur propose uniquement des partenaires vérifiés et n’applique jamais un choix sans action de votre part/);
+  assert.match(editor, /const addRecommendation/);
+  assert.match(editor, /onClick=\{\(\) => addRecommendation\(entry\)\}/);
+  assert.match(editor, /maxAgencyPartners - agency\.length/);
+});
+
 test("catalogue-backed agency partners are rehydrated from verified source before public rendering", () => {
   const resolver = read("components/page-builder/shared/agencyPartnerCatalog.js");
   const renderer = read("components/public-site/renderers/PartnersRenderer.js");
