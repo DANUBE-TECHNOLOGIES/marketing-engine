@@ -1,6 +1,7 @@
 import { getSectionContent, getSectionTitle } from "./helpers";
 import { getPartnerDirectoryCategories } from "../../page-builder/shared/fullPartners";
 import { getPartnerProfile, getPublishablePartnerProfiles } from "../../page-builder/shared/partnerProfile";
+import { safePartnerHref } from "../../page-builder/shared/partnerSelection";
 import styles from "./PartnerDirectoryRenderer.module.css";
 
 function MetadataGroup({ label, values }) {
@@ -17,6 +18,7 @@ function MetadataGroup({ label, values }) {
 function PartnerCard({ partner }) {
   const profile = getPartnerProfile(partner);
   if (!profile) return null;
+  const website = safePartnerHref(profile.details?.website, { allowInternal: false });
 
   return (
     <article className={styles.card} data-partner-id={profile.id}>
@@ -54,8 +56,8 @@ function PartnerCard({ partner }) {
               <MetadataGroup label="Types de voyages" values={profile.details.travelTypes} />
               <MetadataGroup label="Marques" values={profile.details.brands} />
               {profile.details.note ? <p className={styles.note}>{profile.details.note}</p> : null}
-              {profile.details.website ? (
-                <a className={styles.website} href={profile.details.website} target="_blank" rel="noreferrer">
+              {website ? (
+                <a className={styles.website} href={website} target="_blank" rel="noopener noreferrer">
                   Site du partenaire
                 </a>
               ) : null}
