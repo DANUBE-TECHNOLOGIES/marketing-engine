@@ -31,7 +31,8 @@ export function partnerKey(value) {
 export function safePartnerHref(value, { allowInternal = true } = {}) {
   const href = text(value);
   if (!href) return "";
-  if (allowInternal && (href.startsWith("/") || href.startsWith("#"))) return href;
+  const isInternalPath = href.startsWith("/") && !href.startsWith("//");
+  if (allowInternal && (isInternalPath || href.startsWith("#"))) return href;
   try {
     const url = new URL(href);
     return ["http:", "https:"].includes(url.protocol) ? url.toString() : "";
@@ -41,7 +42,9 @@ export function safePartnerHref(value, { allowInternal = true } = {}) {
 }
 
 export function safePartnerAssetUrl(value) {
-  return safePartnerHref(value, { allowInternal: true });
+  const assetUrl = text(value);
+  if (!assetUrl || assetUrl.startsWith("#")) return "";
+  return safePartnerHref(assetUrl, { allowInternal: true });
 }
 
 function networkKeys(networkItems = []) {
@@ -78,7 +81,6 @@ export function selectAgencyPartners(items = [], { networkItems = [], max = 3 } 
 
     const logo = safePartnerAssetUrl(source.logoUrl || source.logo || source.imageUrl);
     const href = safePartnerHref(source.href || source.url || source.link);
-    if (!logo && !name) continue;
 
     selected.push({
       ...source,
