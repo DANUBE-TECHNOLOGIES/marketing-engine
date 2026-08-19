@@ -18,8 +18,14 @@ test("website builder exposes a safe network partner page rollout cockpit", () =
   assert.match(launcher, /aucune publication n’est automatique/);
   assert.match(launcher, /summary\?\.eligibleMissing/);
   assert.match(launcher, /summary\?\.blockedMissing/);
-  assert.match(launcher, /partnerRollout\.summary\.published/);
-  assert.match(launcher, /partnerRollout\.summary\.draftOrReview/);
+  assert.match(launcher, /summary\?\.publishedReady/);
+  assert.match(launcher, /summary\?\.publishedNotReady/);
+  assert.match(launcher, /summary\?\.draftOrReviewReady/);
+  assert.match(launcher, /Partenaires publiée — prête/);
+  assert.match(launcher, /Partenaires publiée — à corriger/);
+  assert.match(launcher, /Partenaires en brouillon — prête à publier/);
+  assert.match(launcher, /partnerRow\?\.partnerPageReady/);
+  assert.match(launcher, /data-partner-ready=\{partnerReady \? "true" : "false"\}/);
   assert.match(launcher, /Rollout bloqué/);
   assert.match(launcher, /page \/agence est absente/);
   assert.match(launcher, /partnerStateLabel/);
@@ -31,6 +37,8 @@ test("website builder exposes a safe network partner page rollout cockpit", () =
   assert.match(css, /\.rolloutStats/);
   assert.match(css, /data-partner-state="published"/);
   assert.match(css, /data-partner-state="missing"/);
+  assert.match(css, /data-partner-ready="true"/);
+  assert.match(css, /data-partner-ready="false"/);
 });
 
 test("website builder proxy forwards rollout audit and confirmed creation to the backend", () => {
