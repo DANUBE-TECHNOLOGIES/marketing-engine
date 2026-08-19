@@ -85,17 +85,27 @@ function runtimeBrandAssets(payload) {
   return assets;
 }
 
+function previewPageKey(page) {
+  if (!page) return "";
+  return JSON.stringify({
+    id: page.id || null,
+    slug: page.slug || "",
+    status: page.status || "draft",
+    published: page.published === true,
+    seoTitle: page.seoTitle || "",
+    seoDescription: page.seoDescription || "",
+    blocks: page.blocks || [],
+  });
+}
+
 export default function PublicPagePreview({ page, site }) {
-  const [brandRuntime, setBrandRuntime] = useState(null);
-  const [hydratedPage, setHydratedPage] = useState(page || null);
-  const [hours, setHours] = useState(site?.hours || null);
+  const pageKey = useMemo(() => previewPageKey(page), [page]);
+  const [hydratedPreview, setHydratedPreview] = useState(null);
+  const [brandRuntimeState, setBrandRuntimeState] = useState(null);
+  const [hoursState, setHoursState] = useState(null);
 
   useEffect(() => {
-    setHydratedPage(page || null);
-
-    if (!site?.slug || !page) {
-      return undefined;
-    }
+    if (!site?.slug || !page) return undefined;
 
     let active = true;
     const controller = new AbortController();
@@ -121,7 +131,7 @@ export default function PublicPagePreview({ page, site }) {
         const payload = await response.json();
 
         if (active && payload?.page) {
-          setHydratedPage(payload.page);
+          setHydratedPreview({ key: pageKey, page: payload.page });
         }
       } catch (error) {
         if (error?.name !== "AbortError") {
@@ -135,7 +145,11 @@ export default function PublicPagePreview({ page, site }) {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [page, site?.slug]);
+  }, [page, pageKey, site?.slug]);
+
+  const hydratedPage = hydratedPreview?.key === pageKey
+    ? hydratedPreview.page
+    : page || null;
 
   const previewPage = useMemo(
     () => (hydratedPage ? toPublicPreviewPage(hydratedPage) : null),
@@ -146,6 +160,10 @@ export default function PublicPagePreview({ page, site }) {
     () => previewNavigation(site, page),
     [site, page]
   );
+
+  const hours = hoursState?.slug === site?.slug
+    ? hoursState.hours
+    : site?.hours || null;
 
   const previewSite = useMemo(
     () =>
@@ -159,6 +177,10 @@ export default function PublicPagePreview({ page, site }) {
     [site, navigation, hours]
   );
 
+  const brandRuntime = brandRuntimeState?.slug === site?.slug
+    ? brandRuntimeState.payload
+    : null;
+
   const brandVariables = useMemo(
     () => runtimeCssVariables(brandRuntime),
     [brandRuntime]
@@ -170,10 +192,7 @@ export default function PublicPagePreview({ page, site }) {
   );
 
   useEffect(() => {
-    if (!site?.slug) {
-      setBrandRuntime(null);
-      return undefined;
-    }
+    if (!site?.slug) return undefined;
 
     let active = true;
 
@@ -190,15 +209,12 @@ export default function PublicPagePreview({ page, site }) {
           }
         );
 
-        if (!response.ok) {
-          if (active) setBrandRuntime(null);
-          return;
-        }
+        if (!response.ok) return;
 
         const payload = await response.json();
-        if (active) setBrandRuntime(payload);
+        if (active) setBrandRuntimeState({ slug: site.slug, payload });
       } catch {
-        if (active) setBrandRuntime(null);
+        // La preview reste utilisable sans runtime de marque distant.
       }
     }
 
@@ -210,11 +226,7 @@ export default function PublicPagePreview({ page, site }) {
   }, [site?.slug]);
 
   useEffect(() => {
-    setHours(site?.hours || null);
-
-    if (!site?.slug) {
-      return undefined;
-    }
+    if (!site?.slug) return undefined;
 
     let active = true;
     const controller = new AbortController();
@@ -238,7 +250,7 @@ export default function PublicPagePreview({ page, site }) {
         const payload = await response.json();
 
         if (active && payload?.hours) {
-          setHours(payload.hours);
+          setHoursState({ slug: site.slug, hours: payload.hours });
         }
       } catch (error) {
         if (error?.name !== "AbortError") {
@@ -253,7 +265,7 @@ export default function PublicPagePreview({ page, site }) {
       active = false;
       controller.abort();
     };
-  }, [site?.slug, site?.hours]);
+  }, [site?.slug]);
 
   if (!previewSite || !previewPage) {
     return null;
