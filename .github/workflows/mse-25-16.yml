@@ -10,6 +10,7 @@ on:
       - 'backend/src/modules/minisite-structured-data/**'
       - 'backend/src/modules/minisite-seo-enrichment/**'
       - 'backend/src/modules/agency-seo/**'
+      - 'backend/src/modules/agency-site/**'
       - 'backend/scripts/search-console-readiness-check.js'
       - 'backend/test/search-console-*.test.js'
       - 'backend/test/minisite-local-*.test.js'
