@@ -23,10 +23,11 @@ on:
       - 'frontend/app/api/website-builder/**'
       - 'frontend/app/indexation/**'
       - 'frontend/lib/indexation-api.js'
+      - 'frontend/lib/page-builder-v2/**'
       - 'frontend/test/mse-25-*.test.mjs'
       - 'frontend/components/page-builder/shared/**'
       - 'frontend/components/page-builder-v2/**'
-      - 'frontend/components/public-site/renderers/**'
+      - 'frontend/components/public-site/**'
       - 'frontend/components/website-builder/**'
       - 'frontend/package.json'
       - '.github/workflows/mse-25-16.yml'
@@ -95,6 +96,9 @@ jobs:
 
       - name: Lint partner rollout controls
         run: npx eslint "app/api/website-builder/partners/rollout/route.js" "components/website-builder/WebsiteBuilderLauncher.js"
+
+      - name: Lint partner page designer and public chain
+        run: npx eslint "lib/page-builder-v2/page-builder-state.js" "lib/page-builder-v2/page-builder-api.js" "lib/page-builder-v2/block-catalog.js" "components/page-builder-v2/VisualPageBuilder.js" "components/page-builder-v2/PublicPagePreview.js" "components/public-site/PublicSiteHeader.js" "components/public-site/renderers/PartnerDirectoryRenderer.js" "components/public-site/renderers/PageHeaderRenderer.js"
 
       - name: Lint sitemap and indexation API
         run: npx eslint "app/agence/[siteSlug]/sitemap.xml/route.js" "app/api/indexation/route.js" "lib/indexation-api.js"
