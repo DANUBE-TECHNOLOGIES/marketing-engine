@@ -11,10 +11,15 @@ const read = (relativePath) => fs.readFileSync(path.join(frontendRoot, relativeP
 test("designer loads generated partner sections when legacy blocks array is empty", () => {
   const state = read("lib/page-builder-v2/page-builder-state.js");
 
-  assert.match(state, /export function pageBlocksSource\(page\)/);
-  assert.match(state, /Array\.isArray\(page\?\.blocks\) && page\.blocks\.length > 0/);
-  assert.match(state, /Array\.isArray\(page\?\.sections\) && page\.sections\.length > 0/);
-  assert.match(state, /const blocks = pageBlocksSource\(page\)/);
+  assert.match(state, /function canonicalPageBlocks\(page\)/);
+  assert.match(state, /Array\.isArray\(page\?\.sections\) && page\.sections\.length/);
+  assert.match(state, /Array\.isArray\(page\?\.blocks\) && page\.blocks\.length/);
+  assert.ok(
+    state.indexOf("Array.isArray(page?.sections) && page.sections.length") <
+      state.indexOf("Array.isArray(page?.blocks) && page.blocks.length"),
+    "canonical AgencySiteSection content must win over legacy PageBlock content"
+  );
+  assert.match(state, /const blocks = canonicalPageBlocks\(page\)/);
   assert.match(state, /page\?\.metaDescription/);
 });
 
