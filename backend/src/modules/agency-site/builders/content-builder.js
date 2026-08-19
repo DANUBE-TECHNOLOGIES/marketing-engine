@@ -15,7 +15,9 @@ class ContentBuilder {
     const shared = { agencyId: agency.id, agencyName: name, city, contact: contact(agency), sitePath: site.basePath };
     const factories = {
       "hero": () => ({ eyebrow: `Agence de voyages à ${city}`, title: name, text: `Construisons ensemble un voyage adapté à vos envies, à votre budget et à votre façon de voyager.`, primaryCta: { label: "Demander un devis", href: `${site.basePath}/contact` }, secondaryCta: { label: "Découvrir l’agence", href: `${site.basePath}/agence` } }),
-      "page-header": () => ({ title: page.h1, introduction: `${page.title} avec ${name}, votre agence de voyages à ${city}.` }),
+      "page-header": () => page.pageType === "PARTNERS"
+        ? ({ title: page.h1, introduction: `Découvrez les tour-opérateurs, croisiéristes et spécialistes avec lesquels ${name}, votre agence de voyages à ${city}, peut construire et comparer les solutions de votre prochain voyage.` })
+        : ({ title: page.h1, introduction: `${page.title} avec ${name}, votre agence de voyages à ${city}.` }),
       "agency-introduction": () => ({ title: `Votre projet voyage commence à ${city}`, paragraphs: [`L’équipe de ${name} vous accompagne avant, pendant et après votre voyage.`, `Nous comparons les solutions adaptées à votre projet et restons votre interlocuteur de proximité.`], link: { label: "En savoir plus sur l’agence", href: `${site.basePath}/agence` } }),
       "agency-story": () => ({ title: `Une agence proche de ses voyageurs`, paragraphs: [`${name} accompagne les voyageurs de ${city} et des environs dans leurs projets de vacances, circuits, croisières et voyages sur mesure.`, `Notre rôle est de vous faire gagner du temps, de sécuriser vos choix et de construire un séjour cohérent.`] }),
       "agency-details": () => ({ title: "Informations pratiques", ...contact(agency) }),
