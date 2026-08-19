@@ -5,12 +5,17 @@ const assert = require("node:assert/strict");
 const {
   buildPartnerPageRolloutStatus,
   ensureNetworkPartnerPages,
+  ensurePartnerPageOnly,
   partnerPageState,
 } = require("../src/modules/agency-site/partner-page-rollout");
 const SitemapBuilder = require("../src/modules/agency-site/builders/sitemap-builder");
 const { isPublishedPage } = require("../src/modules/agency-site/builders/sitemap-builder");
 
-function fakeService() {
+function agencyPage(slug) {
+  return { id: `agency-${slug}`, title: "Notre agence", slug: "agence", path: `/agence/${slug}/agence`, status: "published", published: true };
+}
+
+function fakeService({ gienAgencyPage = true } = {}) {
   const sites = [
     {
       id: "site-gien",
@@ -19,7 +24,7 @@ function fakeService() {
       status: "published",
       agencyId: 1,
       agency: { name: "Mondescale Gien", city: "Gien" },
-      pages: [],
+      pages: gienAgencyPage ? [agencyPage("gien")] : [],
     },
     {
       id: "site-nevers",
@@ -28,7 +33,10 @@ function fakeService() {
       status: "published",
       agencyId: 2,
       agency: { name: "Mondescale Nevers", city: "Nevers" },
-      pages: [{ id: "partners-nevers", title: "Nos partenaires", slug: "partenaires", path: "/agence/nevers/partenaires", status: "draft", published: false }],
+      pages: [
+        agencyPage("nevers"),
+        { id: "partners-nevers", title: "Nos partenaires", slug: "partenaires", path: "/agence/nevers/partenaires", status: "draft", published: false },
+      ],
     },
     {
       id: "site-dax",
@@ -37,7 +45,10 @@ function fakeService() {
       status: "published",
       agencyId: 3,
       agency: { name: "Mondescale Dax", city: "Dax" },
-      pages: [{ id: "partners-dax", title: "Nos partenaires", slug: "partenaires", path: "/agence/dax/partenaires", status: "published", published: true }],
+      pages: [
+        agencyPage("dax"),
+        { id: "partners-dax", title: "Nos partenaires", slug: "partenaires", path: "/agence/dax/partenaires", status: "published", published: true },
+      ],
     },
   ];
   const calls = [];
@@ -48,9 +59,11 @@ function fakeService() {
     async ensurePartnerPage(agencyId, input) {
       calls.push({ agencyId, input });
       const site = sites.find((candidate) => Number(candidate.agencyId) === Number(agencyId));
+      const existing = site.pages.find((page) => page.slug === "partenaires");
+      if (existing) return { created: 0, skipped: 1, partnerPage: existing };
       const page = { id: `partners-${site.slug}`, title: "Nos partenaires", slug: "partenaires", path: `/agence/${site.slug}/partenaires`, status: "draft", published: false };
       site.pages.push(page);
-      return { created: 1, skipped: 1, partnerPage: page };
+      return { created: 1, skipped: 0, partnerPage: page };
     },
   };
 }
@@ -58,8 +71,16 @@ function fakeService() {
 test("partner page rollout distinguishes missing draft and published pages", async () => {
   const service = fakeService();
   const status = await buildPartnerPageRolloutStatus(service);
-  assert.deepEqual(status.summary, { totalSites: 3, missing: 1, published: 1, draftOrReview: 1 });
+  assert.deepEqual(status.summary, {
+    totalSites: 3,
+    missing: 1,
+    eligibleMissing: 1,
+    blockedMissing: 0,
+    published: 1,
+    draftOrReview: 1,
+  });
   assert.equal(status.sites.find((row) => row.siteSlug === "gien").partnerPageState, "missing");
+  assert.equal(status.sites.find((row) => row.siteSlug === "gien").rolloutEligible, true);
   assert.equal(status.sites.find((row) => row.siteSlug === "nevers").partnerPageState, "draft");
   assert.equal(status.sites.find((row) => row.siteSlug === "dax").partnerPageState, "published");
   assert.equal(partnerPageState({ status: "review", published: false }), "review");
@@ -75,10 +96,53 @@ test("network rollout requires confirmation and creates only missing partner pag
   assert.equal(service.calls.length, 1);
   assert.deepEqual(service.calls[0], { agencyId: 1, input: { confirmed: true } });
   assert.equal(result.createdSiteCount, 1);
-  assert.deepEqual(result.before, { totalSites: 3, missing: 1, published: 1, draftOrReview: 1 });
-  assert.deepEqual(result.after, { totalSites: 3, missing: 0, published: 1, draftOrReview: 2 });
+  assert.equal(result.blockedSiteCount, 0);
+  assert.deepEqual(result.before, {
+    totalSites: 3,
+    missing: 1,
+    eligibleMissing: 1,
+    blockedMissing: 0,
+    published: 1,
+    draftOrReview: 1,
+  });
+  assert.deepEqual(result.after, {
+    totalSites: 3,
+    missing: 0,
+    eligibleMissing: 0,
+    blockedMissing: 0,
+    published: 1,
+    draftOrReview: 2,
+  });
   assert.equal(result.results[0].partnerPage.status, "draft");
   assert.equal(result.results[0].partnerPage.published, false);
+});
+
+test("partner rollout never creates the parent agency page as a side effect", async () => {
+  const service = fakeService({ gienAgencyPage: false });
+  const status = await buildPartnerPageRolloutStatus(service);
+  const gien = status.sites.find((row) => row.siteSlug === "gien");
+  assert.equal(gien.partnerPageState, "missing");
+  assert.equal(gien.agencyPagePresent, false);
+  assert.equal(gien.rolloutEligible, false);
+  assert.equal(gien.rolloutBlockReason, "AGENCY_PAGE_MISSING");
+  assert.equal(status.summary.blockedMissing, 1);
+
+  const networkResult = await ensureNetworkPartnerPages(service, { confirmed: true });
+  assert.equal(networkResult.createdSiteCount, 0);
+  assert.equal(networkResult.blockedSiteCount, 1);
+  assert.equal(service.calls.length, 0);
+  assert.deepEqual(networkResult.blocked[0], {
+    agencyId: 1,
+    siteId: "site-gien",
+    siteSlug: "gien",
+    reason: "AGENCY_PAGE_MISSING",
+  });
+
+  await assert.rejects(
+    () => ensurePartnerPageOnly(service, 1, { confirmed: true }),
+    (error) => error?.code === "PARTNER_PAGE_ROLLOUT_AGENCY_PAGE_REQUIRED" && error?.statusCode === 409
+  );
+  assert.equal(service.calls.length, 0);
 });
 
 test("draft partner page stays out of sitemap until publication", () => {
