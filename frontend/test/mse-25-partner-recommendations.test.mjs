@@ -40,8 +40,11 @@ test("partner editor consumes minisite signals while keeping manual focus as an 
   assert.match(editor, /\.\.\.siteSignals, \.\.\.selectedSignals/);
   assert.match(editor, /recommendAgencyPartners\(\{/);
   assert.match(editor, /max: Math\.max\(0, maxAgencyPartners - agency\.length\)/);
+  assert.match(editor, /const addRecommendation = \(entry\) =>/);
   assert.match(editor, /onClick=\{\(\) => addRecommendation\(entry\)\}/);
-  assert.doesNotMatch(editor, /useEffect\([^]*addRecommendation\(/);
+  assert.match(editor, /aucun choix n’est appliqué sans votre action/);
+  assert.doesNotMatch(editor, /useEffect\(\(\) =>\s*addRecommendation/);
+  assert.doesNotMatch(editor, /\.forEach\(addRecommendation\)/);
 });
 
 test("VisualPageBuilder wires live minisite signals into PartnerLogosEditor", () => {
