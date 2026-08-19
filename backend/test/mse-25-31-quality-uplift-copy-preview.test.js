@@ -3,12 +3,18 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { buildBodyCopyPreview, pageProfile, selectParagraphs } = require("../src/modules/minisite-seo-enrichment/quality-uplift-copy-preview");
+const { buildBodyCopyPreview, deCity, pageProfile, selectParagraphs } = require("../src/modules/minisite-seo-enrichment/quality-uplift-copy-preview");
 
 test("pageProfile recognizes thin editorial page families deterministically", () => {
   assert.equal(pageProfile({ slug: "equipe", title: "Notre équipe" }), "team");
   assert.equal(pageProfile({ slug: "partenaires", title: "Nos partenaires" }), "partners");
   assert.equal(pageProfile({ slug: "avis", title: "Avis clients" }), "reviews");
+});
+
+test("French city contraction uses d’ before a vowel and de otherwise", () => {
+  assert.equal(deCity("Ozoir la Ferrière"), "d’Ozoir la Ferrière");
+  assert.equal(deCity("Amilly"), "d’Amilly");
+  assert.equal(deCity("Gien"), "de Gien");
 });
 
 test("body preview uses only supplied agency/page context and does not invent local facts", () => {
@@ -59,7 +65,9 @@ test("team and partner copy avoids mechanical agency-city repetition", () => {
   const team = buildBodyCopyPreview({ agency, page: { slug: "equipe", title: "Notre équipe" }, action });
   const partners = buildBodyCopyPreview({ agency, page: { slug: "partenaires", title: "Nos partenaires" }, action });
   assert.doesNotMatch(team.html, /Mondescale Ozoir la Ferrière[^<]{0,100}à Ozoir la Ferrière[^<]{0,100}Ozoir la Ferrière/i);
-  assert.doesNotMatch(partners.html, /agence de Ozoir la Ferrière[^<]{0,80}Ozoir la Ferrière/i);
+  assert.doesNotMatch(partners.html, /agence de Ozoir la Ferrière/i);
+  assert.doesNotMatch(partners.html, /L’équipe de l’agence/i);
+  assert.match(`${team.html}${partners.html}${team.title}${partners.title}`, /d’Ozoir la Ferrière|à Ozoir la Ferrière/i);
 });
 
 test("body preview is absent when body uplift was not recommended", () => {
