@@ -14,6 +14,8 @@ const agency = {
   email: "gien@example.test",
 };
 
+const EXPECTED_H1 = "Nos partenaires de voyage à Gien";
+
 test("generated minisite exposes a localized partner page", () => {
   const built = new SiteBuilder().build(agency);
   const page = built.pages.find((item) => item.pageType === "PARTNERS");
@@ -21,7 +23,7 @@ test("generated minisite exposes a localized partner page", () => {
   assert.ok(page);
   assert.equal(page.slug, "partenaires");
   assert.match(page.path, /\/partenaires$/);
-  assert.equal(page.h1, "Nos partenaires voyage à Gien");
+  assert.equal(page.h1, EXPECTED_H1);
   assert.match(page.seoTitle, /Partenaires voyage à Gien/);
   assert.match(page.metaDescription, /tour-opérateurs, croisiéristes et spécialistes/);
 });
@@ -35,7 +37,7 @@ test("generated partner page renders header, introduction, directory and contact
     sections.map((section) => section.sectionType),
     ["page-header", "partners-introduction", "partner-directory", "contact-cta"]
   );
-  assert.equal(sections[0].content.title, "Nos partenaires voyage à Gien");
+  assert.equal(sections[0].content.title, EXPECTED_H1);
   assert.match(sections[0].content.introduction, /Mondescale Gien/);
   assert.match(sections[1].content.text, /tour-opérateurs|partenaires/i);
   assert.equal(sections[2].content.city, "Gien");
