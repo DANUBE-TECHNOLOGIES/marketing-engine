@@ -42,6 +42,9 @@ import {
   removeLocalDraft,
   saveLocalDraft,
 } from "../../lib/page-builder-v2/draft-storage";
+import {
+  buildPartnerRecommendationSignals,
+} from "../page-builder/shared/partnerRecommendations";
 
 import {
   FaqEditor,
@@ -568,6 +571,7 @@ function BlockProperties({
   onStatusChange,
   mediaAssets = [],
   mediaLoading = false,
+  partnerRecommendationSignals = [],
 }) {
   if (!block) {
     return (
@@ -985,6 +989,7 @@ function BlockProperties({
           networkItems={content.items}
           agencyPartners={content.agencyPartners}
           maxAgencyPartners={Number(content.maxAgencyPartners) || 3}
+          minisiteSignals={partnerRecommendationSignals}
           onChange={(agencyPartners) =>
             set("agencyPartners", agencyPartners)
           }
@@ -1096,6 +1101,11 @@ export default function VisualPageBuilder({ siteId }) {
         mediaAssets.map((asset) => [asset.id, asset])
       ),
     [mediaAssets]
+  );
+
+  const partnerRecommendationSignals = useMemo(
+    () => buildPartnerRecommendationSignals(site, activePage),
+    [site, activePage]
   );
 
   useEffect(() => {
@@ -1947,6 +1957,7 @@ export default function VisualPageBuilder({ siteId }) {
             block={selectedBlock}
             mediaAssets={mediaAssets}
             mediaLoading={mediaLoading}
+            partnerRecommendationSignals={partnerRecommendationSignals}
             onContentChange={(content) =>
               updateSelectedBlock((block) => ({
                 ...block,
