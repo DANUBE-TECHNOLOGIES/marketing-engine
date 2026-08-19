@@ -98,10 +98,13 @@ const RECOMMENDATION_FOCUS = Object.freeze([
   { value: "France Europe montagne residence camping thalasso Corse", label: "France & Europe" },
 ]);
 
-export function PartnerLogosEditor({ networkItems, agencyPartners, recommendationSignals: minisiteRecommendationSignals = [], maxAgencyPartners = 3, assets = [], loading = false, onChange }) {
+export function PartnerLogosEditor({ networkItems, agencyPartners, recommendationSignals: providedRecommendationSignals = [], minisiteSignals = null, maxAgencyPartners = 3, assets = [], loading = false, onChange }) {
   const [partnerAssets, setPartnerAssets] = useState(assets);
   const [partnerLoading, setPartnerLoading] = useState(loading || assets.length === 0);
   const [recommendationFocus, setRecommendationFocus] = useState("");
+  const minisiteRecommendationSignals = Array.isArray(minisiteSignals)
+    ? minisiteSignals
+    : providedRecommendationSignals;
 
   useEffect(() => {
     if (assets.length) {
