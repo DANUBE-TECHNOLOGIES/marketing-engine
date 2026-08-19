@@ -6,6 +6,9 @@ import {
   getCommonPartners,
 } from "../../page-builder/shared/commonPartners";
 import {
+  resolveAgencyPartnerCandidates,
+} from "../../page-builder/shared/agencyPartnerCatalog";
+import {
   safePartnerAssetUrl,
   selectAgencyPartners,
 } from "../../page-builder/shared/partnerSelection";
@@ -123,7 +126,8 @@ function AgencyPartnerGrid({ items }) {
 export default function PartnersRenderer({ section }) {
   const content = getSectionContent(section);
   const networkItems = getCommonPartners();
-  const agencyItems = selectAgencyPartners(content.agencyPartners, {
+  const candidates = resolveAgencyPartnerCandidates(content.agencyPartners);
+  const agencyItems = selectAgencyPartners(candidates, {
     networkItems,
     max: Number(content.maxAgencyPartners) || 3,
   });
