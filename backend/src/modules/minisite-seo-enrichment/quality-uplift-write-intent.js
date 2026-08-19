@@ -185,4 +185,4 @@ function buildQualityUpliftWriteIntents({ executionPlan = {}, currentPages = [] 
   return { version: "mse-25.31", operation: "quality-uplift-write-intent", readOnly: true, writes: false, publicWrites: false, persistenceCallsPerformed: 0, executionPlanFingerprint: executionPlan.executionPlanFingerprint, writeIntentFingerprint, summary: { approvedCandidateCount: (executionPlan.pages || []).length, touchedPageCount: intents.length }, intents };
 }
 
-module.exports = { approvedLinkSuffix, applyInternalLinkGroups, assertInternalLinkTarget, buildQualityUpliftWriteIntents, collectInternalLinkGroups, currentPageMap, digest, internalLinkTargetKey, nextBlockPosition, normalizedBlockType, normalizedPageSlug, pageKey, saveBody, sha256Text, stableValue, validatedSaveBody };
+module.exports = { approvedLinkSuffix, applyInternalLinkGroups, assertInternalLinkTarget, assertSourceFingerprint, buildQualityUpliftWriteIntents, collectInternalLinkGroups, currentPageMap, digest, internalLinkTargetKey, nextBlockPosition, normalizedBlockType, normalizedPageSlug, pageKey, saveBody, sha256Text, stableValue, validatedSaveBody };
