@@ -3,6 +3,7 @@
 const { pageSlugCandidates } = require("./page-slug");
 const {
   PAGE_STATUSES,
+  assertPartnerPagePublishable,
   createNextVersion,
   normalizeDesignerBlocks,
 } = require("./page-builder-save");
@@ -106,8 +107,18 @@ async function rollbackPageVersion({ prisma, tenantId, agencyId, slug, versionId
     }))
   );
   const data = restoredPageData(snapshot.page, page);
-  let safetyVersion = null;
 
+  assertPartnerPagePublishable({
+    slug: page.slug,
+    status: data.status,
+    title: data.title,
+    seoTitle: data.seoTitle,
+    metaDescription: data.metaDescription,
+    h1: data.h1,
+    blocks: restoredSections,
+  });
+
+  let safetyVersion = null;
   await prisma.$transaction(async (tx) => {
     safetyVersion = await createNextVersion(tx, page, {
       reason: input.reason || `before-rollback-to-v${version.version}`,
@@ -132,7 +143,7 @@ async function rollbackPageVersion({ prisma, tenantId, agencyId, slug, versionId
   });
 
   return {
-    version: "1.0",
+    version: "1.1",
     operation: "rollback-page-version",
     restoredVersion: versionSummary(version),
     safetyVersion: safetyVersion ? { id: safetyVersion.id, version: safetyVersion.version } : null,
