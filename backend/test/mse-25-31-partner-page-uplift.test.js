@@ -20,7 +20,7 @@ test("existing minisites can safely receive the partner page without destructive
   assert.match(service, /published:Boolean\(partnerPage\.published\)/);
 
   assert.match(routes, /post\("\/agencies\/:id\/site\/partners\/ensure"/);
-  assert.match(routes, /ensurePartnerPage\(req\.params\.id, req\.body \|\| \{\}\)/);
+  assert.match(routes, /ensurePartnerPageOnly\(service, req\.params\.id, req\.body \|\| \{\}\)/);
 
   assert.match(repository, /async createDraftPage/);
   assert.match(repository, /status:"draft",published:false/);
