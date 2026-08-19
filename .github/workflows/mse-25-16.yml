@@ -20,12 +20,14 @@ on:
       - 'backend/test/agency-seo-*.test.js'
       - 'frontend/app/agence/[siteSlug]/sitemap.xml/route.js'
       - 'frontend/app/api/indexation/**'
+      - 'frontend/app/api/website-builder/**'
       - 'frontend/app/indexation/**'
       - 'frontend/lib/indexation-api.js'
       - 'frontend/test/mse-25-*.test.mjs'
       - 'frontend/components/page-builder/shared/**'
       - 'frontend/components/page-builder-v2/**'
       - 'frontend/components/public-site/renderers/**'
+      - 'frontend/components/website-builder/**'
       - 'frontend/package.json'
       - '.github/workflows/mse-25-16.yml'
   workflow_dispatch:
@@ -90,6 +92,9 @@ jobs:
 
       - name: Run partner regression tests
         run: npm run test:partners
+
+      - name: Lint partner rollout controls
+        run: npx eslint "app/api/website-builder/partners/rollout/route.js" "components/website-builder/WebsiteBuilderLauncher.js"
 
       - name: Lint sitemap and indexation API
         run: npx eslint "app/agence/[siteSlug]/sitemap.xml/route.js" "app/api/indexation/route.js" "lib/indexation-api.js"
