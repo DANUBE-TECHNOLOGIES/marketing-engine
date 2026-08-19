@@ -16,6 +16,7 @@ const FUNCTIONAL_BLOCK_SIGNALS = Object.freeze([
   "hours",
   "map",
   "offer",
+  "partner",
   "review",
   "service",
   "team",
@@ -68,7 +69,13 @@ function pageText(page) {
 }
 
 function blockType(block) {
-  return clean(block?.blockType || block?.type || block?.kind).toLowerCase();
+  return clean(
+    block?.blockType ||
+    block?.type ||
+    block?.kind ||
+    block?.sectionType ||
+    block?.jsonContent?.__builderType
+  ).toLowerCase().replace(/--\d+$/, "");
 }
 
 function hasFunctionalBlock(page) {
