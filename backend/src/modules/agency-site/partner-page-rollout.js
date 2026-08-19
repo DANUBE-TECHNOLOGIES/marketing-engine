@@ -1,9 +1,18 @@
 "use strict";
 
-function partnerPageFromSite(site) {
+function pageFromSite(site, slug) {
+  const expected = String(slug || "").trim().toLowerCase();
   return (Array.isArray(site?.pages) ? site.pages : []).find(
-    (page) => String(page?.slug || "").trim().toLowerCase() === "partenaires"
+    (page) => String(page?.slug || "").trim().toLowerCase() === expected
   ) || null;
+}
+
+function partnerPageFromSite(site) {
+  return pageFromSite(site, "partenaires");
+}
+
+function agencyPageFromSite(site) {
+  return pageFromSite(site, "agence");
 }
 
 function partnerPageState(page) {
@@ -16,6 +25,7 @@ async function buildPartnerPageRolloutStatus(service) {
   const sites = await service.listSites();
   const rows = sites.map((site) => {
     const page = partnerPageFromSite(site);
+    const agencyPage = agencyPageFromSite(site);
     return {
       siteId: site.id,
       siteName: site.name,
@@ -24,7 +34,10 @@ async function buildPartnerPageRolloutStatus(service) {
       agencyId: Number(site.agencyId),
       agencyName: site.agency?.name || site.name,
       city: site.agency?.city || "",
+      agencyPagePresent: Boolean(agencyPage),
       partnerPageState: partnerPageState(page),
+      rolloutEligible: !page && Boolean(agencyPage),
+      rolloutBlockReason: !page && !agencyPage ? "AGENCY_PAGE_MISSING" : null,
       partnerPage: page
         ? {
             id: page.id,
@@ -39,15 +52,54 @@ async function buildPartnerPageRolloutStatus(service) {
   });
 
   return {
-    version: "1.0",
+    version: "1.1",
     summary: {
       totalSites: rows.length,
       missing: rows.filter((row) => row.partnerPageState === "missing").length,
+      eligibleMissing: rows.filter((row) => row.rolloutEligible).length,
+      blockedMissing: rows.filter((row) => row.partnerPageState === "missing" && !row.rolloutEligible).length,
       published: rows.filter((row) => row.partnerPageState === "published").length,
       draftOrReview: rows.filter((row) => !["missing", "published"].includes(row.partnerPageState)).length,
     },
     sites: rows,
   };
+}
+
+function partnerRolloutScopeError(row = {}) {
+  const error = new Error(
+    `Le rollout Partenaires refuse de créer une autre page que /partenaires${row.siteSlug ? ` pour ${row.siteSlug}` : ""}. La page /agence doit déjà exister.`
+  );
+  error.statusCode = 409;
+  error.code = "PARTNER_PAGE_ROLLOUT_AGENCY_PAGE_REQUIRED";
+  error.details = {
+    siteId: row.siteId || null,
+    siteSlug: row.siteSlug || null,
+    agencyId: row.agencyId || null,
+  };
+  return error;
+}
+
+async function ensurePartnerPageOnly(service, agencyId, input = {}) {
+  if (input.confirmed !== true) {
+    const error = new Error("La création de la page Partenaires exige une validation explicite.");
+    error.statusCode = 400;
+    error.code = "PARTNER_PAGE_CONFIRMATION_REQUIRED";
+    throw error;
+  }
+
+  const status = await buildPartnerPageRolloutStatus(service);
+  const row = status.sites.find((item) => Number(item.agencyId) === Number(agencyId));
+  if (!row) {
+    const error = new Error(`Mini-site de l'agence ${agencyId} introuvable.`);
+    error.statusCode = 404;
+    error.code = "AGENCY_SITE_NOT_FOUND";
+    throw error;
+  }
+  if (row.partnerPageState !== "missing") {
+    return service.ensurePartnerPage(agencyId, { confirmed: true });
+  }
+  if (!row.rolloutEligible) throw partnerRolloutScopeError(row);
+  return service.ensurePartnerPage(agencyId, { confirmed: true });
 }
 
 async function ensureNetworkPartnerPages(service, input = {}) {
@@ -59,7 +111,15 @@ async function ensureNetworkPartnerPages(service, input = {}) {
   }
 
   const before = await buildPartnerPageRolloutStatus(service);
-  const targets = before.sites.filter((row) => row.partnerPageState === "missing");
+  const targets = before.sites.filter((row) => row.rolloutEligible);
+  const blocked = before.sites
+    .filter((row) => row.partnerPageState === "missing" && !row.rolloutEligible)
+    .map((row) => ({
+      agencyId: row.agencyId,
+      siteId: row.siteId,
+      siteSlug: row.siteSlug,
+      reason: row.rolloutBlockReason,
+    }));
   const results = [];
 
   for (const target of targets) {
@@ -76,9 +136,11 @@ async function ensureNetworkPartnerPages(service, input = {}) {
 
   const after = await buildPartnerPageRolloutStatus(service);
   return {
-    version: "1.0",
+    version: "1.1",
     dryRun: false,
     createdSiteCount: results.filter((result) => Number(result.created || 0) > 0).length,
+    blockedSiteCount: blocked.length,
+    blocked,
     results,
     before: before.summary,
     after: after.summary,
@@ -86,8 +148,12 @@ async function ensureNetworkPartnerPages(service, input = {}) {
 }
 
 module.exports = {
+  agencyPageFromSite,
   buildPartnerPageRolloutStatus,
   ensureNetworkPartnerPages,
+  ensurePartnerPageOnly,
+  pageFromSite,
   partnerPageFromSite,
   partnerPageState,
+  partnerRolloutScopeError,
 };
