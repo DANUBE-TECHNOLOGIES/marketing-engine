@@ -17,6 +17,7 @@ test("public partner page has explicit header, introduction and directory render
   assert.match(registry, /"partners-introduction":\s*RichTextV2Renderer/);
   assert.match(registry, /"partner-directory":\s*PartnerDirectoryRenderer/);
   assert.match(header, /<h1>\{title\}<\/h1>/);
+  assert.match(header, /String\(page\?\.h1 \|\| ""\)\.trim\(\) \|\| getSectionTitle/);
   assert.match(header, /content\.introduction/);
   assert.match(directory, /getPublishablePartnerProfiles/);
   assert.match(directory, /Catégories de partenaires/);
