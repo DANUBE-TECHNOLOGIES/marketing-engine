@@ -7,7 +7,7 @@ function pageCity(site) {
 
 export default function PageHeaderRenderer({ section, site, page }) {
   const content = getSectionContent(section);
-  const title = getSectionTitle(section, null) || content.title || page?.title || "";
+  const title = String(page?.h1 || "").trim() || getSectionTitle(section, null) || content.title || page?.title || "";
   const introduction = content.introduction || content.text || content.subtitle || "";
   const city = pageCity(site);
 
