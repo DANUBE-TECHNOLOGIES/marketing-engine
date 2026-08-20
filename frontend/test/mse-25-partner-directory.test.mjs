@@ -80,7 +80,10 @@ test("full partner directory exposes categorized supplier inventory with complet
   assert.match(assetCoverage, /policy: "individual-assets-only"/);
   assert.match(assetCoverage, /fallback: "initials"/);
   assert.match(assetCoverage, /noSprite: true/);
-  assert.match(assetCoverage, /missingLogo/);
+  assert.match(assetCoverage, /missingByState/);
+  assert.match(assetCoverage, /permissionBlocked/);
+  assert.match(assetCoverage, /sourcePending/);
+  assert.match(assetCoverage, /safeToRender/);
   assert.doesNotMatch(assetCoverage, /common-partners-sprite/);
   for (const id of ["ponant", "celestyal-cruises", "destination-aventure", "nordiska", "pouchkine-tours", "belambra", "voyamar", "alma-latina", "australie-tours", "campings-com", "pierre-vacances-center-parcs", "villages-clubs-soleil", "rivages-du-monde"]) {
     assert.match(logoBacklog, new RegExp(`"${id}"`));
@@ -100,8 +103,11 @@ test("full partner directory exposes categorized supplier inventory with complet
   assert.match(renderer, /resolveAgencyPartnerCandidates/);
   assert.match(renderer, /selectAgencyPartners/);
   assert.match(renderer, /findAgencyPartnerSelection/);
-  assert.match(renderer, /getSectionType\(candidate\) !== "partner-logos"/);
+  assert.match(renderer, /AGENCY_PARTNER_SECTION_TYPES/);
+  for (const type of ["partner-logos", "partners", "logos"]) assert.match(renderer, new RegExp(`"${type}"`));
   assert.match(renderer, /max: 3/);
+  assert.match(renderer, /data-partner-logo=/);
+  assert.match(renderer, /data-preferred-partner-logo=/);
   assert.match(renderer, /Socle partenaires du réseau/);
   assert.match(renderer, /Sélection complémentaire de votre agence/);
   assert.match(renderer, /Découvrir ses spécialités/);
