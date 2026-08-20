@@ -20,6 +20,9 @@ test("full partner directory exposes categorized supplier inventory with complet
   const verification = read("components/page-builder/shared/partnerVerification.js");
   const assetCoverage = read("components/page-builder/shared/partnerAssetCoverage.js");
   const logoBacklog = read("components/page-builder/shared/partnerLogoBacklog.js");
+  const commonPartners = read("components/page-builder/shared/commonPartners.js");
+  const partnerSelection = read("components/page-builder/shared/partnerSelection.js");
+  const agencyCatalog = read("components/page-builder/shared/agencyPartnerCatalog.js");
   const renderer = read("components/public-site/renderers/PartnerDirectoryRenderer.js");
   const rendererCss = read("components/public-site/renderers/PartnerDirectoryRenderer.module.css");
   const publicRegistry = read("components/public-site/renderers/registry.js");
@@ -84,13 +87,29 @@ test("full partner directory exposes categorized supplier inventory with complet
   }
   for (const excluded of ["worldia", "aerosun", "mega-vacances"]) assert.doesNotMatch(logoBacklog, new RegExp(`"${excluded}"`));
 
+  for (const id of ["fram", "tui-univers", "club-med", "msc-croisieres", "costa-croisieres", "kuoni", "exotismes"]) {
+    assert.match(commonPartners, new RegExp(`id: "${id}"`));
+  }
+  assert.match(partnerSelection, /Math\.min\(3/);
+  assert.match(agencyCatalog, /readyForPublication/);
+
   assert.match(renderer, /getPartnerDirectoryCategories/);
   assert.match(renderer, /getPartnerProfile/);
   assert.match(renderer, /getPublishablePartnerProfiles/);
+  assert.match(renderer, /getCommonPartners/);
+  assert.match(renderer, /resolveAgencyPartnerCandidates/);
+  assert.match(renderer, /selectAgencyPartners/);
+  assert.match(renderer, /findAgencyPartnerSelection/);
+  assert.match(renderer, /getSectionType\(candidate\) !== "partner-logos"/);
+  assert.match(renderer, /max: 3/);
+  assert.match(renderer, /Socle partenaires du réseau/);
+  assert.match(renderer, /Sélection complémentaire de votre agence/);
   assert.match(renderer, /Découvrir ses spécialités/);
   assert.match(renderer, /Destinations/);
   assert.match(renderer, /Types de voyages/);
   assert.match(renderer, /Site du partenaire/);
+  assert.match(rendererCss, /grid-template-columns: repeat\(7/);
+  assert.match(rendererCss, /agencyPreferredGrid/);
   assert.match(rendererCss, /grid-template-columns: repeat\(3/);
   assert.match(rendererCss, /@media \(max-width: 720px\)/);
 
