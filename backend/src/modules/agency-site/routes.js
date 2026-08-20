@@ -2,6 +2,7 @@ const express = require("express");
 const AgencySiteService = require("./service");
 const { auditDraft, proposeLocalRewrite } = require("./local-rewrite-service");
 const { buildPartnerPageRolloutStatus, ensureNetworkPartnerPages, ensurePartnerPageOnly } = require("./partner-page-rollout");
+const { previewPartnerPageMigration, applyPartnerPageMigration } = require("./partner-page-migration");
 const { saveDesignerPage } = require("./page-builder-save");
 const { listPageVersions, rollbackPageVersion } = require("./page-versions");
 
@@ -35,6 +36,11 @@ module.exports = ({ prisma }) => {
     ...pageVersionArgs(req, slug),
     input: req.body || {},
   });
+  const partnerMigrationArgs = (req) => ({
+    prisma,
+    tenantId: req.tenantId,
+    input: req.body || {},
+  });
 
   router.get("/agency-sites", async (req, res, next) => {
     try { res.json(await serviceFor(req).listSites()); } catch (e) { next(e); }
@@ -47,6 +53,12 @@ module.exports = ({ prisma }) => {
       const result = await ensureNetworkPartnerPages(serviceFor(req), req.body || {});
       res.status(result.createdSiteCount > 0 ? 201 : 200).json(result);
     } catch (e) { next(e); }
+  });
+  router.get("/agency-sites/partners/migration", async (req, res, next) => {
+    try { res.json(await previewPartnerPageMigration(partnerMigrationArgs(req))); } catch (e) { next(e); }
+  });
+  router.post("/agency-sites/partners/migration", async (req, res, next) => {
+    try { res.json(await applyPartnerPageMigration(partnerMigrationArgs(req))); } catch (e) { next(e); }
   });
   router.post("/agencies/:id/site/generate", async (req, res, next) => {
     try { res.status(201).json(await serviceFor(req).generate(req.params.id, req.body || {})); } catch (e) { next(e); }
