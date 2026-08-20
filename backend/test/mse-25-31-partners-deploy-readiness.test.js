@@ -34,10 +34,12 @@ test("partner VM readiness loads every deployment-critical module and contract",
   const result = assertModulesLoad();
   assert.equal(result.loaded.length, REQUIRED_MODULES.length);
   assert.deepEqual(result.contracts.sort(), [
+    "applyPartnerPageMigration",
     "assertPartnerPagePublishable",
     "ensureNetworkPartnerPages",
     "listPageVersions",
     "partnerPageReadiness",
+    "previewPartnerPageMigration",
     "rollbackPageVersion",
     "saveDesignerPage",
   ].sort());
