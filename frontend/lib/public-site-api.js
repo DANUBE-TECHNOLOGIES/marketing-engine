@@ -81,15 +81,24 @@ function pageFromContract(payload) {
 
   if (!page || typeof page !== "object") return page;
 
+  const sections = Array.isArray(page.sections) ? page.sections : [];
   const blocks = Array.isArray(page.blocks) ? page.blocks : [];
 
   /*
-   * Blocks V2 are the canonical rendering source. Legacy `sections` may
-   * legitimately exist as an empty array on migrated pages; because [] is
-   * truthy in JavaScript it used to mask non-empty `blocks` in the public
-   * renderer. Whenever V2 blocks exist, expose them as sections as well so
-   * all public consumers render the same persisted page as Designer V2.
+   * AgencySiteSection is the canonical rendering source for generated and
+   * Designer V2 agency-site pages. Legacy PageBlock rows may still coexist
+   * after migrations, so they are only used when no canonical section is
+   * available. This mirrors the backend public payload and prevents stale
+   * PageBlock content from masking a freshly migrated /partenaires page.
    */
+  if (sections.length) {
+    return {
+      ...page,
+      sections,
+      contentBlocks: sections,
+    };
+  }
+
   if (blocks.length) {
     return {
       ...page,
