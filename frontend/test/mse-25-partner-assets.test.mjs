@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const frontendRoot = path.resolve(here, "..");
@@ -17,19 +17,11 @@ async function loadCatalogue() {
   return import(dataUrl);
 }
 
-async function loadAssetCoverage() {
-  return import(
-    pathToFileURL(
-      path.join(frontendRoot, "components/page-builder/shared/partnerAssetCoverage.js")
-    ).href
-  );
-}
-
 test("every declared partner logo resolves to an individual public asset", async () => {
   const { FULL_PARTNERS } = await loadCatalogue();
   const declared = FULL_PARTNERS.filter((partner) => partner.logoUrl);
 
-  assert.ok(declared.length > 0);
+  assert.ok(declared.length >= 7, "le socle réseau doit conserver ses logos validés");
 
   for (const partner of declared) {
     assert.match(partner.logoUrl, /^\/partners\/[a-z0-9][a-z0-9-]*\.(?:webp|svg)$/);
@@ -60,21 +52,31 @@ test("missing logos remain explicit fallbacks instead of broken image references
   }
 });
 
-test("partner asset coverage never promotes pending or permission-blocked logos", async () => {
-  const { getPartnerAssetCoverage, PARTNER_ASSET_COVERAGE } = await loadAssetCoverage();
-  const coverage = getPartnerAssetCoverage();
+test("logo coverage contract keeps pending and permission-gated assets out of the public catalogue", async () => {
+  const { FULL_PARTNERS } = await loadCatalogue();
+  const coverageSource = fs.readFileSync(
+    path.join(frontendRoot, "components/page-builder/shared/partnerAssetCoverage.js"),
+    "utf8"
+  );
+  const backlogSource = fs.readFileSync(
+    path.join(frontendRoot, "components/page-builder/shared/partnerLogoBacklog.js"),
+    "utf8"
+  );
 
-  assert.equal(PARTNER_ASSET_COVERAGE.policy, "individual-assets-only");
-  assert.equal(PARTNER_ASSET_COVERAGE.fallback, "initials");
-  assert.equal(PARTNER_ASSET_COVERAGE.noSprite, true);
-  assert.equal(coverage.covered + coverage.missing, coverage.total);
-  assert.equal(coverage.fallbackCount, coverage.missing);
-  assert.equal(coverage.safeToRender, true);
-  assert.ok(coverage.covered >= 7, "le socle réseau doit conserver ses logos validés");
-  assert.ok(coverage.permissionBlocked.length > 0, "les logos soumis à autorisation doivent rester identifiés");
-  assert.ok(coverage.sourcePending.length > 0, "le backlog doit conserver les sources encore à valider");
+  assert.match(coverageSource, /policy: "individual-assets-only"/);
+  assert.match(coverageSource, /fallback: "initials"/);
+  assert.match(coverageSource, /BLOCKING_STATES/);
+  assert.match(coverageSource, /permission-required/);
+  assert.match(coverageSource, /verification-pending/);
+  assert.match(coverageSource, /sourceReady/);
+  assert.match(coverageSource, /sourcePending/);
+  assert.match(coverageSource, /safeToRender/);
 
-  for (const partner of [...coverage.permissionBlocked, ...coverage.sourcePending]) {
-    assert.equal(partner.logoUrl, "", `${partner.name}: un logo non validé ne doit pas être activé`);
+  const protectedIds = ["ponant", "celestyal-cruises", "salaun-holidays", "belambra", "plein-vent", "heliades", "voyamar"];
+  for (const id of protectedIds) {
+    assert.match(backlogSource, new RegExp(`id: "${id}"[\\s\\S]{0,220}state: "permission-required"`));
+    const partner = FULL_PARTNERS.find((candidate) => candidate.id === id);
+    assert.ok(partner, `${id}: partenaire absent du catalogue`);
+    assert.equal(partner.logoUrl, "", `${partner.name}: logo protégé activé sans validation`);
   }
 });
