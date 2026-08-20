@@ -36,3 +36,14 @@ test("public site API prefers AgencySiteSection content before legacy PageBlock 
   assert.match(api, /contentBlocks:\s*sections/);
   assert.match(api, /contentBlocks:\s*blocks/);
 });
+
+test("public proxy overlays canonical Agency Site page over legacy public-site-read page", () => {
+  const route = read("app/api/public-sites/[[...path]]/route.js");
+
+  assert.match(route, /\/public\/agency-sites\/\$\{encodeURIComponent\(siteSlug\)\}\/pages\/\$\{encodeURIComponent\(canonicalPageSlug\)\}/);
+  assert.match(route, /canonicalPagePayload/);
+  assert.match(route, /normalizeCanonicalPage/);
+  assert.match(route, /const selectedPage = canonicalMatchesRequest \? canonicalPage : legacySelectedPage/);
+  assert.match(route, /"x-public-site-canonical-page"/);
+  assert.match(route, /version: "1\.3"/);
+});
