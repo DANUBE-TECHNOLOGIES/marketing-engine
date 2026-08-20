@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const frontendRoot = path.resolve(here, "..");
@@ -15,6 +15,14 @@ async function loadCatalogue() {
   );
   const dataUrl = `data:text/javascript;base64,${Buffer.from(source).toString("base64")}`;
   return import(dataUrl);
+}
+
+async function loadAssetCoverage() {
+  return import(
+    pathToFileURL(
+      path.join(frontendRoot, "components/page-builder/shared/partnerAssetCoverage.js")
+    ).href
+  );
 }
 
 test("every declared partner logo resolves to an individual public asset", async () => {
@@ -49,5 +57,24 @@ test("missing logos remain explicit fallbacks instead of broken image references
   assert.ok(missing.length > 0);
   for (const partner of missing) {
     assert.equal(partner.logoUrl, "");
+  }
+});
+
+test("partner asset coverage never promotes pending or permission-blocked logos", async () => {
+  const { getPartnerAssetCoverage, PARTNER_ASSET_COVERAGE } = await loadAssetCoverage();
+  const coverage = getPartnerAssetCoverage();
+
+  assert.equal(PARTNER_ASSET_COVERAGE.policy, "individual-assets-only");
+  assert.equal(PARTNER_ASSET_COVERAGE.fallback, "initials");
+  assert.equal(PARTNER_ASSET_COVERAGE.noSprite, true);
+  assert.equal(coverage.covered + coverage.missing, coverage.total);
+  assert.equal(coverage.fallbackCount, coverage.missing);
+  assert.equal(coverage.safeToRender, true);
+  assert.ok(coverage.covered >= 7, "le socle réseau doit conserver ses logos validés");
+  assert.ok(coverage.permissionBlocked.length > 0, "les logos soumis à autorisation doivent rester identifiés");
+  assert.ok(coverage.sourcePending.length > 0, "le backlog doit conserver les sources encore à valider");
+
+  for (const partner of [...coverage.permissionBlocked, ...coverage.sourcePending]) {
+    assert.equal(partner.logoUrl, "", `${partner.name}: un logo non validé ne doit pas être activé`);
   }
 });
