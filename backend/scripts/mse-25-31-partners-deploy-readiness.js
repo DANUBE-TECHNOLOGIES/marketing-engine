@@ -9,6 +9,7 @@ const { EXPECTED_BRANCH } = require("./mse-25-31-preflight");
 
 const REQUIRED_MODULES = Object.freeze([
   "../src/modules/agency-site/partner-page-rollout",
+  "../src/modules/agency-site/partner-page-migration",
   "../src/modules/agency-site/page-builder-save",
   "../src/modules/agency-site/page-versions",
   "../src/modules/agency-site/routes",
@@ -61,11 +62,14 @@ function assertModulesLoad(loader = require) {
   }
 
   const rollout = loader("../src/modules/agency-site/partner-page-rollout");
+  const migration = loader("../src/modules/agency-site/partner-page-migration");
   const save = loader("../src/modules/agency-site/page-builder-save");
   const versions = loader("../src/modules/agency-site/page-versions");
   const requiredFunctions = [
     ["partnerPageReadiness", rollout.partnerPageReadiness],
     ["ensureNetworkPartnerPages", rollout.ensureNetworkPartnerPages],
+    ["previewPartnerPageMigration", migration.previewPartnerPageMigration],
+    ["applyPartnerPageMigration", migration.applyPartnerPageMigration],
     ["assertPartnerPagePublishable", save.assertPartnerPagePublishable],
     ["saveDesignerPage", save.saveDesignerPage],
     ["listPageVersions", versions.listPageVersions],
@@ -99,7 +103,7 @@ function run({ emitOutput = true } = {}) {
       "frontend partner preflight",
       "frontend production build",
       "service restart",
-      "read-only partner rollout audit",
+      "read-only partner migration preview",
     ],
   };
   if (emitOutput) console.log(JSON.stringify(result, null, 2));
