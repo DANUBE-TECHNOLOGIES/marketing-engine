@@ -19,3 +19,20 @@ test("designer prefers AgencySiteSection content before legacy PageBlock content
   assert.ok(sectionsIndex < blocksIndex, "sections must be checked before legacy blocks");
   assert.match(state, /seoDescription:\s*String\(page\?\.seoDescription \|\| page\?\.metaDescription/);
 });
+
+test("public site API prefers AgencySiteSection content before legacy PageBlock content", () => {
+  const api = read("lib/public-site-api.js");
+
+  const sectionsDeclaration = api.indexOf("const sections = Array.isArray(page.sections) ? page.sections : []");
+  const blocksDeclaration = api.indexOf("const blocks = Array.isArray(page.blocks) ? page.blocks : []");
+  const sectionsBranch = api.indexOf("if (sections.length)");
+  const blocksBranch = api.indexOf("if (blocks.length)");
+
+  assert.ok(sectionsDeclaration >= 0, "public API canonical sections declaration is missing");
+  assert.ok(blocksDeclaration >= 0, "public API legacy blocks declaration is missing");
+  assert.ok(sectionsBranch >= 0, "public API canonical sections branch is missing");
+  assert.ok(blocksBranch >= 0, "public API legacy blocks fallback is missing");
+  assert.ok(sectionsBranch < blocksBranch, "public API must prefer sections before legacy blocks");
+  assert.match(api, /contentBlocks:\s*sections/);
+  assert.match(api, /contentBlocks:\s*blocks/);
+});
