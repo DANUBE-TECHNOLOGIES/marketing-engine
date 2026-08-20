@@ -6,6 +6,12 @@ import { resolveAgencyPartnerCandidates } from "../../page-builder/shared/agency
 import { safePartnerAssetUrl, safePartnerHref, selectAgencyPartners } from "../../page-builder/shared/partnerSelection";
 import styles from "./PartnerDirectoryRenderer.module.css";
 
+const AGENCY_PARTNER_SECTION_TYPES = Object.freeze(new Set([
+  "partner-logos",
+  "partners",
+  "logos",
+]));
+
 function MetadataGroup({ label, values }) {
   if (!Array.isArray(values) || !values.length) return null;
 
@@ -21,11 +27,16 @@ function PartnerCard({ partner }) {
   const profile = getPartnerProfile(partner);
   if (!profile) return null;
   const website = safePartnerHref(profile.details?.website, { allowInternal: false });
+  const hasLogo = Boolean(profile.logoUrl);
 
   return (
-    <article className={styles.card} data-partner-id={profile.id}>
+    <article
+      className={styles.card}
+      data-partner-id={profile.id}
+      data-partner-logo={hasLogo ? "asset" : "initials"}
+    >
       <div className={styles.logoFrame}>
-        {profile.logoUrl ? (
+        {hasLogo ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={profile.logoUrl}
@@ -82,7 +93,7 @@ function findAgencyPartnerSelection(site) {
         : [];
 
     for (const candidate of sections) {
-      if (getSectionType(candidate) !== "partner-logos") continue;
+      if (!AGENCY_PARTNER_SECTION_TYPES.has(getSectionType(candidate))) continue;
       const content = getSectionContent(candidate);
       if (Array.isArray(content.agencyPartners) && content.agencyPartners.length) {
         return content.agencyPartners;
@@ -109,6 +120,7 @@ function PreferredPartnerCard({ item, agency = false }) {
       className={`${styles.preferredCard} ${agency ? styles.agencyPreferredCard : ""}`}
       data-preferred-partner-id={item?.id || undefined}
       data-preferred-partner-scope={agency ? "agency" : "network"}
+      data-preferred-partner-logo={logoUrl ? "asset" : "initials"}
     >
       {href ? (
         <a href={href} target={href.startsWith("http") ? "_blank" : undefined} rel={href.startsWith("http") ? "noopener noreferrer" : undefined}>
