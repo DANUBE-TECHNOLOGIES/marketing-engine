@@ -104,6 +104,24 @@ test("a real unresolved commercial deficit on an existing non-home page remains 
   assert.equal(result.summary.automaticWriteCount, 0);
 });
 
+test("covered intent on the target page is closed instead of appending another residual section", () => {
+  const { networkPlan, consolidatedPlan } = fixture();
+  const ticketing = networkPlan.agencies[0].coverage.find((row) => row.intentKey === "ticketing");
+  ticketing.status = "covered";
+  ticketing.bestScore = 48;
+  ticketing.bestPageSlug = "services";
+
+  const result = buildResidualExecutionPlan(networkPlan, consolidatedPlan);
+  const services = result.sites[0].pages.find((page) => page.pageSlug === "services");
+  assert.equal(services.executable, false);
+  assert.equal(services.eligibleSections.length, 0);
+  assert.equal(services.suppressedSections.length, 1);
+  assert.equal(services.suppressedSections[0].suppressionReason, "intent-covered-on-target-page");
+  assert.equal(services.suppressedSections[0].coverageStatus, "covered");
+  assert.equal(result.summary.executablePageCount, 0);
+  assert.equal(result.summary.eligibleSectionCount, 0);
+});
+
 test("residual plan is deterministic and chained to both source fingerprints", () => {
   const { networkPlan, consolidatedPlan } = fixture();
   const first = buildResidualExecutionPlan(networkPlan, consolidatedPlan);
