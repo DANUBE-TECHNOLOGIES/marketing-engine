@@ -20,7 +20,21 @@ function defaultReportPath() {
   return path.join(directory, `mse-25-40-network-rollout-${timestamp()}.json`);
 }
 
-async function persistenceServiceForTenant(tenantSlug, { prisma } = {}) {
+function loadMseEnvironment(envFile = process.env.MSE_25_40_ENV_FILE) {
+  const dotenv = require("dotenv");
+  const options = { quiet: true };
+  if (envFile) options.path = envFile;
+  dotenv.config(options);
+  if (!String(process.env.DATABASE_URL || "").trim()) {
+    const e = new Error("DATABASE_URL introuvable après chargement de l'environnement MSE-25.40.");
+    e.code = "MSE_25_40_DATABASE_URL_MISSING";
+    throw e;
+  }
+  return { envFile: envFile ? path.resolve(envFile) : null, databaseUrlLoaded: true };
+}
+
+async function persistenceServiceForTenant(tenantSlug, { prisma, envFile } = {}) {
+  if (!prisma) loadMseEnvironment(envFile);
   const client = prisma || new PrismaClient();
   const tenant = await client.tenant.findUnique({ where: { slug: tenantSlug } });
   if (!tenant?.id) { const e = new Error(`Tenant ${tenantSlug} introuvable.`); e.code = "MSE_25_40_TENANT_NOT_FOUND"; throw e; }
@@ -45,7 +59,7 @@ function assertPlanChain(writeIntent, residualPlan) {
   }
 }
 
-async function run({ writeIntentPath, residualPlanPath, confirm, approvedWriteIntentFingerprint, dryRun = true, tenantSlug, reportPath, service, prisma, emitOutput = true } = {}) {
+async function run({ writeIntentPath, residualPlanPath, confirm, approvedWriteIntentFingerprint, dryRun = true, tenantSlug, reportPath, service, prisma, emitOutput = true, envFile = process.env.MSE_25_40_ENV_FILE } = {}) {
   const writeSource = writeIntentPath || process.env.MSE_25_40_WRITE_INTENT;
   const residualSource = residualPlanPath || process.env.MSE_25_40_RESIDUAL_PLAN;
   const { file: writeFile, value: writeIntent } = loadJson(writeSource, "MSE_25_40_APPLY_WRITE_INTENT_REQUIRED");
@@ -62,7 +76,7 @@ async function run({ writeIntentPath, residualPlanPath, confirm, approvedWriteIn
   }
 
   let persistence = { service, prisma, ownsPrisma: false, tenantId: null };
-  if (!service && dryRun === false) persistence = await persistenceServiceForTenant(effectiveTenant, { prisma });
+  if (!service && dryRun === false) persistence = await persistenceServiceForTenant(effectiveTenant, { prisma, envFile });
   const noWriteService = service || {
     get: async () => ({}),
     save: async () => ({}),
@@ -132,4 +146,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { assertPlanChain, defaultReportPath, digest, explicitTrue, loadJson, persistenceServiceForTenant, run };
+module.exports = { assertPlanChain, defaultReportPath, digest, explicitTrue, loadJson, loadMseEnvironment, persistenceServiceForTenant, run };
