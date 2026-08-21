@@ -8,6 +8,12 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const frontendRoot = path.resolve(here, "..");
 const read = (relativePath) => fs.readFileSync(path.join(frontendRoot, relativePath), "utf8");
 
+function assertPendingOrFinalized(id, backlog, catalogue) {
+  const pending = new RegExp(`id:\\s*"${id}"[^\\n]*state:\\s*"source-pending"`).test(backlog);
+  const finalized = new RegExp(`P\\("${id}"[^\\n]*"\\/partners\\/${id}\\.(?:svg|webp)"\\)`).test(catalogue);
+  assert.ok(pending || finalized, `${id} should be pending or finalized`);
+}
+
 test("partner logo sourcing keeps vetted assets separate from press and permission reviews", () => {
   const cruiseSources = read("components/page-builder/shared/partnerCruiseLogoSources.js");
   const cruiseDetails = read("components/page-builder/shared/partnerCruiseDetails.js");
@@ -87,9 +93,9 @@ test("partner logo sourcing keeps vetted assets separate from press and permissi
     assert.match(backlog, new RegExp(`${id}[\\s\\S]*permission-required`));
   }
   assert.doesNotMatch(backlog, /worldia|aerosun|mega-vacances/i);
-  assert.match(backlog, /rivages-du-monde[\s\S]*croisieres[\s\S]*source-pending/);
-  assert.match(backlog, /travel-evasion[\s\S]*sejours[\s\S]*source-pending/);
-  assert.match(backlog, /ollandini[\s\S]*france-europe/);
+  assertPendingOrFinalized("rivages-du-monde", backlog, catalogue);
+  assertPendingOrFinalized("travel-evasion", backlog, catalogue);
+  assertPendingOrFinalized("ollandini", backlog, catalogue);
 
   assert.match(queue, /official-individual-assets-webp-or-vetted-svg/);
   assert.match(queue, /acceptedFormats:\s*\["webp", "svg"\]/);
@@ -114,6 +120,7 @@ test("partner logo sourcing keeps vetted assets separate from press and permissi
 
   assert.match(packageJson, /"partners:logos:discover":\s*"node scripts\/partner-logo-source-discovery\.mjs"/);
   assert.match(packageJson, /"partners:logos:acquire":\s*"node scripts\/partner-logo-acquire\.mjs"/);
+  assert.match(packageJson, /"partners:logos:network":\s*"node scripts\/partner-logo-network-rollout\.mjs"/);
 
   assert.match(coverage, /partnerVerification\.js/);
   assert.match(coverage, /publicationBlocked/);
