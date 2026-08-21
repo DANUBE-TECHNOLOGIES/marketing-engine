@@ -18,7 +18,7 @@ const {
   attestHead,
 } = require("./mse-25-31-ci-attestation");
 
-const EXPECTED_BRANCH = "feature/mse-25-31-local-seo-quality-uplift";
+const EXPECTED_BRANCH = "feature/mse-25-31-rollout-freeze";
 const DEFAULT_REPORT_DIR = path.join(os.homedir(), "mse-25-31-reports");
 const SHA256_PATTERN = /^[0-9a-f]{64}$/i;
 

@@ -34,7 +34,13 @@
     "mse-25.31:network-apply": "node scripts/mse-25-31-network-apply.js",
     "mse-25.31:rollout-report-check": "node scripts/mse-25-31-rollout-report-check.js",
     "mse-25.31:network-rollback": "node scripts/mse-25-31-network-rollback.js",
-    "mse-25.31:post-rollout-validate": "node scripts/mse-25-31-post-rollout-validate.js"
+    "mse-25.31:post-rollout-validate": "node scripts/mse-25-31-post-rollout-validate.js",
+    "mse-25.39:vm-readiness": "node scripts/mse-25-39-vm-readiness.js",
+    "mse-25.40:vm-readiness": "node scripts/mse-25-40-vm-readiness.js",
+    "mse-25.40:network-preview": "node scripts/mse-25-40-network-preview.js",
+    "mse-25.40:preflight": "node scripts/mse-25-40-preflight.js",
+    "mse-25.40:opportunity-manifest": "node scripts/mse-25-40-opportunity-manifest.js",
+    "mse-25.40:consolidated-plan": "node scripts/mse-25-40-consolidated-execution-plan.js"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",
