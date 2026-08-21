@@ -3,7 +3,7 @@
 const INTENT_CATALOG = Object.freeze([
   { key: "agency", label: "agence de voyages", priority: 100, commercial: true, pageHints: ["home", "accueil", "agence"], terms: ["agence de voyages", "conseil voyage", "agence locale"] },
   { key: "services", label: "services de l’agence", priority: 92, commercial: true, pageHints: ["services"], terms: ["services", "accompagnement", "conseil personnalisé"] },
-  { key: "ticketing", label: "billetterie et vols", priority: 90, commercial: true, pageHints: ["billetterie", "vol", "vols"], terms: ["billet avion", "billetterie", "vol", "vols", "aérien"] },
+  { key: "ticketing", label: "billetterie et vols", priority: 90, commercial: true, pageHints: ["billetterie", "vol", "vols"], terms: ["billet d’avion", "billet avion", "billetterie", "vol", "vols", "aérien"] },
   { key: "cruise", label: "croisières", priority: 88, commercial: true, pageHints: ["croisiere", "croisieres"], terms: ["croisière", "croisières", "compagnie de croisière"] },
   { key: "circuit", label: "circuits", priority: 86, commercial: true, pageHints: ["circuit", "circuits"], terms: ["circuit", "circuits", "voyage accompagné"] },
   { key: "tailor-made", label: "voyages sur mesure", priority: 86, commercial: true, pageHints: ["sur-mesure", "sur_mesure", "surmesure"], terms: ["sur mesure", "voyage personnalisé", "voyage à la carte"] },
