@@ -10,6 +10,7 @@ Safety invariants:
 - no `apply`, `create`, `publish` or `rollout` route;
 - doorway guard enabled;
 - no automatic neighboring-city expansion;
+- strict tenant scope;
 - only the persisted agency city can be used as the local scope;
 - existing pages are preferred before any page creation;
 - every new-page candidate requires search-demand evidence and human review;
@@ -18,7 +19,7 @@ Safety invariants:
 
 ## Worktree isolation
 
-MSE-25.40 must run from its dedicated worktree so other developments can continue in `/home/admin1/mondescale-local-engine` without branch switching.
+MSE-25.40 runs from its dedicated worktree:
 
 ```bash
 SEO_DIR=/home/admin1/mondescale-worktrees/mse-25-40
@@ -32,7 +33,20 @@ git status --short
 git rev-parse HEAD
 ```
 
-Never switch the main `/home/admin1/mondescale-local-engine` worktree to the MSE-25.40 branch.
+Never switch `/home/admin1/mondescale-local-engine` to MSE-25.40. That main worktree remains available for the partner and other development streams.
+
+## Shared environment, isolated code
+
+The semantic worktree reads the same PostgreSQL database but does not restart or modify the shared backend runtime.
+
+```bash
+export MSE_25_40_ENV_FILE=/home/admin1/mondescale-local-engine/backend/.env
+export MSE_25_40_PREVIEW_MODE=direct
+export TENANT_SLUG=mondescale
+export MSE_25_40_REPORT_DIR=/home/admin1/mse-25-40-reports
+```
+
+`MSE_25_40_PREVIEW_MODE=direct` instantiates Prisma and the semantic service locally from the isolated worktree. No Docker restart and no branch switch in the main worktree are required.
 
 ## Dependencies and tests
 
@@ -41,34 +55,24 @@ cd "$SEO_DIR/backend"
 npm ci
 mapfile -t TESTS < <(find test -maxdepth 1 -type f -name 'mse-25-40-*.test.js' | sort)
 test "${#TESTS[@]}" -gt 0
+printf '%s\n' "${TESTS[@]}"
 node --test "${TESTS[@]}"
 ```
 
-## Runtime
-
-The production Docker compose mount still points to `/home/admin1/mondescale-local-engine/backend`, so do not recreate that shared backend from the SEO worktree. For MSE-25.40 VM validation, run the semantic service/scripts directly from the isolated worktree or copy only after an explicit integration decision.
-
-If the shared backend has already integrated the MSE-25.40 branch, its health endpoint is:
-
-```bash
-curl -fsS -H 'x-tenant-slug: mondescale' \
-  http://127.0.0.1:4000/minisite-semantic-engine/health | jq
-```
-
-## VM readiness
+## Direct VM readiness
 
 ```bash
 cd "$SEO_DIR/backend"
-BACKEND_ORIGIN=http://127.0.0.1:4000 \
-TENANT_SLUG=mondescale \
 npm run mse-25.40:vm-readiness
 ```
 
-Expected invariants include:
+Expected invariants:
 
 - `readyForPreflight=true`;
 - `publicWritesEnabled=false`;
+- `runtime.mode=direct`;
 - branch and clean-worktree checks true;
+- tenant scope true;
 - read-only health and preview;
 - doorway guard true;
 - existing-page-first true;
@@ -80,8 +84,6 @@ Expected invariants include:
 
 ```bash
 cd "$SEO_DIR/backend"
-BACKEND_ORIGIN=http://127.0.0.1:4000 \
-TENANT_SLUG=mondescale \
 npm run mse-25.40:network-preview \
   | tee /tmp/mse-25-40-network-preview.json
 ```
@@ -89,7 +91,7 @@ npm run mse-25.40:network-preview \
 Useful summary:
 
 ```bash
-jq '{planFingerprint,summary,excludedSites,policy}' /tmp/mse-25-40-network-preview.json
+jq '{tenantSlug,planFingerprint,summary,excludedSites,policy}' /tmp/mse-25-40-network-preview.json
 ```
 
 Agency matrix:
@@ -149,18 +151,26 @@ jq -r '
 ' /tmp/mse-25-40-network-preview.json | column -t -s $'\t'
 ```
 
+Cannibalization advisories:
+
+```bash
+jq -r '
+  .agencies[]
+  | .site.slug as $site
+  | .cannibalization[]
+  | [$site,.intentKey,.severity,([.pages[].slug]|join(","))]
+  | @tsv
+' /tmp/mse-25-40-network-preview.json | column -t -s $'\t'
+```
+
 ## Deterministic preflight
 
 ```bash
 cd "$SEO_DIR/backend"
-export BACKEND_ORIGIN=http://127.0.0.1:4000
-export TENANT_SLUG=mondescale
-export MSE_25_40_REPORT_DIR=/home/admin1/mse-25-40-reports
-
 npm run mse-25.40:preflight
 ```
 
-The preflight runs the full network preview twice and refuses non-determinism, a dirty worktree, another branch, disabled doorway protection, automatic writes, missing existing-page preference or a disabled new-page evidence gate.
+The preflight runs the full direct network preview twice and refuses non-determinism, a dirty worktree, another branch, disabled doorway protection, automatic writes, missing existing-page preference or a disabled new-page evidence gate.
 
 ## Sealed opportunity manifest
 
@@ -181,4 +191,4 @@ No entry in this manifest is automatically writable.
 
 ## Stop condition
 
-After the opportunity manifest, stop. Use the real network results to select which existing-page proposals should become a versioned execution layer. New page candidates remain blocked until Search Console/search-demand evidence exists.
+After the opportunity manifest, stop. The next development layer can convert selected existing-page proposals into a versioned execution plan. New page candidates remain blocked until Search Console/search-demand evidence exists.
