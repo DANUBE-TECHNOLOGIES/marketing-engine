@@ -22,7 +22,7 @@ export const FULL_PARTNERS = Object.freeze([
   P("costa-croisieres", "Costa Croisières", "croisieres", "Croisières familiales et grand public en Méditerranée et vers de nombreuses destinations internationales.", ["famille", "Méditerranée"], "/partners/costa-croisieres.webp"),
   P("msc-croisieres", "MSC Croisières", "croisieres", "Croisières internationales avec une offre large de navires, d'itinéraires, de clubs enfants et de services à bord.", ["famille", "international"], "/partners/msc-croisieres.webp"),
 
-  P("double-sens", "Double Sens", "circuits", "Voyages responsables, immersifs et itinérants privilégiant les rencontres, les expériences locales et les petits groupes.", ["responsable", "immersion"]),
+  P("double-sens", "Double Sens", "circuits", "Voyages responsables, immersifs et itinérants privilégiant les rencontres, les expériences locales et les petits groupes.", ["responsable", "immersion"], "/partners/double-sens.svg"),
   P("destination-aventure", "Destination Aventure", "circuits", "Circuits et voyages d'aventure pour découvrir une destination par ses paysages, ses activités et ses rencontres.", ["aventure", "itinérant"]),
   P("la-francaise-des-circuits", "La Française des Circuits", "circuits", "Circuits accompagnés et itinéraires organisés pour découvrir les incontournables d'une destination avec un programme structuré.", ["accompagné", "culture"]),
   P("salaun-holidays", "Salaün Holidays", "circuits", "Circuits, voyages accompagnés et itinéraires culturels en Europe et dans le monde.", ["accompagné", "autocar"]),

@@ -7,9 +7,7 @@ export const PARTNER_LOGO_BACKLOG = Object.freeze([
   { id: "explora-journeys", category: "croisieres", priority: 1, state: "source-pending", sourceType: "official-press-kit", note: "Use the official Explora Journeys Media Centre / Press Kit rather than favicon or UI assets." },
   { id: "cfc", category: "croisieres", priority: 1, state: "permission-required", sourceType: "brand-permission", note: "Hold logo reproduction until an authorised source or explicit permission is confirmed." },
   { id: "hurtigruten", category: "croisieres", priority: 1, state: "source-pending", sourceType: "official-press-library", note: "Homepage candidates are sub-brand wordmarks; use the official Hurtigruten press/media library for the masterbrand asset." },
-
-  { id: "double-sens", category: "circuits", priority: 2, state: "source-pending", sourceType: "official-site" },
-  { id: "destination-aventure", category: "circuits", priority: 2, state: "source-pending", sourceType: "official-site" },
+{ id: "destination-aventure", category: "circuits", priority: 2, state: "source-pending", sourceType: "official-site" },
   { id: "la-francaise-des-circuits", category: "circuits", priority: 2, state: "source-pending", sourceType: "official-site" },
   { id: "salaun-holidays", category: "circuits", priority: 2, state: "permission-required", sourceType: "brand-permission", note: "Salaün Holidays legal notice prohibits reproduction/exploitation of its protected marks without authorisation." },
   { id: "nordiska", category: "circuits", priority: 2, state: "permission-required", sourceType: "brand-permission", note: "Nordiska is explicitly listed as a protected Salaün mark; hold logo use until authorisation." },

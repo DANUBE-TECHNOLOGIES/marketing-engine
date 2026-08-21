@@ -78,5 +78,22 @@
     "outputFormat": "svg",
     "assetBytes": 7707,
     "converter": "none-required"
+  },
+  "double-sens": {
+    "sourceUrl": "https://www.doublesens.fr/static/tdfront/img/logo_transition.svg",
+    "sourcePage": "https://www.doublesens.fr/",
+    "selectionMode": "deep-structured-logo",
+    "score": 234,
+    "brandHits": 2,
+    "crawledPages": [
+      "https://www.doublesens.fr/",
+      "https://www.doublesens.fr/media/original_images/1000044719.jpg",
+      "https://www.doublesens.fr/media/original_images/1000033565.jpg",
+      "https://www.doublesens.fr/media/original_images/1000033554.jpg",
+      "https://www.doublesens.fr/media/original_images/1000032750.jpg"
+    ],
+    "outputFormat": "svg",
+    "assetBytes": 11310,
+    "converter": "none-required"
   }
 }
