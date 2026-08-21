@@ -1,0 +1,46 @@
+name: MSE-25.40 Local SEO Semantic Engine
+
+on:
+  push:
+    branches:
+      - 'feature/mse-25-40-*'
+  pull_request:
+    paths:
+      - 'backend/src/modules/minisite-semantic-engine/**'
+      - 'backend/scripts/mse-25-40-*.js'
+      - 'backend/test/mse-25-40-*.test.js'
+      - 'backend/src/modules/register-modules.js'
+      - '.github/workflows/mse-25-40.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  semantic-engine:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Prisma client
+        run: npm run prisma:generate
+
+      - name: Load semantic module
+        run: node -e "require('./src/modules/minisite-semantic-engine')"
+
+      - name: MSE-25.40 tests
+        run: node --test test/mse-25-40-*.test.js
