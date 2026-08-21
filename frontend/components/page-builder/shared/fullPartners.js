@@ -64,13 +64,13 @@ export const FULL_PARTNERS = Object.freeze([
   P("gaeland-ashling", "Gaeland Ashling", "sur-mesure", "Voyages personnalisés vers des destinations de caractère, avec une approche experte et thématique.", ["sur mesure", "expertise"]),
   P("planete-production", "Planète Production", "sur-mesure", "Voyages et programmes construits autour de destinations et expériences sélectionnées pour les agences partenaires.", ["voyage organisé", "expérience"]),
 
-  P("campings-com", "Campings.com", "france-europe", "Séjours en camping et hébergements de plein air en France et en Europe, du mobil-home aux villages de vacances.", ["camping", "plein air"]),
+  P("campings-com", "Campings.com", "france-europe", "Séjours en camping et hébergements de plein air en France et en Europe, du mobil-home aux villages de vacances.", ["camping", "plein air"], "/partners/campings-com.svg"),
   P("lagrange", "Lagrange Vacances", "france-europe", "Résidences, locations et séjours à la mer, à la montagne et à la campagne, principalement en France et en Europe.", ["résidence", "France"]),
   P("mmv", "MMV Vacances Club", "france-europe", "Clubs et résidences de vacances à la montagne, particulièrement adaptés aux séjours en famille.", ["montagne", "famille"]),
   P("pierre-vacances-center-parcs", "Pierre & Vacances / Center Parcs / maeva", "france-europe", "Résidences, villages nature, domaines de loisirs et locations de vacances en France et en Europe.", ["résidence", "famille", "France"], "/partners/pierre-vacances-center-parcs.svg"),
   P("ollandini", "Ollandini", "france-europe", "Spécialiste de la Corse, avec des séjours, circuits, locations et hôtels-clubs pour découvrir les différentes régions de l'île.", ["Corse", "spécialiste"]),
   P("odalys", "Odalys Voyages", "france-europe", "Résidences, locations et séjours en France et en Europe, à la mer, à la montagne et en ville.", ["résidence", "France", "Europe"], "/partners/odalys.svg"),
-  P("thalasso-n1", "Thalasso N°1", "france-europe", "Séjours bien-être, thalassothérapie et escapades détente en France et à l'étranger.", ["bien-être", "thalasso"]),
+  P("thalasso-n1", "Thalasso N°1", "france-europe", "Séjours bien-être, thalassothérapie et escapades détente en France et à l'étranger.", ["bien-être", "thalasso"], "/partners/thalasso-n1.svg"),
   P("villages-clubs-soleil", "Villages Clubs du Soleil", "france-europe", "Villages clubs en France, à la montagne et sur le littoral, avec des formules adaptées aux familles et aux activités.", ["France", "club", "famille"], "/partners/villages-clubs-soleil.svg"),
 ]);
 

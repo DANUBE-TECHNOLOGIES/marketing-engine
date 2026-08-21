@@ -42,12 +42,9 @@ export const PARTNER_LOGO_BACKLOG = Object.freeze([
 { id: "jetset-voyages", category: "sur-mesure", priority: 2, state: "source-pending", sourceType: "official-site" },
 { id: "gaeland-ashling", category: "sur-mesure", priority: 2, state: "source-pending", sourceType: "official-site" },
   { id: "planete-production", category: "sur-mesure", priority: 2, state: "source-pending", sourceType: "official-site" },
-
-  { id: "campings-com", category: "france-europe", priority: 2, state: "source-pending", sourceType: "official-site" },
-  { id: "lagrange", category: "france-europe", priority: 2, state: "source-pending", sourceType: "official-site" },
+{ id: "lagrange", category: "france-europe", priority: 2, state: "source-pending", sourceType: "official-site" },
   { id: "mmv", category: "france-europe", priority: 2, state: "source-pending", sourceType: "official-site" },
 { id: "ollandini", category: "france-europe", priority: 2, state: "source-pending", sourceType: "official-site", note: "Corsica specialist; source only the Ollandini masterbrand from its official site." },
-{ id: "thalasso-n1", category: "france-europe", priority: 2, state: "source-pending", sourceType: "official-site" },
 ]);
 
 export function getPartnerLogoBacklog(category = "") {

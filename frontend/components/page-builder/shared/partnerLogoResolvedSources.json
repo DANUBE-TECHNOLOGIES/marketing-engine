@@ -58,5 +58,25 @@
     "outputFormat": "svg",
     "assetBytes": 7621,
     "converter": "none-required"
+  },
+  "campings-com": {
+    "sourceUrl": "https://assets.campings.com/assets/shared/images/logos/logo-white.a72b648b.svg",
+    "sourcePage": "https://www.campings.com/",
+    "sourceRegistryStatus": "official-source-page",
+    "selectionMode": "official-page-high-confidence",
+    "score": 92,
+    "outputFormat": "svg",
+    "assetBytes": 4375,
+    "converter": "none-required"
+  },
+  "thalasso-n1": {
+    "sourceUrl": "https://www.thalassonumero1.com/assets/images/FLOA_LOGO_WHITE.svg",
+    "sourcePage": "https://www.thalassonumero1.com/",
+    "sourceRegistryStatus": "official-source-page",
+    "selectionMode": "official-page-high-confidence",
+    "score": 92,
+    "outputFormat": "svg",
+    "assetBytes": 7707,
+    "converter": "none-required"
   }
 }
