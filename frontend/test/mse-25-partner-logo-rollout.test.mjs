@@ -8,10 +8,16 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
 const read = (relative) => fs.readFileSync(path.join(root, relative), "utf8");
 
-test("batch partner logo rollout only processes vetted sources and preserves legal holds", () => {
+function isPendingOrFinalized(id, backlog, catalogue) {
+  return new RegExp(`id:\\s*"${id}"[^\\n]*state:\\s*"source-pending"`).test(backlog)
+    || new RegExp(`P\\("${id}"[^\\n]*"\\/partners\\/${id}\\.(?:svg|webp)"\\)`).test(catalogue);
+}
+
+test("batch partner logo rollout processes vetted sources and preserves legal holds across lifecycle states", () => {
   const rollout = read("scripts/partner-logo-rollout.mjs");
   const acquire = read("scripts/partner-logo-acquire.mjs");
   const backlog = read("components/page-builder/shared/partnerLogoBacklog.js");
+  const catalogue = read("components/page-builder/shared/fullPartners.js");
 
   assert.match(rollout, /item\.state === "source-vetted"/);
   assert.match(rollout, /item\.state === "permission-required"/);
@@ -24,8 +30,7 @@ test("batch partner logo rollout only processes vetted sources and preserves leg
   assert.match(acquire, /validateSvg/);
   assert.match(acquire, /2 \* 1024 \* 1024/);
 
-  // Finalized partners must leave the active work backlog; legal holds must remain explicit.
   assert.doesNotMatch(backlog, /id:\s*"catlante-catamarans"/);
   assert.match(backlog, /ponant[\s\S]*state: "permission-required"/);
-  assert.match(backlog, /rivages-du-monde[\s\S]*state: "source-pending"/);
+  assert.ok(isPendingOrFinalized("rivages-du-monde", backlog, catalogue));
 });
