@@ -2,8 +2,7 @@
 
 export const PARTNER_LOGO_BACKLOG = Object.freeze([
 { id: "croisieurope", category: "croisieres", priority: 1, state: "source-pending", sourceType: "official-site-or-brand-kit", note: "No trustworthy logo asset was exposed by the public homepage discovery pass." },
-  { id: "rivages-du-monde", category: "croisieres", priority: 1, state: "source-pending", sourceType: "official-site", note: "Official Rivages du Monde site confirmed; discover and vet only the masterbrand logo, never ship or itinerary artwork." },
-  { id: "ponant", category: "croisieres", priority: 1, state: "permission-required", sourceType: "official-press-request", note: "Le site presse PONANT demande de contacter le service presse pour les logos et visuels." },
+{ id: "ponant", category: "croisieres", priority: 1, state: "permission-required", sourceType: "official-press-request", note: "Le site presse PONANT demande de contacter le service presse pour les logos et visuels." },
   { id: "celestyal-cruises", category: "croisieres", priority: 1, state: "permission-required", sourceType: "brand-permission", note: "Les conditions d'utilisation Celestyal réservent l'utilisation des logos et marques sans consentement exprès." },
   { id: "explora-journeys", category: "croisieres", priority: 1, state: "source-pending", sourceType: "official-press-kit", note: "Use the official Explora Journeys Media Centre / Press Kit rather than favicon or UI assets." },
   { id: "cfc", category: "croisieres", priority: 1, state: "permission-required", sourceType: "brand-permission", note: "Hold logo reproduction until an authorised source or explicit permission is confirmed." },
@@ -40,20 +39,15 @@ export const PARTNER_LOGO_BACKLOG = Object.freeze([
   { id: "climats-du-monde", category: "sur-mesure", priority: 2, state: "source-pending", sourceType: "official-site" },
   { id: "asia", category: "sur-mesure", priority: 2, state: "source-pending", sourceType: "official-site" },
   { id: "asiam", category: "sur-mesure", priority: 3, state: "verification-pending", sourceType: "identity-check" },
-  { id: "austral-lagons", category: "sur-mesure", priority: 2, state: "source-pending", sourceType: "official-site" },
-  { id: "jetset-voyages", category: "sur-mesure", priority: 2, state: "source-pending", sourceType: "official-site" },
-  { id: "luxair-tours", category: "sur-mesure", priority: 2, state: "source-pending", sourceType: "official-site" },
-  { id: "gaeland-ashling", category: "sur-mesure", priority: 2, state: "source-pending", sourceType: "official-site" },
+{ id: "jetset-voyages", category: "sur-mesure", priority: 2, state: "source-pending", sourceType: "official-site" },
+{ id: "gaeland-ashling", category: "sur-mesure", priority: 2, state: "source-pending", sourceType: "official-site" },
   { id: "planete-production", category: "sur-mesure", priority: 2, state: "source-pending", sourceType: "official-site" },
 
   { id: "campings-com", category: "france-europe", priority: 2, state: "source-pending", sourceType: "official-site" },
   { id: "lagrange", category: "france-europe", priority: 2, state: "source-pending", sourceType: "official-site" },
   { id: "mmv", category: "france-europe", priority: 2, state: "source-pending", sourceType: "official-site" },
-  { id: "pierre-vacances-center-parcs", category: "france-europe", priority: 2, state: "source-pending", sourceType: "brand-cluster", note: "Three-brand cluster: Pierre & Vacances, Center Parcs and maeva require separate vetted masterbrand assets." },
-  { id: "ollandini", category: "france-europe", priority: 2, state: "source-pending", sourceType: "official-site", note: "Corsica specialist; source only the Ollandini masterbrand from its official site." },
-  { id: "odalys", category: "france-europe", priority: 2, state: "source-pending", sourceType: "official-site" },
-  { id: "thalasso-n1", category: "france-europe", priority: 2, state: "source-pending", sourceType: "official-site" },
-  { id: "villages-clubs-soleil", category: "france-europe", priority: 2, state: "source-pending", sourceType: "official-site" },
+{ id: "ollandini", category: "france-europe", priority: 2, state: "source-pending", sourceType: "official-site", note: "Corsica specialist; source only the Ollandini masterbrand from its official site." },
+{ id: "thalasso-n1", category: "france-europe", priority: 2, state: "source-pending", sourceType: "official-site" },
 ]);
 
 export function getPartnerLogoBacklog(category = "") {

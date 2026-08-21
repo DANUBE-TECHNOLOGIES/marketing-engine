@@ -1,0 +1,62 @@
+{
+  "rivages-du-monde": {
+    "sourceUrl": "https://cuwpmlqxha.cloudimg.io/https://www.rivagesdumonde.fr/media/logo-rdm-anniversaire-blanc.png?w=400&q=78&org_if_sml=1&force_format=webp",
+    "sourcePage": "https://www.rivagesdumonde.fr/",
+    "sourceRegistryStatus": "official-source-page",
+    "selectionMode": "official-page-high-confidence",
+    "score": 106,
+    "outputFormat": "webp",
+    "assetBytes": 8074,
+    "converter": "none-required"
+  },
+  "austral-lagons": {
+    "sourceUrl": "https://australlagons.com/sites/default/files/2023-12/Logo-IATA.svg",
+    "sourcePage": "https://www.australlagons.com/",
+    "sourceRegistryStatus": "official-source-page",
+    "selectionMode": "official-page-high-confidence",
+    "score": 108,
+    "outputFormat": "svg",
+    "assetBytes": 8933,
+    "converter": "none-required"
+  },
+  "luxair-tours": {
+    "sourceUrl": "https://www.luxairtours.lu/modules/custom/luxair_styleguide/src/images/logos/logos/grayscale-luxairtours.svg",
+    "sourcePage": "https://www.luxairtours.lu/",
+    "sourceRegistryStatus": "official-source-page",
+    "selectionMode": "official-page-high-confidence",
+    "score": 108,
+    "outputFormat": "svg",
+    "assetBytes": 4714,
+    "converter": "none-required"
+  },
+  "pierre-vacances-center-parcs": {
+    "sourceUrl": "https://photo.pierreetvacances.com/picto/usp/LogoESCDA2026TourismeRVB57x57.svg",
+    "sourcePage": "https://www.pierreetvacances.com/",
+    "sourceRegistryStatus": "multi-brand-review",
+    "selectionMode": "official-page-high-confidence",
+    "score": 100,
+    "outputFormat": "svg",
+    "assetBytes": 9598,
+    "converter": "none-required"
+  },
+  "odalys": {
+    "sourceUrl": "https://media.odalys-vacances.com/plus/v3/menu/img/logo.svg",
+    "sourcePage": "https://www.odalys-vacances.com/",
+    "sourceRegistryStatus": "official-source-page",
+    "selectionMode": "official-page-high-confidence",
+    "score": 100,
+    "outputFormat": "svg",
+    "assetBytes": 6952,
+    "converter": "none-required"
+  },
+  "villages-clubs-soleil": {
+    "sourceUrl": "https://www.villagesclubsdusoleil.com/logo-vcs.svg",
+    "sourcePage": "https://www.villagesclubsdusoleil.com/",
+    "sourceRegistryStatus": "official-source-page",
+    "selectionMode": "official-page-high-confidence",
+    "score": 124,
+    "outputFormat": "svg",
+    "assetBytes": 7621,
+    "converter": "none-required"
+  }
+}
