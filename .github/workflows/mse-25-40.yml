@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - 'feature/mse-25-40-*'
+      - 'integration/mse-25-*'
   pull_request:
     paths:
       - 'backend/src/modules/minisite-semantic-engine/**'
