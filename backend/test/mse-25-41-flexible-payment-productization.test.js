@@ -7,6 +7,7 @@ const {
   planPaymentPlacements,
   validatePaymentPolicyInput,
 } = require("../src/modules/flexible-payment-experience");
+const { toPolicyRecord } = require("../src/modules/flexible-payment-experience/policy-repository");
 
 test("MSE-25.41 defaults to a conversion-oriented CTA without inventing financing terms", () => {
   const copy = buildPublicPaymentCopy({ enabled: true, products: ["flight", "travel"] });
@@ -23,6 +24,20 @@ test("MSE-25.41 can route a payment lead to the quote journey", () => {
     site: { pages: [{ slug: "home", status: "published", blocks: [] }] },
   });
   assert.equal(plan.proposals[0].block.content.primaryCta.href, "devis");
+});
+
+test("MSE-25.41 keeps CTA mode when a persisted policy is read back", () => {
+  const policy = toPolicyRecord({
+    enabled: true,
+    products: ["flight", "travel"],
+    installmentCounts: [],
+    feeMode: "unspecified",
+    ctaMode: "quote",
+    disclaimer: "Sous réserve des conditions applicables.",
+    ctaLabel: "Demander une étude",
+  });
+  assert.equal(policy.ctaMode, "quote");
+  assert.equal(policy.ctaLabel, "Demander une étude");
 });
 
 test("MSE-25.41 rejects unsupported CTA destinations", () => {
