@@ -4,11 +4,30 @@ function normalizeOrigin(value) {
   return String(value || "http://127.0.0.1:4000").trim().replace(/\/+$/g, "");
 }
 
-async function run({ backendOrigin, tenantSlug = "mondescale", emitOutput = true, request = fetch } = {}) {
+function validatePreview(payload) {
+  if (payload?.readOnly !== true || payload?.writes !== false || payload?.destructive !== false) {
+    const error = new Error("Le preview réseau MSE-25.40 doit rester strictement read-only.");
+    error.code = "MSE_25_40_UNSAFE_PREVIEW";
+    throw error;
+  }
+  if (!/^[0-9a-f]{64}$/i.test(String(payload?.planFingerprint || ""))) {
+    const error = new Error("Le preview MSE-25.40 doit fournir un fingerprint SHA-256 valide.");
+    error.code = "MSE_25_40_FINGERPRINT_INVALID";
+    throw error;
+  }
+  if (payload?.policy?.automaticWrites !== false || (payload?.summary?.automaticWriteCount || 0) !== 0) {
+    const error = new Error("Le preview MSE-25.40 ne doit exposer aucune écriture automatique.");
+    error.code = "MSE_25_40_AUTOMATIC_WRITE_EXPOSED";
+    throw error;
+  }
+  return payload;
+}
+
+async function runHttp({ backendOrigin, tenantSlug, request = fetch } = {}) {
   const origin = normalizeOrigin(backendOrigin || process.env.BACKEND_ORIGIN);
   const response = await request(`${origin}/minisite-semantic-engine/network/preview`, {
     method: "POST",
-    headers: { "content-type": "application/json", "x-tenant-slug": tenantSlug || process.env.TENANT_SLUG || "mondescale" },
+    headers: { "content-type": "application/json", "x-tenant-slug": tenantSlug },
     body: "{}",
   });
   const payload = await response.json();
@@ -18,16 +37,27 @@ async function run({ backendOrigin, tenantSlug = "mondescale", emitOutput = true
     error.details = payload?.details || {};
     throw error;
   }
-  if (payload.readOnly !== true || payload.writes !== false || payload.destructive !== false) {
-    const error = new Error("Le preview réseau MSE-25.40 doit rester strictement read-only.");
-    error.code = "MSE_25_40_UNSAFE_PREVIEW";
-    throw error;
+  return validatePreview(payload);
+}
+
+async function runDirect({ tenantSlug } = {}) {
+  require("dotenv").config();
+  const { PrismaClient } = require("@prisma/client");
+  const { MiniSiteSemanticEngineService } = require("../src/modules/minisite-semantic-engine/service");
+  const prisma = new PrismaClient();
+  try {
+    const service = new MiniSiteSemanticEngineService({ prisma });
+    return validatePreview(await service.previewNetwork({ tenantSlug }));
+  } finally {
+    await prisma.$disconnect();
   }
-  if (!/^[0-9a-f]{64}$/i.test(String(payload.planFingerprint || ""))) {
-    const error = new Error("Le preview MSE-25.40 doit fournir un fingerprint SHA-256 valide.");
-    error.code = "MSE_25_40_FINGERPRINT_INVALID";
-    throw error;
-  }
+}
+
+async function run({ backendOrigin, tenantSlug = process.env.TENANT_SLUG || "mondescale", emitOutput = true, request = fetch, mode = process.env.MSE_25_40_PREVIEW_MODE || "direct" } = {}) {
+  const normalizedMode = String(mode || "direct").trim().toLowerCase();
+  const payload = normalizedMode === "http"
+    ? await runHttp({ backendOrigin, tenantSlug, request })
+    : await runDirect({ tenantSlug });
   if (emitOutput) console.log(JSON.stringify(payload, null, 2));
   return payload;
 }
@@ -39,4 +69,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { normalizeOrigin, run };
+module.exports = { normalizeOrigin, run, runDirect, runHttp, validatePreview };
