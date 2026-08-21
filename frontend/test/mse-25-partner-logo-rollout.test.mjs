@@ -23,6 +23,9 @@ test("batch partner logo rollout only processes vetted sources and preserves leg
   assert.match(acquire, /source\.status !== "vetted-source"/);
   assert.match(acquire, /validateSvg/);
   assert.match(acquire, /2 \* 1024 \* 1024/);
-  assert.match(backlog, /catlante-catamarans[\s\S]*state: "source-vetted"/);
+
+  // Finalized partners must leave the active work backlog; legal holds must remain explicit.
+  assert.doesNotMatch(backlog, /id:\s*"catlante-catamarans"/);
   assert.match(backlog, /ponant[\s\S]*state: "permission-required"/);
+  assert.match(backlog, /rivages-du-monde[\s\S]*state: "source-pending"/);
 });
