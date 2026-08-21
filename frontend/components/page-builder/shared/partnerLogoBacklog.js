@@ -1,8 +1,7 @@
 "use strict";
 
 export const PARTNER_LOGO_BACKLOG = Object.freeze([
-  { id: "catlante-catamarans", category: "croisieres", priority: 1, state: "source-vetted", sourceType: "official-site-svg", note: "Official site exposes logo.svg and logo-scroll.svg; use a vetted source before normalisation." },
-  { id: "croisieurope", category: "croisieres", priority: 1, state: "source-pending", sourceType: "official-site-or-brand-kit", note: "No trustworthy logo asset was exposed by the public homepage discovery pass." },
+{ id: "croisieurope", category: "croisieres", priority: 1, state: "source-pending", sourceType: "official-site-or-brand-kit", note: "No trustworthy logo asset was exposed by the public homepage discovery pass." },
   { id: "rivages-du-monde", category: "croisieres", priority: 1, state: "source-pending", sourceType: "official-site", note: "Official Rivages du Monde site confirmed; discover and vet only the masterbrand logo, never ship or itinerary artwork." },
   { id: "ponant", category: "croisieres", priority: 1, state: "permission-required", sourceType: "official-press-request", note: "Le site presse PONANT demande de contacter le service presse pour les logos et visuels." },
   { id: "celestyal-cruises", category: "croisieres", priority: 1, state: "permission-required", sourceType: "brand-permission", note: "Les conditions d'utilisation Celestyal réservent l'utilisation des logos et marques sans consentement exprès." },
