@@ -366,6 +366,11 @@ function normalizeBlockEnvelope(input = {}) {
     settings: isPlainObject(input.settings)
       ? deepClone(input.settings)
       : {},
+    seo: isPlainObject(input.seo)
+      ? deepClone(input.seo)
+      : {},
+    visibleDesktop: input.visibleDesktop !== false,
+    visibleMobile: input.visibleMobile !== false,
   };
 }
 
