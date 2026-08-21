@@ -5,6 +5,15 @@ const PaymentPolicyRepository = require("./policy-repository");
 const { validatePaymentPolicyInput } = require("./payment-experience");
 const { buildFlexiblePaymentOperationalStatus } = require("./operational-status");
 const {
+  DEFAULT_NETWORK_POLICY,
+  applyFlexiblePaymentNetworkPolicy,
+  buildFlexiblePaymentNetworkPolicyPreview,
+} = require("./network-policy");
+const {
+  applyFlexiblePaymentNetworkRollout,
+  buildFlexiblePaymentNetworkRolloutPreview,
+} = require("./network-rollout");
+const {
   applyPaymentPlacementPreview,
   buildPaymentPlacementPreview,
   rollbackPaymentPlacement,
@@ -39,9 +48,7 @@ async function loadSite(prisma, siteKey, policyRepository = new PaymentPolicyRep
       agency: true,
       pages: {
         include: {
-          blocks: {
-            orderBy: { displayOrder: "asc" },
-          },
+          blocks: { orderBy: { displayOrder: "asc" } },
         },
         orderBy: { displayOrder: "asc" },
       },
@@ -59,9 +66,7 @@ async function loadNetworkSites(prisma, policyRepository = new PaymentPolicyRepo
       agency: true,
       pages: {
         include: {
-          blocks: {
-            orderBy: { displayOrder: "asc" },
-          },
+          blocks: { orderBy: { displayOrder: "asc" } },
         },
         orderBy: { displayOrder: "asc" },
       },
@@ -109,17 +114,71 @@ module.exports = function createFlexiblePaymentRoutes({ prisma }) {
     }
   });
 
+  router.post("/api/flexible-payment/network-policy/preview", async (req, res) => {
+    try {
+      const sites = await loadNetworkSites(prisma, policyRepository);
+      const policy = req.body?.policy === undefined
+        ? DEFAULT_NETWORK_POLICY
+        : validatePaymentPolicyInput(req.body.policy);
+      const preview = buildFlexiblePaymentNetworkPolicyPreview(sites, policy);
+      return res.json({ ok: true, mode: "network-policy-preview", ...preview });
+    } catch (error) {
+      return sendModuleError(res, error);
+    }
+  });
+
+  router.post("/api/flexible-payment/network-policy/apply", async (req, res) => {
+    try {
+      const sites = await loadNetworkSites(prisma, policyRepository);
+      const policy = req.body?.policy === undefined
+        ? DEFAULT_NETWORK_POLICY
+        : validatePaymentPolicyInput(req.body.policy);
+      const result = await applyFlexiblePaymentNetworkPolicy(policyRepository, {
+        sites,
+        siteIds: req.body?.siteIds,
+        policy,
+        previewFingerprint: req.body?.previewFingerprint,
+        confirm: req.body?.confirm === true,
+        overwrite: req.body?.overwrite === true,
+      });
+      return res.json({ ok: true, mode: "network-policy-apply", ...result });
+    } catch (error) {
+      return sendModuleError(res, error);
+    }
+  });
+
+  router.post("/api/flexible-payment/network-rollout/preview", async (_req, res) => {
+    try {
+      const sites = await loadNetworkSites(prisma, policyRepository);
+      const preview = buildFlexiblePaymentNetworkRolloutPreview(sites);
+      return res.json({ ok: true, mode: "network-rollout-preview", ...preview });
+    } catch (error) {
+      return sendModuleError(res, error);
+    }
+  });
+
+  router.post("/api/flexible-payment/network-rollout/apply", async (req, res) => {
+    try {
+      const sites = await loadNetworkSites(prisma, policyRepository);
+      const result = await applyFlexiblePaymentNetworkRollout({ prisma }, {
+        sites,
+        siteIds: req.body?.siteIds,
+        previewFingerprint: req.body?.previewFingerprint,
+        confirm: req.body?.confirm === true,
+        createdBy: req.body?.createdBy || "mse-25.41-network-rollout",
+      });
+      return res.json({ ok: true, mode: "network-rollout-apply", ...result });
+    } catch (error) {
+      return sendModuleError(res, error);
+    }
+  });
+
   router.get("/api/agency-sites/:siteSlug/flexible-payment", async (req, res) => {
     try {
       const site = await loadSite(prisma, req.params.siteSlug, policyRepository);
       if (!site) {
-        return res.status(404).json({
-          ok: false,
-          code: "FLEXIBLE_PAYMENT_SITE_NOT_FOUND",
-          error: "Mini-site agence introuvable.",
-        });
+        return res.status(404).json({ ok: false, code: "FLEXIBLE_PAYMENT_SITE_NOT_FOUND", error: "Mini-site agence introuvable." });
       }
-
       const preview = buildPaymentPlacementPreview({ site });
       return res.json({
         ok: true,
@@ -138,19 +197,11 @@ module.exports = function createFlexiblePaymentRoutes({ prisma }) {
       assertPolicyWriteConfirmed(req.body?.confirm === true);
       const site = await loadSite(prisma, req.params.siteSlug, policyRepository);
       if (!site) {
-        return res.status(404).json({
-          ok: false,
-          code: "FLEXIBLE_PAYMENT_SITE_NOT_FOUND",
-          error: "Mini-site agence introuvable.",
-        });
+        return res.status(404).json({ ok: false, code: "FLEXIBLE_PAYMENT_SITE_NOT_FOUND", error: "Mini-site agence introuvable." });
       }
-
       const policy = validatePaymentPolicyInput(req.body?.policy);
       const savedPolicy = await policyRepository.upsert(site.id, policy);
-      const preview = buildPaymentPlacementPreview({
-        site: { ...site, paymentPolicy: savedPolicy },
-      });
-
+      const preview = buildPaymentPlacementPreview({ site: { ...site, paymentPolicy: savedPolicy } });
       return res.json({
         ok: true,
         mode: "policy-update",
@@ -168,18 +219,9 @@ module.exports = function createFlexiblePaymentRoutes({ prisma }) {
     try {
       const site = await loadSite(prisma, req.params.siteSlug, policyRepository);
       if (!site) {
-        return res.status(404).json({
-          ok: false,
-          code: "FLEXIBLE_PAYMENT_SITE_NOT_FOUND",
-          error: "Mini-site agence introuvable.",
-        });
+        return res.status(404).json({ ok: false, code: "FLEXIBLE_PAYMENT_SITE_NOT_FOUND", error: "Mini-site agence introuvable." });
       }
-
-      const preview = buildPaymentPlacementPreview({
-        site,
-        policy: req.body?.policy,
-      });
-
+      const preview = buildPaymentPlacementPreview({ site, policy: req.body?.policy });
       return res.json({
         ok: true,
         mode: "preview",
@@ -196,24 +238,15 @@ module.exports = function createFlexiblePaymentRoutes({ prisma }) {
     try {
       const site = await loadSite(prisma, req.params.siteSlug, policyRepository);
       if (!site) {
-        return res.status(404).json({
-          ok: false,
-          code: "FLEXIBLE_PAYMENT_SITE_NOT_FOUND",
-          error: "Mini-site agence introuvable.",
-        });
+        return res.status(404).json({ ok: false, code: "FLEXIBLE_PAYMENT_SITE_NOT_FOUND", error: "Mini-site agence introuvable." });
       }
-
-      const result = await applyPaymentPlacementPreview(
-        { prisma },
-        {
-          site,
-          policy: req.body?.policy,
-          previewFingerprint: req.body?.previewFingerprint,
-          confirm: req.body?.confirm === true,
-          createdBy: req.body?.createdBy || "mse-25.32-api",
-        }
-      );
-
+      const result = await applyPaymentPlacementPreview({ prisma }, {
+        site,
+        policy: req.body?.policy,
+        previewFingerprint: req.body?.previewFingerprint,
+        confirm: req.body?.confirm === true,
+        createdBy: req.body?.createdBy || "mse-25.32-api",
+      });
       return res.json({
         ok: true,
         mode: "apply",
@@ -227,48 +260,27 @@ module.exports = function createFlexiblePaymentRoutes({ prisma }) {
 
   router.post("/api/agency-sites/:siteSlug/flexible-payment/rollback", async (req, res) => {
     try {
-      const site = await findSiteByKey(prisma, req.params.siteSlug, {
-        select: { id: true, slug: true },
-      });
+      const site = await findSiteByKey(prisma, req.params.siteSlug, { select: { id: true, slug: true } });
       if (!site) {
-        return res.status(404).json({
-          ok: false,
-          code: "FLEXIBLE_PAYMENT_SITE_NOT_FOUND",
-          error: "Mini-site agence introuvable.",
-        });
+        return res.status(404).json({ ok: false, code: "FLEXIBLE_PAYMENT_SITE_NOT_FOUND", error: "Mini-site agence introuvable." });
       }
-
       const pageId = String(req.body?.pageId || "").trim();
       const blockId = String(req.body?.blockId || "").trim();
       if (!pageId || !blockId) {
-        return res.status(400).json({
-          ok: false,
-          code: "FLEXIBLE_PAYMENT_ROLLBACK_TARGET_REQUIRED",
-          error: "pageId et blockId sont requis.",
-        });
+        return res.status(400).json({ ok: false, code: "FLEXIBLE_PAYMENT_ROLLBACK_TARGET_REQUIRED", error: "pageId et blockId sont requis." });
       }
-
       const page = await prisma.agencySitePage.findFirst({
         where: { id: pageId, siteId: site.id },
         select: { id: true },
       });
       if (!page) {
-        return res.status(404).json({
-          ok: false,
-          code: "FLEXIBLE_PAYMENT_PAGE_NOT_FOUND",
-          error: "Page introuvable pour ce mini-site.",
-        });
+        return res.status(404).json({ ok: false, code: "FLEXIBLE_PAYMENT_PAGE_NOT_FOUND", error: "Page introuvable pour ce mini-site." });
       }
-
-      const result = await rollbackPaymentPlacement(
-        { prisma },
-        {
-          pageId,
-          blockId,
-          confirm: req.body?.confirm === true,
-        }
-      );
-
+      const result = await rollbackPaymentPlacement({ prisma }, {
+        pageId,
+        blockId,
+        confirm: req.body?.confirm === true,
+      });
       return res.json({ ok: true, mode: "rollback", ...result });
     } catch (error) {
       return sendModuleError(res, error);
