@@ -44,8 +44,18 @@ class MiniSiteSemanticEngineService {
       newPageEvidenceGate: true,
       autoCreatePages: false,
       automaticWrites: false,
+      tenantScoped: true,
       routes: ["agency-preview", "network-preview"],
     };
+  }
+
+  async resolveTenantBySlug(tenantSlug) {
+    const slug = String(tenantSlug || "").trim();
+    if (!slug || !this.prisma?.tenant) return null;
+    return this.prisma.tenant.findUnique({
+      where: { slug },
+      select: { id: true, slug: true },
+    });
   }
 
   async resolveTenantId(summary) {
@@ -56,6 +66,42 @@ class MiniSiteSemanticEngineService {
       select: { tenantId: true },
     });
     return row?.tenantId || null;
+  }
+
+  async assertTenantScope(summary, tenantSlug) {
+    if (!tenantSlug) return null;
+    const tenant = await this.resolveTenantBySlug(tenantSlug);
+    if (!tenant) {
+      const error = new Error(`Tenant ${tenantSlug} introuvable.`);
+      error.code = "MSE_25_40_TENANT_NOT_FOUND";
+      error.status = 404;
+      throw error;
+    }
+    const siteTenantId = await this.resolveTenantId(summary);
+    if (!siteTenantId || siteTenantId !== tenant.id) {
+      const error = new Error("Le mini-site demandé n'appartient pas au tenant MSE-25.40 courant.");
+      error.code = "MSE_25_40_TENANT_SCOPE_MISMATCH";
+      error.status = 404;
+      throw error;
+    }
+    return tenant;
+  }
+
+  async filterSitesForTenant(sites, tenantSlug) {
+    if (!tenantSlug) return sites || [];
+    const tenant = await this.resolveTenantBySlug(tenantSlug);
+    if (!tenant) {
+      const error = new Error(`Tenant ${tenantSlug} introuvable.`);
+      error.code = "MSE_25_40_TENANT_NOT_FOUND";
+      error.status = 404;
+      throw error;
+    }
+    const rows = await this.prisma.agencySite.findMany({
+      where: { tenantId: tenant.id },
+      select: { id: true },
+    });
+    const allowed = new Set(rows.map((row) => String(row.id)));
+    return (sites || []).filter((site) => allowed.has(String(site.id)));
   }
 
   async contentServiceForSite(summary) {
@@ -77,7 +123,7 @@ class MiniSiteSemanticEngineService {
     });
   }
 
-  async siteWithContent(agencyId) {
+  async siteWithContent(agencyId, { tenantSlug } = {}) {
     const summary = await this.repository.findSiteByAgency(agencyId);
     if (!summary) {
       const error = new Error("Mini-site introuvable pour cette agence.");
@@ -85,6 +131,7 @@ class MiniSiteSemanticEngineService {
       error.status = 404;
       throw error;
     }
+    await this.assertTenantScope(summary, tenantSlug);
     const enrichmentService = await this.contentServiceForSite(summary);
     const content = await enrichmentService.buildAgencyContentOptimization({ agencyId });
     return {
@@ -102,18 +149,19 @@ class MiniSiteSemanticEngineService {
     };
   }
 
-  async previewAgency({ agencyId } = {}) {
+  async previewAgency({ agencyId, tenantSlug } = {}) {
     if (agencyId === undefined || agencyId === null || agencyId === "") {
       const error = new Error("agencyId est obligatoire.");
       error.code = "MSE_25_40_AGENCY_ID_REQUIRED";
       error.status = 400;
       throw error;
     }
-    return attachSemanticProposals(semanticPlan(await this.siteWithContent(agencyId)));
+    return attachSemanticProposals(semanticPlan(await this.siteWithContent(agencyId, { tenantSlug })));
   }
 
-  async previewNetwork() {
-    const sites = await this.repository.listSites();
+  async previewNetwork({ tenantSlug } = {}) {
+    const allSites = await this.repository.listSites();
+    const sites = await this.filterSitesForTenant(allSites, tenantSlug);
     const hydrated = [];
     for (const site of sites || []) {
       if (!(String(site.status || "").toLowerCase() === "published" || Boolean(site.publishedAt))) {
@@ -122,7 +170,7 @@ class MiniSiteSemanticEngineService {
       }
       const agencyId = site.agencyId || site.agency?.id;
       if (!agencyId) continue;
-      hydrated.push(await this.siteWithContent(agencyId));
+      hydrated.push(await this.siteWithContent(agencyId, { tenantSlug }));
     }
 
     const base = networkSemanticPlan(hydrated);
@@ -130,6 +178,7 @@ class MiniSiteSemanticEngineService {
     const { planFingerprint: _oldFingerprint, ...networkBase } = base;
     const result = {
       ...networkBase,
+      tenantSlug: tenantSlug || null,
       agencies,
       summary: {
         ...(base.summary || {}),
