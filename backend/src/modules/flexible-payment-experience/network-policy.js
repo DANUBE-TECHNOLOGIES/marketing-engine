@@ -9,6 +9,7 @@ const DEFAULT_NETWORK_POLICY = Object.freeze({
   products: ["flight", "travel"],
   installmentCounts: [],
   feeMode: "unspecified",
+  ctaMode: "contact",
   disclaimer: "Selon votre réservation et sous réserve des conditions applicables. Renseignez-vous auprès de votre agence.",
   ctaLabel: "Étudier mes possibilités de paiement",
 });
@@ -31,7 +32,6 @@ function fingerprint(value) {
 function buildFlexiblePaymentNetworkPolicyPreview(sites = [], inputPolicy = DEFAULT_NETWORK_POLICY) {
   const policy = normalizePaymentPolicy(inputPolicy);
   const rows = [];
-
   for (const site of Array.isArray(sites) ? sites : []) {
     const configured = Boolean(site?.paymentPolicy && typeof site.paymentPolicy === "object");
     rows.push({
@@ -42,7 +42,6 @@ function buildFlexiblePaymentNetworkPolicyPreview(sites = [], inputPolicy = DEFA
       action: configured ? "preserve" : "configure",
     });
   }
-
   const preview = {
     version: SOURCE,
     readOnly: true,
@@ -55,7 +54,6 @@ function buildFlexiblePaymentNetworkPolicyPreview(sites = [], inputPolicy = DEFA
       preserved: rows.filter((row) => row.action === "preserve").length,
     },
   };
-
   return { ...preview, fingerprint: fingerprint(preview) };
 }
 
@@ -81,16 +79,11 @@ function assertNetworkPolicyApplyAllowed({ preview, previewFingerprint, confirm,
 }
 
 async function applyFlexiblePaymentNetworkPolicy(policyRepository, {
-  sites = [],
-  siteIds = [],
-  policy: inputPolicy = DEFAULT_NETWORK_POLICY,
-  previewFingerprint,
-  confirm = false,
-  overwrite = false,
+  sites = [], siteIds = [], policy: inputPolicy = DEFAULT_NETWORK_POLICY,
+  previewFingerprint, confirm = false, overwrite = false,
 } = {}) {
   const preview = buildFlexiblePaymentNetworkPolicyPreview(sites, inputPolicy);
   assertNetworkPolicyApplyAllowed({ preview, previewFingerprint, confirm, siteIds });
-
   const selected = [...new Set(siteIds.map(String))];
   const rowsById = new Map(preview.sites.map((row) => [String(row.siteId), row]));
   const unknown = selected.filter((siteId) => !rowsById.has(siteId));
@@ -100,7 +93,6 @@ async function applyFlexiblePaymentNetworkPolicy(policyRepository, {
     error.status = 404;
     throw error;
   }
-
   const applied = [];
   const preserved = [];
   for (const siteId of selected) {
@@ -112,7 +104,6 @@ async function applyFlexiblePaymentNetworkPolicy(policyRepository, {
     const savedPolicy = await policyRepository.upsert(siteId, preview.policy);
     applied.push({ ...row, policy: savedPolicy });
   }
-
   return {
     version: SOURCE,
     fingerprint: preview.fingerprint,
