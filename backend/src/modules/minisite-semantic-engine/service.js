@@ -16,11 +16,36 @@ function attachSemanticProposals(plan = {}) {
       ...(plan.summary || {}),
       semanticProposalCount: semanticProposals.summary.proposalCount,
       existingPageProposalCount: semanticProposals.summary.existingPageProposalCount,
+      managedRouteReviewCount: semanticProposals.summary.managedRouteReviewCount || 0,
       newPageEvidenceGateCount: semanticProposals.summary.newPageEvidenceGateCount,
       automaticWriteCount: 0,
     },
   };
   return { ...result, planFingerprint: fingerprint(result) };
+}
+
+function managedRoutePages(summary = {}, excludedPages = []) {
+  const managedSlugs = new Set(
+    (excludedPages || [])
+      .filter((row) => row?.reason === "canonical-route-managed")
+      .map((row) => String(row.slug || ""))
+      .filter(Boolean)
+  );
+
+  return (summary.pages || [])
+    .filter((page) => managedSlugs.has(String(page.slug || "")))
+    .map((page) => ({
+      ...page,
+      id: page.id || null,
+      slug: page.slug || null,
+      title: page.title || null,
+      published: page.published === true || String(page.status || "").toLowerCase() === "published",
+      status: page.status || (page.published === true ? "published" : null),
+      blocks: [],
+      managedRoute: true,
+      writeEligible: false,
+      semanticSource: "canonical-managed-route",
+    }));
 }
 
 class MiniSiteSemanticEngineService {
@@ -42,6 +67,7 @@ class MiniSiteSemanticEngineService {
       locationExpansion: false,
       preferExistingPages: true,
       newPageEvidenceGate: true,
+      managedRoutesAware: true,
       autoCreatePages: false,
       automaticWrites: false,
       tenantScoped: true,
@@ -134,18 +160,25 @@ class MiniSiteSemanticEngineService {
     await this.assertTenantScope(summary, tenantSlug);
     const enrichmentService = await this.contentServiceForSite(summary);
     const content = await enrichmentService.buildAgencyContentOptimization({ agencyId });
+    const editablePages = (content.pages || []).map((row) => ({
+      ...(row.page || {}),
+      id: row.pageId || row.page?.id || null,
+      slug: row.slug || row.page?.slug || null,
+      title: row.title || row.page?.title || null,
+      published: row.published === true || row.page?.published === true,
+      status: row.page?.status || (row.published === true ? "published" : null),
+      blocks: row.currentBlocks || row.page?.blocks || [],
+      managedRoute: false,
+      writeEligible: true,
+      semanticSource: "website-designer",
+    }));
+    const canonicalManagedPages = managedRoutePages(summary, content.excludedPages || []);
+
     return {
       ...summary,
-      pages: (content.pages || []).map((row) => ({
-        ...(row.page || {}),
-        id: row.pageId || row.page?.id || null,
-        slug: row.slug || row.page?.slug || null,
-        title: row.title || row.page?.title || null,
-        published: row.published === true || row.page?.published === true,
-        status: row.page?.status || (row.published === true ? "published" : null),
-        blocks: row.currentBlocks || row.page?.blocks || [],
-      })),
-      semanticExcludedPages: content.excludedPages || [],
+      pages: [...editablePages, ...canonicalManagedPages],
+      semanticExcludedPages: (content.excludedPages || []).filter((row) => row?.reason !== "canonical-route-managed"),
+      semanticManagedRoutes: canonicalManagedPages.map((page) => ({ slug: page.slug, pageId: page.id })),
     };
   }
 
@@ -184,6 +217,7 @@ class MiniSiteSemanticEngineService {
         ...(base.summary || {}),
         semanticProposalCount: agencies.reduce((sum, row) => sum + (row.summary.semanticProposalCount || 0), 0),
         existingPageProposalCount: agencies.reduce((sum, row) => sum + (row.summary.existingPageProposalCount || 0), 0),
+        managedRouteReviewCount: agencies.reduce((sum, row) => sum + (row.summary.managedRouteReviewCount || 0), 0),
         newPageEvidenceGateCount: agencies.reduce((sum, row) => sum + (row.summary.newPageEvidenceGateCount || 0), 0),
         automaticWriteCount: 0,
       },
@@ -192,4 +226,4 @@ class MiniSiteSemanticEngineService {
   }
 }
 
-module.exports = { MiniSiteSemanticEngineService, attachSemanticProposals };
+module.exports = { MiniSiteSemanticEngineService, attachSemanticProposals, managedRoutePages };
