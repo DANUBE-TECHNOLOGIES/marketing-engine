@@ -5,7 +5,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
-const { run } = require("../scripts/mse-25-40-post-rollout-validate");
+const { run, writtenTargets } = require("../scripts/mse-25-40-post-rollout-validate");
 
 function network({ ticketingStatus = "covered" } = {}) {
   return {
@@ -17,7 +17,7 @@ function network({ ticketingStatus = "covered" } = {}) {
       ],
       coverage: [
         { intentKey: "services", status: "strong", bestPageSlug: "services", bestScore: 100, bestLocalityScore: 70, candidatePages: [] },
-        { intentKey: "ticketing", status: ticketingStatus, bestPageSlug: "services", bestScore: ticketingStatus === "gap" ? 32 : 48, bestLocalityScore: 70, candidatePages: [{ slug: "services", score: ticketingStatus === "gap" ? 32 : 48, localityScore: 70, managedRoute: false }] },
+        { intentKey: "ticketing", status: ticketingStatus, bestPageSlug: "services", bestScore: ticketingStatus === "gap" ? 40 : 48, bestLocalityScore: 70, candidatePages: [{ slug: "services", score: ticketingStatus === "gap" ? 40 : 48, localityScore: 70, managedRoute: false }] },
       ],
       semanticProposals: {
         proposals: [{
@@ -36,6 +36,14 @@ function network({ ticketingStatus = "covered" } = {}) {
   };
 }
 
+function generated(intentKey, html) {
+  return {
+    type: "rich_text",
+    content: { html },
+    seo: { generatedBy: "mse-25.40", purpose: "residual-semantic-uplift", intentKey },
+  };
+}
+
 function writeIntent() {
   return {
     version: "mse-25.40",
@@ -47,11 +55,8 @@ function writeIntent() {
       pageSlug: "services",
       targetSnapshotFingerprint: "c".repeat(64),
       snapshot: {
-        after: {
-          blocks: [{
-            seo: { generatedBy: "mse-25.40", purpose: "residual-semantic-uplift", intentKey: "ticketing" },
-          }],
-        },
+        before: { blocks: [] },
+        after: { blocks: [generated("ticketing", "Billetterie et vols")] },
       },
     }],
   };
@@ -113,4 +118,24 @@ test("post-rollout validator fails closed while a written intent is still a resi
     }),
     (error) => error.code === "MSE_25_40_POST_ROLLOUT_CLOSURE_NOT_CERTIFIED"
   );
+});
+
+test("corrective rollout validates only the generated intent that actually changed", () => {
+  const unchangedStay = generated("stay", "Séjours inchangés");
+  const beforeTicketing = generated("ticketing", "Ancienne billetterie");
+  const afterTicketing = generated("ticketing", "Nouvelle billetterie");
+  const corrective = {
+    intents: [{
+      siteSlug: "lamorlaye",
+      agencyId: 7,
+      pageSlug: "services",
+      targetSnapshotFingerprint: "e".repeat(64),
+      snapshot: {
+        before: { blocks: [beforeTicketing, unchangedStay] },
+        after: { blocks: [afterTicketing, unchangedStay] },
+      },
+    }],
+  };
+  const targets = writtenTargets(corrective);
+  assert.deepEqual(targets.map((row) => row.intentKey), ["ticketing"]);
 });
