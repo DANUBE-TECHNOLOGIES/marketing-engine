@@ -27,6 +27,26 @@ function assertRepository(state) {
   return state;
 }
 
+function assertSafetyPolicy(preview = {}) {
+  const policy = preview.policy || {};
+  const issues = [];
+  if (policy.doorwayGuard !== true) issues.push("doorwayGuard");
+  if (policy.locationExpansion !== false) issues.push("locationExpansion");
+  if (policy.preferExistingPages !== true) issues.push("preferExistingPages");
+  if (policy.newPageEvidenceGate !== true) issues.push("newPageEvidenceGate");
+  if (policy.autoCreatePages !== false) issues.push("autoCreatePages");
+  if (policy.autoPublishPages !== false) issues.push("autoPublishPages");
+  if (policy.automaticWrites !== false) issues.push("automaticWrites");
+  if (preview.readOnly !== true || preview.writes !== false || preview.destructive !== false) issues.push("readOnlyContract");
+  if ((preview.summary?.automaticWriteCount || 0) !== 0) issues.push("automaticWriteCount");
+  if (issues.length) {
+    const error = new Error(`Politique de sécurité sémantique invalide : ${issues.join(", ")}.`);
+    error.code = "MSE_25_40_SEMANTIC_SAFETY_GUARD_DISABLED";
+    error.details = { issues };
+    throw error;
+  }
+}
+
 async function run({ backendOrigin, tenantSlug, output, emitOutput = true, previewRunner = runPreview, repositoryReader = repositoryState } = {}) {
   const repository = assertRepository(repositoryReader());
   const options = { backendOrigin: backendOrigin || process.env.BACKEND_ORIGIN, tenantSlug: tenantSlug || process.env.TENANT_SLUG || "mondescale", emitOutput: false };
@@ -38,11 +58,8 @@ async function run({ backendOrigin, tenantSlug, output, emitOutput = true, previ
     error.details = { firstFingerprint: first.planFingerprint || null, secondFingerprint: second.planFingerprint || null };
     throw error;
   }
-  if (first.policy?.doorwayGuard !== true || first.policy?.locationExpansion !== false || first.policy?.autoCreatePages !== false) {
-    const error = new Error("La politique anti-doorway MSE-25.40 n'est pas active.");
-    error.code = "MSE_25_40_DOORWAY_GUARD_DISABLED";
-    throw error;
-  }
+  assertSafetyPolicy(first);
+
   const directory = path.resolve(process.env.MSE_25_40_REPORT_DIR || path.join(os.homedir(), "mse-25-40-reports"));
   fs.mkdirSync(directory, { recursive: true });
   const target = path.resolve(output || process.env.MSE_25_40_PREFLIGHT_OUTPUT || path.join(directory, `mse-25-40-preflight-${new Date().toISOString().replace(/[:.]/g, "-")}.json`));
@@ -56,10 +73,28 @@ async function run({ backendOrigin, tenantSlug, output, emitOutput = true, previ
     repository,
     context: options,
     determinism: { verified: true, previewCount: 2, planFingerprint: first.planFingerprint },
+    safety: {
+      verified: true,
+      doorwayGuard: true,
+      preferExistingPages: true,
+      newPageEvidenceGate: true,
+      automaticWrites: false,
+    },
     preview: first,
   };
   fs.writeFileSync(target, JSON.stringify(report, null, 2) + "\n", "utf8");
-  const result = { ok: true, readOnly: true, writes: false, destructive: false, reportPath: target, repository, planFingerprint: first.planFingerprint, summary: first.summary, excludedSites: first.excludedSites || [] };
+  const result = {
+    ok: true,
+    readOnly: true,
+    writes: false,
+    destructive: false,
+    reportPath: target,
+    repository,
+    planFingerprint: first.planFingerprint,
+    summary: first.summary,
+    excludedSites: first.excludedSites || [],
+    safety: report.safety,
+  };
   if (emitOutput) console.log(JSON.stringify(result, null, 2));
   return result;
 }
@@ -71,4 +106,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { EXPECTED_BRANCH, assertRepository, repositoryState, run };
+module.exports = { EXPECTED_BRANCH, assertRepository, assertSafetyPolicy, repositoryState, run };
