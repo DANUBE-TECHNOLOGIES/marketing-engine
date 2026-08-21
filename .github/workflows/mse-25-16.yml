@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - 'feature/mse-25-*'
+      - 'integration/mse-25-*'
   pull_request:
     paths:
       - 'backend/src/modules/search-console-submission/**'
@@ -11,17 +12,30 @@ on:
       - 'backend/src/modules/minisite-seo-enrichment/**'
       - 'backend/src/modules/agency-seo/**'
       - 'backend/src/modules/agency-site/**'
+      - 'backend/src/modules/flexible-payment-experience/**'
+      - 'backend/prisma/migrations/**'
       - 'backend/scripts/search-console-readiness-check.js'
+      - 'backend/scripts/mse-25-39-vm-readiness.js'
       - 'backend/test/search-console-*.test.js'
       - 'backend/test/minisite-local-*.test.js'
       - 'backend/test/minisite-seo-*.test.js'
       - 'backend/test/mse-25-30-*.test.js'
       - 'backend/test/mse-25-31-*.test.js'
+      - 'backend/test/mse-25-32-*.test.js'
+      - 'backend/test/mse-25-34-*.test.js'
+      - 'backend/test/mse-25-35-*.test.js'
+      - 'backend/test/mse-25-36-*.test.js'
+      - 'backend/test/mse-25-37-*.test.js'
+      - 'backend/test/mse-25-38-*.test.js'
+      - 'backend/test/mse-25-39-*.test.js'
       - 'backend/test/agency-seo-*.test.js'
+      - 'backend/package.json'
       - 'frontend/app/agence/[siteSlug]/sitemap.xml/route.js'
+      - 'frontend/app/api/agency-sites/**'
       - 'frontend/app/api/indexation/**'
       - 'frontend/app/api/website-builder/**'
       - 'frontend/app/indexation/**'
+      - 'frontend/app/website-builder/editor/**'
       - 'frontend/lib/indexation-api.js'
       - 'frontend/lib/page-builder-v2/**'
       - 'frontend/test/mse-25-*.test.mjs'
@@ -56,10 +70,31 @@ jobs:
       - name: Install backend dependencies
         run: npm ci
 
-      - name: Run Search Console, local SEO and optimizer backend tests
+      - name: Run Search Console, local SEO and MSE-25.30/25.31 backend tests
         env:
           SEARCH_CONSOLE_ENABLED: 'false'
         run: node --test test/search-console-*.test.js test/minisite-local-*.test.js test/minisite-seo-*.test.js test/mse-25-30-*.test.js test/mse-25-31-*.test.js test/agency-seo-*.test.js
+
+      - name: Run MSE-25.32 flexible payment backend tests
+        run: node --test test/mse-25-32-*.test.js
+
+      - name: Run MSE-25.34 flexible payment network readiness tests
+        run: node --test test/mse-25-34-*.test.js
+
+      - name: Run MSE-25.35 flexible payment network rollout tests
+        run: node --test test/mse-25-35-*.test.js
+
+      - name: Run MSE-25.36 flexible payment rollout audit tests
+        run: node --test test/mse-25-36-*.test.js
+
+      - name: Run MSE-25.37 flexible payment network rollback tests
+        run: node --test test/mse-25-37-*.test.js
+
+      - name: Run MSE-25.38 flexible payment operational status tests
+        run: node --test test/mse-25-38-*.test.js
+
+      - name: Run MSE-25.39 flexible payment VM handoff tests
+        run: node --test test/mse-25-39-*.test.js
 
       - name: Verify Search Console module loads with provider disabled
         env:
@@ -94,11 +129,20 @@ jobs:
       - name: Run partner regression tests
         run: npm run test:partners
 
+      - name: Run MSE-25.32 flexible payment frontend tests
+        run: node --test test/mse-25-32-flexible-payment-experience.test.mjs
+
+      - name: Run MSE-25.33 flexible payment conversion tests
+        run: node --test test/mse-25-33-flexible-payment-conversion-measurement.test.mjs
+
       - name: Lint partner rollout controls
         run: npx eslint "app/api/website-builder/partners/rollout/route.js" "components/website-builder/WebsiteBuilderLauncher.js"
 
       - name: Lint partner page designer and public chain
         run: npx eslint "lib/page-builder-v2/page-builder-state.js" "lib/page-builder-v2/page-builder-api.js" "lib/page-builder-v2/block-catalog.js" "components/page-builder-v2/VisualPageBuilder.js" "components/page-builder-v2/PublicPagePreview.js" "components/public-site/PublicSiteHeader.js" "components/public-site/renderers/PartnerDirectoryRenderer.js" "components/public-site/renderers/PageHeaderRenderer.js"
+
+      - name: Lint MSE-25.32/25.33 flexible payment integration
+        run: npx eslint "app/api/agency-sites/[siteKey]/flexible-payment/[[...operation]]/route.js" "app/website-builder/editor/[siteId]/page.js" "components/page-builder-v2/FlexiblePaymentPolicyPanel.js" "components/public-site/TrackedConversionLink.js" "components/public-site/renderers/FlexiblePaymentRenderer.js" "components/public-site/renderers/registry.js" "lib/page-builder-v2/block-catalog.js" "lib/page-builder-v2/flexible-payment-api.js"
 
       - name: Lint sitemap and indexation API
         run: npx eslint "app/agence/[siteSlug]/sitemap.xml/route.js" "app/api/indexation/route.js" "lib/indexation-api.js"
