@@ -25,11 +25,30 @@ async function run({ backendOrigin = process.env.BACKEND_ORIGIN || "http://127.0
     cleanWorktree: repository.dirty === false,
     healthReadOnly: runtimeHealth.readOnly === true && runtimeHealth.writes === false && runtimeHealth.destructive === false,
     doorwayGuard: runtimeHealth.doorwayGuard === true && runtimeHealth.locationExpansion === false && runtimeHealth.autoCreatePages === false,
+    existingPageFirst: runtimeHealth.preferExistingPages === true,
+    newPageEvidenceGate: runtimeHealth.newPageEvidenceGate === true,
+    automaticWritesDisabled: runtimeHealth.automaticWrites === false && (preview.summary?.automaticWriteCount || 0) === 0,
     previewReadOnly: preview.readOnly === true && preview.writes === false && preview.destructive === false,
+    proposalsPresent: Number(preview.summary?.semanticProposalCount || 0) >= 0,
     fingerprint: /^[0-9a-f]{64}$/i.test(String(preview.planFingerprint || "")),
   };
   const readyForPreflight = Object.values(checks).every(Boolean);
-  const result = { version: "mse-25.40", ok: readyForPreflight, readyForPreflight, publicWritesEnabled: false, repository, runtime: { backendOrigin, tenantSlug, health: runtimeHealth, planFingerprint: preview.planFingerprint, summary: preview.summary, excludedSites: preview.excludedSites || [] }, checks };
+  const result = {
+    version: "mse-25.40",
+    ok: readyForPreflight,
+    readyForPreflight,
+    publicWritesEnabled: false,
+    repository,
+    runtime: {
+      backendOrigin,
+      tenantSlug,
+      health: runtimeHealth,
+      planFingerprint: preview.planFingerprint,
+      summary: preview.summary,
+      excludedSites: preview.excludedSites || [],
+    },
+    checks,
+  };
   if (emitOutput) console.log(JSON.stringify(result, null, 2));
   if (!readyForPreflight) process.exitCode = 1;
   return result;
