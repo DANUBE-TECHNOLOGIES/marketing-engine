@@ -4,6 +4,7 @@ module.exports = {
   ...require("./payment-experience"),
   ...require("./placement-executor"),
   ...require("./network-readiness"),
+  ...require("./network-policy"),
   ...require("./network-rollout"),
   ...require("./rollout-audit"),
   ...require("./network-rollback"),
