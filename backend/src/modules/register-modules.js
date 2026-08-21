@@ -35,6 +35,7 @@ const pageBuilderPersistence = require("./page-builder-persistence");
 const minisiteBlueprint = require("./minisite-blueprint");
 const minisiteBlueprintPersistence = require("./minisite-blueprint-persistence");
 const minisiteSeoEnrichment = require("./minisite-seo-enrichment");
+const minisiteSemanticEngine = require("./minisite-semantic-engine");
 const minisiteStructuredData = require("./minisite-structured-data");
 const searchConsoleSubmission = require("./search-console-submission");
 module.exports = function registerModules(app, { prisma }) {
@@ -201,6 +202,14 @@ module.exports = function registerModules(app, { prisma }) {
   if (minisiteSeoEnrichment.routes) {
     app.use(
       minisiteSeoEnrichment.routes({
+        prisma,
+      })
+    );
+  }
+
+  if (minisiteSemanticEngine.routes) {
+    app.use(
+      minisiteSemanticEngine.routes({
         prisma,
       })
     );
