@@ -8,6 +8,12 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const frontendRoot = path.resolve(here, "..");
 const read = (relativePath) => fs.readFileSync(path.join(frontendRoot, relativePath), "utf8");
 
+function assertPendingOrFinalized(id, backlog, catalogue) {
+  const pending = new RegExp(`id:\\s*"${id}"[^\\n]*state:\\s*"source-pending"`).test(backlog);
+  const finalized = new RegExp(`P\\("${id}"[^\\n]*"\\/partners\\/${id}\\.(?:svg|webp)"\\)`).test(catalogue);
+  assert.ok(pending || finalized, `${id} must remain pending or be finalized`);
+}
+
 test("generic partner logo discovery stays read-only and respects publication holds", () => {
   const discovery = read("scripts/partner-logo-source-discovery.mjs");
   assert.match(discovery, /discover-classify-no-write/);
@@ -60,7 +66,7 @@ test("generic partner logo acquisition validates downloaded and generated payloa
   assert.match(acquire, /validateGeneratedAsset\(generatedPath, outputFormat\)/);
 });
 
-test("Rivages du Monde is wired through catalogue, cruise details and logo sourcing", () => {
+test("Rivages du Monde stays wired through catalogue, cruise details and logo sourcing across pending/finalized lifecycle", () => {
   const catalogue = read("components/page-builder/shared/fullPartners.js");
   const details = read("components/page-builder/shared/partnerCruiseDetails.js");
   const sources = read("components/page-builder/shared/partnerCruiseLogoSources.js");
@@ -68,5 +74,5 @@ test("Rivages du Monde is wired through catalogue, cruise details and logo sourc
   assert.match(catalogue, /P\("rivages-du-monde",\s*"Rivages du Monde",\s*"croisieres"/);
   assert.match(details, /"rivages-du-monde"[\s\S]*Croisière fluviale/);
   assert.match(sources, /"rivages-du-monde"[\s\S]*rivagesdumonde\.fr/);
-  assert.match(backlog, /rivages-du-monde[\s\S]*croisieres[\s\S]*source-pending/);
+  assertPendingOrFinalized("rivages-du-monde", backlog, catalogue);
 });
