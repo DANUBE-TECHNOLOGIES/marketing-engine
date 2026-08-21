@@ -2,6 +2,7 @@
 
 const ALLOWED_PRODUCTS = new Set(["flight", "travel"]);
 const ALLOWED_FEE_MODES = new Set(["unspecified", "with-fees", "without-fees"]);
+const ALLOWED_CTA_MODES = new Set(["contact", "quote"]);
 const FLIGHT_PAGE_SLUGS = new Set([
   "billetterie",
   "billetterie-vols",
@@ -28,14 +29,17 @@ function normalizePaymentPolicy(input = {}) {
 
   const requestedFeeMode = normalizeText(input.feeMode).toLowerCase();
   const feeMode = ALLOWED_FEE_MODES.has(requestedFeeMode) ? requestedFeeMode : "unspecified";
+  const requestedCtaMode = normalizeText(input.ctaMode).toLowerCase();
+  const ctaMode = ALLOWED_CTA_MODES.has(requestedCtaMode) ? requestedCtaMode : "contact";
 
   return {
     enabled,
     products,
     installmentCounts,
     feeMode,
+    ctaMode,
     disclaimer: normalizeText(input.disclaimer),
-    ctaLabel: normalizeText(input.ctaLabel) || "Contacter mon agence",
+    ctaLabel: normalizeText(input.ctaLabel) || "Étudier mes possibilités de paiement",
   };
 }
 
@@ -101,6 +105,16 @@ function validatePaymentPolicyInput(input) {
     }
   }
 
+  if (input.ctaMode !== undefined) {
+    const ctaMode = normalizeText(input.ctaMode).toLowerCase();
+    if (!ALLOWED_CTA_MODES.has(ctaMode)) {
+      const error = new Error("ctaMode doit être contact ou quote.");
+      error.code = "FLEXIBLE_PAYMENT_POLICY_INVALID_CTA_MODE";
+      error.status = 400;
+      throw error;
+    }
+  }
+
   for (const field of ["disclaimer", "ctaLabel"]) {
     if (input[field] !== undefined && typeof input[field] !== "string") {
       const error = new Error(`${field} doit être une chaîne de caractères.`);
@@ -140,25 +154,31 @@ function buildPublicPaymentCopy(input = {}) {
 
   let title;
   if (includesFlight && includesTravel) {
-    title = "Vos billets d’avion et vos voyages, payables en plusieurs fois";
+    title = "Payez vos billets d’avion et vos voyages en plusieurs fois";
   } else if (includesFlight) {
-    title = "Vos billets d’avion, payables en plusieurs fois";
+    title = "Payez vos billets d’avion en plusieurs fois";
   } else {
-    title = "Votre voyage, payable en plusieurs fois";
+    title = "Payez votre voyage en plusieurs fois";
   }
 
   let body;
   if (installmentClaim) {
-    body = `Selon votre réservation et les conditions proposées par votre agence, un règlement en ${installmentClaim}${feeClaim} peut être disponible.`;
+    body = `Selon votre réservation et les conditions applicables, votre agence peut vous proposer un règlement en ${installmentClaim}${feeClaim}.`;
+  } else if (includesFlight && includesTravel) {
+    body = "Pour vos billets d’avion comme pour vos voyages, votre agence peut étudier avec vous une solution de règlement échelonné adaptée à votre réservation.";
+  } else if (includesFlight) {
+    body = "Pour votre billetterie aérienne, votre agence peut étudier avec vous une solution de règlement échelonné adaptée à votre réservation.";
   } else {
-    body = "Selon votre réservation et les possibilités proposées par votre agence, un règlement échelonné peut être disponible.";
+    body = "Pour votre voyage, votre agence peut étudier avec vous une solution de règlement échelonné adaptée à votre réservation.";
   }
 
   return {
+    eyebrow: "Facilités de paiement",
     title,
     body,
-    disclaimer: policy.disclaimer,
+    disclaimer: policy.disclaimer || "Sous réserve des conditions applicables à votre réservation. Renseignez-vous auprès de votre agence.",
     ctaLabel: policy.ctaLabel,
+    ctaMode: policy.ctaMode,
     products: policy.products,
     installmentCounts: policy.installmentCounts,
     feeMode: policy.feeMode,
@@ -188,12 +208,7 @@ function planPaymentPlacements({ site = {}, policy: inputPolicy = {} } = {}) {
   const copy = buildPublicPaymentCopy(policy);
 
   if (!copy) {
-    return {
-      version: "mse-25.32",
-      enabled: false,
-      proposals: [],
-      skipped: [],
-    };
+    return { version: "mse-25.41", enabled: false, proposals: [], skipped: [] };
   }
 
   const pages = Array.isArray(site.pages) ? site.pages : [];
@@ -221,10 +236,13 @@ function planPaymentPlacements({ site = {}, policy: inputPolicy = {} } = {}) {
         blockType: "flexible_payment",
         content: {
           variant: placement,
+          eyebrow: copy.eyebrow,
           title: copy.title,
           body: copy.body,
           disclaimer: copy.disclaimer,
           ctaLabel: copy.ctaLabel,
+          ctaMode: copy.ctaMode,
+          primaryCta: { href: copy.ctaMode === "quote" ? "devis" : "contact", label: copy.ctaLabel },
           products: copy.products,
           installmentCounts: copy.installmentCounts,
           feeMode: copy.feeMode,
@@ -234,7 +252,7 @@ function planPaymentPlacements({ site = {}, policy: inputPolicy = {} } = {}) {
   }
 
   return {
-    version: "mse-25.32",
+    version: "mse-25.41",
     enabled: true,
     readOnly: true,
     writes: false,
@@ -244,6 +262,7 @@ function planPaymentPlacements({ site = {}, policy: inputPolicy = {} } = {}) {
 }
 
 module.exports = {
+  ALLOWED_CTA_MODES,
   ALLOWED_FEE_MODES,
   ALLOWED_PRODUCTS,
   buildPublicPaymentCopy,
