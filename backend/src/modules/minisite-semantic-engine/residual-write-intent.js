@@ -27,8 +27,8 @@ function escapeHtml(value) {
 
 const COPY = {
   ticketing: (city) => ({
-    title: `Billetterie et vols à ${city}`,
-    html: `<p>Pour vos billets d’avion, votre agence de voyages à ${escapeHtml(city)} vous accompagne dans la recherche d’un itinéraire adapté à votre projet. Nous comparons avec vous les horaires, les correspondances et les conditions tarifaires afin de retenir une solution cohérente avec vos priorités.</p><p>Notre rôle ne s’arrête pas au prix du billet : nous vous aidons également à comprendre les règles de bagages, les conditions de modification et les services utiles avant le départ. Vous disposez ainsi d’un interlocuteur en agence pour préparer votre voyage et suivre votre réservation.</p>`,
+    title: `Billetterie aérienne et vols à ${city}`,
+    html: `<p>Pour votre billetterie aérienne et vos billets d’avion, votre agence de voyages à ${escapeHtml(city)} vous accompagne dans la recherche de vols adaptés à votre projet. Nous comparons avec vous les horaires, les correspondances, les conditions tarifaires et les différentes solutions de transport aérien afin de retenir un itinéraire cohérent avec vos priorités.</p><p>Notre rôle ne s’arrête pas au prix du billet d’avion : nous vous aidons également à comprendre les règles de bagages, les conditions de modification, les services associés aux vols et les informations utiles avant le départ. Vous disposez ainsi d’un interlocuteur en agence pour préparer votre voyage et suivre votre réservation de billetterie.</p>`,
   }),
   stay: (city) => ({
     title: `Séjours et vacances avec votre agence à ${city}`,
@@ -90,6 +90,20 @@ function applyMetadata(page, metadata = {}, details = {}) {
 
 function appendSection(page, section, city) {
   const copy = copyFor(section.intentKey, city);
+  const existing = (page.blocks || []).find((block) => (
+    block?.seo?.generatedBy === "mse-25.40"
+    && block?.seo?.purpose === "residual-semantic-uplift"
+    && String(block?.seo?.intentKey || "") === String(section.intentKey || "")
+  ));
+  if (existing) {
+    existing.content = { title: copy.title, html: copy.html, alignment: "left" };
+    existing.status = "published";
+    existing.settings = existing.settings || {};
+    existing.seo = { ...(existing.seo || {}), generatedBy: "mse-25.40", purpose: "residual-semantic-uplift", intentKey: section.intentKey };
+    existing.visibleDesktop = true;
+    existing.visibleMobile = true;
+    return;
+  }
   page.blocks.push({
     type: "rich_text",
     status: "published",
