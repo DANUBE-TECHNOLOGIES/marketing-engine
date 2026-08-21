@@ -40,8 +40,10 @@ async function runHttp({ backendOrigin, tenantSlug, request = fetch } = {}) {
   return validatePreview(payload);
 }
 
-async function runDirect({ tenantSlug } = {}) {
-  require("dotenv").config();
+async function runDirect({ tenantSlug, envFile = process.env.MSE_25_40_ENV_FILE } = {}) {
+  const dotenv = require("dotenv");
+  if (envFile) dotenv.config({ path: envFile });
+  else dotenv.config();
   const { PrismaClient } = require("@prisma/client");
   const { MiniSiteSemanticEngineService } = require("../src/modules/minisite-semantic-engine/service");
   const prisma = new PrismaClient();
@@ -53,11 +55,11 @@ async function runDirect({ tenantSlug } = {}) {
   }
 }
 
-async function run({ backendOrigin, tenantSlug = process.env.TENANT_SLUG || "mondescale", emitOutput = true, request = fetch, mode = process.env.MSE_25_40_PREVIEW_MODE || "direct" } = {}) {
+async function run({ backendOrigin, tenantSlug = process.env.TENANT_SLUG || "mondescale", emitOutput = true, request = fetch, mode = process.env.MSE_25_40_PREVIEW_MODE || "direct", envFile = process.env.MSE_25_40_ENV_FILE } = {}) {
   const normalizedMode = String(mode || "direct").trim().toLowerCase();
   const payload = normalizedMode === "http"
     ? await runHttp({ backendOrigin, tenantSlug, request })
-    : await runDirect({ tenantSlug });
+    : await runDirect({ tenantSlug, envFile });
   if (emitOutput) console.log(JSON.stringify(payload, null, 2));
   return payload;
 }
