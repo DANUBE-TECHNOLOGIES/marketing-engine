@@ -20,7 +20,9 @@ test("public partner page has explicit header, introduction and directory render
   assert.match(header, /String\(page\?\.h1 \|\| ""\)\.trim\(\) \|\| getSectionTitle/);
   assert.match(header, /content\.introduction/);
   assert.match(directory, /getPublishablePartnerProfiles/);
-  assert.match(directory, /Catégories de partenaires/);
+  assert.match(directory, /Univers de partenaires/);
+  assert.match(directory, /function CategoryPanel/);
+  assert.match(directory, /open=\{index === 0\}/);
 });
 
 test("designer catalogue recognizes generated partner page structure as singleton blocks", () => {
@@ -43,7 +45,7 @@ test("partner directory styling follows public brand runtime variables", () => {
   assert.match(styles, /var\(--public-accent/);
   assert.match(styles, /var\(--public-background/);
   assert.match(styles, /var\(--public-text/);
-  assert.match(styles, /var\(--brand-button-radius/);
+  assert.match(styles, /var\(--brand-card-radius/);
   assert.match(styles, /color-mix\(/);
 });
 
