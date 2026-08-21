@@ -3,7 +3,25 @@
 const { MiniSiteSeoRepository } = require("../minisite-seo-enrichment/repository");
 const { MiniSiteSeoEnrichmentService } = require("../minisite-seo-enrichment/service");
 const PageBuilderPersistenceService = require("../page-builder-persistence/service");
-const { networkSemanticPlan, semanticPlan } = require("./engine");
+const { fingerprint, networkSemanticPlan, semanticPlan } = require("./engine");
+const { buildSemanticProposals } = require("./semantic-proposals");
+
+function attachSemanticProposals(plan = {}) {
+  const semanticProposals = buildSemanticProposals(plan);
+  const { planFingerprint: _oldFingerprint, ...base } = plan;
+  const result = {
+    ...base,
+    semanticProposals,
+    summary: {
+      ...(plan.summary || {}),
+      semanticProposalCount: semanticProposals.summary.proposalCount,
+      existingPageProposalCount: semanticProposals.summary.existingPageProposalCount,
+      newPageEvidenceGateCount: semanticProposals.summary.newPageEvidenceGateCount,
+      automaticWriteCount: 0,
+    },
+  };
+  return { ...result, planFingerprint: fingerprint(result) };
+}
 
 class MiniSiteSemanticEngineService {
   constructor({ prisma, repository, enrichmentService } = {}) {
@@ -22,7 +40,10 @@ class MiniSiteSemanticEngineService {
       destructive: false,
       doorwayGuard: true,
       locationExpansion: false,
+      preferExistingPages: true,
+      newPageEvidenceGate: true,
       autoCreatePages: false,
+      automaticWrites: false,
       routes: ["agency-preview", "network-preview"],
     };
   }
@@ -88,7 +109,7 @@ class MiniSiteSemanticEngineService {
       error.status = 400;
       throw error;
     }
-    return semanticPlan(await this.siteWithContent(agencyId));
+    return attachSemanticProposals(semanticPlan(await this.siteWithContent(agencyId)));
   }
 
   async previewNetwork() {
@@ -103,8 +124,23 @@ class MiniSiteSemanticEngineService {
       if (!agencyId) continue;
       hydrated.push(await this.siteWithContent(agencyId));
     }
-    return networkSemanticPlan(hydrated);
+
+    const base = networkSemanticPlan(hydrated);
+    const agencies = (base.agencies || []).map(attachSemanticProposals);
+    const { planFingerprint: _oldFingerprint, ...networkBase } = base;
+    const result = {
+      ...networkBase,
+      agencies,
+      summary: {
+        ...(base.summary || {}),
+        semanticProposalCount: agencies.reduce((sum, row) => sum + (row.summary.semanticProposalCount || 0), 0),
+        existingPageProposalCount: agencies.reduce((sum, row) => sum + (row.summary.existingPageProposalCount || 0), 0),
+        newPageEvidenceGateCount: agencies.reduce((sum, row) => sum + (row.summary.newPageEvidenceGateCount || 0), 0),
+        automaticWriteCount: 0,
+      },
+    };
+    return { ...result, planFingerprint: fingerprint(result) };
   }
 }
 
-module.exports = { MiniSiteSemanticEngineService };
+module.exports = { MiniSiteSemanticEngineService, attachSemanticProposals };
