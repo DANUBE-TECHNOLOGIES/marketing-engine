@@ -21,6 +21,7 @@ import ReviewsRenderer from "./ReviewsRenderer";
 import TestimonialsRenderer from "./TestimonialsRenderer";
 import SeparatorRenderer from "./SeparatorRenderer";
 import TeamRenderer from "./TeamRenderer";
+import FlexiblePaymentRenderer from "./FlexiblePaymentRenderer";
 
 export const PUBLIC_RENDERER_REGISTRY = {
   hero: HeroV2Renderer,
@@ -72,6 +73,7 @@ export const PUBLIC_RENDERER_REGISTRY = {
   equipe: TeamRenderer,
   "team-grid": TeamRenderer,
   "equipe-grid": TeamRenderer,
+  flexible_payment: FlexiblePaymentRenderer,
 };
 
 export function getPublicRenderer(type) {
