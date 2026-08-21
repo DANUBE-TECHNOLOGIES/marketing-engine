@@ -14,8 +14,16 @@ function preview(fingerprint = "a".repeat(64)) {
     writes: false,
     destructive: false,
     planFingerprint: fingerprint,
-    policy: { doorwayGuard: true, locationExpansion: false, autoCreatePages: false },
-    summary: { agenciesProcessed: 7, semanticGapCount: 12 },
+    policy: {
+      doorwayGuard: true,
+      locationExpansion: false,
+      preferExistingPages: true,
+      newPageEvidenceGate: true,
+      autoCreatePages: false,
+      autoPublishPages: false,
+      automaticWrites: false,
+    },
+    summary: { agenciesProcessed: 7, semanticGapCount: 12, automaticWriteCount: 0 },
     excludedSites: [],
   };
 }
@@ -32,7 +40,10 @@ test("preflight accepts two identical read-only semantic previews", async () => 
   assert.equal(result.readOnly, true);
   assert.equal(result.writes, false);
   assert.equal(result.planFingerprint, "a".repeat(64));
-  assert.equal(JSON.parse(fs.readFileSync(file, "utf8")).determinism.verified, true);
+  const persisted = JSON.parse(fs.readFileSync(file, "utf8"));
+  assert.equal(persisted.determinism.verified, true);
+  assert.equal(persisted.safety.verified, true);
+  assert.equal(persisted.safety.newPageEvidenceGate, true);
   fs.unlinkSync(file);
 });
 
@@ -41,10 +52,19 @@ test("preflight refuses another branch or dirty worktree", async () => {
   await assert.rejects(() => run({ emitOutput: false, repositoryReader: () => ({ branch: EXPECTED_BRANCH, head: "1".repeat(40), dirty: true }), previewRunner: async () => preview() }), { code: "MSE_25_40_DIRTY_WORKTREE" });
 });
 
-test("preflight refuses non-determinism and disabled doorway guard", async () => {
+test("preflight refuses non-determinism and any disabled semantic safety guard", async () => {
   let call = 0;
   await assert.rejects(() => run({ emitOutput: false, repositoryReader: () => ({ branch: EXPECTED_BRANCH, head: "1".repeat(40), dirty: false }), previewRunner: async () => preview((++call === 1 ? "a" : "b").repeat(64)) }), { code: "MSE_25_40_NON_DETERMINISTIC_PREVIEW" });
-  const unsafe = preview();
-  unsafe.policy.locationExpansion = true;
-  await assert.rejects(() => run({ emitOutput: false, repositoryReader: () => ({ branch: EXPECTED_BRANCH, head: "1".repeat(40), dirty: false }), previewRunner: async () => unsafe }), { code: "MSE_25_40_DOORWAY_GUARD_DISABLED" });
+
+  for (const mutation of [
+    (unsafe) => { unsafe.policy.locationExpansion = true; },
+    (unsafe) => { unsafe.policy.preferExistingPages = false; },
+    (unsafe) => { unsafe.policy.newPageEvidenceGate = false; },
+    (unsafe) => { unsafe.policy.automaticWrites = true; },
+    (unsafe) => { unsafe.summary.automaticWriteCount = 1; },
+  ]) {
+    const unsafe = preview();
+    mutation(unsafe);
+    await assert.rejects(() => run({ emitOutput: false, repositoryReader: () => ({ branch: EXPECTED_BRANCH, head: "1".repeat(40), dirty: false }), previewRunner: async () => unsafe }), { code: "MSE_25_40_SEMANTIC_SAFETY_GUARD_DISABLED" });
+  }
 });
