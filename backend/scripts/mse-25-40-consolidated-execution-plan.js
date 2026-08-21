@@ -22,13 +22,17 @@ function validatePreflight(preflight = {}) {
     error.code = "MSE_25_40_CONSOLIDATED_UNSAFE_PREFLIGHT";
     throw error;
   }
-  if (preflight.safety?.verified !== true || preflight.safety?.automaticWrites !== false) {
-    const error = new Error("Les garde-fous du preflight MSE-25.40 ne sont pas certifiés.");
+  if (
+    preflight.safety?.verified !== true
+    || preflight.safety?.automaticWrites !== false
+    || preflight.safety?.managedRoutesAware !== true
+  ) {
+    const error = new Error("Les garde-fous du preflight MSE-25.40 ne sont pas certifiés, y compris la prise en compte des routes gérées.");
     error.code = "MSE_25_40_CONSOLIDATED_SAFETY_NOT_VERIFIED";
     throw error;
   }
-  if (!preflight.preview?.planFingerprint) {
-    const error = new Error("Le preflight ne contient pas le preview réseau nécessaire à la consolidation.");
+  if (!preflight.preview?.planFingerprint || preflight.preview?.policy?.managedRoutesAware !== true) {
+    const error = new Error("Le preflight ne contient pas un preview réseau managed-route-aware exploitable.");
     error.code = "MSE_25_40_CONSOLIDATED_PREVIEW_MISSING";
     throw error;
   }
