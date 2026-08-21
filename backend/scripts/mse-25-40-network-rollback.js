@@ -2,10 +2,12 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
+const crypto = require("node:crypto");
 const { PrismaClient } = require("@prisma/client");
 const PageBuilderPersistenceService = require("../src/modules/page-builder-persistence/service");
 
 function explicitTrue(value) { return value === true || String(value || "").trim().toLowerCase() === "true"; }
+function digest(value) { return crypto.createHash("sha256").update(JSON.stringify(value)).digest("hex"); }
 function loadReport(file) {
   if (!file) { const e = new Error("Rapport de rollout MSE-25.40 requis."); e.code = "MSE_25_40_ROLLBACK_REPORT_REQUIRED"; throw e; }
   const resolved = path.resolve(file);
@@ -17,6 +19,10 @@ function assertReport(report = {}) {
   }
   if (report.proof?.noHomeScoreFilling !== true || report.proof?.automaticWrites !== false) {
     const e = new Error("Le rapport ne certifie pas les garde-fous MSE-25.40."); e.code = "MSE_25_40_ROLLBACK_REPORT_UNSAFE"; throw e;
+  }
+  const expected = digest({ type: report.type, context: report.context, proof: report.proof, result: report.result, rollbackManifest: report.rollbackManifest });
+  if (String(report.reportFingerprint).toLowerCase() !== expected) {
+    const e = new Error("Le rapport de rollout MSE-25.40 a été modifié après sa génération."); e.code = "MSE_25_40_ROLLBACK_REPORT_INTEGRITY_MISMATCH"; throw e;
   }
   return report;
 }
@@ -75,4 +81,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { assertReport, explicitTrue, loadReport, run, serviceForReport };
+module.exports = { assertReport, digest, explicitTrue, loadReport, run, serviceForReport };
