@@ -42,8 +42,9 @@ async function runHttp({ backendOrigin, tenantSlug, request = fetch } = {}) {
 
 async function runDirect({ tenantSlug, envFile = process.env.MSE_25_40_ENV_FILE } = {}) {
   const dotenv = require("dotenv");
-  if (envFile) dotenv.config({ path: envFile });
-  else dotenv.config();
+  const dotenvOptions = { quiet: true };
+  if (envFile) dotenvOptions.path = envFile;
+  dotenv.config(dotenvOptions);
   const { PrismaClient } = require("@prisma/client");
   const { MiniSiteSemanticEngineService } = require("../src/modules/minisite-semantic-engine/service");
   const prisma = new PrismaClient();
