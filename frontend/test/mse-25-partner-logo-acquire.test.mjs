@@ -8,6 +8,12 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const frontendRoot = path.resolve(here, "..");
 const read = (relativePath) => fs.readFileSync(path.join(frontendRoot, relativePath), "utf8");
 
+function assertPendingOrFinalized({ id, backlog, catalogue }) {
+  const pending = new RegExp(`id:\\s*"${id}"[^\\n]*state:\\s*"source-pending"`).test(backlog);
+  const finalized = new RegExp(`P\\("${id}"[^\\n]*"\\/partners\\/${id}\\.(?:svg|webp)"\\)`).test(catalogue);
+  assert.ok(pending || finalized, `${id} must be either pending or finalized with a public asset`);
+}
+
 test("generic partner logo acquisition is gated by vetted backlog and registry states", () => {
   const acquire = read("scripts/partner-logo-acquire.mjs");
 
@@ -21,7 +27,7 @@ test("generic partner logo acquisition is gated by vetted backlog and registry s
   assert.match(acquire, /if \(write\)/);
 });
 
-test("Catlante is finalized with retained vetted provenance while Rivages du Monde still waits for masterbrand validation", () => {
+test("finalized logo sources leave the active backlog while unresolved official sources remain eligible for network rollout", () => {
   const cruiseSources = read("components/page-builder/shared/partnerCruiseLogoSources.js");
   const backlog = read("components/page-builder/shared/partnerLogoBacklog.js");
   const catalogue = read("components/page-builder/shared/fullPartners.js");
@@ -31,5 +37,5 @@ test("Catlante is finalized with retained vetted provenance while Rivages du Mon
   assert.doesNotMatch(backlog, /id:\s*"catlante-catamarans"/);
 
   assert.match(cruiseSources, /"rivages-du-monde"[\s\S]*status:\s*"official-source-page"/);
-  assert.match(backlog, /"rivages-du-monde"[\s\S]*state:\s*"source-pending"/);
+  assertPendingOrFinalized({ id: "rivages-du-monde", backlog, catalogue });
 });
