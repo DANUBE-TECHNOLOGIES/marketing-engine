@@ -37,7 +37,8 @@
     "mse-25.40:vm-readiness": "node scripts/mse-25-40-vm-readiness.js",
     "mse-25.40:network-preview": "node scripts/mse-25-40-network-preview.js",
     "mse-25.40:preflight": "node scripts/mse-25-40-preflight.js",
-    "mse-25.40:opportunity-manifest": "node scripts/mse-25-40-opportunity-manifest.js"
+    "mse-25.40:opportunity-manifest": "node scripts/mse-25-40-opportunity-manifest.js",
+    "mse-25.40:consolidated-plan": "node scripts/mse-25-40-consolidated-execution-plan.js"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",
