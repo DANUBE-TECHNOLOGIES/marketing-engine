@@ -41,6 +41,7 @@ async function run({
     doorwayGuard: runtimeHealth.doorwayGuard === true && runtimeHealth.locationExpansion === false && runtimeHealth.autoCreatePages === false,
     existingPageFirst: runtimeHealth.preferExistingPages === true,
     newPageEvidenceGate: runtimeHealth.newPageEvidenceGate === true,
+    managedRoutesAware: runtimeHealth.managedRoutesAware === true && preview.policy?.managedRoutesAware === true,
     automaticWritesDisabled: runtimeHealth.automaticWrites === false && (preview.summary?.automaticWriteCount || 0) === 0,
     previewReadOnly: preview.readOnly === true && preview.writes === false && preview.destructive === false,
     proposalsPresent: Number(preview.summary?.semanticProposalCount || 0) >= 0,
