@@ -21,6 +21,8 @@ test("MSE-25.41 proposes a safe flight + travel policy only for unconfigured sit
   assert.deepEqual(preview.policy.products, ["flight", "travel"]);
   assert.deepEqual(preview.policy.installmentCounts, []);
   assert.equal(preview.policy.feeMode, "unspecified");
+  assert.equal(preview.policy.ctaMode, "contact");
+  assert.equal(preview.policy.ctaLabel, "Étudier mes possibilités de paiement");
   assert.equal(preview.summary.configurable, 2);
   assert.equal(preview.summary.preserved, 1);
   assert.equal(preview.sites.find((row) => row.siteId === "site-b").action, "preserve");
