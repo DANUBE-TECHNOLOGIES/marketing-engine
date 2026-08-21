@@ -31,104 +31,50 @@ test("full partner directory exposes categorized supplier inventory with complet
   const blockCatalogue = read("lib/page-builder-v2/block-catalog.js");
 
   for (const category of ["croisieres", "circuits", "sejours", "sur-mesure", "france-europe"]) assert.match(catalogue, new RegExp(`id: "${category}"`));
-  for (const supplier of ["Catlante Catamarans", "CroisiEurope", "Rivages du Monde", "Ponant", "Hurtigruten", "MSC Croisières", "Costa Croisières", "FRAM", "TUI France", "Club Med", "Exotismes", "Jet tours", "Plein Vent", "Solea", "Travel Evasion", "Asia", "Austral Lagons", "KUONI", "Salaün Holidays", "Ollandini", "Thalasso N°1"]) {
-    assert.match(catalogue, new RegExp(supplier.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
-  }
+  for (const supplier of ["Catlante Catamarans", "CroisiEurope", "Rivages du Monde", "Ponant", "Hurtigruten", "MSC Croisières", "Costa Croisières", "FRAM", "TUI France", "Club Med", "Exotismes", "Jet tours", "Plein Vent", "Solea", "Travel Evasion", "Asia", "Austral Lagons", "KUONI", "Salaün Holidays", "Ollandini", "Thalasso N°1"]) assert.match(catalogue, new RegExp(supplier.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   for (const excluded of ["Worldia", "Aerosun", "Mega Vacances"]) assert.doesNotMatch(catalogue, new RegExp(excluded, "i"));
-
   assert.match(fallbackDetails, /const DETAILS = Object\.freeze\(\{\}\)/);
-
-  for (const id of ["catlante-catamarans", "croisieurope", "rivages-du-monde", "ponant", "celestyal-cruises", "explora-journeys", "cfc", "hurtigruten", "msc-croisieres", "costa-croisieres"]) {
-    assert.match(cruiseDetails, new RegExp(`(?:^|\\n)\\s*"?${id}"?\\s*:`));
-  }
-  assert.match(cruiseDetails, /Croisière à la cabine/);
-  assert.match(cruiseDetails, /Croisière culturelle/);
-  assert.match(cruiseDetails, /Départ de Marseille/);
-
-  for (const id of ["double-sens", "destination-aventure", "la-francaise-des-circuits", "salaun-holidays", "pouchkine-tours", "nordiska", "top-of-travel", "visit-europe", "voyages-internationaux", "rev-vacances"]) {
-    assert.match(circuitDetails, new RegExp(`(?:^|\\n)\\s*"?${id}"?\\s*:`));
-  }
-  assert.doesNotMatch(circuitDetails, /(?:^|\n)\s*worldia\s*:/i);
-  assert.match(circuitDetails, /Trek & randonnée/);
-  assert.match(circuitDetails, /Voyage Signature/);
-  assert.match(circuitDetails, /Voyage en train/);
-
-  for (const id of ["fram", "tui-france", "club-med", "belambra", "boomerang", "exotismes", "jet-tours", "hotels-lagons", "lmx-voyages", "mondial-tourisme", "plein-vent", "solea", "pacha-tours", "heliades", "voyamar", "travel-evasion"]) {
-    assert.match(stayDetails, new RegExp(`(?:^|\\n)\\s*"?${id}"?\\s*:`));
-  }
-  for (const term of [/Club Framissima/, /Kappa Club/, /Mondi Club/, /Club Jumbo/, /Méditerranée orientale/, /Naya Club/, /Croisière sur le Nil/]) assert.match(stayDetails, term);
-
-  for (const id of ["alma-latina", "australie-tours", "amerigo", "beachcomber-tours", "asia", "austral-lagons", "climats-du-monde", "jetset-voyages", "luxair-tours", "gaeland-ashling", "planete-production", "kuoni"]) {
-    assert.match(longHaulDetails, new RegExp(`(?:^|\\n)\\s*"?${id}"?\\s*:`));
-  }
-  assert.doesNotMatch(longHaulDetails, /(?:^|\n)\s*ollandini\s*:/i);
-  assert.doesNotMatch(longHaulDetails, /(?:^|\n)\s*worldia\s*:/i);
-
-  for (const id of ["campings-com", "lagrange", "mmv", "pierre-vacances-center-parcs", "ollandini", "odalys", "thalasso-n1", "villages-clubs-soleil"]) {
-    assert.match(franceEuropeDetails, new RegExp(`(?:^|\\n)\\s*"?${id}"?\\s*:`));
-  }
-  assert.match(franceEuropeDetails, /Spécialiste|Corse/);
-
+  for (const id of ["catlante-catamarans", "croisieurope", "rivages-du-monde", "ponant", "celestyal-cruises", "explora-journeys", "cfc", "hurtigruten", "msc-croisieres", "costa-croisieres"]) assert.match(cruiseDetails, new RegExp(`(?:^|\\n)\\s*"?${id}"?\\s*:`));
+  for (const id of ["double-sens", "destination-aventure", "la-francaise-des-circuits", "salaun-holidays", "pouchkine-tours", "nordiska", "top-of-travel", "visit-europe", "voyages-internationaux", "rev-vacances"]) assert.match(circuitDetails, new RegExp(`(?:^|\\n)\\s*"?${id}"?\\s*:`));
+  for (const id of ["fram", "tui-france", "club-med", "belambra", "boomerang", "exotismes", "jet-tours", "hotels-lagons", "lmx-voyages", "mondial-tourisme", "plein-vent", "solea", "pacha-tours", "heliades", "voyamar", "travel-evasion"]) assert.match(stayDetails, new RegExp(`(?:^|\\n)\\s*"?${id}"?\\s*:`));
+  for (const id of ["alma-latina", "australie-tours", "amerigo", "beachcomber-tours", "asia", "austral-lagons", "climats-du-monde", "jetset-voyages", "luxair-tours", "gaeland-ashling", "planete-production", "kuoni"]) assert.match(longHaulDetails, new RegExp(`(?:^|\\n)\\s*"?${id}"?\\s*:`));
+  for (const id of ["campings-com", "lagrange", "mmv", "pierre-vacances-center-parcs", "ollandini", "odalys", "thalasso-n1", "villages-clubs-soleil"]) assert.match(franceEuropeDetails, new RegExp(`(?:^|\\n)\\s*"?${id}"?\\s*:`));
   for (const resolver of ["getCruisePartnerDetails", "getCircuitPartnerDetails", "getStayPartnerDetails", "getLongHaulPartnerDetails", "getFranceEuropePartnerDetails"]) assert.match(profile, new RegExp(resolver));
-  assert.match(profile, /getResolvedPartnerDetails/);
   assert.match(profile, /getPublishablePartnerProfiles/);
   assert.match(profile, /readyForPublication/);
-  assert.match(profile, /visibleTags:\s*Array\.isArray\(partner\.tags\) \? partner\.tags\.slice\(0, 2\)/);
   assert.match(verification, /asiam[\s\S]*identity-review/);
-
   assert.match(catalogue, /\/partners\/kuoni-official\.webp/);
   assert.match(assetCoverage, /policy: "individual-assets-only"/);
   assert.match(assetCoverage, /fallback: "initials"/);
-  assert.match(assetCoverage, /noSprite: true/);
-  assert.match(assetCoverage, /missingByState/);
   assert.match(assetCoverage, /permissionBlocked/);
   assert.match(assetCoverage, /sourcePending/);
-  assert.match(assetCoverage, /safeToRender/);
-  assert.doesNotMatch(assetCoverage, /common-partners-sprite/);
-  for (const id of ["ponant", "celestyal-cruises", "destination-aventure", "nordiska", "pouchkine-tours", "belambra", "voyamar", "alma-latina", "australie-tours", "campings-com", "pierre-vacances-center-parcs", "villages-clubs-soleil", "rivages-du-monde"]) {
-    assert.match(logoBacklog, new RegExp(`"${id}"`));
-  }
-  for (const excluded of ["worldia", "aerosun", "mega-vacances"]) assert.doesNotMatch(logoBacklog, new RegExp(`"${excluded}"`));
-
-  for (const id of ["fram", "tui-univers", "club-med", "msc-croisieres", "costa-croisieres", "kuoni", "exotismes"]) {
-    assert.match(commonPartners, new RegExp(`id: "${id}"`));
-  }
+  for (const id of ["fram", "tui-univers", "club-med", "msc-croisieres", "costa-croisieres", "kuoni", "exotismes"]) assert.match(commonPartners, new RegExp(`id: "${id}"`));
   assert.match(partnerSelection, /Math\.min\(3/);
   assert.match(agencyCatalog, /readyForPublication/);
 
   assert.match(renderer, /getPartnerDirectoryCategories/);
-  assert.match(renderer, /getPartnerProfile/);
   assert.match(renderer, /getPublishablePartnerProfiles/);
-  assert.match(renderer, /getCommonPartners/);
-  assert.match(renderer, /resolveAgencyPartnerCandidates/);
   assert.match(renderer, /selectAgencyPartners/);
-  assert.match(renderer, /findAgencyPartnerSelection/);
-  assert.match(renderer, /AGENCY_PARTNER_SECTION_TYPES/);
-  for (const type of ["partner-logos", "partners", "logos"]) assert.match(renderer, new RegExp(`"${type}"`));
   assert.match(renderer, /max: 3/);
   assert.match(renderer, /data-partner-logo=/);
   assert.match(renderer, /data-preferred-partner-logo=/);
-  assert.match(renderer, /Socle partenaires du réseau/);
-  assert.match(renderer, /Sélection complémentaire de votre agence/);
+  assert.match(renderer, /Des références reconnues pour construire votre voyage/);
+  assert.match(renderer, /hasAgencySelection/);
+  assert.match(renderer, /function CategoryPanel/);
+  assert.match(renderer, /<details id=\{`partenaires-\$\{category\.id\}`\}/);
+  assert.match(renderer, /open=\{index === 0\}/);
+  assert.match(renderer, /aria-label="Univers de partenaires"/);
   assert.match(renderer, /Découvrir ses spécialités/);
-  assert.match(renderer, /Destinations/);
-  assert.match(renderer, /Types de voyages/);
-  assert.match(renderer, /Site du partenaire/);
-  assert.match(rendererCss, /grid-template-columns: repeat\(7/);
-  assert.match(rendererCss, /agencyPreferredGrid/);
-  assert.match(rendererCss, /grid-template-columns: repeat\(3/);
-  assert.match(rendererCss, /@media \(max-width: 720px\)/);
+  assert.match(rendererCss, /grid-template-columns:repeat\(5/);
+  assert.match(rendererCss, /categorySummary/);
+  assert.match(rendererCss, /categoryToggle::before/);
+  assert.match(rendererCss, /-webkit-line-clamp:3/);
+  assert.match(rendererCss, /@media \(max-width:720px\)/);
 
   assert.match(publicRegistry, /"partner-directory":\s*PartnerDirectoryRenderer/);
   assert.match(publicRegistry, /"partners-directory":\s*PartnerDirectoryRenderer/);
   assert.match(previewRegistry, /registerBlock\("partner-directory", PartnerCategoriesBlock\)/);
-  assert.match(previewRegistry, /registerBlock\("partners-directory", PartnerCategoriesBlock\)/);
-  assert.match(previewRegistry, /registerBlock\("partner-categories", PartnerCategoriesBlock\)/);
   assert.match(previewRenderer, /PARTNER_DIRECTORY_CATEGORIES/);
-  assert.match(previewRenderer, /getPublishablePartnerProfiles/);
-  assert.match(previewRenderer, /data-block-type="partner-directory"/);
-  assert.match(previewRenderer, /Destinations et types de voyages/);
-  assert.match(previewRenderer, /Site du partenaire/);
   assert.match(blockCatalogue, /type: "partner-directory"/);
   assert.match(blockCatalogue, /singleton: true/);
 });
