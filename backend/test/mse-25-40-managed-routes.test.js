@@ -46,7 +46,7 @@ test("managed canonical commercial routes remain visible to semantic coverage", 
     assert.equal(coverage.status, "strong", key);
     assert.equal(coverage.bestPageManagedRoute, true, key);
   }
-  assert.equal(plan.summary.commercialGapCount, 2); // agency + services are absent in this focused fixture
+  assert.equal(plan.summary.commercialGapCount, 3); // agency + services + destinations are absent in this focused fixture
   assert.equal(plan.opportunities.some((row) => ["cruise", "circuit", "stay", "ticketing", "tailor-made"].includes(row.intentKey)), false);
 });
 
