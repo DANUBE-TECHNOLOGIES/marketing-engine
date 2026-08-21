@@ -1,65 +1,33 @@
 "use strict";
-
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const {
-  buildPublicPaymentCopy,
-  planPaymentPlacements,
-  validatePaymentPolicyInput,
-} = require("../src/modules/flexible-payment-experience");
-const { toPolicyRecord } = require("../src/modules/flexible-payment-experience/policy-repository");
+const { buildPublicPaymentCopy, planPaymentPlacements } = require("../src/modules/flexible-payment-experience");
 
-test("MSE-25.41 defaults to a conversion-oriented CTA without inventing financing terms", () => {
+test("MSE-25.41 uses conversion-oriented public copy without inventing financing terms", () => {
   const copy = buildPublicPaymentCopy({ enabled: true, products: ["flight", "travel"] });
   assert.equal(copy.title, "Payez vos billets d’avion et vos voyages en plusieurs fois");
   assert.equal(copy.ctaLabel, "Étudier mes possibilités de paiement");
-  assert.equal(copy.ctaMode, "contact");
   assert.doesNotMatch(copy.body, /\b[2-9]x\b|sans frais/);
   assert.match(copy.disclaimer, /Sous réserve/);
 });
 
-test("MSE-25.41 can route a payment lead to the quote journey", () => {
+test("MSE-25.41 preserves explicit agency CTA labels while routing to contact", () => {
   const plan = planPaymentPlacements({
-    policy: { enabled: true, products: ["flight"], ctaMode: "quote" },
+    policy: { enabled: true, products: ["flight"], ctaLabel: "Demander une étude personnalisée" },
     site: { pages: [{ slug: "home", status: "published", blocks: [] }] },
   });
-  assert.equal(plan.proposals[0].block.content.primaryCta.href, "devis");
-});
-
-test("MSE-25.41 keeps CTA mode when a persisted policy is read back", () => {
-  const policy = toPolicyRecord({
-    enabled: true,
-    products: ["flight", "travel"],
-    installmentCounts: [],
-    feeMode: "unspecified",
-    ctaMode: "quote",
-    disclaimer: "Sous réserve des conditions applicables.",
-    ctaLabel: "Demander une étude",
-  });
-  assert.equal(policy.ctaMode, "quote");
-  assert.equal(policy.ctaLabel, "Demander une étude");
-});
-
-test("MSE-25.41 rejects unsupported CTA destinations", () => {
-  assert.throws(
-    () => validatePaymentPolicyInput({ enabled: true, products: ["travel"], ctaMode: "external-credit" }),
-    (error) => error.code === "FLEXIBLE_PAYMENT_POLICY_INVALID_CTA_MODE"
-  );
+  assert.equal(plan.productVersion, "mse-25.41");
+  assert.deepEqual(plan.proposals[0].block.content.primaryCta, { href: "contact", label: "Demander une étude personnalisée" });
 });
 
 test("MSE-25.41 only states no-fee payment when explicitly configured", () => {
-  const withFeesUnknown = buildPublicPaymentCopy({
-    enabled: true,
-    products: ["flight"],
-    installmentCounts: [3, 4],
-  });
-  assert.doesNotMatch(withFeesUnknown.body, /sans frais/);
-
-  const noFees = buildPublicPaymentCopy({
-    enabled: true,
-    products: ["flight"],
-    installmentCounts: [3, 4],
-    feeMode: "without-fees",
-  });
+  const unknownFees = buildPublicPaymentCopy({ enabled: true, products: ["flight"], installmentCounts: [3, 4] });
+  assert.doesNotMatch(unknownFees.body, /sans frais/);
+  const noFees = buildPublicPaymentCopy({ enabled: true, products: ["flight"], installmentCounts: [3, 4], feeMode: "without-fees" });
   assert.match(noFees.body, /3x ou 4x sans frais/);
+});
+
+test("MSE-25.41 differentiates flight-only and travel-only public promises", () => {
+  assert.equal(buildPublicPaymentCopy({ enabled: true, products: ["flight"] }).title, "Payez vos billets d’avion en plusieurs fois");
+  assert.equal(buildPublicPaymentCopy({ enabled: true, products: ["travel"] }).title, "Payez votre voyage en plusieurs fois");
 });
