@@ -1,4 +1,5 @@
 import VisualPageBuilder from "../../../../components/page-builder-v2/VisualPageBuilder";
+import FlexiblePaymentPolicyPanel from "../../../../components/page-builder-v2/FlexiblePaymentPolicyPanel";
 import SeoDesignerContext from "../../../../components/page-builder-v2/SeoDesignerContext";
 
 import "../../../sites/[siteSlug]/public-site.css";
@@ -58,6 +59,9 @@ export default async function MiniSiteEditorPage({
 
   return (
     <>
+      <FlexiblePaymentPolicyPanel
+        siteSlug={resolvedParams.siteId}
+      />
       <VisualPageBuilder
         siteId={resolvedParams.siteId}
       />
