@@ -28,7 +28,31 @@ function residualPlan() {
   };
 }
 
-function currentPage() {
+function currentPage({ withGeneratedTicketing = false } = {}) {
+  const blocks = [{
+    id: 10,
+    type: "hero",
+    status: "published",
+    position: 0,
+    content: { title: "Nos services", subtitle: "" },
+    settings: {},
+    seo: {},
+    visibleDesktop: true,
+    visibleMobile: true,
+  }];
+  if (withGeneratedTicketing) {
+    blocks.push({
+      id: 11,
+      type: "rich_text",
+      status: "published",
+      position: 1,
+      content: { title: "Billetterie et vols à Gien", html: "<p>Ancienne copie ticketing.</p>", alignment: "left" },
+      settings: {},
+      seo: { generatedBy: "mse-25.40", purpose: "residual-semantic-uplift", intentKey: "ticketing" },
+      visibleDesktop: true,
+      visibleMobile: true,
+    });
+  }
   return {
     siteSlug: "gien",
     agencyId: 4,
@@ -39,17 +63,7 @@ function currentPage() {
       published: true,
       seoTitle: "Services de votre agence de voyages à Gien",
       metaDescription: "Découvrez les services de votre agence.",
-      blocks: [{
-        id: 10,
-        type: "hero",
-        status: "published",
-        position: 0,
-        content: { title: "Nos services", subtitle: "" },
-        settings: {},
-        seo: {},
-        visibleDesktop: true,
-        visibleMobile: true,
-      }],
+      blocks,
     },
   };
 }
@@ -70,7 +84,21 @@ test("write-intent appends only the approved residual section and seals before/a
   assert.equal(intent.snapshot.after.blocks.length, 2);
   assert.equal(intent.snapshot.after.blocks[1].seo.generatedBy, "mse-25.40");
   assert.equal(intent.snapshot.after.blocks[1].seo.intentKey, "ticketing");
-  assert.match(intent.snapshot.after.blocks[1].content.html, /conditions de modification/);
+  assert.match(intent.snapshot.after.blocks[1].content.title, /Billetterie aérienne et vols/);
+  assert.match(intent.snapshot.after.blocks[1].content.html, /billetterie aérienne/i);
+  assert.match(intent.snapshot.after.blocks[1].content.html, /billets d’avion/i);
+  assert.match(intent.snapshot.after.blocks[1].content.html, /vols adaptés/i);
+  assert.match(intent.snapshot.after.blocks[1].content.html, /transport aérien/i);
+});
+
+test("write-intent replaces an existing MSE-25.40 ticketing block instead of stacking a duplicate", () => {
+  const result = buildResidualWriteIntent({ residualPlan: residualPlan(), currentPages: [currentPage({ withGeneratedTicketing: true })] });
+  const after = result.intents[0].snapshot.after;
+  const generated = after.blocks.filter((block) => block.seo?.generatedBy === "mse-25.40" && block.seo?.intentKey === "ticketing");
+  assert.equal(after.blocks.length, 2);
+  assert.equal(generated.length, 1);
+  assert.match(generated[0].content.title, /Billetterie aérienne et vols/);
+  assert.match(generated[0].content.html, /réservation de billetterie/i);
 });
 
 test("write-intent is deterministic", () => {
