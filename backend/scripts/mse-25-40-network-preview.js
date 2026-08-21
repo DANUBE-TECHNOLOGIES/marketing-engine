@@ -15,6 +15,11 @@ function validatePreview(payload) {
     error.code = "MSE_25_40_FINGERPRINT_INVALID";
     throw error;
   }
+  if (payload?.policy?.managedRoutesAware !== true) {
+    const error = new Error("Le preview MSE-25.40 doit intégrer les routes canoniques gérées à la couverture sémantique.");
+    error.code = "MSE_25_40_MANAGED_ROUTES_NOT_AWARE";
+    throw error;
+  }
   if (payload?.policy?.automaticWrites !== false || (payload?.summary?.automaticWriteCount || 0) !== 0) {
     const error = new Error("Le preview MSE-25.40 ne doit exposer aucune écriture automatique.");
     error.code = "MSE_25_40_AUTOMATIC_WRITE_EXPOSED";
