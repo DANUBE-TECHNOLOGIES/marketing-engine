@@ -9,6 +9,7 @@ function toPolicyRecord(record) {
     products: Array.isArray(record.products) ? record.products : [],
     installmentCounts: Array.isArray(record.installmentCounts) ? record.installmentCounts : [],
     feeMode: record.feeMode,
+    ctaMode: record.ctaMode,
     disclaimer: record.disclaimer,
     ctaLabel: record.ctaLabel,
   });
@@ -35,6 +36,7 @@ class PaymentPolicyRepository {
         "products",
         "installmentCounts",
         "feeMode",
+        "ctaMode",
         "disclaimer",
         "ctaLabel",
         "createdAt",
@@ -53,10 +55,7 @@ class PaymentPolicyRepository {
     if (this.prisma.agencyPaymentPolicy?.upsert) {
       const record = await this.prisma.agencyPaymentPolicy.upsert({
         where: { siteId: String(siteId) },
-        create: {
-          siteId: String(siteId),
-          ...policy,
-        },
+        create: { siteId: String(siteId), ...policy },
         update: policy,
       });
       return toPolicyRecord(record);
@@ -71,6 +70,7 @@ class PaymentPolicyRepository {
         "products",
         "installmentCounts",
         "feeMode",
+        "ctaMode",
         "disclaimer",
         "ctaLabel",
         "createdAt",
@@ -81,6 +81,7 @@ class PaymentPolicyRepository {
         CAST(${products} AS jsonb),
         CAST(${installmentCounts} AS jsonb),
         ${policy.feeMode},
+        ${policy.ctaMode},
         ${policy.disclaimer},
         ${policy.ctaLabel},
         NOW(),
@@ -91,6 +92,7 @@ class PaymentPolicyRepository {
         "products" = EXCLUDED."products",
         "installmentCounts" = EXCLUDED."installmentCounts",
         "feeMode" = EXCLUDED."feeMode",
+        "ctaMode" = EXCLUDED."ctaMode",
         "disclaimer" = EXCLUDED."disclaimer",
         "ctaLabel" = EXCLUDED."ctaLabel",
         "updatedAt" = NOW()
@@ -100,6 +102,7 @@ class PaymentPolicyRepository {
         "products",
         "installmentCounts",
         "feeMode",
+        "ctaMode",
         "disclaimer",
         "ctaLabel",
         "createdAt",
