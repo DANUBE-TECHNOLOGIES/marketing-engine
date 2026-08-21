@@ -46,15 +46,25 @@ function assertRollout(report = {}) {
   return report;
 }
 
+function generatedBlocksByIntent(snapshot = {}) {
+  const map = new Map();
+  for (const block of snapshot.blocks || []) {
+    if (block?.seo?.generatedBy !== "mse-25.40" || block?.seo?.purpose !== "residual-semantic-uplift") continue;
+    const intentKey = String(block.seo.intentKey || "").trim();
+    if (!intentKey) continue;
+    map.set(intentKey, block);
+  }
+  return map;
+}
+
 function writtenTargets(writeIntent = {}) {
   const targets = [];
   for (const intent of writeIntent.intents || []) {
-    const seen = new Set();
-    for (const block of intent.snapshot?.after?.blocks || []) {
-      if (block?.seo?.generatedBy !== "mse-25.40" || block?.seo?.purpose !== "residual-semantic-uplift") continue;
-      const intentKey = String(block.seo.intentKey || "").trim();
-      if (!intentKey || seen.has(intentKey)) continue;
-      seen.add(intentKey);
+    const before = generatedBlocksByIntent(intent.snapshot?.before || {});
+    const after = generatedBlocksByIntent(intent.snapshot?.after || {});
+    for (const [intentKey, afterBlock] of after.entries()) {
+      const beforeBlock = before.get(intentKey);
+      if (beforeBlock && digest(beforeBlock) === digest(afterBlock)) continue;
       targets.push({
         siteSlug: intent.siteSlug,
         agencyId: intent.agencyId,
@@ -233,6 +243,7 @@ module.exports = {
   evaluateTarget,
   freshCoverage,
   freshResidualDecision,
+  generatedBlocksByIntent,
   loadJson,
   run,
   writtenTargets,
