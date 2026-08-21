@@ -7,6 +7,8 @@ const {
   INTENT_CATALOG,
   STRONG_COVERAGE_THRESHOLD,
 } = require("./catalog");
+const { buildTopicGraph } = require("./topic-graph");
+const { planSemanticOpportunities } = require("./opportunity-planner");
 
 function normalize(value) {
   return String(value || "")
@@ -145,7 +147,14 @@ function buildCannibalization(pages) {
       .sort((a, b) => b.score - a.score || b.localityScore - a.localityScore || a.slug.localeCompare(b.slug, "fr"));
     if (candidates.length < 2) continue;
     const delta = Math.abs(candidates[0].score - candidates[1].score);
-    conflicts.push({ intentKey: intent.key, label: intent.label, severity: delta <= 12 ? "medium" : "low", blocking: false, pages: candidates, recommendation: "clarify-primary-target" });
+    conflicts.push({
+      intentKey: intent.key,
+      label: intent.label,
+      severity: delta <= 12 ? "medium" : "low",
+      blocking: false,
+      pages: candidates,
+      recommendation: "clarify-primary-target",
+    });
   }
   return conflicts;
 }
@@ -191,7 +200,9 @@ function semanticPlan(site = {}) {
   const pages = publishedPages.map((page) => analyzePage(page, { city }));
   const coverage = INTENT_CATALOG.map((intent) => coverageForIntent(intent, pages));
   const cannibalization = buildCannibalization(pages);
-  const opportunities = coverage.map((row) => opportunityForCoverage(row, { city })).filter(Boolean);
+  const rawOpportunities = coverage.map((row) => opportunityForCoverage(row, { city })).filter(Boolean);
+  const graph = buildTopicGraph({ coverage, pages });
+  const opportunityPlan = planSemanticOpportunities({ opportunities: rawOpportunities }, graph);
   const result = {
     version: "mse-25.40",
     operation: "local-semantic-preview",
@@ -199,7 +210,16 @@ function semanticPlan(site = {}) {
     writes: false,
     destructive: false,
     site: { id: site.id || null, slug: site.slug || null, agencyId: site.agencyId || site.agency?.id || null, city: city || null },
-    policy: { doorwayGuard: true, locationExpansion: false, allowedLocationScope: city ? [city] : [], autoCreatePages: false, autoPublishPages: false },
+    policy: {
+      doorwayGuard: true,
+      locationExpansion: false,
+      allowedLocationScope: city ? [city] : [],
+      preferExistingPages: true,
+      newPageEvidenceGate: true,
+      autoCreatePages: false,
+      autoPublishPages: false,
+      automaticWrites: false,
+    },
     summary: {
       publishedPageCount: pages.length,
       strongIntentCount: coverage.filter((row) => row.status === "strong").length,
@@ -207,13 +227,20 @@ function semanticPlan(site = {}) {
       semanticGapCount: coverage.filter((row) => row.status === "gap").length,
       commercialGapCount: coverage.filter((row) => row.status === "gap" && row.commercial).length,
       localQualificationGapCount: coverage.filter((row) => row.commercial && ["locality-weak", "locality-partial"].includes(row.gapReason)).length,
-      opportunityCount: opportunities.length,
+      opportunityCount: opportunityPlan.summary.opportunityCount,
+      highValueExistingPageCount: opportunityPlan.summary.highValueExistingPageCount,
+      newPageEvidenceGateCount: opportunityPlan.summary.newPageEvidenceGateCount,
+      topicGraphNodeCount: graph.summary.nodeCount,
+      topicGraphEdgeCount: graph.summary.edgeCount,
+      semanticOrphanPageCount: graph.summary.orphanPageCount,
       cannibalizationConflictCount: cannibalization.length,
       blockingConflictCount: 0,
     },
     coverage,
     pages,
-    opportunities,
+    opportunities: opportunityPlan.items,
+    opportunitySummary: opportunityPlan.summary,
+    topicGraph: graph,
     cannibalization,
   };
   return { ...result, planFingerprint: fingerprint(result) };
@@ -229,7 +256,15 @@ function networkSemanticPlan(sites = []) {
     readOnly: true,
     writes: false,
     destructive: false,
-    policy: { doorwayGuard: true, locationExpansion: false, autoCreatePages: false, autoPublishPages: false },
+    policy: {
+      doorwayGuard: true,
+      locationExpansion: false,
+      preferExistingPages: true,
+      newPageEvidenceGate: true,
+      autoCreatePages: false,
+      autoPublishPages: false,
+      automaticWrites: false,
+    },
     agencies,
     excludedSites,
     summary: {
@@ -242,6 +277,10 @@ function networkSemanticPlan(sites = []) {
       commercialGapCount: agencies.reduce((sum, row) => sum + row.summary.commercialGapCount, 0),
       localQualificationGapCount: agencies.reduce((sum, row) => sum + row.summary.localQualificationGapCount, 0),
       opportunityCount: agencies.reduce((sum, row) => sum + row.summary.opportunityCount, 0),
+      highValueExistingPageCount: agencies.reduce((sum, row) => sum + row.summary.highValueExistingPageCount, 0),
+      newPageEvidenceGateCount: agencies.reduce((sum, row) => sum + row.summary.newPageEvidenceGateCount, 0),
+      topicGraphEdgeCount: agencies.reduce((sum, row) => sum + row.summary.topicGraphEdgeCount, 0),
+      semanticOrphanPageCount: agencies.reduce((sum, row) => sum + row.summary.semanticOrphanPageCount, 0),
       cannibalizationConflictCount: agencies.reduce((sum, row) => sum + row.summary.cannibalizationConflictCount, 0),
       blockingConflictCount: 0,
     },
