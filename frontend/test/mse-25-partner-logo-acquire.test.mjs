@@ -21,12 +21,14 @@ test("generic partner logo acquisition is gated by vetted backlog and registry s
   assert.match(acquire, /if \(write\)/);
 });
 
-test("Catlante remains the reference vetted acquisition path while Rivages du Monde waits for masterbrand validation", () => {
+test("Catlante is finalized with retained vetted provenance while Rivages du Monde still waits for masterbrand validation", () => {
   const cruiseSources = read("components/page-builder/shared/partnerCruiseLogoSources.js");
   const backlog = read("components/page-builder/shared/partnerLogoBacklog.js");
+  const catalogue = read("components/page-builder/shared/fullPartners.js");
 
   assert.match(cruiseSources, /"catlante-catamarans"[\s\S]*status:\s*"vetted-source"[\s\S]*preferredSource:/);
-  assert.match(backlog, /"catlante-catamarans"[\s\S]*state:\s*"source-vetted"/);
+  assert.match(catalogue, /P\("catlante-catamarans"[^\n]*"\/partners\/catlante-catamarans\.(?:svg|webp)"\)/);
+  assert.doesNotMatch(backlog, /id:\s*"catlante-catamarans"/);
 
   assert.match(cruiseSources, /"rivages-du-monde"[\s\S]*status:\s*"official-source-page"/);
   assert.match(backlog, /"rivages-du-monde"[\s\S]*state:\s*"source-pending"/);
