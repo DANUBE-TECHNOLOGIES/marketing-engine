@@ -102,6 +102,9 @@ function analyzePage(page = {}, { city = "" } = {}) {
     title: page.title || null,
     seoTitle: page.seoTitle || null,
     published: page.published === true || String(page.status || "").toLowerCase() === "published",
+    managedRoute: page.managedRoute === true,
+    writeEligible: page.writeEligible !== false,
+    semanticSource: page.semanticSource || "website-designer",
     localityScore: locality.score,
     localityMatches: locality.matches,
     primaryIntent: intents[0]?.key || null,
@@ -134,7 +137,15 @@ function coverageForIntent(intent, pages) {
     bestPageSlug: best?.page?.slug || null,
     bestScore: score,
     bestLocalityScore: localScore,
-    candidatePages: candidates.map((item) => ({ slug: item.page.slug, score: item.row.score, localityScore: item.page.localityScore })),
+    bestPageManagedRoute: best?.page?.managedRoute === true,
+    bestPageWriteEligible: best?.page?.writeEligible !== false,
+    candidatePages: candidates.map((item) => ({
+      slug: item.page.slug,
+      score: item.row.score,
+      localityScore: item.page.localityScore,
+      managedRoute: item.page.managedRoute === true,
+      writeEligible: item.page.writeEligible !== false,
+    })),
   };
 }
 
@@ -142,7 +153,12 @@ function buildCannibalization(pages) {
   const conflicts = [];
   for (const intent of INTENT_CATALOG) {
     const candidates = pages
-      .map((page) => ({ slug: page.slug, score: page.intents.find((item) => item.key === intent.key)?.score || 0, localityScore: page.localityScore || 0 }))
+      .map((page) => ({
+        slug: page.slug,
+        score: page.intents.find((item) => item.key === intent.key)?.score || 0,
+        localityScore: page.localityScore || 0,
+        managedRoute: page.managedRoute === true,
+      }))
       .filter((row) => row.score >= CANNIBALIZATION_THRESHOLD)
       .sort((a, b) => b.score - a.score || b.localityScore - a.localityScore || a.slug.localeCompare(b.slug, "fr"));
     if (candidates.length < 2) continue;
@@ -161,6 +177,24 @@ function buildCannibalization(pages) {
 
 function opportunityForCoverage(row, { city }) {
   if (row.status === "strong") return null;
+  if (row.bestPageSlug && row.bestPageManagedRoute) {
+    return {
+      type: "managed-route-semantic-review",
+      intentKey: row.intentKey,
+      label: row.label,
+      pageSlug: row.bestPageSlug,
+      priority: row.commercial ? "high" : "medium",
+      currentScore: row.bestScore,
+      currentLocalityScore: row.bestLocalityScore,
+      targetScore: STRONG_COVERAGE_THRESHOLD,
+      targetLocalityScore: row.commercial ? 50 : null,
+      reason: row.gapReason,
+      locationScope: city || null,
+      autoCreate: false,
+      writeEligible: false,
+      requiresHumanReview: true,
+    };
+  }
   if (row.bestPageSlug) {
     return {
       type: "strengthen-existing-page",
@@ -175,6 +209,7 @@ function opportunityForCoverage(row, { city }) {
       reason: row.gapReason,
       locationScope: city || null,
       autoCreate: false,
+      writeEligible: true,
     };
   }
   return {
@@ -216,12 +251,15 @@ function semanticPlan(site = {}) {
       allowedLocationScope: city ? [city] : [],
       preferExistingPages: true,
       newPageEvidenceGate: true,
+      managedRoutesAware: true,
       autoCreatePages: false,
       autoPublishPages: false,
       automaticWrites: false,
     },
     summary: {
       publishedPageCount: pages.length,
+      managedRoutePageCount: pages.filter((page) => page.managedRoute).length,
+      writablePageCount: pages.filter((page) => page.writeEligible).length,
       strongIntentCount: coverage.filter((row) => row.status === "strong").length,
       coveredIntentCount: coverage.filter((row) => row.status === "covered").length,
       semanticGapCount: coverage.filter((row) => row.status === "gap").length,
@@ -261,6 +299,7 @@ function networkSemanticPlan(sites = []) {
       locationExpansion: false,
       preferExistingPages: true,
       newPageEvidenceGate: true,
+      managedRoutesAware: true,
       autoCreatePages: false,
       autoPublishPages: false,
       automaticWrites: false,
@@ -271,6 +310,8 @@ function networkSemanticPlan(sites = []) {
       agenciesProcessed: agencies.length,
       agenciesExcluded: excludedSites.length,
       publishedPageCount: agencies.reduce((sum, row) => sum + row.summary.publishedPageCount, 0),
+      managedRoutePageCount: agencies.reduce((sum, row) => sum + row.summary.managedRoutePageCount, 0),
+      writablePageCount: agencies.reduce((sum, row) => sum + row.summary.writablePageCount, 0),
       strongIntentCount: agencies.reduce((sum, row) => sum + row.summary.strongIntentCount, 0),
       coveredIntentCount: agencies.reduce((sum, row) => sum + row.summary.coveredIntentCount, 0),
       semanticGapCount: agencies.reduce((sum, row) => sum + row.summary.semanticGapCount, 0),
@@ -298,6 +339,7 @@ module.exports = {
   localityScore,
   networkSemanticPlan,
   normalize,
+  opportunityForCoverage,
   pageSignals,
   semanticPlan,
 };
