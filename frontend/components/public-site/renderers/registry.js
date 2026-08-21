@@ -74,6 +74,7 @@ export const PUBLIC_RENDERER_REGISTRY = {
   "team-grid": TeamRenderer,
   "equipe-grid": TeamRenderer,
   flexible_payment: FlexiblePaymentRenderer,
+  "flexible-payment": FlexiblePaymentRenderer,
 };
 
 export function getPublicRenderer(type) {
