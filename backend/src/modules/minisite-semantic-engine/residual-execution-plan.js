@@ -16,9 +16,18 @@ function coverageMap(agency = {}) {
   return new Map((agency.coverage || []).map((row) => [String(row.intentKey), row]));
 }
 
+function coverageSatisfied(coverage) {
+  return Boolean(coverage && ["strong", "covered"].includes(String(coverage.status)));
+}
+
 function coverageSatisfiedElsewhere(coverage, pageSlug) {
-  if (!coverage || !["strong", "covered"].includes(String(coverage.status))) return false;
+  if (!coverageSatisfied(coverage)) return false;
   return Boolean(coverage.bestPageSlug && String(coverage.bestPageSlug) !== String(pageSlug));
+}
+
+function coverageSatisfiedOnTarget(coverage, pageSlug) {
+  if (!coverageSatisfied(coverage)) return false;
+  return Boolean(coverage.bestPageSlug && String(coverage.bestPageSlug) === String(pageSlug));
 }
 
 function managedRouteAlternative(coverage, pageSlug) {
@@ -58,6 +67,16 @@ function residualMetadata(pagePlan = {}, agency = {}) {
 
 function residualSection(section = {}, pagePlan = {}, agency = {}) {
   const coverage = coverageMap(agency).get(String(section.intentKey || ""));
+
+  if (coverageSatisfiedOnTarget(coverage, pagePlan.pageSlug)) {
+    return {
+      ...section,
+      eligible: false,
+      suppressionReason: "intent-covered-on-target-page",
+      coveredByPageSlug: coverage.bestPageSlug,
+      coverageStatus: coverage.status,
+    };
+  }
 
   if (coverageSatisfiedElsewhere(coverage, pagePlan.pageSlug)) {
     return {
@@ -118,6 +137,7 @@ function residualPagePlan(pagePlan = {}, agency = {}) {
     suppressedSections,
     safeguards: {
       architectureCoverageChecked: true,
+      targetCoverageChecked: true,
       homeSecondaryFillProhibited: true,
       managedRoutesPreferred: true,
       preserveManualBodyCopy: true,
@@ -201,7 +221,9 @@ function buildResidualExecutionPlan(networkPlan = {}, consolidatedPlan = {}) {
 module.exports = {
   buildResidualExecutionPlan,
   coverageMap,
+  coverageSatisfied,
   coverageSatisfiedElsewhere,
+  coverageSatisfiedOnTarget,
   fingerprint,
   managedRouteAlternative,
   residualMetadata,
