@@ -18,6 +18,7 @@ function opportunityValue(row = {}, graph = {}) {
   const priorityWeight = PRIORITY_WEIGHT[row.priority] || 0;
   const graphBonus = graph.orphanPages?.includes(row.pageSlug) ? 8 : 0;
   const creationPenalty = row.type === "page-candidate-review" ? 22 : 0;
+  const managedRoutePenalty = row.type === "managed-route-semantic-review" ? 8 : 0;
   const score = Math.round(
     commercialWeight +
     priorityWeight +
@@ -25,12 +26,16 @@ function opportunityValue(row = {}, graph = {}) {
     localityGap * 0.25 +
     existingPageBonus +
     graphBonus -
-    creationPenalty
+    creationPenalty -
+    managedRoutePenalty
   );
   return bounded(score);
 }
 
 function actionForOpportunity(row = {}) {
+  if (row.type === "managed-route-semantic-review") {
+    return ["managed-route-owner-review", "managed-route-metadata-review", "no-website-designer-write"];
+  }
   if (row.type === "strengthen-existing-page") {
     const operations = [];
     if (["intent-weak", "intent-absent"].includes(row.reason)) {
@@ -49,9 +54,11 @@ function actionForOpportunity(row = {}) {
 function planSemanticOpportunities(plan = {}, graph = {}) {
   const items = (plan.opportunities || []).map((row) => {
     const valueScore = opportunityValue(row, graph);
-    const executionClass = row.type === "strengthen-existing-page"
-      ? (valueScore >= 70 ? "high-value-existing-page" : "existing-page-review")
-      : "new-page-evidence-gate";
+    let executionClass;
+    if (row.type === "managed-route-semantic-review") executionClass = "managed-route-review";
+    else if (row.type === "strengthen-existing-page") executionClass = valueScore >= 70 ? "high-value-existing-page" : "existing-page-review";
+    else executionClass = "new-page-evidence-gate";
+
     return {
       ...row,
       valueScore,
@@ -69,6 +76,7 @@ function planSemanticOpportunities(plan = {}, graph = {}) {
       opportunityCount: items.length,
       highValueExistingPageCount: items.filter((row) => row.executionClass === "high-value-existing-page").length,
       existingPageReviewCount: items.filter((row) => row.executionClass === "existing-page-review").length,
+      managedRouteReviewCount: items.filter((row) => row.executionClass === "managed-route-review").length,
       newPageEvidenceGateCount: items.filter((row) => row.executionClass === "new-page-evidence-gate").length,
       automaticWriteCount: 0,
     },
