@@ -9,24 +9,39 @@ function repositoryState() {
   return { branch: git(["branch", "--show-current"]), head: git(["rev-parse", "HEAD"]), dirty: Boolean(git(["status", "--porcelain"])) };
 }
 
-async function health(origin, tenantSlug, request = fetch) {
+async function httpHealth(origin, tenantSlug, request = fetch) {
   const response = await request(`${String(origin || "http://127.0.0.1:4000").replace(/\/+$/g, "")}/minisite-semantic-engine/health`, { headers: { "x-tenant-slug": tenantSlug || "mondescale" } });
   const payload = await response.json();
   if (!response.ok || payload?.ok !== true) throw new Error(payload?.message || `HTTP ${response.status}`);
   return payload;
 }
 
-async function run({ backendOrigin = process.env.BACKEND_ORIGIN || "http://127.0.0.1:4000", tenantSlug = process.env.TENANT_SLUG || "mondescale", emitOutput = true } = {}) {
+function directHealth() {
+  const { MiniSiteSemanticEngineService } = require("../src/modules/minisite-semantic-engine/service");
+  return { ok: true, ...new MiniSiteSemanticEngineService({ repository: {} }).health() };
+}
+
+async function run({
+  backendOrigin = process.env.BACKEND_ORIGIN || "http://127.0.0.1:4000",
+  tenantSlug = process.env.TENANT_SLUG || "mondescale",
+  emitOutput = true,
+  mode = process.env.MSE_25_40_PREVIEW_MODE || "direct",
+} = {}) {
   const repository = repositoryState();
-  const runtimeHealth = await health(backendOrigin, tenantSlug);
-  const preview = await runPreview({ backendOrigin, tenantSlug, emitOutput: false });
+  const normalizedMode = String(mode || "direct").trim().toLowerCase();
+  const runtimeHealth = normalizedMode === "http"
+    ? await httpHealth(backendOrigin, tenantSlug)
+    : directHealth();
+  const preview = await runPreview({ backendOrigin, tenantSlug, emitOutput: false, mode: normalizedMode });
   const checks = {
     branch: repository.branch === EXPECTED_BRANCH,
     cleanWorktree: repository.dirty === false,
     healthReadOnly: runtimeHealth.readOnly === true && runtimeHealth.writes === false && runtimeHealth.destructive === false,
+    tenantScoped: runtimeHealth.tenantScoped === true,
     doorwayGuard: runtimeHealth.doorwayGuard === true && runtimeHealth.locationExpansion === false && runtimeHealth.autoCreatePages === false,
     existingPageFirst: runtimeHealth.preferExistingPages === true,
     newPageEvidenceGate: runtimeHealth.newPageEvidenceGate === true,
+    managedRoutesAware: runtimeHealth.managedRoutesAware === true && preview.policy?.managedRoutesAware === true,
     automaticWritesDisabled: runtimeHealth.automaticWrites === false && (preview.summary?.automaticWriteCount || 0) === 0,
     previewReadOnly: preview.readOnly === true && preview.writes === false && preview.destructive === false,
     proposalsPresent: Number(preview.summary?.semanticProposalCount || 0) >= 0,
@@ -40,7 +55,8 @@ async function run({ backendOrigin = process.env.BACKEND_ORIGIN || "http://127.0
     publicWritesEnabled: false,
     repository,
     runtime: {
-      backendOrigin,
+      mode: normalizedMode,
+      backendOrigin: normalizedMode === "http" ? backendOrigin : null,
       tenantSlug,
       health: runtimeHealth,
       planFingerprint: preview.planFingerprint,
@@ -56,4 +72,4 @@ async function run({ backendOrigin = process.env.BACKEND_ORIGIN || "http://127.0
 
 if (require.main === module) run().catch((error) => { console.error(JSON.stringify({ ok: false, error: "MSE_25_40_VM_READINESS_FAILED", message: error.message }, null, 2)); process.exitCode = 1; });
 
-module.exports = { health, repositoryState, run };
+module.exports = { directHealth, httpHealth, repositoryState, run };

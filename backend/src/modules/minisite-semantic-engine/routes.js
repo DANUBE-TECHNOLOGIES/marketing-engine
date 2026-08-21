@@ -12,6 +12,10 @@ function errorPayload(error) {
   };
 }
 
+function tenantSlugFrom(req) {
+  return String(req.get("x-tenant-slug") || req.tenant?.slug || "mondescale").trim();
+}
+
 function routes({ prisma, service } = {}) {
   const router = express.Router();
   const semantic = service || new MiniSiteSemanticEngineService({ prisma });
@@ -22,15 +26,24 @@ function routes({ prisma, service } = {}) {
 
   router.post("/minisite-semantic-engine/agencies/:agencyId/preview", async (req, res) => {
     try {
-      res.json({ ok: true, ...(await semantic.previewAgency({ agencyId: req.params.agencyId })) });
+      res.json({
+        ok: true,
+        ...(await semantic.previewAgency({
+          agencyId: req.params.agencyId,
+          tenantSlug: tenantSlugFrom(req),
+        })),
+      });
     } catch (error) {
       res.status(error?.status || 500).json(errorPayload(error));
     }
   });
 
-  router.post("/minisite-semantic-engine/network/preview", async (_req, res) => {
+  router.post("/minisite-semantic-engine/network/preview", async (req, res) => {
     try {
-      res.json({ ok: true, ...(await semantic.previewNetwork()) });
+      res.json({
+        ok: true,
+        ...(await semantic.previewNetwork({ tenantSlug: tenantSlugFrom(req) })),
+      });
     } catch (error) {
       res.status(error?.status || 500).json(errorPayload(error));
     }
@@ -39,4 +52,4 @@ function routes({ prisma, service } = {}) {
   return router;
 }
 
-module.exports = { errorPayload, routes };
+module.exports = { errorPayload, routes, tenantSlugFrom };

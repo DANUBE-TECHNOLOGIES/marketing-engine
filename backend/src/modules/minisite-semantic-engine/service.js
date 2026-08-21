@@ -16,11 +16,36 @@ function attachSemanticProposals(plan = {}) {
       ...(plan.summary || {}),
       semanticProposalCount: semanticProposals.summary.proposalCount,
       existingPageProposalCount: semanticProposals.summary.existingPageProposalCount,
+      managedRouteReviewCount: semanticProposals.summary.managedRouteReviewCount || 0,
       newPageEvidenceGateCount: semanticProposals.summary.newPageEvidenceGateCount,
       automaticWriteCount: 0,
     },
   };
   return { ...result, planFingerprint: fingerprint(result) };
+}
+
+function managedRoutePages(summary = {}, excludedPages = []) {
+  const managedSlugs = new Set(
+    (excludedPages || [])
+      .filter((row) => row?.reason === "canonical-route-managed")
+      .map((row) => String(row.slug || ""))
+      .filter(Boolean)
+  );
+
+  return (summary.pages || [])
+    .filter((page) => managedSlugs.has(String(page.slug || "")))
+    .map((page) => ({
+      ...page,
+      id: page.id || null,
+      slug: page.slug || null,
+      title: page.title || null,
+      published: page.published === true || String(page.status || "").toLowerCase() === "published",
+      status: page.status || (page.published === true ? "published" : null),
+      blocks: [],
+      managedRoute: true,
+      writeEligible: false,
+      semanticSource: "canonical-managed-route",
+    }));
 }
 
 class MiniSiteSemanticEngineService {
@@ -42,10 +67,21 @@ class MiniSiteSemanticEngineService {
       locationExpansion: false,
       preferExistingPages: true,
       newPageEvidenceGate: true,
+      managedRoutesAware: true,
       autoCreatePages: false,
       automaticWrites: false,
+      tenantScoped: true,
       routes: ["agency-preview", "network-preview"],
     };
+  }
+
+  async resolveTenantBySlug(tenantSlug) {
+    const slug = String(tenantSlug || "").trim();
+    if (!slug || !this.prisma?.tenant) return null;
+    return this.prisma.tenant.findUnique({
+      where: { slug },
+      select: { id: true, slug: true },
+    });
   }
 
   async resolveTenantId(summary) {
@@ -56,6 +92,42 @@ class MiniSiteSemanticEngineService {
       select: { tenantId: true },
     });
     return row?.tenantId || null;
+  }
+
+  async assertTenantScope(summary, tenantSlug) {
+    if (!tenantSlug) return null;
+    const tenant = await this.resolveTenantBySlug(tenantSlug);
+    if (!tenant) {
+      const error = new Error(`Tenant ${tenantSlug} introuvable.`);
+      error.code = "MSE_25_40_TENANT_NOT_FOUND";
+      error.status = 404;
+      throw error;
+    }
+    const siteTenantId = await this.resolveTenantId(summary);
+    if (!siteTenantId || siteTenantId !== tenant.id) {
+      const error = new Error("Le mini-site demandé n'appartient pas au tenant MSE-25.40 courant.");
+      error.code = "MSE_25_40_TENANT_SCOPE_MISMATCH";
+      error.status = 404;
+      throw error;
+    }
+    return tenant;
+  }
+
+  async filterSitesForTenant(sites, tenantSlug) {
+    if (!tenantSlug) return sites || [];
+    const tenant = await this.resolveTenantBySlug(tenantSlug);
+    if (!tenant) {
+      const error = new Error(`Tenant ${tenantSlug} introuvable.`);
+      error.code = "MSE_25_40_TENANT_NOT_FOUND";
+      error.status = 404;
+      throw error;
+    }
+    const rows = await this.prisma.agencySite.findMany({
+      where: { tenantId: tenant.id },
+      select: { id: true },
+    });
+    const allowed = new Set(rows.map((row) => String(row.id)));
+    return (sites || []).filter((site) => allowed.has(String(site.id)));
   }
 
   async contentServiceForSite(summary) {
@@ -77,7 +149,7 @@ class MiniSiteSemanticEngineService {
     });
   }
 
-  async siteWithContent(agencyId) {
+  async siteWithContent(agencyId, { tenantSlug } = {}) {
     const summary = await this.repository.findSiteByAgency(agencyId);
     if (!summary) {
       const error = new Error("Mini-site introuvable pour cette agence.");
@@ -85,35 +157,44 @@ class MiniSiteSemanticEngineService {
       error.status = 404;
       throw error;
     }
+    await this.assertTenantScope(summary, tenantSlug);
     const enrichmentService = await this.contentServiceForSite(summary);
     const content = await enrichmentService.buildAgencyContentOptimization({ agencyId });
+    const editablePages = (content.pages || []).map((row) => ({
+      ...(row.page || {}),
+      id: row.pageId || row.page?.id || null,
+      slug: row.slug || row.page?.slug || null,
+      title: row.title || row.page?.title || null,
+      published: row.published === true || row.page?.published === true,
+      status: row.page?.status || (row.published === true ? "published" : null),
+      blocks: row.currentBlocks || row.page?.blocks || [],
+      managedRoute: false,
+      writeEligible: true,
+      semanticSource: "website-designer",
+    }));
+    const canonicalManagedPages = managedRoutePages(summary, content.excludedPages || []);
+
     return {
       ...summary,
-      pages: (content.pages || []).map((row) => ({
-        ...(row.page || {}),
-        id: row.pageId || row.page?.id || null,
-        slug: row.slug || row.page?.slug || null,
-        title: row.title || row.page?.title || null,
-        published: row.published === true || row.page?.published === true,
-        status: row.page?.status || (row.published === true ? "published" : null),
-        blocks: row.currentBlocks || row.page?.blocks || [],
-      })),
-      semanticExcludedPages: content.excludedPages || [],
+      pages: [...editablePages, ...canonicalManagedPages],
+      semanticExcludedPages: (content.excludedPages || []).filter((row) => row?.reason !== "canonical-route-managed"),
+      semanticManagedRoutes: canonicalManagedPages.map((page) => ({ slug: page.slug, pageId: page.id })),
     };
   }
 
-  async previewAgency({ agencyId } = {}) {
+  async previewAgency({ agencyId, tenantSlug } = {}) {
     if (agencyId === undefined || agencyId === null || agencyId === "") {
       const error = new Error("agencyId est obligatoire.");
       error.code = "MSE_25_40_AGENCY_ID_REQUIRED";
       error.status = 400;
       throw error;
     }
-    return attachSemanticProposals(semanticPlan(await this.siteWithContent(agencyId)));
+    return attachSemanticProposals(semanticPlan(await this.siteWithContent(agencyId, { tenantSlug })));
   }
 
-  async previewNetwork() {
-    const sites = await this.repository.listSites();
+  async previewNetwork({ tenantSlug } = {}) {
+    const allSites = await this.repository.listSites();
+    const sites = await this.filterSitesForTenant(allSites, tenantSlug);
     const hydrated = [];
     for (const site of sites || []) {
       if (!(String(site.status || "").toLowerCase() === "published" || Boolean(site.publishedAt))) {
@@ -122,7 +203,7 @@ class MiniSiteSemanticEngineService {
       }
       const agencyId = site.agencyId || site.agency?.id;
       if (!agencyId) continue;
-      hydrated.push(await this.siteWithContent(agencyId));
+      hydrated.push(await this.siteWithContent(agencyId, { tenantSlug }));
     }
 
     const base = networkSemanticPlan(hydrated);
@@ -130,11 +211,13 @@ class MiniSiteSemanticEngineService {
     const { planFingerprint: _oldFingerprint, ...networkBase } = base;
     const result = {
       ...networkBase,
+      tenantSlug: tenantSlug || null,
       agencies,
       summary: {
         ...(base.summary || {}),
         semanticProposalCount: agencies.reduce((sum, row) => sum + (row.summary.semanticProposalCount || 0), 0),
         existingPageProposalCount: agencies.reduce((sum, row) => sum + (row.summary.existingPageProposalCount || 0), 0),
+        managedRouteReviewCount: agencies.reduce((sum, row) => sum + (row.summary.managedRouteReviewCount || 0), 0),
         newPageEvidenceGateCount: agencies.reduce((sum, row) => sum + (row.summary.newPageEvidenceGateCount || 0), 0),
         automaticWriteCount: 0,
       },
@@ -143,4 +226,4 @@ class MiniSiteSemanticEngineService {
   }
 }
 
-module.exports = { MiniSiteSemanticEngineService, attachSemanticProposals };
+module.exports = { MiniSiteSemanticEngineService, attachSemanticProposals, managedRoutePages };

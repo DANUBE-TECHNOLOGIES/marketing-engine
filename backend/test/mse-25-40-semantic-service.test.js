@@ -33,7 +33,7 @@ function fixtures() {
   return { repository, enrichmentService };
 }
 
-test("service hydrates semantic analysis from persisted Website Designer blocks", async () => {
+test("service hydrates semantic analysis from persisted Website Designer blocks and exposes exact proposals", async () => {
   const { repository, enrichmentService } = fixtures();
   const service = new MiniSiteSemanticEngineService({ repository, enrichmentService });
   const result = await service.previewAgency({ agencyId: 4 });
@@ -41,9 +41,14 @@ test("service hydrates semantic analysis from persisted Website Designer blocks"
   assert.equal(result.pages[0].slug, "home");
   assert.equal(result.coverage.find((row) => row.intentKey === "agency").status, "strong");
   assert.equal(result.readOnly, true);
+  assert.equal(result.writes, false);
+  assert.ok(result.semanticProposals);
+  assert.equal(result.semanticProposals.summary.automaticWriteCount, 0);
+  assert.equal(result.summary.semanticProposalCount, result.semanticProposals.summary.proposalCount);
+  assert.match(result.planFingerprint, /^[0-9a-f]{64}$/);
 });
 
-test("network service excludes drafts before expensive content hydration", async () => {
+test("network service excludes drafts before expensive content hydration and aggregates semantic proposals", async () => {
   const { repository, enrichmentService } = fixtures();
   let calls = 0;
   const wrapped = { buildAgencyContentOptimization: async (options) => { calls += 1; return enrichmentService.buildAgencyContentOptimization(options); } };
@@ -53,6 +58,8 @@ test("network service excludes drafts before expensive content hydration", async
   assert.equal(result.summary.agenciesProcessed, 1);
   assert.equal(result.summary.agenciesExcluded, 1);
   assert.equal(result.excludedSites[0].siteSlug, "amilly");
+  assert.equal(result.summary.automaticWriteCount, 0);
+  assert.equal(result.summary.semanticProposalCount, result.agencies[0].summary.semanticProposalCount);
 });
 
 test("agency preview fails closed for an unknown mini-site", async () => {

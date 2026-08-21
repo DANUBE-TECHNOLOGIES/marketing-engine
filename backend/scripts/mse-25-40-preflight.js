@@ -34,6 +34,7 @@ function assertSafetyPolicy(preview = {}) {
   if (policy.locationExpansion !== false) issues.push("locationExpansion");
   if (policy.preferExistingPages !== true) issues.push("preferExistingPages");
   if (policy.newPageEvidenceGate !== true) issues.push("newPageEvidenceGate");
+  if (policy.managedRoutesAware !== true) issues.push("managedRoutesAware");
   if (policy.autoCreatePages !== false) issues.push("autoCreatePages");
   if (policy.autoPublishPages !== false) issues.push("autoPublishPages");
   if (policy.automaticWrites !== false) issues.push("automaticWrites");
@@ -78,6 +79,7 @@ async function run({ backendOrigin, tenantSlug, output, emitOutput = true, previ
       doorwayGuard: true,
       preferExistingPages: true,
       newPageEvidenceGate: true,
+      managedRoutesAware: true,
       automaticWrites: false,
     },
     preview: first,

@@ -112,6 +112,32 @@ function linksForOpportunity(opportunity = {}, graph = {}) {
 }
 
 function proposalForOpportunity(opportunity = {}, { city, graph } = {}) {
+  if (opportunity.type === "managed-route-semantic-review") {
+    return {
+      intentKey: opportunity.intentKey,
+      pageSlug: opportunity.pageSlug,
+      type: "managed-route-semantic-review",
+      readOnly: true,
+      writes: false,
+      valueScore: opportunity.valueScore,
+      reason: opportunity.reason,
+      writeEligible: false,
+      requiresHumanReview: true,
+      proposed: {
+        seoTitle: titleFor(opportunity.intentKey, city),
+        h1: h1For(opportunity.intentKey, city),
+        metaDescription: metaFor(opportunity.intentKey, city),
+        editorialBrief: bodyBriefFor(opportunity.intentKey, city),
+      },
+      safeguards: {
+        noWebsiteDesignerWrite: true,
+        noAutomaticPublication: true,
+        noAutomaticWrite: true,
+        doorwayGuard: true,
+      },
+    };
+  }
+
   if (opportunity.type !== "strengthen-existing-page") {
     return {
       intentKey: opportunity.intentKey,
@@ -161,6 +187,7 @@ function buildSemanticProposals(plan = {}) {
     summary: {
       proposalCount: proposals.length,
       existingPageProposalCount: proposals.filter((row) => row.type === "existing-page-semantic-uplift").length,
+      managedRouteReviewCount: proposals.filter((row) => row.type === "managed-route-semantic-review").length,
       newPageEvidenceGateCount: proposals.filter((row) => row.type === "new-page-evidence-gate").length,
       automaticWriteCount: 0,
     },

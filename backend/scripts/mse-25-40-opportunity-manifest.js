@@ -29,6 +29,7 @@ function manifestFromPreflight(report = {}) {
 
   const preview = report.preview || {};
   const opportunities = [];
+  const managedRouteReviews = [];
   const evidenceGates = [];
   const cannibalization = [];
 
@@ -46,6 +47,16 @@ function manifestFromPreflight(report = {}) {
       };
       if (proposal.type === "existing-page-semantic-uplift") {
         opportunities.push({ ...base, valueScore: proposal.valueScore || 0, reason: proposal.reason || null, proposed: proposal.proposed, safeguards: proposal.safeguards });
+      } else if (proposal.type === "managed-route-semantic-review") {
+        managedRouteReviews.push({
+          ...base,
+          valueScore: proposal.valueScore || 0,
+          reason: proposal.reason || null,
+          writeEligible: false,
+          requiresHumanReview: true,
+          proposed: proposal.proposed,
+          safeguards: proposal.safeguards,
+        });
       } else {
         evidenceGates.push({ ...base, requiresSearchDemandEvidence: true, requiresHumanReview: true, suggestedTitle: proposal.suggestedTitle, suggestedH1: proposal.suggestedH1, editorialBrief: proposal.editorialBrief });
       }
@@ -56,6 +67,7 @@ function manifestFromPreflight(report = {}) {
   }
 
   opportunities.sort((a, b) => b.valueScore - a.valueScore || String(a.siteSlug).localeCompare(String(b.siteSlug), "fr") || String(a.intentKey).localeCompare(String(b.intentKey), "fr"));
+  managedRouteReviews.sort((a, b) => b.valueScore - a.valueScore || String(a.siteSlug).localeCompare(String(b.siteSlug), "fr") || String(a.intentKey).localeCompare(String(b.intentKey), "fr"));
   evidenceGates.sort((a, b) => String(a.siteSlug).localeCompare(String(b.siteSlug), "fr") || String(a.intentKey).localeCompare(String(b.intentKey), "fr"));
 
   const base = {
@@ -73,17 +85,20 @@ function manifestFromPreflight(report = {}) {
     policy: {
       preferExistingPages: true,
       newPageEvidenceGate: true,
+      managedRoutesAware: true,
       doorwayGuard: true,
       automaticWrites: false,
     },
     summary: {
       existingPageOpportunityCount: opportunities.length,
       highValueOpportunityCount: opportunities.filter((row) => row.valueScore >= 70).length,
+      managedRouteReviewCount: managedRouteReviews.length,
       newPageEvidenceGateCount: evidenceGates.length,
       cannibalizationAdvisoryCount: cannibalization.length,
       automaticWriteCount: 0,
     },
     opportunities,
+    managedRouteReviews,
     evidenceGates,
     cannibalization,
   };

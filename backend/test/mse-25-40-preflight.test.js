@@ -19,6 +19,7 @@ function preview(fingerprint = "a".repeat(64)) {
       locationExpansion: false,
       preferExistingPages: true,
       newPageEvidenceGate: true,
+      managedRoutesAware: true,
       autoCreatePages: false,
       autoPublishPages: false,
       automaticWrites: false,
@@ -44,6 +45,7 @@ test("preflight accepts two identical read-only semantic previews", async () => 
   assert.equal(persisted.determinism.verified, true);
   assert.equal(persisted.safety.verified, true);
   assert.equal(persisted.safety.newPageEvidenceGate, true);
+  assert.equal(persisted.safety.managedRoutesAware, true);
   fs.unlinkSync(file);
 });
 
@@ -60,6 +62,7 @@ test("preflight refuses non-determinism and any disabled semantic safety guard",
     (unsafe) => { unsafe.policy.locationExpansion = true; },
     (unsafe) => { unsafe.policy.preferExistingPages = false; },
     (unsafe) => { unsafe.policy.newPageEvidenceGate = false; },
+    (unsafe) => { unsafe.policy.managedRoutesAware = false; },
     (unsafe) => { unsafe.policy.automaticWrites = true; },
     (unsafe) => { unsafe.summary.automaticWriteCount = 1; },
   ]) {
