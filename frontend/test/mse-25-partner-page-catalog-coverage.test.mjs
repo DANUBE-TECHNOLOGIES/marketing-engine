@@ -47,7 +47,7 @@ function contentReady(partner) {
 
 test("public partner page catalogue keeps expected network coverage", () => {
   assert.equal(PARTNER_DIRECTORY_CATEGORIES.length, 5);
-  assert.equal(FULL_PARTNERS.length, 57);
+  assert.equal(FULL_PARTNERS.length, 56);
 
   const counts = Object.fromEntries(
     PARTNER_DIRECTORY_CATEGORIES.map((category) => [
@@ -57,11 +57,15 @@ test("public partner page catalogue keeps expected network coverage", () => {
   );
   assert.deepEqual(counts, {
     croisieres: 10,
-    circuits: 10,
-    sejours: 16,
-    "sur-mesure": 13,
+    circuits: 9,
+    sejours: 17,
+    "sur-mesure": 12,
     "france-europe": 8,
   });
+
+  assert.equal(FULL_PARTNERS.some((partner) => partner.id === "visit-europe"), false);
+  assert.equal(FULL_PARTNERS.some((partner) => partner.id === "planete-production"), false);
+  assert.equal(FULL_PARTNERS.some((partner) => partner.id === "ovoyages"), true);
 
   const blockedByIdentity = FULL_PARTNERS.filter(
     (partner) => verificationModule.getPartnerVerification(partner.id).status === "identity-review"
@@ -69,6 +73,6 @@ test("public partner page catalogue keeps expected network coverage", () => {
   assert.deepEqual(blockedByIdentity.map((partner) => partner.id), ["asiam"]);
 
   const ready = FULL_PARTNERS.filter(contentReady);
-  assert.equal(ready.length, 56);
+  assert.equal(ready.length, 55);
   assert.equal(ready.some((partner) => partner.id === "asiam"), false);
 });

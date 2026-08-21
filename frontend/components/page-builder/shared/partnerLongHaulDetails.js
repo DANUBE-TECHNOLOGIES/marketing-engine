@@ -1,57 +1,17 @@
 "use strict";
 
 const DETAILS = Object.freeze({
-  "alma-latina": {
-    destinations: ["Mexique", "Costa Rica", "Colombie", "Pérou", "Argentine", "Chili", "Brésil"],
-    travelTypes: ["Voyage sur mesure", "Circuit privatif", "Autotour", "Combiné"],
-  },
-  "australie-tours": {
-    destinations: ["Australie", "Nouvelle-Zélande", "Pacifique Sud"],
-    travelTypes: ["Voyage sur mesure", "Autotour", "Circuit", "Séjour"],
-  },
-  amerigo: {
-    destinations: ["États-Unis", "Canada", "Mexique", "Amérique centrale", "Amérique du Sud", "Asie"],
-    travelTypes: ["Circuit accompagné", "Voyage sur mesure", "Voyage de groupe", "Autotour", "Circuit thématique"],
-    website: "https://www.amerigo.fr/",
-  },
-  "beachcomber-tours": {
-    destinations: ["Maurice", "Seychelles", "Maldives", "Dubaï", "Abu Dhabi", "Oman"],
-    travelTypes: ["Séjour haut de gamme", "Voyage de noces", "Famille", "Golf", "Multi-centres"],
-  },
-  asia: {
-    destinations: ["Japon", "Thaïlande", "Vietnam", "Inde", "Indonésie", "Asie du Sud-Est"],
-    travelTypes: ["Voyage sur mesure", "Circuit privé", "Circuit accompagné", "Combiné"],
-  },
-  "austral-lagons": {
-    destinations: ["Tahiti", "Seychelles", "Maurice", "Réunion", "Maldives", "Zanzibar", "Afrique australe"],
-    travelTypes: ["Voyage sur mesure", "Séjour haut de gamme", "Voyage de noces", "Safari", "Combiné"],
-  },
-  "climats-du-monde": {
-    destinations: ["Asie", "Moyen-Orient", "Afrique", "Océan Indien"],
-    travelTypes: ["Circuit", "Voyage sur mesure", "Séjour", "Combiné"],
-  },
-  "jetset-voyages": {
-    destinations: ["Amérique du Nord", "Caraïbes", "Océan Indien", "Polynésie", "Asie"],
-    travelTypes: ["Séjour long-courrier", "Circuit", "Autotour", "Combiné"],
-  },
-  "luxair-tours": {
-    destinations: ["Méditerranée", "Canaries", "Cap-Vert", "Égypte", "Destinations soleil"],
-    travelTypes: ["Forfait vol + hôtel", "Séjour", "City break", "Vacances balnéaires"],
-  },
-  "gaeland-ashling": {
-    destinations: ["Irlande", "Écosse", "Angleterre", "Pays de Galles"],
-    travelTypes: ["Voyage sur mesure", "Autotour", "Séjour", "Manoir & château", "Location", "Circuit"],
-    website: "https://www.gaeland-ashling.com/",
-  },
-  "planete-production": {
-    destinations: ["Monde", "Afrique", "Asie", "Amériques", "Océan Indien", "Europe"],
-    travelTypes: ["Voyage sur mesure", "FIT", "Groupe", "Production à la carte", "Voyage d'aventure"],
-    website: "https://planeteproduction.fr/",
-  },
-  kuoni: {
-    destinations: ["Europe", "Afrique", "Amériques", "Asie", "Océan Indien", "Océanie", "Grand Nord & Antarctique"],
-    travelTypes: ["Circuit accompagné", "Circuit privé", "Séjour", "Autotour", "Croisière", "Voyage sur mesure"],
-  },
+  "alma-latina": { destinations: ["Mexique", "Costa Rica", "Colombie", "Pérou", "Argentine", "Chili", "Brésil"], travelTypes: ["Voyage sur mesure", "Circuit privatif", "Autotour", "Combiné"] },
+  "australie-tours": { destinations: ["Australie", "Nouvelle-Zélande", "Pacifique Sud"], travelTypes: ["Voyage sur mesure", "Autotour", "Circuit", "Séjour"] },
+  amerigo: { destinations: ["États-Unis", "Canada", "Mexique", "Amérique centrale", "Amérique du Sud", "Asie"], travelTypes: ["Circuit accompagné", "Voyage sur mesure", "Voyage de groupe", "Autotour", "Circuit thématique"], website: "https://www.amerigo.fr/" },
+  "beachcomber-tours": { destinations: ["Maurice", "Seychelles", "Maldives", "Dubaï", "Abu Dhabi", "Oman"], travelTypes: ["Séjour haut de gamme", "Voyage de noces", "Famille", "Golf", "Multi-centres"] },
+  asia: { destinations: ["Japon", "Thaïlande", "Vietnam", "Inde", "Indonésie", "Asie du Sud-Est"], travelTypes: ["Voyage sur mesure", "Circuit privé", "Circuit accompagné", "Combiné"] },
+  "austral-lagons": { destinations: ["Tahiti", "Seychelles", "Maurice", "Réunion", "Maldives", "Zanzibar", "Afrique australe"], travelTypes: ["Voyage sur mesure", "Séjour haut de gamme", "Voyage de noces", "Safari", "Combiné"] },
+  "climats-du-monde": { destinations: ["Asie", "Moyen-Orient", "Afrique", "Océan Indien"], travelTypes: ["Circuit", "Voyage sur mesure", "Séjour", "Combiné"] },
+  "jetset-voyages": { destinations: ["Amérique du Nord", "Caraïbes", "Océan Indien", "Polynésie", "Asie"], travelTypes: ["Séjour long-courrier", "Circuit", "Autotour", "Combiné"] },
+  "luxair-tours": { destinations: ["Méditerranée", "Canaries", "Cap-Vert", "Égypte", "Destinations soleil"], travelTypes: ["Forfait vol + hôtel", "Séjour", "City break", "Vacances balnéaires"] },
+  "gaeland-ashling": { destinations: ["Irlande", "Écosse", "Angleterre", "Pays de Galles"], travelTypes: ["Voyage sur mesure", "Autotour", "Séjour", "Manoir & château", "Location", "Circuit"], website: "https://www.gaeland-ashling.com/" },
+  kuoni: { destinations: ["Europe", "Afrique", "Amériques", "Asie", "Océan Indien", "Océanie", "Grand Nord & Antarctique"], travelTypes: ["Circuit accompagné", "Circuit privé", "Séjour", "Autotour", "Croisière", "Voyage sur mesure"] },
 });
 
 export function getLongHaulPartnerDetails(partnerId) {

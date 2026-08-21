@@ -17,6 +17,7 @@ const DETAILS = Object.freeze({
   heliades: { destinations: ["Grèce", "Chypre", "Cap-Vert", "Portugal", "Albanie", "Caraïbes", "Amérique latine"], travelTypes: ["Séjour", "Club", "Circuit", "Autotour", "Périple d'île en île", "Croisière"], website: "https://www.heliades.fr/" },
   voyamar: { destinations: ["Tunisie", "Portugal", "Italie", "Malte", "États-Unis", "Canada", "Afrique du Sud", "Kenya", "Thaïlande", "Méditerranée"], travelTypes: ["Séjour", "Naya Club", "Circuit accompagné", "Autotour", "Croisière", "Circuit privatif"], website: "https://www.voyamar-vacances.com/" },
   "travel-evasion": { destinations: ["Égypte", "Crète", "Grèce", "Chypre", "Espagne", "Portugal", "Méditerranée", "Afrique", "Asie", "Océan Indien"], travelTypes: ["Séjour", "Club francophone", "Circuit", "Croisière sur le Nil", "Autotour", "Package vol + hôtel"], website: "https://www.travelevasion.fr/" },
+  ovoyages: { destinations: ["Méditerranée", "Canaries", "Afrique du Nord", "Destinations soleil"], travelTypes: ["Séjour", "Club vacances", "Circuit", "Vacances en famille"] },
 });
 
 export function getStayPartnerDetails(partnerId) {

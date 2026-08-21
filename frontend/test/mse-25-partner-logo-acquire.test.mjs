@@ -10,13 +10,12 @@ const read = (relativePath) => fs.readFileSync(path.join(frontendRoot, relativeP
 
 function assertPendingOrFinalized({ id, backlog, catalogue }) {
   const pending = new RegExp(`id:\\s*"${id}"[^\\n]*state:\\s*"source-pending"`).test(backlog);
-  const finalized = new RegExp(`P\\("${id}"[^\\n]*"\\/partners\\/${id}\\.(?:svg|webp)"\\)`).test(catalogue);
+  const finalized = new RegExp(`P\\("${id}"[^\\n]*"\\/partners\\/(?:manual\\/)?${id}\\.(?:svg|webp)"\\)`).test(catalogue);
   assert.ok(pending || finalized, `${id} must be either pending or finalized with a public asset`);
 }
 
 test("generic partner logo acquisition is gated by vetted backlog and registry states", () => {
   const acquire = read("scripts/partner-logo-acquire.mjs");
-
   assert.match(acquire, /backlog\.state !== "source-vetted"/);
   assert.match(acquire, /source\.status !== "vetted-source"/);
   assert.match(acquire, /preferredSource \|\| source\?\.assetUrl/);

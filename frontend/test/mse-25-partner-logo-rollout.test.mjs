@@ -10,10 +10,10 @@ const read = (relative) => fs.readFileSync(path.join(root, relative), "utf8");
 
 function isPendingOrFinalized(id, backlog, catalogue) {
   return new RegExp(`id:\\s*"${id}"[^\\n]*state:\\s*"source-pending"`).test(backlog)
-    || new RegExp(`P\\("${id}"[^\\n]*"\\/partners\\/${id}\\.(?:svg|webp)"\\)`).test(catalogue);
+    || new RegExp(`P\\("${id}"[^\\n]*"\\/partners\\/(?:manual\\/)?${id}\\.(?:svg|webp)"\\)`).test(catalogue);
 }
 
-test("batch partner logo rollout processes vetted sources and preserves legal holds across lifecycle states", () => {
+test("batch partner logo rollout processes vetted sources and preserves unresolved legal holds across lifecycle states", () => {
   const rollout = read("scripts/partner-logo-rollout.mjs");
   const acquire = read("scripts/partner-logo-acquire.mjs");
   const backlog = read("components/page-builder/shared/partnerLogoBacklog.js");
@@ -31,6 +31,7 @@ test("batch partner logo rollout processes vetted sources and preserves legal ho
   assert.match(acquire, /2 \* 1024 \* 1024/);
 
   assert.doesNotMatch(backlog, /id:\s*"catlante-catamarans"/);
-  assert.match(backlog, /ponant[\s\S]*state: "permission-required"/);
+  assert.match(backlog, /voyamar[\s\S]*state: "permission-required"/);
+  assert.match(catalogue, /P\("ponant"[^\n]*"\/partners\/manual\/ponant\.webp"\)/);
   assert.ok(isPendingOrFinalized("rivages-du-monde", backlog, catalogue));
 });

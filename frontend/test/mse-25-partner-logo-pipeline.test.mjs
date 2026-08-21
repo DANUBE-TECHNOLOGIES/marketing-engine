@@ -10,7 +10,7 @@ const read = (relativePath) => fs.readFileSync(path.join(frontendRoot, relativeP
 
 function assertPendingOrFinalized(id, backlog, catalogue) {
   const pending = new RegExp(`id:\\s*"${id}"[^\\n]*state:\\s*"source-pending"`).test(backlog);
-  const finalized = new RegExp(`P\\("${id}"[^\\n]*"\\/partners\\/${id}\\.(?:svg|webp)"\\)`).test(catalogue);
+  const finalized = new RegExp(`P\\("${id}"[^\\n]*"\\/partners\\/(?:manual\\/)?${id}\\.(?:svg|webp)"\\)`).test(catalogue);
   assert.ok(pending || finalized, `${id} must remain pending or be finalized`);
 }
 

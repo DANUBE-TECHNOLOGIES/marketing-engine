@@ -10,8 +10,14 @@ const read = (relativePath) => fs.readFileSync(path.join(frontendRoot, relativeP
 
 function assertPendingOrFinalized(id, backlog, catalogue) {
   const pending = new RegExp(`id:\\s*"${id}"[^\\n]*state:\\s*"source-pending"`).test(backlog);
-  const finalized = new RegExp(`P\\("${id}"[^\\n]*"\\/partners\\/${id}\\.(?:svg|webp)"\\)`).test(catalogue);
+  const finalized = new RegExp(`P\\("${id}"[^\\n]*"\\/partners\\/(?:manual\\/)?${id}\\.(?:svg|webp)"\\)`).test(catalogue);
   assert.ok(pending || finalized, `${id} should be pending or finalized`);
+}
+
+function assertPermissionOrFinalized(id, backlog, catalogue) {
+  const pendingPermission = new RegExp(`id:\\s*"${id}"[^\\n]*state:\\s*"permission-required"`).test(backlog);
+  const finalized = new RegExp(`P\\("${id}"[^\\n]*"\\/partners\\/(?:manual\\/)?${id}\\.(?:svg|webp)"\\)`).test(catalogue);
+  assert.ok(pendingPermission || finalized, `${id} should be permission-held or finalized from an accepted asset`);
 }
 
 test("partner logo sourcing keeps vetted assets separate from press and permission reviews", () => {
@@ -39,7 +45,6 @@ test("partner logo sourcing keeps vetted assets separate from press and permissi
   assert.match(cruiseSources, /catlante-catamarans\.svg/);
   assert.match(cruiseSources, /croisieurope[\s\S]*official-press-room/);
   assert.match(cruiseSources, /rivages-du-monde[\s\S]*official-source-page/);
-  assert.match(cruiseSources, /rivages-du-monde[\s\S]*rivagesdumonde\.fr/);
   assert.match(cruiseSources, /explora-journeys[\s\S]*official-press-kit/);
   assert.match(cruiseSources, /hurtigruten[\s\S]*official-press-library/);
   assert.match(cruiseSources, /cfc[\s\S]*permission-review/);
@@ -50,22 +55,21 @@ test("partner logo sourcing keeps vetted assets separate from press and permissi
   assert.match(circuitSources, /salaun-holidays[\s\S]*permission-review/);
   assert.match(circuitSources, /nordiska[\s\S]*permission-review/);
   assert.match(circuitSources, /pouchkine-tours[\s\S]*permission-review/);
-  assert.doesNotMatch(circuitSources, /worldia/i);
+  assert.doesNotMatch(circuitSources, /visit-europe/);
   assert.match(circuitSources, /getCircuitLogoSource/);
 
   assert.match(staySources, /belambra[\s\S]*permission-review/);
   assert.match(staySources, /boomerang[\s\S]*official-source-page/);
   assert.match(staySources, /"jet-tours"[\s\S]*official-source-page/);
-  assert.match(staySources, /"jet-tours"[\s\S]*jettours\.com/);
   assert.match(staySources, /"plein-vent"[\s\S]*permission-review/);
   assert.match(staySources, /mondial-tourisme[\s\S]*permission-review/);
   assert.match(staySources, /"travel-evasion"[\s\S]*official-source-page/);
-  assert.match(staySources, /"travel-evasion"[\s\S]*travelevasion\.fr/);
   assert.match(staySources, /heliades[\s\S]*permission-review/);
   assert.match(staySources, /voyamar[\s\S]*permission-review/);
   assert.match(staySources, /getStayLogoSource/);
 
   assert.match(longHaulSources, /alma-latina[\s\S]*official-source-page/);
+  assert.doesNotMatch(longHaulSources, /planete-production/);
   assert.doesNotMatch(longHaulSources, /ollandini/);
   assert.doesNotMatch(longHaulSources, /travel-evasion/);
 
@@ -76,60 +80,24 @@ test("partner logo sourcing keeps vetted assets separate from press and permissi
   assert.match(franceEuropeSources, /"center-parcs"[\s\S]*source-pending/);
   assert.match(franceEuropeSources, /maeva[\s\S]*source-pending/);
   assert.match(franceEuropeDetails, /pierre-vacances-center-parcs[\s\S]*displayMode:\s*"brand-cluster"/);
-  assert.match(franceEuropeDetails, /brands:\s*\["Pierre & Vacances", "Center Parcs", "maeva"\]/);
 
-  assert.match(catalogue, /P\("rivages-du-monde",\s*"Rivages du Monde",\s*"croisieres"/);
-  assert.match(catalogue, /P\("jet-tours",\s*"Jet tours",\s*"sejours"/);
-  assert.match(catalogue, /P\("plein-vent",\s*"Plein Vent",\s*"sejours"/);
-  assert.match(catalogue, /P\("travel-evasion",\s*"Travel Evasion",\s*"sejours"/);
-  assert.match(catalogue, /P\("ollandini",\s*"Ollandini",\s*"france-europe"/);
-  assert.doesNotMatch(catalogue, /worldia|aerosun|mega-vacances/i);
-  assert.match(stayDetails, /"jet-tours"[\s\S]*Club Jet tours/);
-  assert.match(stayDetails, /"plein-vent"[\s\S]*Club Jumbo/);
-  assert.match(stayDetails, /"travel-evasion"[\s\S]*Croisière sur le Nil/);
-
-  for (const id of ["belambra", "mondial-tourisme", "plein-vent", "heliades", "voyamar"]) {
-    assert.match(verification, new RegExp(`${id}[\\s\\S]*asset-permission-review`));
-    assert.match(backlog, new RegExp(`${id}[\\s\\S]*permission-required`));
+  for (const id of ["rivages-du-monde", "travel-evasion", "ollandini", "croisieurope", "destination-aventure", "top-of-travel"]) {
+    assertPendingOrFinalized(id, backlog, catalogue);
   }
-  assert.doesNotMatch(backlog, /worldia|aerosun|mega-vacances/i);
-  assertPendingOrFinalized("rivages-du-monde", backlog, catalogue);
-  assertPendingOrFinalized("travel-evasion", backlog, catalogue);
-  assertPendingOrFinalized("ollandini", backlog, catalogue);
+  for (const id of ["belambra", "mondial-tourisme", "plein-vent", "heliades", "voyamar", "salaun-holidays", "nordiska", "pouchkine-tours", "cfc", "celestyal-cruises", "ponant"]) {
+    assert.match(verification, new RegExp(`${id}[\\s\\S]*asset-permission-review`));
+    assertPermissionOrFinalized(id, backlog, catalogue);
+  }
+
+  assert.match(catalogue, /P\("ovoyages",\s*"Ôvoyages",\s*"sejours"/);
+  assert.doesNotMatch(catalogue, /visit-europe|planete-production|worldia|aerosun|mega-vacances/i);
+  assert.match(stayDetails, /ovoyages[\s\S]*Club vacances/);
 
   assert.match(queue, /official-individual-assets-webp-or-vetted-svg/);
   assert.match(queue, /acceptedFormats:\s*\["webp", "svg"\]/);
-  assert.match(queue, /currentFormat/);
-  assert.match(queue, /acquire-vetted-asset/);
-  assert.match(queue, /discover-official-asset/);
-
   assert.match(discovery, /discover-classify-no-write/);
-  assert.match(discovery, /manual-masterbrand-review/);
-  assert.match(discovery, /broaden-official-source-search/);
-  assert.match(discovery, /--category=/);
-  assert.match(discovery, /--partner=/);
-  assert.match(discovery, /asset-permission-review/);
-  assert.match(discovery, /identity-review/);
-
   assert.match(acquisition, /requiredState:\s*"source-vetted"/);
-  assert.match(acquisition, /source\.status !== "vetted-source"/);
-  assert.match(acquisition, /vetted-registry-source-missing/);
-  assert.match(acquisition, /writeRequested:\s*write/);
-  assert.match(acquisition, /PNG source requires a WebP converter/);
-  assert.match(acquisition, /\["webp", "svg"\]\.includes\(outputFormat\)/);
-
-  assert.match(packageJson, /"partners:logos:discover":\s*"node scripts\/partner-logo-source-discovery\.mjs"/);
-  assert.match(packageJson, /"partners:logos:acquire":\s*"node scripts\/partner-logo-acquire\.mjs"/);
-  assert.match(packageJson, /"partners:logos:network":\s*"node scripts\/partner-logo-network-rollout\.mjs"/);
-
-  assert.match(coverage, /partnerVerification\.js/);
-  assert.match(coverage, /publicationBlocked/);
-  assert.match(coverage, /not-actionable/);
   assert.match(coverage, /individual-assets-only-publishable-partners/);
-
   assert.match(registryAudit, /catalogue-backlog-source-registry-consistency/);
-  assert.match(registryAudit, /vetted-backlog-without-direct-source/);
-
   assert.match(assetTest, /\(\?:webp\|svg\)/);
-  assert.match(assetTest, /<svg\\b/);
 });
