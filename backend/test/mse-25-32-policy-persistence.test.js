@@ -44,6 +44,7 @@ test("payment policy repository persists one normalized policy per AgencySite", 
     products: ["travel", "flight"],
     installmentCounts: [3, 4],
     feeMode: "without-fees",
+    ctaMode: "contact",
     disclaimer: "Sous réserve d’acceptation.",
     ctaLabel: "Étudier mes possibilités",
   });
@@ -64,6 +65,7 @@ test("strict policy validation accepts a disabled empty policy", () => {
     products: [],
     installmentCounts: [],
     feeMode: "unspecified",
+    ctaMode: "contact",
     disclaimer: "",
     ctaLabel: "Contacter mon agence",
   });

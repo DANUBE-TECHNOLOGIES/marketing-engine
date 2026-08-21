@@ -18,6 +18,7 @@ function normalizePaymentPolicy(input = {}) {
     products,
     installmentCounts,
     feeMode: ALLOWED_FEE_MODES.has(requestedFeeMode) ? requestedFeeMode : "unspecified",
+    ctaMode: "contact",
     disclaimer: normalizeText(input.disclaimer),
     ctaLabel: normalizeText(input.ctaLabel) || "Contacter mon agence",
   };
