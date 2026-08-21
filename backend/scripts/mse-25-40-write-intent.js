@@ -26,7 +26,7 @@ function executableTargets(residualPlan = {}) {
   return [...map.values()].sort((a, b) => `${a.siteSlug}:${a.pageSlug}`.localeCompare(`${b.siteSlug}:${b.pageSlug}`, "fr"));
 }
 
-async function fetchCurrentPages(residualPlan, { backendOrigin, tenantSlug, request = jsonRequest } = {}) {
+async function fetchCurrentPagesHttp(residualPlan, { backendOrigin, tenantSlug, request = jsonRequest } = {}) {
   const origin = normalizeOrigin(backendOrigin);
   const tenant = String(tenantSlug || "mondescale").trim();
   const rows = [];
@@ -40,11 +40,46 @@ async function fetchCurrentPages(residualPlan, { backendOrigin, tenantSlug, requ
   return rows;
 }
 
+async function fetchCurrentPagesDirect(residualPlan, { tenantSlug, envFile = process.env.MSE_25_40_ENV_FILE, prisma, service } = {}) {
+  const dotenv = require("dotenv");
+  const dotenvOptions = { quiet: true };
+  if (envFile) dotenvOptions.path = envFile;
+  dotenv.config(dotenvOptions);
+
+  const { PrismaClient } = require("@prisma/client");
+  const PageBuilderPersistenceService = require("../src/modules/page-builder-persistence/service");
+  const client = prisma || new PrismaClient();
+  const ownsPrisma = !prisma;
+  try {
+    const tenant = await client.tenant.findUnique({ where: { slug: String(tenantSlug || "mondescale").trim() } });
+    if (!tenant?.id) {
+      const error = new Error(`Tenant ${tenantSlug || "mondescale"} introuvable.`);
+      error.code = "MSE_25_40_WRITE_INTENT_TENANT_NOT_FOUND";
+      throw error;
+    }
+    const persistence = service || new PageBuilderPersistenceService(client, tenant.id);
+    const rows = [];
+    for (const target of executableTargets(residualPlan)) {
+      const page = await persistence.get(target.agencyId, target.pageSlug);
+      rows.push({ agencyId: target.agencyId, siteSlug: target.siteSlug, page });
+    }
+    return rows;
+  } finally {
+    if (ownsPrisma) await client.$disconnect();
+  }
+}
+
+async function fetchCurrentPages(residualPlan, options = {}) {
+  const mode = String(options.mode || process.env.MSE_25_40_PREVIEW_MODE || "direct").trim().toLowerCase();
+  if (mode === "http") return fetchCurrentPagesHttp(residualPlan, options);
+  return fetchCurrentPagesDirect(residualPlan, options);
+}
+
 function defaultOutputPath(residualPath, result) {
   return path.join(path.dirname(path.resolve(residualPath)), `mse-25-40-write-intent-${result.writeIntentFingerprint.slice(0, 12)}.json`);
 }
 
-async function run({ residualPlanPath, backendOrigin, tenantSlug, output, emitOutput = true, request = jsonRequest } = {}) {
+async function run({ residualPlanPath, backendOrigin, tenantSlug, output, emitOutput = true, request = jsonRequest, mode = process.env.MSE_25_40_PREVIEW_MODE || "direct", envFile = process.env.MSE_25_40_ENV_FILE, prisma, service } = {}) {
   const residualSource = residualPlanPath || process.env.MSE_25_40_RESIDUAL_PLAN;
   const { file: residualFile, value: residualPlan } = loadJson(residualSource, "MSE_25_40_WRITE_INTENT_RESIDUAL_REQUIRED");
   if (residualPlan.readOnly !== true || residualPlan.writes !== false || residualPlan.policy?.noHomeScoreFilling !== true || residualPlan.policy?.automaticWrites !== false) {
@@ -55,7 +90,15 @@ async function run({ residualPlanPath, backendOrigin, tenantSlug, output, emitOu
 
   const effectiveOrigin = backendOrigin || process.env.BACKEND_ORIGIN || "http://127.0.0.1:3001";
   const effectiveTenant = tenantSlug || process.env.TENANT_SLUG || "mondescale";
-  const currentPages = await fetchCurrentPages(residualPlan, { backendOrigin: effectiveOrigin, tenantSlug: effectiveTenant, request });
+  const currentPages = await fetchCurrentPages(residualPlan, {
+    backendOrigin: effectiveOrigin,
+    tenantSlug: effectiveTenant,
+    request,
+    mode,
+    envFile,
+    prisma,
+    service,
+  });
   const result = buildResidualWriteIntent({ residualPlan, currentPages });
   const target = path.resolve(output || process.env.MSE_25_40_WRITE_INTENT_OUTPUT || defaultOutputPath(residualFile, result));
   fs.writeFileSync(target, JSON.stringify(result, null, 2) + "\n", "utf8");
@@ -66,6 +109,7 @@ async function run({ residualPlanPath, backendOrigin, tenantSlug, output, emitOu
     writes: false,
     publicWrites: false,
     persistenceCallsPerformed: 0,
+    sourceMode: String(mode || "direct").trim().toLowerCase(),
     residualExecutionFingerprint: result.residualExecutionFingerprint,
     writeIntentFingerprint: result.writeIntentFingerprint,
     touchedPageCount: result.summary.touchedPageCount,
@@ -91,4 +135,12 @@ if (require.main === module) {
   });
 }
 
-module.exports = { defaultOutputPath, executableTargets, fetchCurrentPages, loadJson, run };
+module.exports = {
+  defaultOutputPath,
+  executableTargets,
+  fetchCurrentPages,
+  fetchCurrentPagesDirect,
+  fetchCurrentPagesHttp,
+  loadJson,
+  run,
+};
