@@ -79,12 +79,24 @@ test("MSE-25.42.1 gives the home hero a stable split layout and dedicated respon
   assert.match(hero, /function\s+isHomePage/);
   assert.match(hero, /public-site-hero--home/);
   assert.match(hero, /public-site-hero-copy/);
-  assert.match(css, /\.public-site-hero--home \.public-site-hero-media[\s\S]*position:\s*absolute[\s\S]*width:\s*58%/);
-  assert.match(css, /grid-template-columns:\s*minmax\(0, 52%\) minmax\(0, 48%\)/);
-  assert.match(css, /max-width:\s*620px[\s\S]*word-break:\s*normal[\s\S]*hyphens:\s*none/);
+  assert.match(css, /\.public-site-hero--home \.public-site-hero-media[\s\S]*position:\s*absolute/);
+  assert.match(css, /grid-template-columns:\s*minmax\(0, 54%\) minmax\(0, 46%\)/);
+  assert.match(css, /max-width:\s*610px[\s\S]*word-break:\s*normal[\s\S]*hyphens:\s*none/);
   assert.match(css, /@media \(max-width: 760px\)[\s\S]*linear-gradient\([\s\S]*180deg/);
   assert.match(layout, /hero-finish\.css/);
   assert.doesNotMatch(css, /inset-right/);
+});
+
+test("MSE-25.42.2 fades the image before its physical edge and tightens the final home", () => {
+  const css = read("components/public-site/hero-finish.css");
+
+  assert.match(css, /MSE-25\.42\.2/);
+  assert.match(css, /\.public-site-hero--home \.public-site-hero-media[\s\S]*width:\s*68%/);
+  assert.match(css, /\.public-site-hero--home \.public-site-hero-fade[\s\S]*inset:\s*0 0 0 auto[\s\S]*width:\s*42%/);
+  assert.match(css, /rgba\(10, 51, 95, \.74\)[\s\S]*var\(--public-primary\) 100%/);
+  assert.match(css, /\.public-site-hero--home > \.public-site-container[\s\S]*width:\s*min\(1360px/);
+  assert.match(css, /\.public-site-shell \.public-site-local-area-compact[\s\S]*padding-block:\s*clamp\(28px/);
+  assert.match(css, /@media \(max-width: 760px\)[\s\S]*\.public-site-hero--home \.public-site-hero-overlay[\s\S]*background:\s*none/);
 });
 
 test("MSE-25.42 removes redundant conversion bands from the home only", () => {
