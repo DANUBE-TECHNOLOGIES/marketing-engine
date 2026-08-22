@@ -62,19 +62,10 @@ function defaultFeaturesIntroduction(site) {
   return `Notre équipe à ${city} vous conseille selon votre projet, votre budget et votre façon de voyager.${area}`;
 }
 
-export default function FeaturesV2Renderer({
-  section,
-  site,
-}) {
+export default function FeaturesV2Renderer({ section, site }) {
   const content = getSectionContent(section);
-  const items = Array.isArray(content.items)
-    ? content.items
-    : [];
-  const introduction =
-    content.introduction ||
-    content.text ||
-    content.description ||
-    defaultFeaturesIntroduction(site);
+  const items = Array.isArray(content.items) ? content.items : [];
+  const introduction = content.introduction || content.text || content.description || defaultFeaturesIntroduction(site);
   const columns = normalizeColumns(content.columns);
   const minimum = minimumCardWidth(columns);
   const root = siteRoot(site);
@@ -83,78 +74,31 @@ export default function FeaturesV2Renderer({
   return (
     <section className="public-site-section public-site-features">
       <div className="public-site-container">
-        <h2>
-          {getSectionTitle(
-            section,
-            defaultFeaturesTitle(site)
-          )}
-        </h2>
-
-        {introduction ? (
-          <p className="public-site-section-intro">
-            {introduction}
-          </p>
-        ) : null}
-
+        <p className="public-site-section-kicker">Votre projet</p>
+        <h2>{getSectionTitle(section, defaultFeaturesTitle(site))}</h2>
+        {introduction ? <p className="public-site-section-intro">{introduction}</p> : null}
         {items.length ? (
-          <div
-            className="public-site-card-grid"
-            data-columns={columns}
-            style={{
-              gridTemplateColumns:
-                `repeat(auto-fit, minmax(min(100%, ${minimum}px), 1fr))`,
-            }}
-          >
+          <div className="public-site-card-grid" data-columns={columns} style={{ gridTemplateColumns: `repeat(auto-fit, minmax(min(100%, ${minimum}px), 1fr))` }}>
             {items.map((item, index) => {
               const href = featureHref(root, item.href);
               const heading = item.title || item.label;
-              return (
-                <article
-                  className="public-site-card public-site-feature-card"
-                  key={item.id || item.title || index}
-                >
-                  {item.icon ? (
-                    <span className="public-site-feature-icon" aria-hidden="true">
-                      {item.icon}
-                    </span>
-                  ) : null}
-
-                  <h3>{href ? <Link href={href}>{heading}</Link> : heading}</h3>
-
-                  {item.text ? <p>{item.text}</p> : null}
-                  {item.description ? (
-                    <p>{item.description}</p>
-                  ) : null}
-                </article>
-              );
+              return <article className="public-site-card public-site-feature-card" key={item.id || item.title || index}>
+                {item.icon ? <span className="public-site-feature-icon" aria-hidden="true">{item.icon}</span> : null}
+                <h3>{href ? <Link href={href}>{heading}</Link> : heading}</h3>
+                {item.text ? <p>{item.text}</p> : null}
+                {item.description ? <p>{item.description}</p> : null}
+              </article>;
             })}
           </div>
         ) : null}
-
-        <div
-          className="public-site-related-links"
-          aria-label={city ? `Poursuivre votre projet avec l’agence de ${city}` : "Préparer votre voyage avec l’agence"}
-        >
-          <Link href={`${root}/destinations`}>
-            {city ? `Destinations conseillées par notre agence à ${city}` : "Explorer nos destinations"}
-          </Link>
-          <Link href={`${root}/inspiration`}>
-            {city ? `Conseils voyage de notre équipe à ${city}` : "Lire nos conseils voyage"}
-          </Link>
-          <Link href={`${root}/contact`}>
-            {city ? `Demander conseil à notre agence de voyages à ${city}` : "Demander un conseil personnalisé"}
-          </Link>
+        <div className="public-site-related-links" aria-label={city ? `Poursuivre votre projet avec l’agence de ${city}` : "Préparer votre voyage avec l’agence"}>
+          <Link href={`${root}/destinations`}>{city ? `Destinations conseillées par notre agence à ${city}` : "Explorer nos destinations"}</Link>
+          <Link href={`${root}/inspirations`}>{city ? `Conseils voyage de notre équipe à ${city}` : "Lire nos conseils voyage"}</Link>
+          <Link href={`${root}/contact`}>{city ? `Demander conseil à notre agence de voyages à ${city}` : "Demander un conseil personnalisé"}</Link>
         </div>
       </div>
     </section>
   );
 }
 
-export {
-  defaultFeaturesIntroduction,
-  defaultFeaturesTitle,
-  featureHref,
-  joinCities,
-  localCity,
-  siteRoot,
-};
+export { defaultFeaturesIntroduction, defaultFeaturesTitle, featureHref, joinCities, localCity, siteRoot };
