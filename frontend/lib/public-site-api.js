@@ -85,25 +85,26 @@ function pageFromContract(payload) {
   const blocks = Array.isArray(page.blocks) ? page.blocks : [];
 
   /*
-   * AgencySiteSection is the canonical rendering source for generated and
-   * Designer V2 agency-site pages. Legacy PageBlock rows may still coexist
-   * after migrations, so they are only used when no canonical section is
-   * available. This mirrors the backend public payload and prevents stale
-   * PageBlock content from masking a freshly migrated /partenaires page.
+   * Website Designer V2 PageBlock rows are the canonical public rendering
+   * source whenever they exist. AgencySiteSection is retained only as the
+   * legacy fallback for pages that have not yet been migrated to V2.
+   *
+   * This mirrors the backend SectionAwarePublicSiteReadService contract and
+   * prevents stale AgencySiteSection rows from masking newer V2 blocks.
    */
-  if (sections.length) {
-    return {
-      ...page,
-      sections,
-      contentBlocks: sections,
-    };
-  }
-
   if (blocks.length) {
     return {
       ...page,
       sections: blocks,
       contentBlocks: blocks,
+    };
+  }
+
+  if (sections.length) {
+    return {
+      ...page,
+      sections,
+      contentBlocks: sections,
     };
   }
 
