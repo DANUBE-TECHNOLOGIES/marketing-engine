@@ -34,8 +34,8 @@ export function sortSections(sections = []) {
     .slice()
     .sort(
       (a, b) =>
-        (a?.displayOrder ?? a?.order ?? 0) -
-        (b?.displayOrder ?? b?.order ?? 0)
+        (a?.presentationOrder ?? a?.displayOrder ?? a?.order ?? 0) -
+        (b?.presentationOrder ?? b?.displayOrder ?? b?.order ?? 0)
     );
 }
 
