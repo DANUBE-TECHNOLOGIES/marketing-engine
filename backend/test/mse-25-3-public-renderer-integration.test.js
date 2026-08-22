@@ -78,9 +78,11 @@ test(
       "../frontend/lib/page-builder-v2/page-builder-api.js"
     );
 
+    // The implementation normalizes both the historical empty home slug and
+    // the explicit \"home\" slug to the canonical backend endpoint /pages/home.
     assert.match(
       api,
-      /function\s+pageApiSlug\([\s\S]*?return\s+page\?\.slug[\s\S]*?:\s*["']home["']/
+      /function\s+pageApiSlug\([\s\S]*?slug\s*!==\s*["']home["'][\s\S]*?:\s*["']home["']/
     );
 
     assert.match(
