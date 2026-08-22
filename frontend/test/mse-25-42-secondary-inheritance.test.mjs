@@ -1,0 +1,29 @@
+import fs from "node:fs";
+import path from "node:path";
+import test from "node:test";
+import assert from "node:assert/strict";
+
+const ROOT = path.resolve(import.meta.dirname, "..");
+const api = fs.readFileSync(path.join(ROOT, "lib/public-site-api.js"), "utf8");
+
+test("MSE-25.42.5 treats generated team placeholders as non-authoritative", () => {
+  assert.match(api, /GENERIC_TEAM_IDENTITIES/);
+  assert.match(api, /"conseiller voyage"/);
+  assert.match(api, /function\s+teamMemberIsMeaningful/);
+  assert.match(api, /!GENERIC_TEAM_IDENTITIES\.has\(identity\)/);
+  assert.match(api, /member\.imageUrl/);
+  assert.match(api, /member\.photoUrl/);
+});
+
+test("MSE-25.42.5 replaces placeholder member collections with canonical home advisors", () => {
+  assert.match(api, /function\s+teamBlockMembers/);
+  assert.match(api, /teamBlockMembers\(block\)\.some\(teamMemberIsMeaningful\)/);
+  assert.match(api, /function\s+mergeInheritedTeamBlock/);
+  assert.match(api, /delete merged\[key\]/);
+  assert.match(api, /merged\[key\] = sourceItems/);
+});
+
+test("MSE-25.42.5 still preserves explicitly populated secondary team pages", () => {
+  assert.match(api, /contract\.family !== "team" \|\| teamBlockHasMembers\(targetBlocks\[targetIndex\]\)/);
+  assert.match(api, /return page;/);
+});
