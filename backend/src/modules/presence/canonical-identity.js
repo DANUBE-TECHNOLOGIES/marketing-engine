@@ -6,10 +6,15 @@ function cleanString(value) {
   return normalized || null;
 }
 
-function normalizePhone(value) {
+function normalizePhone(value, countryCode = "FR") {
   const raw = cleanString(value);
   if (!raw) return null;
-  return raw.replace(/[^+\d]/g, "");
+  let normalized = raw.replace(/[^+\d]/g, "");
+  if (countryCode === "FR") {
+    if (/^0\d{9}$/.test(normalized)) normalized = `+33${normalized.slice(1)}`;
+    if (/^33\d{9}$/.test(normalized)) normalized = `+${normalized}`;
+  }
+  return normalized;
 }
 
 function normalizeWebsite(value) {
@@ -26,6 +31,7 @@ function normalizeWebsite(value) {
 
 function buildCanonicalAgencyIdentity(agency, options = {}) {
   if (!agency?.id) throw new Error("Agency is required");
+  const countryCode = cleanString(options.countryCode || agency.countryCode || "FR");
 
   return Object.freeze({
     agencyId: agency.id,
@@ -35,9 +41,9 @@ function buildCanonicalAgencyIdentity(agency, options = {}) {
       street: cleanString(agency.address),
       postalCode: cleanString(agency.postalCode),
       city: cleanString(agency.city),
-      countryCode: cleanString(options.countryCode || agency.countryCode || "FR")
+      countryCode
     }),
-    phone: normalizePhone(agency.phone),
+    phone: normalizePhone(agency.phone, countryCode),
     email: cleanString(agency.email)?.toLowerCase() || null,
     website: normalizeWebsite(agency.website),
     googleLocationId: cleanString(agency.googleLocationId),
