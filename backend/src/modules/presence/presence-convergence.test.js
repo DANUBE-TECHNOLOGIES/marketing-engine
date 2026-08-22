@@ -9,6 +9,10 @@ const {
 } = require("./directory-bridge");
 const { getPresenceProvider } = require("./provider-registry");
 const { projectGooglePresence } = require("./google-listing-adapter");
+const {
+  normalizeLocationName,
+  mapGoogleLocationToNap
+} = require("./google-business-information");
 
 test("legacy directory names resolve to presence providers", () => {
   assert.equal(providerKeyForDirectory({ name: "Google Business Profile" }), "google_business_profile");
@@ -31,25 +35,36 @@ test("legacy submission mode is derived from provider capability", () => {
   assert.equal(legacySubmissionModeForProvider(getPresenceProvider("pagesjaunes")), "manual");
 });
 
-test("Google projection preserves existing googleLocationId as connection evidence", () => {
-  const projection = projectGooglePresence({
-    id: 7,
+test("Google location resource names are normalized", () => {
+  assert.equal(normalizeLocationName("locations/123"), "locations/123");
+  assert.equal(normalizeLocationName("accounts/99/locations/123"), "locations/123");
+  assert.equal(normalizeLocationName("123"), "locations/123");
+});
+
+test("Google Business Information response maps to canonical NAP shape", () => {
+  assert.deepEqual(mapGoogleLocationToNap({
+    name: "locations/123",
+    title: "Mondescale Nevers",
+    storefrontAddress: {
+      addressLines: ["1 rue Exemple"],
+      postalCode: "58000",
+      locality: "Nevers"
+    },
+    phoneNumbers: { primaryPhone: "+33386000000" },
+    websiteUri: "https://agences.mondescale.com/nevers"
+  }), {
+    externalId: "locations/123",
     name: "Mondescale Nevers",
     address: "1 rue Exemple",
     postalCode: "58000",
     city: "Nevers",
-    phone: "03 86 00 00 00",
-    website: "https://agences.mondescale.com/nevers",
-    googleLocationId: "locations/123"
+    phone: "+33386000000",
+    website: "https://agences.mondescale.com/nevers"
   });
-  assert.equal(projection.connected, true);
-  assert.equal(projection.externalId, "locations/123");
-  assert.equal(projection.status, "in_sync");
-  assert.equal(projection.diff.score, 100);
 });
 
-test("Google projection requires connection when no location id exists", () => {
-  const projection = projectGooglePresence({ id: 8, name: "Mondescale Test" });
+test("Google projection requires connection when no location id exists", async () => {
+  const projection = await projectGooglePresence({}, { id: 8, name: "Mondescale Test" });
   assert.equal(projection.connected, false);
   assert.equal(projection.status, "connection_required");
   assert.equal(projection.diff, null);
