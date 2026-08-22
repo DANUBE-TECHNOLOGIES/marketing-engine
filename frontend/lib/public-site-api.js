@@ -7,13 +7,41 @@ const INTERNAL_API_URL =
   process.env.NEXT_PUBLIC_APP_URL ||
   "http://localhost:3000";
 
+const HOME_PRESENTATION_RANK = Object.freeze({
+  hero: 0,
+  features: 10,
+  engagements: 10,
+  engagement: 10,
+  destinations: 20,
+  destination: 20,
+  "destination-grid": 20,
+  "destinations-grid": 20,
+  "destinations-highlight": 20,
+  "destination-recommendations": 20,
+  flexible_payment: 30,
+  "flexible-payment": 30,
+  services: 40,
+  "services-grid": 40,
+  "services-highlight": 40,
+  team: 50,
+  equipe: 50,
+  "team-grid": 50,
+  "equipe-grid": 50,
+  reviews: 60,
+  testimonials: 60,
+  partners: 70,
+  logos: 70,
+  "partner-logos": 70,
+  contact: 80,
+  map: 90,
+  faq: 100,
+});
+
 async function request(path) {
   const response = await fetch(
     `${INTERNAL_API_URL}/api/public-sites${path}`,
     {
-      headers: {
-        accept: "application/json",
-      },
+      headers: { accept: "application/json" },
       cache: "no-store",
     }
   );
@@ -41,9 +69,7 @@ async function requestWebsiteBuilder(path) {
   const response = await fetch(
     `${INTERNAL_API_URL}/api/website-builder${path}`,
     {
-      headers: {
-        accept: "application/json",
-      },
+      headers: { accept: "application/json" },
       cache: "no-store",
     }
   );
@@ -52,9 +78,7 @@ async function requestWebsiteBuilder(path) {
 
   if (!response.ok) {
     const error = new Error(
-      payload?.message ||
-        payload?.error ||
-        "Catalogue éditorial indisponible"
+      payload?.message || payload?.error || "Catalogue éditorial indisponible"
     );
     error.statusCode = response.status;
     throw error;
@@ -76,6 +100,39 @@ function siteFromContract(payload) {
   };
 }
 
+function pageIsHome(page) {
+  const slug = String(page?.slug || "").trim().toLowerCase();
+  return !slug || ["home", "accueil", "index"].includes(slug);
+}
+
+function publicBlockType(block) {
+  const content = block?.jsonContent || block?.content || {};
+  return String(
+    content?.__builderType ||
+      block?.blockType ||
+      block?.sectionType ||
+      block?.type ||
+      block?.key ||
+      ""
+  ).trim().toLowerCase();
+}
+
+function withHomePresentationOrder(page, blocks) {
+  if (!pageIsHome(page)) return blocks;
+
+  return blocks.map((block, index) => {
+    const type = publicBlockType(block);
+    const rank = HOME_PRESENTATION_RANK[type] ?? 110;
+    const storedOrder = Number(block?.displayOrder ?? block?.order ?? index);
+    const tieBreaker = Number.isFinite(storedOrder) ? storedOrder : index;
+
+    return {
+      ...block,
+      presentationOrder: rank * 1000 + tieBreaker,
+    };
+  });
+}
+
 function pageFromContract(payload) {
   const page = payload?.page || payload?.currentPage || payload?.requestedPage || payload;
 
@@ -88,15 +145,15 @@ function pageFromContract(payload) {
    * Website Designer V2 PageBlock rows are the canonical public rendering
    * source whenever they exist. AgencySiteSection is retained only as the
    * legacy fallback for pages that have not yet been migrated to V2.
-   *
-   * This mirrors the backend SectionAwarePublicSiteReadService contract and
-   * prevents stale AgencySiteSection rows from masking newer V2 blocks.
+   * Presentation order is applied in memory only: stored PageBlock ordering
+   * stays untouched in the Website Designer and database.
    */
   if (blocks.length) {
+    const publicBlocks = withHomePresentationOrder(page, blocks);
     return {
       ...page,
-      sections: blocks,
-      contentBlocks: blocks,
+      sections: publicBlocks,
+      contentBlocks: publicBlocks,
     };
   }
 
@@ -182,6 +239,10 @@ export const publicSiteApi = {
 };
 
 export {
+  HOME_PRESENTATION_RANK,
   pageFromContract,
+  pageIsHome,
+  publicBlockType,
   siteFromContract,
+  withHomePresentationOrder,
 };
