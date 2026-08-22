@@ -1,0 +1,230 @@
+/* MSE-25.42.1 — final public-home visual polish.
+ *
+ * This layer intentionally overrides the earlier consolidation rules without
+ * changing persisted Website Designer data. The home hero uses a true split
+ * composition: full-height travel photography on the left, a progressive fade
+ * through the middle, and a stable Mondescale copy panel on the right.
+ */
+
+.public-site-hero--home[data-has-hero-image="true"] {
+  position: relative;
+  min-height: clamp(520px, 42vw, 690px);
+  overflow: hidden;
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 92% 12%, color-mix(in srgb, var(--public-accent) 18%, transparent), transparent 34%),
+    linear-gradient(118deg, #0a335f 0%, var(--public-primary) 68%, #0964d8 100%);
+}
+
+.public-site-hero--home .public-site-hero-media {
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: 0;
+  width: 58%;
+  height: 100%;
+  overflow: visible;
+}
+
+.public-site-hero--home .public-site-hero-media img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center;
+}
+
+.public-site-hero--home .public-site-hero-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.public-site-hero--home .public-site-hero-fade {
+  position: absolute;
+  inset: 0 -36% 0 auto;
+  width: 62%;
+  height: 100%;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    rgba(10, 51, 95, 0) 0%,
+    rgba(10, 51, 95, .08) 18%,
+    rgba(10, 51, 95, .28) 38%,
+    rgba(10, 51, 95, .72) 70%,
+    var(--public-primary) 100%
+  );
+}
+
+.public-site-hero--home > .public-site-container {
+  position: relative;
+  z-index: 2;
+  width: min(1280px, calc(100% - 64px));
+  min-height: clamp(520px, 42vw, 690px);
+  display: grid;
+  grid-template-columns: minmax(0, 52%) minmax(0, 48%);
+  align-items: center;
+  padding: 0;
+}
+
+.public-site-hero--home .public-site-hero-copy {
+  grid-column: 2;
+  width: min(100%, 620px);
+  min-width: 0;
+  padding-left: clamp(36px, 4vw, 72px);
+  text-align: left !important;
+}
+
+.public-site-hero--home .public-site-eyebrow {
+  margin-bottom: 16px;
+}
+
+.public-site-hero--home h1 {
+  width: 100%;
+  max-width: 620px;
+  margin: 0 !important;
+  color: #fff;
+  font-size: clamp(3.15rem, 4.1vw, 5rem);
+  line-height: .96;
+  letter-spacing: -.035em;
+  text-wrap: balance;
+  word-break: normal;
+  overflow-wrap: normal;
+  hyphens: none;
+}
+
+.public-site-hero--home .public-site-hero-text {
+  width: 100%;
+  max-width: 540px;
+  margin: 22px 0 0 !important;
+  color: rgba(255, 255, 255, .9);
+  font-size: clamp(1rem, 1.25vw, 1.15rem);
+  line-height: 1.65;
+}
+
+.public-site-hero--home .public-site-hero-actions {
+  margin-top: 28px;
+  justify-content: flex-start !important;
+}
+
+/* Slightly tighten the long home while keeping each commercial sequence airy. */
+.public-site-shell .public-site-section {
+  padding-block: clamp(44px, 4.4vw, 64px);
+}
+
+.public-site-shell .public-site-partners,
+.public-site-shell .public-site-faq,
+.public-site-shell .public-site-local-area-compact {
+  padding-block: clamp(34px, 3.8vw, 50px);
+}
+
+.public-site-features h2 {
+  font-size: clamp(2.05rem, 3.25vw, 3.35rem);
+  line-height: 1.03;
+}
+
+@media (max-width: 1100px) {
+  .public-site-hero--home[data-has-hero-image="true"],
+  .public-site-hero--home > .public-site-container {
+    min-height: clamp(500px, 54vw, 620px);
+  }
+
+  .public-site-hero--home .public-site-hero-media {
+    width: 55%;
+  }
+
+  .public-site-hero--home .public-site-hero-fade {
+    inset-right: -42%;
+    width: 68%;
+  }
+
+  .public-site-hero--home > .public-site-container {
+    width: min(100% - 48px, 1180px);
+    grid-template-columns: minmax(0, 48%) minmax(0, 52%);
+  }
+
+  .public-site-hero--home .public-site-hero-copy {
+    padding-left: 28px;
+  }
+
+  .public-site-hero--home h1 {
+    font-size: clamp(2.75rem, 5.8vw, 4.5rem);
+  }
+}
+
+@media (max-width: 760px) {
+  .public-site-hero--home[data-has-hero-image="true"] {
+    min-height: 0;
+    padding-top: clamp(270px, 68vw, 430px);
+  }
+
+  .public-site-hero--home .public-site-hero-media {
+    inset: 0 0 auto 0;
+    width: 100%;
+    height: clamp(300px, 72vw, 450px);
+    overflow: hidden;
+  }
+
+  .public-site-hero--home .public-site-hero-fade {
+    inset: auto 0 -2px 0;
+    width: 100%;
+    height: 58%;
+    background: linear-gradient(
+      180deg,
+      rgba(10, 51, 95, 0) 0%,
+      rgba(10, 51, 95, .18) 28%,
+      rgba(10, 51, 95, .72) 72%,
+      var(--public-primary) 100%
+    );
+  }
+
+  .public-site-hero--home > .public-site-container {
+    width: min(calc(100% - 36px), 680px);
+    min-height: 0;
+    display: block;
+    padding: 0;
+  }
+
+  .public-site-hero--home .public-site-hero-copy {
+    width: 100%;
+    max-width: none;
+    padding: 34px 0 48px;
+  }
+
+  .public-site-hero--home h1 {
+    max-width: 620px;
+    font-size: clamp(2.6rem, 11vw, 4rem);
+    line-height: .98;
+  }
+
+  .public-site-hero--home .public-site-hero-text {
+    max-width: 580px;
+    margin-top: 18px !important;
+  }
+
+  .public-site-hero--home .public-site-hero-actions {
+    margin-top: 24px;
+  }
+
+  .public-site-shell .public-site-section {
+    padding-block: 40px;
+  }
+}
+
+@media (max-width: 480px) {
+  .public-site-hero--home[data-has-hero-image="true"] {
+    padding-top: 68vw;
+  }
+
+  .public-site-hero--home .public-site-hero-media {
+    height: 74vw;
+    min-height: 260px;
+  }
+
+  .public-site-hero--home h1 {
+    font-size: clamp(2.35rem, 12vw, 3.25rem);
+  }
+
+  .public-site-hero--home .public-site-hero-copy {
+    padding-bottom: 42px;
+  }
+}
