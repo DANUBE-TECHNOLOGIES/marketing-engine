@@ -1,11 +1,81 @@
 "use strict";
 
 const express = require("express");
+const { buildCanonicalAgencyIdentity } = require("./canonical-identity");
+const { listPresenceProviders } = require("./provider-registry");
+const { enrichDirectoryWithProvider } = require("./directory-bridge");
 const { projectGooglePresence } = require("./google-listing-adapter");
 const { syncGoogleDirectoryListing } = require("./google-directory-sync");
 
 function routes({ prisma }) {
   const router = express.Router();
+
+  router.get("/api/presence/providers", async (req, res) => {
+    try {
+      const directories = await prisma.localDirectory.findMany({
+        orderBy: [{ priority: "desc" }, { name: "asc" }]
+      });
+      const directoryByProvider = new Map(
+        directories
+          .map(enrichDirectoryWithProvider)
+          .filter((directory) => directory.providerKey)
+          .map((directory) => [directory.providerKey, directory])
+      );
+
+      return res.json({
+        providers: listPresenceProviders().map((provider) => {
+          const directory = directoryByProvider.get(provider.key);
+          return {
+            ...provider,
+            legacyDirectory: directory
+              ? {
+                  id: directory.id,
+                  name: directory.name,
+                  active: directory.active,
+                  priority: directory.priority,
+                  impactScore: directory.impactScore,
+                  difficulty: directory.difficulty
+                }
+              : null
+          };
+        })
+      });
+    } catch (error) {
+      return res.status(500).json({ error: error.message });
+    }
+  });
+
+  router.get("/api/presence/agencies/:agencyId", async (req, res) => {
+    try {
+      const agencyId = Number(req.params.agencyId);
+      if (!Number.isInteger(agencyId) || agencyId <= 0) {
+        return res.status(400).json({ error: "agencyId invalide" });
+      }
+      const agency = await prisma.agency.findUnique({ where: { id: agencyId } });
+      if (!agency) return res.status(404).json({ error: "Agence introuvable" });
+
+      const listings = await prisma.directoryListing.findMany({
+        where: { agencyId },
+        include: { directory: true },
+        orderBy: { directoryId: "asc" }
+      });
+
+      return res.json({
+        agencyId,
+        canonical: buildCanonicalAgencyIdentity(agency),
+        listings: listings.map((listing) => ({
+          id: listing.id,
+          status: listing.status,
+          listingUrl: listing.listingUrl,
+          lastCheckedAt: listing.lastCheckedAt,
+          notes: listing.notes,
+          directory: enrichDirectoryWithProvider(listing.directory)
+        }))
+      });
+    } catch (error) {
+      return res.status(500).json({ error: error.message });
+    }
+  });
 
   router.get("/api/presence/agencies/:agencyId/google", async (req, res) => {
     try {
@@ -32,9 +102,7 @@ function routes({ prisma }) {
         return res.status(409).json({ error: "Annuaire Google Business Profile non initialisé" });
       }
 
-      const agencies = await prisma.agency.findMany({
-        orderBy: { id: "asc" }
-      });
+      const agencies = await prisma.agency.findMany({ orderBy: { id: "asc" } });
       const results = [];
 
       for (const agency of agencies) {
