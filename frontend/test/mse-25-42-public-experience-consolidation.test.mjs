@@ -23,9 +23,10 @@ const tree = read("../backend/src/modules/agency-site/templates/default-tree.js"
 const sections = read("../backend/src/modules/agency-site/templates/section-definitions.js");
 
 function assertCanonicalInspirationsLink(source) {
-  assert.match(source, /\/inspirations/);
+  const hasCanonicalRoute = /\/inspirations/.test(source) || /siteHref\(site,\s*["']inspirations["']\)/.test(source);
+  assert.equal(hasCanonicalRoute, true, "Expected a canonical inspirations route or siteHref(site, \"inspirations\") helper call");
   assert.doesNotMatch(source, /\$\{root\}\/inspiration["`]/);
-  assert.doesNotMatch(source, /siteHref\(site,\s*"inspiration"\)/);
+  assert.doesNotMatch(source, /siteHref\(site,\s*["']inspiration["']\)/);
 }
 
 test("MSE-25.42 keeps V2 PageBlocks canonical and home ordering in memory", () => {
