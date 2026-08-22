@@ -1,28 +1,27 @@
-/* MSE-25.42.1 — final public-home visual polish.
+/* MSE-25.42.2 — final public-home visual polish.
  *
- * This layer intentionally overrides the earlier consolidation rules without
- * changing persisted Website Designer data. The home hero uses a true split
- * composition: full-height travel photography on the left, a progressive fade
- * through the middle, and a stable Mondescale copy panel on the right.
+ * The home hero remains data-neutral: this stylesheet only refines public
+ * presentation. The photograph now fades to the Mondescale panel before its
+ * physical edge, avoiding the visible vertical seam seen on very wide screens.
  */
 
 .public-site-hero--home[data-has-hero-image="true"] {
   position: relative;
-  min-height: clamp(520px, 42vw, 690px);
+  min-height: clamp(510px, 38vw, 650px);
   overflow: hidden;
   isolation: isolate;
   background:
-    radial-gradient(circle at 92% 12%, color-mix(in srgb, var(--public-accent) 18%, transparent), transparent 34%),
-    linear-gradient(118deg, #0a335f 0%, var(--public-primary) 68%, #0964d8 100%);
+    radial-gradient(circle at 92% 12%, color-mix(in srgb, var(--public-accent) 16%, transparent), transparent 34%),
+    linear-gradient(112deg, #0a335f 0%, var(--public-primary) 70%, #0964d8 100%);
 }
 
 .public-site-hero--home .public-site-hero-media {
   position: absolute;
   inset: 0 auto 0 0;
   z-index: 0;
-  width: 58%;
+  width: 68%;
   height: 100%;
-  overflow: visible;
+  overflow: hidden;
 }
 
 .public-site-hero--home .public-site-hero-media img {
@@ -36,41 +35,56 @@
 .public-site-hero--home .public-site-hero-overlay {
   position: absolute;
   inset: 0;
+  z-index: 1;
   pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    rgba(10, 51, 95, 0) 0%,
+    rgba(10, 51, 95, 0) 43%,
+    rgba(10, 51, 95, .08) 49%,
+    rgba(10, 51, 95, .28) 55%,
+    rgba(10, 51, 95, .62) 62%,
+    rgba(10, 51, 95, .92) 69%,
+    rgba(10, 51, 95, 0) 76%
+  );
 }
 
+/* The fade is deliberately contained inside the media box and reaches full
+ * brand colour at the image edge. This is what removes the vertical cut. */
 .public-site-hero--home .public-site-hero-fade {
   position: absolute;
-  inset: 0 -36% 0 auto;
-  width: 62%;
+  inset: 0 0 0 auto;
+  z-index: 2;
+  width: 42%;
   height: 100%;
   pointer-events: none;
   background: linear-gradient(
     90deg,
     rgba(10, 51, 95, 0) 0%,
-    rgba(10, 51, 95, .08) 18%,
-    rgba(10, 51, 95, .28) 38%,
-    rgba(10, 51, 95, .72) 70%,
+    rgba(10, 51, 95, .06) 14%,
+    rgba(10, 51, 95, .18) 30%,
+    rgba(10, 51, 95, .42) 52%,
+    rgba(10, 51, 95, .74) 74%,
     var(--public-primary) 100%
   );
 }
 
 .public-site-hero--home > .public-site-container {
   position: relative;
-  z-index: 2;
-  width: min(1280px, calc(100% - 64px));
-  min-height: clamp(520px, 42vw, 690px);
+  z-index: 3;
+  width: min(1360px, calc(100% - 64px));
+  min-height: clamp(510px, 38vw, 650px);
   display: grid;
-  grid-template-columns: minmax(0, 52%) minmax(0, 48%);
+  grid-template-columns: minmax(0, 54%) minmax(0, 46%);
   align-items: center;
   padding: 0;
 }
 
 .public-site-hero--home .public-site-hero-copy {
   grid-column: 2;
-  width: min(100%, 620px);
+  width: min(100%, 610px);
   min-width: 0;
-  padding-left: clamp(36px, 4vw, 72px);
+  padding-left: clamp(32px, 3.2vw, 58px);
   text-align: left !important;
 }
 
@@ -80,11 +94,11 @@
 
 .public-site-hero--home h1 {
   width: 100%;
-  max-width: 620px;
+  max-width: 610px;
   margin: 0 !important;
   color: #fff;
-  font-size: clamp(3.15rem, 4.1vw, 5rem);
-  line-height: .96;
+  font-size: clamp(3.1rem, 3.9vw, 4.85rem);
+  line-height: .97;
   letter-spacing: -.035em;
   text-wrap: balance;
   word-break: normal;
@@ -94,60 +108,66 @@
 
 .public-site-hero--home .public-site-hero-text {
   width: 100%;
-  max-width: 540px;
-  margin: 22px 0 0 !important;
+  max-width: 530px;
+  margin: 20px 0 0 !important;
   color: rgba(255, 255, 255, .9);
-  font-size: clamp(1rem, 1.25vw, 1.15rem);
-  line-height: 1.65;
+  font-size: clamp(1rem, 1.18vw, 1.14rem);
+  line-height: 1.62;
 }
 
 .public-site-hero--home .public-site-hero-actions {
-  margin-top: 28px;
+  margin-top: 26px;
   justify-content: flex-start !important;
 }
 
-/* Slightly tighten the long home while keeping each commercial sequence airy. */
+/* Keep the long home premium but slightly denser after the hero. */
 .public-site-shell .public-site-section {
-  padding-block: clamp(44px, 4.4vw, 64px);
+  padding-block: clamp(42px, 4vw, 60px);
 }
 
 .public-site-shell .public-site-partners,
-.public-site-shell .public-site-faq,
+.public-site-shell .public-site-faq {
+  padding-block: clamp(32px, 3.45vw, 46px);
+}
+
 .public-site-shell .public-site-local-area-compact {
-  padding-block: clamp(34px, 3.8vw, 50px);
+  padding-block: clamp(28px, 3vw, 42px);
 }
 
 .public-site-features h2 {
-  font-size: clamp(2.05rem, 3.25vw, 3.35rem);
+  font-size: clamp(2.1rem, 3.25vw, 3.35rem);
   line-height: 1.03;
+}
+
+.public-site-features .public-site-section-intro {
+  margin-bottom: 22px;
 }
 
 @media (max-width: 1100px) {
   .public-site-hero--home[data-has-hero-image="true"],
   .public-site-hero--home > .public-site-container {
-    min-height: clamp(500px, 54vw, 620px);
+    min-height: clamp(490px, 52vw, 610px);
   }
 
   .public-site-hero--home .public-site-hero-media {
-    width: 55%;
+    width: 66%;
   }
 
   .public-site-hero--home .public-site-hero-fade {
-    right: -42%;
-    width: 68%;
+    width: 46%;
   }
 
   .public-site-hero--home > .public-site-container {
     width: min(calc(100% - 48px), 1180px);
-    grid-template-columns: minmax(0, 48%) minmax(0, 52%);
+    grid-template-columns: minmax(0, 50%) minmax(0, 50%);
   }
 
   .public-site-hero--home .public-site-hero-copy {
-    padding-left: 28px;
+    padding-left: 26px;
   }
 
   .public-site-hero--home h1 {
-    font-size: clamp(2.75rem, 5.8vw, 4.5rem);
+    font-size: clamp(2.7rem, 5.4vw, 4.25rem);
   }
 }
 
@@ -164,15 +184,20 @@
     overflow: hidden;
   }
 
+  .public-site-hero--home .public-site-hero-overlay {
+    background: none;
+  }
+
   .public-site-hero--home .public-site-hero-fade {
     inset: auto 0 -2px 0;
     width: 100%;
-    height: 58%;
+    height: 62%;
     background: linear-gradient(
       180deg,
       rgba(10, 51, 95, 0) 0%,
-      rgba(10, 51, 95, .18) 28%,
-      rgba(10, 51, 95, .72) 72%,
+      rgba(10, 51, 95, .12) 24%,
+      rgba(10, 51, 95, .42) 52%,
+      rgba(10, 51, 95, .78) 76%,
       var(--public-primary) 100%
     );
   }
@@ -187,26 +212,26 @@
   .public-site-hero--home .public-site-hero-copy {
     width: 100%;
     max-width: none;
-    padding: 34px 0 48px;
+    padding: 32px 0 46px;
   }
 
   .public-site-hero--home h1 {
     max-width: 620px;
-    font-size: clamp(2.6rem, 11vw, 4rem);
-    line-height: .98;
+    font-size: clamp(2.55rem, 10.8vw, 3.9rem);
+    line-height: .99;
   }
 
   .public-site-hero--home .public-site-hero-text {
     max-width: 580px;
-    margin-top: 18px !important;
+    margin-top: 17px !important;
   }
 
   .public-site-hero--home .public-site-hero-actions {
-    margin-top: 24px;
+    margin-top: 22px;
   }
 
   .public-site-shell .public-site-section {
-    padding-block: 40px;
+    padding-block: 38px;
   }
 }
 
@@ -221,10 +246,10 @@
   }
 
   .public-site-hero--home h1 {
-    font-size: clamp(2.35rem, 12vw, 3.25rem);
+    font-size: clamp(2.3rem, 11.5vw, 3.15rem);
   }
 
   .public-site-hero--home .public-site-hero-copy {
-    padding-bottom: 42px;
+    padding-bottom: 40px;
   }
 }
