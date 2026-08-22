@@ -3,7 +3,7 @@
 const { projectGooglePresence } = require("./google-listing-adapter");
 
 function fieldMatch(diff, field) {
-  const item = diff?.fields?.[field];
+  const item = diff?.checks?.find((check) => check.field === field);
   return Boolean(item?.match);
 }
 
@@ -46,7 +46,7 @@ async function syncGoogleDirectoryListing(prisma, agency, listing) {
       score: presence.diff?.score ?? 0,
       notes: match
         ? "Google Business Profile vérifié via Business Information API."
-        : `Dérive NAP Google détectée: ${presence.diff?.mismatches?.join(", ") || "inconnue"}`,
+        : `Dérive NAP Google détectée: ${(presence.diff?.drift || []).join(", ") || "inconnue"}`,
       lastCheckedAt: new Date()
     }
   });
