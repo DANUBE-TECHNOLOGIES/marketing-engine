@@ -22,13 +22,13 @@ test("canonical identity normalizes existing Agency fields without persistence c
   });
 
   assert.equal(identity.name, "Mondescale Nevers");
-  assert.equal(identity.phone, "0386000000");
+  assert.equal(identity.phone, "+33386000000");
   assert.equal(identity.email, "agence@example.fr");
   assert.equal(identity.website, "https://mondescale.com/nevers");
   assert.equal(identity.address.countryCode, "FR");
 });
 
-test("NAP diff ignores accents, casing, phone formatting and trailing website slash", () => {
+test("NAP diff ignores accents, casing, French phone formatting and trailing website slash", () => {
   const canonical = buildCanonicalAgencyIdentity({
     id: 1,
     name: "Agence Voyages Évasion",
@@ -43,7 +43,7 @@ test("NAP diff ignores accents, casing, phone formatting and trailing website sl
   const result = compareNap(canonical, {
     name: "agence voyages evasion",
     address: { street: "10 rue de paris", postalCode: "75001", city: "PARIS", countryCode: "FR" },
-    phone: "01.42.00.00.00",
+    phone: "+33 1 42 00 00 00",
     website: "https://example.fr"
   });
 
