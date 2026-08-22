@@ -159,3 +159,34 @@ test("MSE-25.42 applies a commercial home presentation order without mutating st
   assert.match(api, /presentationOrder:\s*rank \* 1000 \+ tieBreaker/);
   assert.match(utils, /presentationOrder\s*\?\?/);
 });
+
+test("MSE-25.42.3 widens premium desktop surfaces without stretching editorial copy", () => {
+  const css = read("components/public-site/desktop-composition.css");
+  const layout = read("app/agence/[siteSlug]/layout.js");
+
+  assert.match(css, /MSE-25\.42\.3/);
+  assert.match(css, /@media \(min-width: 1200px\)/);
+  assert.match(css, /width:\s*min\(1360px, calc\(100% - 72px\)\)/);
+  assert.match(css, /@media \(min-width: 1500px\)[\s\S]*width:\s*min\(1420px, calc\(100% - 96px\)\)/);
+  assert.match(css, /public-site-section-intro[\s\S]*max-width:\s*820px/);
+  assert.match(layout, /desktop-composition\.css/);
+});
+
+test("MSE-25.42.3 gives services and single-advisor agencies stronger desktop composition", () => {
+  const css = read("components/public-site/desktop-composition.css");
+
+  assert.match(css, /\.public-site-features \.public-site-card-grid[\s\S]*repeat\(3, minmax\(0, 1fr\)\)/);
+  assert.match(css, /\.public-site-feature-card[\s\S]*min-height:\s*205px/);
+  assert.match(css, /\.public-site-team-grid--single[\s\S]*width:\s*min\(100%, 1020px\)/);
+  assert.match(css, /grid-template-columns:\s*300px minmax\(0, 1fr\)/);
+  assert.match(css, /\.public-site-team-grid--single \.public-site-team-portrait[\s\S]*width:\s*230px/);
+});
+
+test("MSE-25.42.3 compacts the local conversion sequence while keeping contact and map visible", () => {
+  const css = read("components/public-site/desktop-composition.css");
+
+  assert.match(css, /\.public-site-contact[\s\S]*padding-bottom:\s*clamp\(44px/);
+  assert.match(css, /\.public-site-contact-grid[\s\S]*gap:\s*22px[\s\S]*margin-top:\s*30px/);
+  assert.match(css, /\.public-site-map-frame[\s\S]*margin-top:\s*28px[\s\S]*min-height:\s*330px/);
+  assert.match(css, /\.public-site-map-frame iframe[\s\S]*height:\s*330px/);
+});
