@@ -250,21 +250,92 @@
   line-height: 1.6;
 }
 
-/*
- * MSE-25.42 — hiérarchie publique consolidée.
- * On réduit les respirations excessives sans supprimer le contenu indexable.
- */
+/* MSE-25.42 — premium home consolidation. */
 .public-site-shell .public-site-section {
-  padding-block: clamp(52px, 5.8vw, 82px);
+  padding-block: clamp(48px, 5vw, 72px);
 }
 
 .public-site-shell .public-site-partners,
 .public-site-shell .public-site-faq,
 .public-site-shell .public-site-local-area-compact {
-  padding-block: clamp(42px, 4.8vw, 66px);
+  padding-block: clamp(38px, 4.2vw, 58px);
 }
 
-/* Les CTA doivent rester lisibles même quand le thème ne fournit aucune image. */
+/* Hero: the photo visually dissolves into the Mondescale blue panel. */
+.public-site-hero--immersive[data-has-hero-image="true"] {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 88% 18%, color-mix(in srgb, var(--public-accent) 18%, transparent), transparent 36%),
+    linear-gradient(120deg, #0a335f 0%, var(--public-primary) 72%, #0964d8 100%);
+}
+
+.public-site-hero--immersive .public-site-hero-media {
+  width: min(58vw, 980px);
+  right: auto;
+  left: 0;
+  overflow: visible;
+}
+
+.public-site-hero--immersive .public-site-hero-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.public-site-hero--immersive .public-site-hero-fade {
+  position: absolute;
+  inset: 0 -34% 0 auto;
+  width: 48%;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(10,51,95,0) 0%, rgba(10,51,95,.18) 22%, rgba(10,51,95,.72) 68%, var(--public-primary) 100%);
+}
+
+.public-site-hero--immersive > .public-site-container {
+  position: relative;
+  z-index: 2;
+  width: min(1180px, calc(100% - 48px));
+  display: flex;
+  min-height: clamp(480px, 50vw, 650px);
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  padding-left: clamp(52%, 56vw, 640px);
+}
+
+.public-site-hero--immersive h1,
+.public-site-hero--immersive .public-site-hero-text,
+.public-site-hero--immersive .public-site-eyebrow {
+  color: #fff;
+}
+
+/* Single-advisor agencies use an editorial portrait instead of an empty 3-column grid. */
+.public-site-team-grid--single {
+  grid-template-columns: minmax(0, 760px);
+}
+
+.public-site-team-grid--single .public-site-team-card {
+  display: grid;
+  grid-template-columns: 230px minmax(0, 1fr);
+  align-items: center;
+  padding: 20px;
+}
+
+.public-site-team-grid--single .public-site-team-portrait {
+  width: 190px;
+  margin: 0 auto;
+}
+
+.public-site-team-grid--single .public-site-team-copy {
+  padding: 26px 30px;
+}
+
+.public-site-team-grid--single .public-site-team-copy h3 {
+  font-size: clamp(1.7rem, 2.4vw, 2.25rem);
+  font-family: var(--public-heading-font, "DM Serif Display", serif);
+}
+
+/* CTA blocks on inner pages stay contrasted. */
 .public-site-shell .public-site-cta {
   color: #fff;
   background:
@@ -308,9 +379,8 @@
   align-self: center;
 }
 
-/* Flexible Payment reste un argument fort mais ne coupe plus la home en deux. */
 .public-site-shell .public-site-flexible-payment--compact {
-  padding-block: clamp(38px, 4.5vw, 60px);
+  padding-block: clamp(34px, 4vw, 52px);
 }
 
 .public-site-flexible-payment--compact .public-site-container {
@@ -379,14 +449,22 @@
 
 .public-site-map-frame iframe {
   width: 100%;
-  height: clamp(300px, 40vw, 430px);
+  height: clamp(280px, 34vw, 390px);
 }
 
 @media (max-width: 1050px) {
   .public-site-destination-grid,
   .public-site-editorial-grid,
-  .public-site-team-grid {
+  .public-site-team-grid:not(.public-site-team-grid--single) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .public-site-hero--immersive .public-site-hero-media {
+    width: 62%;
+  }
+
+  .public-site-hero--immersive > .public-site-container {
+    padding-left: 50%;
   }
 
   .public-site-cta .public-site-container,
@@ -416,13 +494,47 @@
 
 @media (max-width: 760px) {
   .public-site-shell .public-site-section {
-    padding-block: 46px;
+    padding-block: 42px;
   }
 
   .public-site-destination-grid,
   .public-site-editorial-grid,
-  .public-site-team-grid {
+  .public-site-team-grid,
+  .public-site-team-grid--single,
+  .public-site-team-grid--single .public-site-team-card {
     grid-template-columns: 1fr;
+  }
+
+  .public-site-hero--immersive[data-has-hero-image="true"] {
+    padding-top: min(68vw, 430px);
+  }
+
+  .public-site-hero--immersive .public-site-hero-media {
+    inset: 0 0 auto 0;
+    width: 100%;
+    height: min(72vw, 450px);
+  }
+
+  .public-site-hero--immersive .public-site-hero-fade {
+    inset: auto 0 -2px 0;
+    width: 100%;
+    height: 48%;
+    background: linear-gradient(180deg, rgba(10,51,95,0) 0%, rgba(10,51,95,.55) 52%, var(--public-primary) 100%);
+  }
+
+  .public-site-hero--immersive > .public-site-container {
+    width: min(100% - 36px, 1180px);
+    min-height: auto;
+    padding: 34px 0 48px;
+  }
+
+  .public-site-team-grid--single .public-site-team-card {
+    padding: 20px;
+  }
+
+  .public-site-team-grid--single .public-site-team-copy {
+    padding: 20px 4px 4px;
+    text-align: center;
   }
 
   .public-site-team-portrait {
