@@ -59,6 +59,7 @@ export const PUBLIC_RENDERER_REGISTRY = {
   partners: PartnersRenderer,
   logos: PartnersRenderer,
   "partner-logos": PartnersRenderer,
+  "partner-categories": PartnerDirectoryRenderer,
   "partner-directory": PartnerDirectoryRenderer,
   "partners-directory": PartnerDirectoryRenderer,
   appointment: AppointmentRenderer,
