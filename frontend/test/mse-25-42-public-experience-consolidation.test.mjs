@@ -71,6 +71,22 @@ test("MSE-25.42 gives the hero a responsive image-to-brand fade", () => {
   assert.match(css, /@media \(max-width: 760px\)[\s\S]*linear-gradient\(180deg/);
 });
 
+test("MSE-25.42.1 gives the home hero a stable split layout and dedicated responsive finish", () => {
+  const hero = read("components/public-site/renderers/HeroV2Renderer.js");
+  const css = read("components/public-site/hero-finish.css");
+  const layout = read("app/agence/[siteSlug]/layout.js");
+
+  assert.match(hero, /function\s+isHomePage/);
+  assert.match(hero, /public-site-hero--home/);
+  assert.match(hero, /public-site-hero-copy/);
+  assert.match(css, /\.public-site-hero--home \.public-site-hero-media[\s\S]*position:\s*absolute[\s\S]*width:\s*58%/);
+  assert.match(css, /grid-template-columns:\s*minmax\(0, 52%\) minmax\(0, 48%\)/);
+  assert.match(css, /max-width:\s*620px[\s\S]*word-break:\s*normal[\s\S]*hyphens:\s*none/);
+  assert.match(css, /@media \(max-width: 760px\)[\s\S]*linear-gradient\([\s\S]*180deg/);
+  assert.match(layout, /hero-finish\.css/);
+  assert.doesNotMatch(css, /inset-right/);
+});
+
 test("MSE-25.42 removes redundant conversion bands from the home only", () => {
   const cta = read("components/public-site/renderers/CtaV2Renderer.js");
   assert.match(cta, /function\s+isHomePage/);
