@@ -55,6 +55,7 @@ function intentHeroTitle({ page, site }) {
   if (["destinations", "destination"].includes(slug)) return `Destinations et voyages depuis ${city}`;
   if (["inspiration", "inspirations"].includes(slug)) return `Inspirations voyage depuis ${city}`;
   if (["equipe", "team", "notre-equipe"].includes(slug)) return `Votre équipe de conseillers voyage à ${city}`;
+  if (["partenaires", "partners", "nos-partenaires"].includes(slug)) return `Nos partenaires voyage à ${city}`;
   if (["contact", "nous-contacter"].includes(slug)) return `Contacter votre agence de voyages à ${city}`;
   if (["avis", "reviews", "avis-clients"].includes(slug)) return `Avis clients de votre agence de voyages à ${city}`;
   return null;
@@ -103,11 +104,11 @@ export default function HeroV2Renderer({ section, site, page }) {
   const heroClassName = [
     "public-site-hero",
     "public-site-hero--immersive",
-    homeHero ? "public-site-hero--home" : null,
+    homeHero ? "public-site-hero--home" : "public-site-hero--inner",
   ].filter(Boolean).join(" ");
 
   return (
-    <section className={heroClassName} data-has-hero-image={backgroundImage ? "true" : "false"}>
+    <section className={heroClassName} data-has-hero-image={backgroundImage ? "true" : "false"} data-page-slug={pageSlug(page) || "home"}>
       {backgroundImage ? (
         <div className="public-site-hero-media" aria-hidden="true">
           {/* eslint-disable-next-line @next/next/no-img-element */}
