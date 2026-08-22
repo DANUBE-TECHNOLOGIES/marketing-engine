@@ -25,11 +25,14 @@ function mapGoogleLocationToNap(location) {
   return {
     externalId: normalizeLocationName(location?.name),
     name: location?.title || null,
-    address: Array.isArray(address.addressLines)
-      ? address.addressLines.filter(Boolean).join(" ")
-      : null,
-    postalCode: address.postalCode || null,
-    city: address.locality || null,
+    address: {
+      street: Array.isArray(address.addressLines)
+        ? address.addressLines.filter(Boolean).join(" ")
+        : null,
+      postalCode: address.postalCode || null,
+      city: address.locality || null,
+      countryCode: address.regionCode || "FR"
+    },
     phone: location?.phoneNumbers?.primaryPhone || null,
     website: location?.websiteUri || null
   };
@@ -37,9 +40,7 @@ function mapGoogleLocationToNap(location) {
 
 async function readGoogleLocation(prisma, googleLocationId) {
   const locationName = normalizeLocationName(googleLocationId);
-  if (!locationName) {
-    throw new Error("googleLocationId manquant");
-  }
+  if (!locationName) throw new Error("googleLocationId manquant");
 
   const accessToken = await getGoogleAccessToken(prisma);
   const url = `${GOOGLE_BUSINESS_INFORMATION_BASE}/${locationName}?readMask=${encodeURIComponent(GOOGLE_NAP_READ_MASK)}`;
@@ -61,10 +62,7 @@ async function readGoogleLocation(prisma, googleLocationId) {
     throw error;
   }
 
-  return {
-    raw: body,
-    nap: mapGoogleLocationToNap(body)
-  };
+  return { raw: body, nap: mapGoogleLocationToNap(body) };
 }
 
 module.exports = {
