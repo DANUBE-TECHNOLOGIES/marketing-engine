@@ -1,0 +1,134 @@
+/* MSE-25.42.4 — desktop public experience consolidation
+ * Pure presentation layer: no content, ordering or runtime contract changes.
+ */
+
+@media (min-width: 1180px) {
+  .public-site-container {
+    width: min(1440px, calc(100% - 96px));
+  }
+
+  .public-site-section {
+    padding-block: 88px;
+  }
+
+  .public-site-section h2 {
+    max-width: 940px;
+  }
+
+  .public-site-section > p,
+  .public-site-section .public-site-container > p {
+    max-width: 940px;
+  }
+
+  .public-site-card-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 20px;
+  }
+
+  .public-site-card {
+    min-height: 164px;
+    padding: 26px;
+  }
+
+  .public-site-destination-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 24px;
+  }
+
+  .public-site-destination-card {
+    min-height: 390px;
+  }
+
+  .public-site-review-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 24px;
+  }
+
+  .public-site-partners-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 18px;
+  }
+
+  .public-site-partners-grid > div {
+    min-height: 112px;
+  }
+
+  .public-site-agency-profile {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 24px;
+  }
+
+  .public-site-agency-card {
+    min-height: 150px;
+    padding: 28px;
+  }
+
+  .public-site-agency-actions {
+    margin-top: 24px;
+  }
+
+  .public-site-agency-actions .public-site-button {
+    min-height: 50px;
+    padding-inline: 24px;
+  }
+
+  .public-site-map-frame,
+  .public-site-map-frame iframe {
+    min-height: 360px;
+  }
+
+  .public-site-map-frame {
+    margin-top: 30px;
+  }
+
+  .public-site-faq-list {
+    margin-top: 28px;
+  }
+
+  .public-site-faq-list details {
+    padding: 18px 22px;
+  }
+
+  .public-site-contact,
+  .public-site-map,
+  .public-site-faq,
+  .public-site-local-area-compact {
+    padding-block: 72px;
+  }
+
+  .public-site-footer {
+    padding-top: 68px;
+  }
+
+  .public-site-footer-main {
+    grid-template-columns: minmax(300px, 1.35fr) repeat(3, minmax(180px, 1fr));
+    gap: 64px;
+  }
+
+  .public-site-footer-bottom {
+    margin-top: 48px;
+  }
+}
+
+@media (min-width: 1500px) {
+  .public-site-container {
+    width: min(1480px, calc(100% - 128px));
+  }
+
+  .public-site-section {
+    padding-block: 82px;
+  }
+
+  .public-site-card-grid,
+  .public-site-review-grid,
+  .public-site-agency-profile {
+    column-gap: 26px;
+  }
+
+  .public-site-contact,
+  .public-site-map,
+  .public-site-faq,
+  .public-site-local-area-compact {
+    padding-block: 66px;
+  }
+}
