@@ -62,6 +62,23 @@ const SECONDARY_PAGE_INHERITANCE = Object.freeze({
     family: "team",
     types: Object.freeze(["team", "equipe", "team-grid", "equipe-grid"]),
   }),
+  services: Object.freeze({
+    family: "services",
+    types: Object.freeze(["services", "services-grid", "services-highlight"]),
+    collectionKeys: Object.freeze(["items"]),
+  }),
+  destinations: Object.freeze({
+    family: "destinations",
+    types: Object.freeze([
+      "destinations",
+      "destination",
+      "destination-grid",
+      "destinations-grid",
+      "destinations-highlight",
+      "destination-recommendations",
+    ]),
+    collectionKeys: Object.freeze(["destinations", "items", "destinationIds"]),
+  }),
 });
 
 const GENERIC_TEAM_IDENTITIES = Object.freeze(new Set([
@@ -289,6 +306,32 @@ function teamBlockHasMembers(block) {
   return teamBlockMembers(block).some(teamMemberIsMeaningful);
 }
 
+function collectionValueIsMeaningful(value) {
+  if (typeof value === "string") return Boolean(value.trim());
+  if (!value || typeof value !== "object") return false;
+
+  return Boolean(
+    String(value.title || value.name || value.label || value.slug || value.id || "").trim() ||
+    String(value.text || value.description || value.href || value.url || value.image || value.imageUrl || "").trim()
+  );
+}
+
+function collectionBlockHasData(block, keys = []) {
+  const content = publicBlockContent(block);
+  return keys.some((key) => {
+    const values = content[key];
+    return Array.isArray(values) && values.some(collectionValueIsMeaningful);
+  });
+}
+
+function blockHasAuthoritativeData(block, contract) {
+  if (contract.family === "team") return teamBlockHasMembers(block);
+  if (Array.isArray(contract.collectionKeys)) {
+    return collectionBlockHasData(block, contract.collectionKeys);
+  }
+  return true;
+}
+
 function selectInheritanceSourceBlock(homeBlocks, contract) {
   const typeSet = new Set(contract.types);
   const candidates = homeBlocks.filter((block) => typeSet.has(publicBlockType(block)));
@@ -297,6 +340,10 @@ function selectInheritanceSourceBlock(homeBlocks, contract) {
 
   if (contract.family === "team") {
     return candidates.find(teamBlockHasMembers) || candidates[0];
+  }
+
+  if (Array.isArray(contract.collectionKeys)) {
+    return candidates.find((block) => collectionBlockHasData(block, contract.collectionKeys)) || candidates[0];
   }
 
   return candidates[0];
@@ -319,6 +366,25 @@ function mergeInheritedTeamBlock(targetBlock, sourceBlock) {
   }
 
   for (const key of ["members", "items", "team"]) {
+    const sourceItems = sourceContent[key];
+    if (Array.isArray(sourceItems) && sourceItems.length) {
+      merged[key] = sourceItems;
+    }
+  }
+
+  return withPublicBlockContent(targetBlock, merged);
+}
+
+function mergeInheritedCollectionBlock(targetBlock, sourceBlock, keys = []) {
+  const targetContent = publicBlockContent(targetBlock);
+  const sourceContent = publicBlockContent(sourceBlock);
+  const merged = { ...sourceContent, ...targetContent };
+
+  for (const key of keys) {
+    delete merged[key];
+  }
+
+  for (const key of keys) {
     const sourceItems = sourceContent[key];
     if (Array.isArray(sourceItems) && sourceItems.length) {
       merged[key] = sourceItems;
@@ -355,18 +421,24 @@ function inheritSecondaryPageFromHome(page, homePage, pageSlug) {
   const typeSet = new Set(contract.types);
   const sourceBlock = selectInheritanceSourceBlock(homeBlocks, contract);
 
-  if (!sourceBlock) return page;
+  if (!sourceBlock || !blockHasAuthoritativeData(sourceBlock, contract)) return page;
 
   const targetIndex = targetBlocks.findIndex((block) => typeSet.has(publicBlockType(block)));
   let nextBlocks = targetBlocks;
 
   if (targetIndex >= 0) {
-    if (contract.family !== "team" || teamBlockHasMembers(targetBlocks[targetIndex])) {
+    if (blockHasAuthoritativeData(targetBlocks[targetIndex], contract)) {
       return page;
     }
 
     nextBlocks = [...targetBlocks];
-    nextBlocks[targetIndex] = mergeInheritedTeamBlock(targetBlocks[targetIndex], sourceBlock);
+    nextBlocks[targetIndex] = contract.family === "team"
+      ? mergeInheritedTeamBlock(targetBlocks[targetIndex], sourceBlock)
+      : mergeInheritedCollectionBlock(
+          targetBlocks[targetIndex],
+          sourceBlock,
+          contract.collectionKeys || []
+        );
   } else {
     nextBlocks = [
       ...targetBlocks,
@@ -471,8 +543,12 @@ export {
   GENERIC_TEAM_IDENTITIES,
   HOME_PRESENTATION_RANK,
   SECONDARY_PAGE_INHERITANCE,
+  blockHasAuthoritativeData,
+  collectionBlockHasData,
+  collectionValueIsMeaningful,
   inheritSecondaryPageFromHome,
   inheritanceContract,
+  mergeInheritedCollectionBlock,
   normalizeTeamIdentity,
   pageFromContract,
   pageIsHome,
