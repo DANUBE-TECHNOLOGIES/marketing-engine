@@ -190,3 +190,26 @@ test("MSE-25.42.3 compacts the local conversion sequence while keeping contact a
   assert.match(css, /\.public-site-map-frame[\s\S]*margin-top:\s*28px[\s\S]*min-height:\s*330px/);
   assert.match(css, /\.public-site-map-frame iframe[\s\S]*height:\s*330px/);
 });
+
+test("MSE-25.42 secondary partner page inherits the canonical home partner block when missing", () => {
+  const api = read("lib/public-site-api.js");
+  const partners = read("components/public-site/renderers/PartnersRenderer.js");
+
+  assert.match(api, /SECONDARY_PAGE_INHERITANCE/);
+  assert.match(api, /partenaires:[\s\S]*family:\s*"partners"/);
+  assert.match(api, /inheritSecondaryPageFromHome/);
+  assert.match(api, /cloneInheritedBlock/);
+  assert.match(partners, /getCommonPartners\(\)/);
+  assert.match(partners, /NetworkPartnerGrid items=\{networkItems\}/);
+});
+
+test("MSE-25.42 secondary team page reuses populated home advisors without overwriting explicit page members", () => {
+  const api = read("lib/public-site-api.js");
+
+  assert.match(api, /"notre-equipe"/);
+  assert.match(api, /teamBlockHasMembers/);
+  assert.match(api, /mergeInheritedTeamBlock/);
+  assert.match(api, /contract\.family !== "team" \|\| teamBlockHasMembers/);
+  assert.match(api, /for \(const key of \["members", "items", "team"\]\)/);
+  assert.match(api, /inheritedHomeContent:\s*contract\.family/);
+});
