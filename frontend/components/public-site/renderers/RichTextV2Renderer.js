@@ -43,6 +43,12 @@ function isGenericHomeIntro(section, page) {
   return ["accueil", "bienvenue", "home"].includes(title);
 }
 
+function isRedundantHomeLocalSection(section, page) {
+  if (!isHomePage(page)) return false;
+  const title = normalizeLabel(getSectionTitle(section, null));
+  return /agence\s+de\s+proximite/.test(title) && /environs/.test(title);
+}
+
 const LEGAL_HEADINGS = [
   ["editeur du site", "Éditeur du site", "▤"],
   ["informations legales", "Informations légales", "▧"],
@@ -159,7 +165,7 @@ export default function RichTextV2Renderer({ section, page }) {
   const alignment = normalizeAlignment(content.alignment);
   const paragraphs = textParagraphs(content.html);
   if (isLegalPage(page)) return <LegalDocument section={section} page={page} content={content} paragraphs={paragraphs} />;
-  if (isGenericHomeIntro(section, page)) return null;
+  if (isGenericHomeIntro(section, page) || isRedundantHomeLocalSection(section, page)) return null;
   return (
     <section className="public-site-section public-site-rich-text">
       <div className="public-site-container public-site-prose" style={{ textAlign: alignment }}>
@@ -172,4 +178,8 @@ export default function RichTextV2Renderer({ section, page }) {
   );
 }
 
-export { isGenericHomeIntro, textParagraphs };
+export {
+  isGenericHomeIntro,
+  isRedundantHomeLocalSection,
+  textParagraphs,
+};
