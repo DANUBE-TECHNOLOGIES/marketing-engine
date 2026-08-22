@@ -14,7 +14,8 @@ const inspirations = read("components/public-site/renderers/InspirationsRenderer
 const team = read("components/public-site/renderers/TeamRenderer.js");
 const teamCss = read("components/public-site/renderers/TeamRenderer.module.css");
 const partners = read("components/public-site/renderers/PartnersRenderer.js");
-const partnersCss = read("components/public-site/renderers/PartnersRenderer.module.css");
+const partnerDirectory = read("components/public-site/renderers/PartnerDirectoryRenderer.js");
+const partnerDirectoryCss = read("components/public-site/renderers/PartnerDirectoryRenderer.module.css");
 const contact = read("components/public-site/renderers/ContactRenderer.js");
 const hours = read("components/public-site/renderers/HoursRenderer.js");
 const map = read("components/public-site/renderers/MapRenderer.js");
@@ -78,14 +79,14 @@ test("MSE-25.42 team page renders actual advisor media with adaptive single-memb
   assert.match(teamCss, /\.single \.card\{display:grid;grid-template-columns:250px minmax\(0,1fr\)/);
 });
 
-test("MSE-25.42 partners restore both network logos and the complete specialist catalogue", () => {
+test("MSE-25.42 keeps Home partners compact and reserves the full catalogue for the Partners page", () => {
   assert.match(partners, /getCommonPartners/);
-  assert.match(partners, /FULL_PARTNERS/);
-  assert.match(partners, /PARTNER_DIRECTORY_CATEGORIES/);
-  assert.match(partners, /getPublishablePartnerProfiles/);
-  assert.match(partners, /PartnerDirectory/);
-  assert.match(partnersCss, /\.directoryGrid/);
-  assert.match(partnersCss, /\.networkGrid/);
+  assert.doesNotMatch(partners, /FULL_PARTNERS|PARTNER_DIRECTORY_CATEGORIES|getPublishablePartnerProfiles/);
+  assert.match(partnerDirectory, /getPartnerDirectoryCategories/);
+  assert.match(partnerDirectory, /getPublishablePartnerProfiles/);
+  assert.match(partnerDirectory, /data-partner-directory="full"/);
+  assert.match(partnerDirectory, /PreferredPartners/);
+  assert.match(partnerDirectoryCss, /\.directory/);
 });
 
 test("MSE-25.42 secondary partner and team pages inherit useful Home content only when needed", () => {
