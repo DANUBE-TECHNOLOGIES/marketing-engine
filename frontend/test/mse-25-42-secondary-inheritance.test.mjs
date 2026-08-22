@@ -10,9 +10,17 @@ test("MSE-25.42.5 treats generated team placeholders as non-authoritative", () =
   assert.match(api, /GENERIC_TEAM_IDENTITIES/);
   assert.match(api, /"conseiller voyage"/);
   assert.match(api, /function\s+teamMemberIsMeaningful/);
-  assert.match(api, /!GENERIC_TEAM_IDENTITIES\.has\(identity\)/);
+  assert.match(api, /if \(identity\) \{[\s\S]*return !GENERIC_TEAM_IDENTITIES\.has\(identity\);[\s\S]*\}/);
   assert.match(api, /member\.imageUrl/);
   assert.match(api, /member\.photoUrl/);
+});
+
+test("MSE-25.42.5 ignores descriptive copy on generic team placeholders", () => {
+  assert.match(api, /Generated Team placeholders often carry descriptive copy/);
+  assert.doesNotMatch(
+    api.match(/function\s+teamMemberIsMeaningful[\s\S]*?\n\}/)?.[0] || "",
+    /member\.description|member\.bio/
+  );
 });
 
 test("MSE-25.42.5 replaces placeholder member collections with canonical home advisors", () => {
