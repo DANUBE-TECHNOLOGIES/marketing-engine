@@ -64,6 +64,23 @@ const SECONDARY_PAGE_INHERITANCE = Object.freeze({
   }),
 });
 
+const GENERIC_TEAM_IDENTITIES = Object.freeze(new Set([
+  "equipe",
+  "l equipe",
+  "notre equipe",
+  "votre equipe",
+  "conseiller",
+  "conseillere",
+  "conseiller voyage",
+  "conseillere voyage",
+  "conseiller voyages",
+  "conseillere voyages",
+  "expert voyage",
+  "experte voyage",
+  "expert voyages",
+  "experte voyages",
+]));
+
 async function request(path) {
   const response = await fetch(
     `${INTERNAL_API_URL}/api/public-sites${path}`,
@@ -227,10 +244,41 @@ function pagePublicBlocks(page) {
   return [];
 }
 
-function teamBlockHasMembers(block) {
+function normalizeTeamIdentity(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function teamMemberIsMeaningful(member) {
+  if (!member || typeof member !== "object") return false;
+
+  const identity = normalizeTeamIdentity(member.name || member.title);
+  if (identity && !GENERIC_TEAM_IDENTITIES.has(identity)) return true;
+
+  return Boolean(
+    member.email ||
+    member.image ||
+    member.imageUrl ||
+    member.photo ||
+    member.photoUrl ||
+    member.bio ||
+    member.description
+  );
+}
+
+function teamBlockMembers(block) {
   const content = publicBlockContent(block);
   return [content.members, content.items, content.team]
-    .some((items) => Array.isArray(items) && items.filter(Boolean).length > 0);
+    .flatMap((items) => Array.isArray(items) ? items : [])
+    .filter(Boolean);
+}
+
+function teamBlockHasMembers(block) {
+  return teamBlockMembers(block).some(teamMemberIsMeaningful);
 }
 
 function mergeInheritedTeamBlock(targetBlock, sourceBlock) {
@@ -238,10 +286,20 @@ function mergeInheritedTeamBlock(targetBlock, sourceBlock) {
   const sourceContent = publicBlockContent(sourceBlock);
   const merged = { ...sourceContent, ...targetContent };
 
+  /*
+   * A generated secondary Team page may contain a non-empty placeholder such
+   * as "Conseiller voyage". Those rows are presentation scaffolding, not
+   * agency data. When the target has no meaningful advisor, the Home remains
+   * the canonical populated source and all member collections come from it.
+   * Explicit named advisors on the secondary page never reach this branch.
+   */
   for (const key of ["members", "items", "team"]) {
-    const targetItems = targetContent[key];
+    delete merged[key];
+  }
+
+  for (const key of ["members", "items", "team"]) {
     const sourceItems = sourceContent[key];
-    if ((!Array.isArray(targetItems) || targetItems.length === 0) && Array.isArray(sourceItems) && sourceItems.length) {
+    if (Array.isArray(sourceItems) && sourceItems.length) {
       merged[key] = sourceItems;
     }
   }
@@ -389,15 +447,19 @@ export const publicSiteApi = {
 };
 
 export {
+  GENERIC_TEAM_IDENTITIES,
   HOME_PRESENTATION_RANK,
   SECONDARY_PAGE_INHERITANCE,
   inheritSecondaryPageFromHome,
   inheritanceContract,
+  normalizeTeamIdentity,
   pageFromContract,
   pageIsHome,
   publicBlockContent,
   publicBlockType,
   siteFromContract,
   teamBlockHasMembers,
+  teamBlockMembers,
+  teamMemberIsMeaningful,
   withHomePresentationOrder,
 };
