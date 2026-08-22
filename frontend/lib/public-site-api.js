@@ -281,6 +281,19 @@ function teamBlockHasMembers(block) {
   return teamBlockMembers(block).some(teamMemberIsMeaningful);
 }
 
+function selectInheritanceSourceBlock(homeBlocks, contract) {
+  const typeSet = new Set(contract.types);
+  const candidates = homeBlocks.filter((block) => typeSet.has(publicBlockType(block)));
+
+  if (!candidates.length) return null;
+
+  if (contract.family === "team") {
+    return candidates.find(teamBlockHasMembers) || candidates[0];
+  }
+
+  return candidates[0];
+}
+
 function mergeInheritedTeamBlock(targetBlock, sourceBlock) {
   const targetContent = publicBlockContent(targetBlock);
   const sourceContent = publicBlockContent(sourceBlock);
@@ -332,7 +345,7 @@ function inheritSecondaryPageFromHome(page, homePage, pageSlug) {
   const targetBlocks = pagePublicBlocks(page);
   const homeBlocks = pagePublicBlocks(homePage);
   const typeSet = new Set(contract.types);
-  const sourceBlock = homeBlocks.find((block) => typeSet.has(publicBlockType(block)));
+  const sourceBlock = selectInheritanceSourceBlock(homeBlocks, contract);
 
   if (!sourceBlock) return page;
 
@@ -457,6 +470,7 @@ export {
   pageIsHome,
   publicBlockContent,
   publicBlockType,
+  selectInheritanceSourceBlock,
   siteFromContract,
   teamBlockHasMembers,
   teamBlockMembers,
