@@ -45,7 +45,8 @@
     "mse-25.40:write-intent": "node scripts/mse-25-40-write-intent.js",
     "mse-25.40:network-apply": "node scripts/mse-25-40-network-apply.js",
     "mse-25.40:network-rollback": "node scripts/mse-25-40-network-rollback.js",
-    "mse-25.40:post-rollout-validate": "node scripts/mse-25-40-post-rollout-validate.js"
+    "mse-25.40:post-rollout-validate": "node scripts/mse-25-40-post-rollout-validate.js",
+    "mse-25.42:vm-readiness": "node scripts/mse-25-42-vm-readiness.js"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",
