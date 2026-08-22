@@ -22,6 +22,7 @@ import "../../../components/public-site/legal-experience.css";
 import "../../../components/public-site/logo-emphasis.css";
 import "../../../components/public-site/public-readability-fixes.css";
 import "../../../components/public-site/seo-crawlability.css";
+import "../../../components/public-site/desktop-composition.css";
 
 export default async function PublicAgencySiteLayout({ children, params }) {
   const { siteSlug } = await params;
