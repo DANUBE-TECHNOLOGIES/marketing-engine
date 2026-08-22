@@ -10,19 +10,12 @@ function clean(value) {
 }
 
 function initials(value) {
-  return String(value || "Équipe")
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part.charAt(0).toUpperCase())
-    .join("");
+  return String(value || "Équipe").trim().split(/\s+/).slice(0, 2).map((part) => part.charAt(0).toUpperCase()).join("");
 }
 
 function localTeamTitle(site) {
   const city = clean(site?.agency?.city || site?.city);
-  return city
-    ? `L’équipe de votre agence de voyages à ${city}`
-    : "L’équipe de votre agence de voyages";
+  return city ? `L’équipe de votre agence de voyages à ${city}` : "L’équipe de votre agence de voyages";
 }
 
 function localTeamIntro(site) {
@@ -33,8 +26,7 @@ function localTeamIntro(site) {
 }
 
 function siteHref(site, slug) {
-  const root = String(site?.basePath || `/agence/${encodeURIComponent(site?.slug || "")}`)
-    .replace(/\/$/, "");
+  const root = String(site?.basePath || `/agence/${encodeURIComponent(site?.slug || "")}`).replace(/\/$/, "");
   return `${root}/${slug}`;
 }
 
@@ -53,47 +45,37 @@ export default function TeamRenderer({ section, site }) {
 
   const uniqueMembers = members.filter((member, index, list) => {
     const key = String(member.id || member.email || member.name || member.title || index);
-    return list.findIndex((candidate, candidateIndex) =>
-      String(candidate.id || candidate.email || candidate.name || candidate.title || candidateIndex) === key
-    ) === index;
+    return list.findIndex((candidate, candidateIndex) => String(candidate.id || candidate.email || candidate.name || candidate.title || candidateIndex) === key) === index;
   });
 
-  if (!uniqueMembers.length && content.showWhenEmpty !== true) {
-    return null;
-  }
+  if (!uniqueMembers.length && content.showWhenEmpty !== true) return null;
+  const singleMember = uniqueMembers.length === 1;
 
   return (
-    <section className="public-site-section public-site-team">
+    <section className="public-site-section public-site-team" data-team-size={uniqueMembers.length}>
       <div className="public-site-container">
         <p className="public-site-section-kicker">Votre équipe</p>
         <h2>{getSectionTitle(section, localTeamTitle(site))}</h2>
-        <p className="public-site-section-intro">
-          {content.text || content.description || localTeamIntro(site)}
-        </p>
+        <p className="public-site-section-intro">{content.text || content.description || localTeamIntro(site)}</p>
 
         {uniqueMembers.length ? (
-          <div className="public-site-team-grid">
+          <div className={`public-site-team-grid${singleMember ? " public-site-team-grid--single" : ""}`}>
             {uniqueMembers.map((member, index) => {
               const name = clean(member.name || member.title) || "Conseiller voyage";
               const role = clean(member.role || member.jobTitle || member.subtitle) || "Conseiller voyage";
               const image = member.image || member.imageUrl || member.photo || member.photoUrl || null;
               const presentation = memberPresentation(member);
-
               return (
                 <article className="public-site-team-card" key={member.id || member.email || name || index}>
                   <div className="public-site-team-portrait">
                     {image ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={image} alt={member.imageAlt || `Portrait de ${name}`} loading="lazy" />
-                    ) : (
-                      <span>{initials(name)}</span>
-                    )}
+                    ) : <span>{initials(name)}</span>}
                   </div>
                   <div className="public-site-team-copy">
                     <h3>{name}</h3>
-                    <p className="public-site-team-role">
-                      {city ? `${role} à ${city}` : role}
-                    </p>
+                    <p className="public-site-team-role">{city ? `${role} à ${city}` : role}</p>
                     {presentation ? <p>{presentation}</p> : null}
                   </div>
                 </article>
@@ -102,19 +84,10 @@ export default function TeamRenderer({ section, site }) {
           </div>
         ) : null}
 
-        <div
-          className="public-site-related-links"
-          aria-label={city ? `Préparer votre voyage avec l’équipe de ${city}` : "Préparer votre voyage avec notre équipe"}
-        >
-          <Link href={siteHref(site, "services")}>
-            {city ? `Services de nos conseillers voyage à ${city}` : "Découvrir les services de l’agence"}
-          </Link>
-          <Link href={siteHref(site, "destinations")}>
-            {city ? `Destinations conseillées par l’équipe de ${city}` : "Explorer nos destinations"}
-          </Link>
-          <Link href={siteHref(site, "contact")}>
-            {city ? `Contacter un conseiller voyage à ${city}` : "Contacter un conseiller voyage"}
-          </Link>
+        <div className="public-site-related-links" aria-label={city ? `Préparer votre voyage avec l’équipe de ${city}` : "Préparer votre voyage avec notre équipe"}>
+          <Link href={siteHref(site, "services")}>{city ? `Services de nos conseillers voyage à ${city}` : "Découvrir les services de l’agence"}</Link>
+          <Link href={siteHref(site, "destinations")}>{city ? `Destinations conseillées par l’équipe de ${city}` : "Explorer nos destinations"}</Link>
+          <Link href={siteHref(site, "contact")}>{city ? `Contacter un conseiller voyage à ${city}` : "Contacter un conseiller voyage"}</Link>
         </div>
       </div>
     </section>
