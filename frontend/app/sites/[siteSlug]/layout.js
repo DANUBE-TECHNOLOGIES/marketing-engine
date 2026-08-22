@@ -7,6 +7,7 @@ import PublicSiteHeader from "../../../components/public-site/PublicSiteHeader";
 import PublicSiteFooter from "../../../components/public-site/PublicSiteFooter";
 
 import "./public-site.css";
+import "./public-site-desktop-consolidation.css";
 import "../../../components/public-site/brand-runtime.css";
 
 import MiniSiteStructuredData from "../../../components/public-site/MiniSiteStructuredData";
