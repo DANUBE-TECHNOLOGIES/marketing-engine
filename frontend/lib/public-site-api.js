@@ -37,6 +37,33 @@ const HOME_PRESENTATION_RANK = Object.freeze({
   faq: 100,
 });
 
+const SECONDARY_PAGE_INHERITANCE = Object.freeze({
+  partenaires: Object.freeze({
+    family: "partners",
+    types: Object.freeze(["partners", "logos", "partner-logos"]),
+  }),
+  partners: Object.freeze({
+    family: "partners",
+    types: Object.freeze(["partners", "logos", "partner-logos"]),
+  }),
+  equipe: Object.freeze({
+    family: "team",
+    types: Object.freeze(["team", "equipe", "team-grid", "equipe-grid"]),
+  }),
+  team: Object.freeze({
+    family: "team",
+    types: Object.freeze(["team", "equipe", "team-grid", "equipe-grid"]),
+  }),
+  "notre-equipe": Object.freeze({
+    family: "team",
+    types: Object.freeze(["team", "equipe", "team-grid", "equipe-grid"]),
+  }),
+  notre_equipe: Object.freeze({
+    family: "team",
+    types: Object.freeze(["team", "equipe", "team-grid", "equipe-grid"]),
+  }),
+});
+
 async function request(path) {
   const response = await fetch(
     `${INTERNAL_API_URL}/api/public-sites${path}`,
@@ -117,6 +144,26 @@ function publicBlockType(block) {
   ).trim().toLowerCase();
 }
 
+function publicBlockContent(block) {
+  if (block?.jsonContent && typeof block.jsonContent === "object") {
+    return block.jsonContent;
+  }
+  if (block?.content && typeof block.content === "object") {
+    return block.content;
+  }
+  return {};
+}
+
+function withPublicBlockContent(block, content) {
+  if (block?.jsonContent && typeof block.jsonContent === "object") {
+    return { ...block, jsonContent: content };
+  }
+  if (block?.content && typeof block.content === "object") {
+    return { ...block, content };
+  }
+  return { ...block, jsonContent: content };
+}
+
 function withHomePresentationOrder(page, blocks) {
   if (!pageIsHome(page)) return blocks;
 
@@ -168,6 +215,94 @@ function pageFromContract(payload) {
   return page;
 }
 
+function inheritanceContract(pageSlug) {
+  const slug = String(pageSlug || "").trim().toLowerCase();
+  return SECONDARY_PAGE_INHERITANCE[slug] || null;
+}
+
+function pagePublicBlocks(page) {
+  if (Array.isArray(page?.sections)) return page.sections;
+  if (Array.isArray(page?.contentBlocks)) return page.contentBlocks;
+  if (Array.isArray(page?.blocks)) return page.blocks;
+  return [];
+}
+
+function teamBlockHasMembers(block) {
+  const content = publicBlockContent(block);
+  return [content.members, content.items, content.team]
+    .some((items) => Array.isArray(items) && items.filter(Boolean).length > 0);
+}
+
+function mergeInheritedTeamBlock(targetBlock, sourceBlock) {
+  const targetContent = publicBlockContent(targetBlock);
+  const sourceContent = publicBlockContent(sourceBlock);
+  const merged = { ...sourceContent, ...targetContent };
+
+  for (const key of ["members", "items", "team"]) {
+    const targetItems = targetContent[key];
+    const sourceItems = sourceContent[key];
+    if ((!Array.isArray(targetItems) || targetItems.length === 0) && Array.isArray(sourceItems) && sourceItems.length) {
+      merged[key] = sourceItems;
+    }
+  }
+
+  return withPublicBlockContent(targetBlock, merged);
+}
+
+function inheritedDisplayOrder(blocks) {
+  const orders = blocks
+    .map((block, index) => Number(block?.displayOrder ?? block?.order ?? index))
+    .filter(Number.isFinite);
+  return (orders.length ? Math.max(...orders) : blocks.length) + 10;
+}
+
+function cloneInheritedBlock(sourceBlock, blocks, family) {
+  const displayOrder = inheritedDisplayOrder(blocks);
+  const clone = {
+    ...sourceBlock,
+    id: `${sourceBlock?.id || family}-inherited-home`,
+    displayOrder,
+    presentationOrder: undefined,
+  };
+  return clone;
+}
+
+function inheritSecondaryPageFromHome(page, homePage, pageSlug) {
+  const contract = inheritanceContract(pageSlug);
+  if (!contract || !page || !homePage) return page;
+
+  const targetBlocks = pagePublicBlocks(page);
+  const homeBlocks = pagePublicBlocks(homePage);
+  const typeSet = new Set(contract.types);
+  const sourceBlock = homeBlocks.find((block) => typeSet.has(publicBlockType(block)));
+
+  if (!sourceBlock) return page;
+
+  const targetIndex = targetBlocks.findIndex((block) => typeSet.has(publicBlockType(block)));
+  let nextBlocks = targetBlocks;
+
+  if (targetIndex >= 0) {
+    if (contract.family !== "team" || teamBlockHasMembers(targetBlocks[targetIndex])) {
+      return page;
+    }
+
+    nextBlocks = [...targetBlocks];
+    nextBlocks[targetIndex] = mergeInheritedTeamBlock(targetBlocks[targetIndex], sourceBlock);
+  } else {
+    nextBlocks = [
+      ...targetBlocks,
+      cloneInheritedBlock(sourceBlock, targetBlocks, contract.family),
+    ];
+  }
+
+  return {
+    ...page,
+    sections: nextBlocks,
+    contentBlocks: nextBlocks,
+    inheritedHomeContent: contract.family,
+  };
+}
+
 export const publicSiteApi = {
   async getSite(siteSlug) {
     const [payload, hours] = await Promise.all([
@@ -191,10 +326,25 @@ export const publicSiteApi = {
   },
 
   async getPage(siteSlug, pageSlug) {
-    return pageFromContract(
-      await request(
-        `/${encodeURIComponent(siteSlug)}/pages/${encodeURIComponent(pageSlug)}`
-      )
+    const contract = inheritanceContract(pageSlug);
+
+    if (!contract) {
+      return pageFromContract(
+        await request(
+          `/${encodeURIComponent(siteSlug)}/pages/${encodeURIComponent(pageSlug)}`
+        )
+      );
+    }
+
+    const [pagePayload, homePayload] = await Promise.all([
+      request(`/${encodeURIComponent(siteSlug)}/pages/${encodeURIComponent(pageSlug)}`),
+      request(`/${encodeURIComponent(siteSlug)}/pages/home`),
+    ]);
+
+    return inheritSecondaryPageFromHome(
+      pageFromContract(pagePayload),
+      pageFromContract(homePayload),
+      pageSlug
     );
   },
 
@@ -240,9 +390,14 @@ export const publicSiteApi = {
 
 export {
   HOME_PRESENTATION_RANK,
+  SECONDARY_PAGE_INHERITANCE,
+  inheritSecondaryPageFromHome,
+  inheritanceContract,
   pageFromContract,
   pageIsHome,
+  publicBlockContent,
   publicBlockType,
   siteFromContract,
+  teamBlockHasMembers,
   withHomePresentationOrder,
 };
