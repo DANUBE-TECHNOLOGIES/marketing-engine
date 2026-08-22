@@ -10,6 +10,10 @@ const {
 } = require("../src/modules/public-site-read/destination-media-hydrator");
 
 const {
+  hydrateDestinationBlocks,
+} = require("../src/modules/public-site-read/dynamic-block-hydrator");
+
+const {
   memberAssetId,
   teamMediaReferences,
   hydrateTeamMembers,
@@ -53,6 +57,41 @@ test("MSE-25.42 hydrates destinations collection used by the public renderer", (
   const content = hydrated[0].blocks[0].content;
   assert.equal(content.destinations[0].imageUrl, "https://cdn.example/maurice.webp");
   assert.equal(content.items[0].imageUrl, "https://cdn.example/maurice.webp");
+});
+
+test("MSE-25.42 preserves V2 media references while refreshing dynamic destination data", () => {
+  const pages = [{
+    blocks: [{
+      blockType: "destinations",
+      content: {
+        source: "automatic",
+        selectionMode: "automatic",
+        limit: 6,
+        items: [{
+          id: "destination-maurice",
+          slug: "ile-maurice",
+          title: "Île Maurice",
+          imageAssetId: "asset-maurice",
+          imageAlt: "Plage à l’Île Maurice",
+        }],
+      },
+    }],
+  }];
+
+  const refreshed = hydrateDestinationBlocks(pages, [], [{
+    id: "destination-maurice",
+    slug: "ile-maurice",
+    name: "Île Maurice",
+    country: "Maurice",
+    summary: "Séjours et circuits à Maurice",
+    heroImageUrl: null,
+  }]);
+
+  const item = refreshed[0].blocks[0].content.destinations[0];
+  assert.equal(item.imageAssetId, "asset-maurice");
+  assert.equal(item.imageAlt, "Plage à l’Île Maurice");
+  assert.equal(item.description, "Séjours et circuits à Maurice");
+  assert.equal(refreshed[0].blocks[0].content.items[0].imageAssetId, "asset-maurice");
 });
 
 test("MSE-25.42 keeps an existing destination URL without requiring an asset", () => {
