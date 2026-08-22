@@ -6,9 +6,19 @@ const { listPresenceProviders } = require("./provider-registry");
 const { enrichDirectoryWithProvider } = require("./directory-bridge");
 const { projectGooglePresence } = require("./google-listing-adapter");
 const { syncGoogleDirectoryListing } = require("./google-directory-sync");
+const { auditDirectorySchema } = require("./directory-schema-audit");
 
 function routes({ prisma }) {
   const router = express.Router();
+
+  router.get("/api/presence/health/schema", async (req, res) => {
+    try {
+      const schema = await auditDirectorySchema(prisma);
+      return res.status(schema.ready ? 200 : 503).json({ ok: schema.ready, schema });
+    } catch (error) {
+      return res.status(500).json({ ok: false, error: error.message });
+    }
+  });
 
   router.get("/api/presence/providers", async (req, res) => {
     try {
@@ -95,6 +105,15 @@ function routes({ prisma }) {
 
   router.post("/api/presence/google/sync", async (req, res) => {
     try {
+      const schema = await auditDirectorySchema(prisma);
+      if (!schema.ready) {
+        return res.status(503).json({
+          ok: false,
+          error: "Schéma directories incomplet pour Presence",
+          schema
+        });
+      }
+
       const directory = await prisma.localDirectory.findUnique({
         where: { name: "Google Business Profile" }
       });
