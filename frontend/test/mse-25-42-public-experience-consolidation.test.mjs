@@ -83,11 +83,20 @@ test("MSE-25.42 team page renders actual advisor media with adaptive single-memb
 test("MSE-25.42 keeps Home partners compact and reserves the full catalogue for the Partners page", () => {
   assert.match(partners, /getCommonPartners/);
   assert.doesNotMatch(partners, /FULL_PARTNERS|PARTNER_DIRECTORY_CATEGORIES|getPublishablePartnerProfiles/);
+  assert.match(partners, /PartnerDirectoryRenderer/);
+  assert.match(partners, /if \(!pageIsHome\(page\)\)/);
+  assert.match(partners, /pageHasExplicitDirectory/);
   assert.match(partnerDirectory, /getPartnerDirectoryCategories/);
   assert.match(partnerDirectory, /getPublishablePartnerProfiles/);
   assert.match(partnerDirectory, /data-partner-directory="full"/);
   assert.match(partnerDirectory, /PreferredPartners/);
   assert.match(partnerDirectoryCss, /\.directory/);
+});
+
+test("MSE-25.42 promotes legacy secondary partners blocks to the full directory without duplication", () => {
+  assert.match(partners, /DIRECTORY_TYPES/);
+  assert.match(partners, /if \(pageHasExplicitDirectory\(page\)\) return null/);
+  assert.match(partners, /return <PartnerDirectoryRenderer section=\{section\} site=\{site\} page=\{page\} \/>/);
 });
 
 test("MSE-25.42 secondary partner and team pages inherit useful Home content only when needed", () => {
