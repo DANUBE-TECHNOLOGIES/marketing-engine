@@ -9,45 +9,39 @@ function fieldMatch(diff, field) {
 
 async function syncGoogleDirectoryListing(prisma, agency, listing) {
   const presence = await projectGooglePresence(prisma, agency);
+  const checkedAt = new Date();
 
   if (!presence.connected) {
     return prisma.directoryListing.update({
       where: { id: listing.id },
       data: {
         status: "missing",
-        automationStatus: "todo",
-        verified: false,
-        score: 0,
-        lastCheckedAt: new Date()
+        nameCorrect: false,
+        addressCorrect: false,
+        phoneCorrect: false,
+        websiteCorrect: false,
+        notes: "Google Business Profile non raccordé à cette agence.",
+        lastCheckedAt: checkedAt
       }
     });
   }
 
   const match = Boolean(presence.diff?.match);
-  const nameMatch = fieldMatch(presence.diff, "name");
-  const addressMatch = fieldMatch(presence.diff, "address");
-  const phoneMatch = fieldMatch(presence.diff, "phone");
-  const websiteMatch = fieldMatch(presence.diff, "website");
+  const drift = presence.diff?.drift || [];
 
   return prisma.directoryListing.update({
     where: { id: listing.id },
     data: {
       listingUrl: presence.listingUrl,
       status: match ? "validated" : "pending",
-      nameCorrect: nameMatch,
-      addressCorrect: addressMatch,
-      phoneCorrect: phoneMatch,
-      websiteCorrect: websiteMatch,
-      phoneMatch,
-      addressMatch,
-      websiteMatch,
-      verified: true,
-      automationStatus: match ? "validated" : "drift_detected",
-      score: presence.diff?.score ?? 0,
+      nameCorrect: fieldMatch(presence.diff, "name"),
+      addressCorrect: fieldMatch(presence.diff, "address"),
+      phoneCorrect: fieldMatch(presence.diff, "phone"),
+      websiteCorrect: fieldMatch(presence.diff, "website"),
       notes: match
-        ? "Google Business Profile vérifié via Business Information API."
-        : `Dérive NAP Google détectée: ${(presence.diff?.drift || []).join(", ") || "inconnue"}`,
-      lastCheckedAt: new Date()
+        ? "Google Business Profile vérifié via Business Information API. NAP conforme."
+        : `Google Business Profile vérifié via Business Information API. Dérive NAP: ${drift.join(", ") || "inconnue"}.`,
+      lastCheckedAt: checkedAt
     }
   });
 }
