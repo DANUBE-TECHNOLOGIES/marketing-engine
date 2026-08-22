@@ -23,6 +23,14 @@ test("MSE-25.42.5 replaces placeholder member collections with canonical home ad
   assert.match(api, /merged\[key\] = sourceItems/);
 });
 
+test("MSE-25.42.5 prefers the populated Home team block when duplicate team blocks coexist", () => {
+  assert.match(api, /function\s+selectInheritanceSourceBlock/);
+  assert.match(api, /const candidates = homeBlocks\.filter/);
+  assert.match(api, /contract\.family === "team"/);
+  assert.match(api, /candidates\.find\(teamBlockHasMembers\) \|\| candidates\[0\]/);
+  assert.match(api, /const sourceBlock = selectInheritanceSourceBlock\(homeBlocks, contract\)/);
+});
+
 test("MSE-25.42.5 still preserves explicitly populated secondary team pages", () => {
   assert.match(api, /contract\.family !== "team" \|\| teamBlockHasMembers\(targetBlocks\[targetIndex\]\)/);
   assert.match(api, /return page;/);
