@@ -33,6 +33,11 @@ function pageSlug(page) {
   return String(page?.slug || "").trim().toLowerCase();
 }
 
+function isHomePage(page) {
+  const slug = pageSlug(page);
+  return !slug || ["home", "accueil", "index"].includes(slug);
+}
+
 function genericHeroTitle(value, site) {
   const title = String(value || "").replace(/\s+/g, " ").trim();
   if (!title) return true;
@@ -79,6 +84,7 @@ export default function HeroV2Renderer({ section, site, page }) {
   const backgroundPosition = content.backgroundPosition || "center";
   const imageAlt = resolvedHeroAlt({ content, site, title });
   const overlayOpacity = Math.min(Math.max(Number(content.overlayOpacity ?? 68), 20), 90) / 100;
+  const homeHero = isHomePage(page);
 
   const primaryCta = content.primaryCta || null;
   const secondaryCta = content.secondaryCta || null;
@@ -94,9 +100,14 @@ export default function HeroV2Renderer({ section, site, page }) {
   const contentStyle = { textAlign: alignment };
   const centered = alignment === "center";
   const rightAligned = alignment === "right";
+  const heroClassName = [
+    "public-site-hero",
+    "public-site-hero--immersive",
+    homeHero ? "public-site-hero--home" : null,
+  ].filter(Boolean).join(" ");
 
   return (
-    <section className="public-site-hero public-site-hero--immersive" data-has-hero-image={backgroundImage ? "true" : "false"}>
+    <section className={heroClassName} data-has-hero-image={backgroundImage ? "true" : "false"}>
       {backgroundImage ? (
         <div className="public-site-hero-media" aria-hidden="true">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -118,13 +129,15 @@ export default function HeroV2Renderer({ section, site, page }) {
         </div>
       ) : null}
 
-      <div className="public-site-container" style={contentStyle}>
-        <p className="public-site-eyebrow">{content.eyebrow || defaultHeroEyebrow(site)}</p>
-        <h1 style={centered ? { marginInline: "auto" } : rightAligned ? { marginLeft: "auto" } : undefined}>{title}</h1>
-        <p className="public-site-hero-text" style={centered ? { marginInline: "auto" } : rightAligned ? { marginLeft: "auto" } : undefined}>{subtitle}</p>
-        <div className="public-site-hero-actions" style={{ justifyContent: centered ? "center" : rightAligned ? "flex-end" : "flex-start" }}>
-          {primaryHref ? <a className="public-site-button" href={primaryHref}>{ctaLabel(primaryCta, content.primaryButton, primaryCta?.href ? "En savoir plus" : "Appeler l’agence")}</a> : null}
-          {secondaryHref ? <a className="public-site-button public-site-button-secondary" href={secondaryHref}>{ctaLabel(secondaryCta, content.secondaryButton, "Nous contacter")}</a> : null}
+      <div className="public-site-container">
+        <div className="public-site-hero-copy" style={contentStyle}>
+          <p className="public-site-eyebrow">{content.eyebrow || defaultHeroEyebrow(site)}</p>
+          <h1 style={centered ? { marginInline: "auto" } : rightAligned ? { marginLeft: "auto" } : undefined}>{title}</h1>
+          <p className="public-site-hero-text" style={centered ? { marginInline: "auto" } : rightAligned ? { marginLeft: "auto" } : undefined}>{subtitle}</p>
+          <div className="public-site-hero-actions" style={{ justifyContent: centered ? "center" : rightAligned ? "flex-end" : "flex-start" }}>
+            {primaryHref ? <a className="public-site-button" href={primaryHref}>{ctaLabel(primaryCta, content.primaryButton, primaryCta?.href ? "En savoir plus" : "Appeler l’agence")}</a> : null}
+            {secondaryHref ? <a className="public-site-button public-site-button-secondary" href={secondaryHref}>{ctaLabel(secondaryCta, content.secondaryButton, "Nous contacter")}</a> : null}
+          </div>
         </div>
       </div>
     </section>
@@ -136,6 +149,7 @@ export {
   defaultHeroTitle,
   genericHeroTitle,
   intentHeroTitle,
+  isHomePage,
   resolvedHeroAlt,
   resolvedHeroTitle,
 };
