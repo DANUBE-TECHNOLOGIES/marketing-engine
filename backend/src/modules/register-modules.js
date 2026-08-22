@@ -49,51 +49,193 @@ module.exports = function registerModules(app, { prisma }) {
   const tenantService = new tenantCore.TenantService(new tenantCore.TenantRepository(prisma));
   app.use(tenantCore.createTenantMiddleware(tenantService));
 
-  if (brand.routes) app.use(brand.routes({ prisma }));
-  if (miniSiteBuilder.routes) app.use(miniSiteBuilder.routes({ prisma }));
-  if (siteProvisioning.routes) app.use(siteProvisioning.routes({ prisma }));
-  if (campaignManager.routes) app.use(campaignManager.routes({ prisma }));
-  if (contentGeneration.routes) app.use(contentGeneration.routes({ prisma }));
-  if (travelCore.routes) app.use(travelCore.routes({ prisma }));
-  if (aiSeoGenerator.routes) app.use(aiSeoGenerator.routes({ prisma }));
-  if (aiContent.routes) app.use(aiContent.routes({ prisma }));
-  if (destinationEngine.routes) app.use(destinationEngine.routes({ prisma }));
+  if (brand.routes) {
+    app.use(brand.routes({ prisma }));
+  }
+
+  if (miniSiteBuilder.routes) {
+    app.use(miniSiteBuilder.routes({ prisma }));
+  }
+
+  if (siteProvisioning.routes) {
+    app.use(siteProvisioning.routes({ prisma }));
+  }
+
+  if (campaignManager.routes) {
+    app.use(campaignManager.routes({ prisma }));
+  }
+
+  if (contentGeneration.routes) {
+    app.use(contentGeneration.routes({ prisma }));
+  }
+
+  if (travelCore.routes) {
+    app.use(travelCore.routes({ prisma }));
+  }
+
+  if (aiSeoGenerator.routes) {
+    app.use(aiSeoGenerator.routes({ prisma }));
+  }
+
+  if (aiContent.routes) {
+    app.use(aiContent.routes({ prisma }));
+  }
+
+  if (destinationEngine.routes) {
+    app.use(destinationEngine.routes({ prisma }));
+  }
+
   if (seoPlatform.routes) app.use(seoPlatform.routes({ prisma }));
+
   if (aiPlatform.routes) app.use(aiPlatform.routes({ prisma }));
-  if (platformCore.routes) app.use(platformCore.routes({ prisma }));
-  if (assetEngine.routes) app.use(assetEngine.routes({ prisma }));
 
+  if (platformCore.routes) {
+    app.use(platformCore.routes({ prisma }));
+  }
+
+  if (assetEngine.routes) {
+    app.use(assetEngine.routes({ prisma }));
+  }
+
+  // agency-seo exporte une factory et non un objet { routes }.
   const agencySeo = createAgencySeoModule(prisma);
-  if (agencySeo.routes) app.use(agencySeo.routes);
+  if (agencySeo.routes) {
+    app.use(agencySeo.routes);
+  }
 
-  if (miniSite.routes) app.use(miniSite.routes({ prisma }));
-  if (seoFactory.routes) app.use(seoFactory.routes({ prisma }));
-  if (contentComposer.routes) app.use(contentComposer.routes({ prisma }));
-  if (contentFactory.routes) app.use(contentFactory.routes({ prisma }));
-  if (knowledgeGraph.routes) app.use(knowledgeGraph.routes({ prisma }));
-  if (contentQuality.routes) app.use(contentQuality.routes({ prisma }));
-  if (marketingAutomation.routes) app.use(marketingAutomation.routes({ prisma }));
-  if (editorialCalendar.routes) app.use(editorialCalendar.routes({ prisma }));
-  if (editorialAi.routes) app.use(editorialAi.routes({ prisma }));
-  if (networkSiteProvisioning.routes) app.use(networkSiteProvisioning.routes({ prisma }));
-  if (publishers.googleBusiness?.routes) app.use(publishers.googleBusiness.routes({ prisma }));
-  if (presence.routes) app.use(presence.routes({ prisma }));
-  if (seoBrain.routes) app.use(seoBrain.routes({ prisma }));
-  if (seoAutopilot.routes) app.use(seoAutopilot.routes({ prisma }));
-  if (agencyProfile.routes) app.use(agencyProfile.routes({ prisma }));
-  if (googleBusinessPhotos.routes) app.use(googleBusinessPhotos.routes({ prisma }));
-  if (pageBuilderPersistence.routes) app.use(pageBuilderPersistence.routes({ prisma }));
-  if (agencySite.routes) app.use(agencySite.routes({ prisma }));
-  if (minisiteBlueprint.routes) app.use(minisiteBlueprint.routes({ prisma }));
-  if (minisiteBlueprintPersistence.routes) app.use(minisiteBlueprintPersistence.routes({ prisma }));
-  if (minisiteSeoEnrichment.routes) app.use(minisiteSeoEnrichment.routes({ prisma }));
-  if (minisiteSemanticEngine.routes) app.use(minisiteSemanticEngine.routes({ prisma }));
-  if (minisiteStructuredData.routes) app.use(minisiteStructuredData.routes({ prisma }));
+  if (miniSite.routes) {
+    app.use(miniSite.routes({ prisma }));
+  }
+
+  if (seoFactory.routes) {
+    app.use(seoFactory.routes({ prisma }));
+  }
+
+  if (contentComposer.routes) {
+    app.use(contentComposer.routes({ prisma }));
+  }
+
+  if (contentFactory.routes) {
+    app.use(contentFactory.routes({ prisma }));
+  }
+
+  // Knowledge Graph — Sprint 006
+  if (knowledgeGraph.routes) {
+    app.use(knowledgeGraph.routes({ prisma }));
+  }
+
+  if (contentQuality.routes) {
+    app.use(contentQuality.routes({ prisma }));
+  }
+
+  if (marketingAutomation.routes) {
+    app.use(marketingAutomation.routes({ prisma }));
+  }
+
+  if (editorialCalendar.routes) {
+    app.use(editorialCalendar.routes({ prisma }));
+  }
+
+  if (editorialAi.routes) {
+    app.use(
+      editorialAi.routes({
+        prisma,
+      })
+    );
+  }
+
+  if (networkSiteProvisioning.routes) {
+    app.use(
+      networkSiteProvisioning.routes({
+        prisma,
+      })
+    );
+  }
+
+  if (publishers.googleBusiness?.routes) {
+    app.use(publishers.googleBusiness.routes({ prisma }));
+  }
+
+  if (presence.routes) {
+    app.use(presence.routes({ prisma }));
+  }
+
+  if (seoBrain.routes) {
+    app.use(seoBrain.routes({ prisma }));
+  }
+
+  if (seoAutopilot.routes) {
+    app.use(seoAutopilot.routes({ prisma }));
+  }
+
+  if (agencyProfile.routes) {
+    app.use(agencyProfile.routes({ prisma }));
+  }
+
+  // Agency Launch et Site Publication sont montés une seule fois dans server.js
+  // sous /api/agency-launch et /api/site-publication. Ne pas les remonter ici
+  // à la racine : cela créerait deux contrats HTTP pour les mêmes mutations.
+
+  if (googleBusinessPhotos.routes) {
+    app.use(googleBusinessPhotos.routes({ prisma }));
+  }
+
+  if (pageBuilderPersistence.routes) {
+    app.use(
+      pageBuilderPersistence.routes({ prisma })
+    );
+  }
+
+  if (agencySite.routes) {
+    app.use(agencySite.routes({ prisma }));
+  }
+
+  if (minisiteBlueprint.routes) {
+    app.use(
+      minisiteBlueprint.routes({
+        prisma,
+      })
+    );
+  }
+
+  if (minisiteBlueprintPersistence.routes) {
+    app.use(
+      minisiteBlueprintPersistence.routes({
+        prisma,
+      })
+    );
+  }
+
+  if (minisiteSeoEnrichment.routes) {
+    app.use(
+      minisiteSeoEnrichment.routes({
+        prisma,
+      })
+    );
+  }
+
+  if (minisiteSemanticEngine.routes) {
+    app.use(
+      minisiteSemanticEngine.routes({
+        prisma,
+      })
+    );
+  }
+
+  if (minisiteStructuredData.routes) {
+    app.use(
+      minisiteStructuredData.routes({
+        prisma,
+      })
+    );
+  }
 
   if (searchConsoleSubmission.routes) {
     const provider = searchConsoleSubmission.createConfiguredSearchConsoleProvider();
     app.use(searchConsoleSubmission.routes({ prisma, provider }));
   }
 
-  if (flexiblePaymentExperience.routes) app.use(flexiblePaymentExperience.routes({ prisma }));
+  if (flexiblePaymentExperience.routes) {
+    app.use(flexiblePaymentExperience.routes({ prisma }));
+  }
 };
