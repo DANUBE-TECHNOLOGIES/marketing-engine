@@ -48,16 +48,20 @@ test("Google Business Information response maps to canonical NAP shape", () => {
     storefrontAddress: {
       addressLines: ["1 rue Exemple"],
       postalCode: "58000",
-      locality: "Nevers"
+      locality: "Nevers",
+      regionCode: "FR"
     },
     phoneNumbers: { primaryPhone: "+33386000000" },
     websiteUri: "https://agences.mondescale.com/nevers"
   }), {
     externalId: "locations/123",
     name: "Mondescale Nevers",
-    address: "1 rue Exemple",
-    postalCode: "58000",
-    city: "Nevers",
+    address: {
+      street: "1 rue Exemple",
+      postalCode: "58000",
+      city: "Nevers",
+      countryCode: "FR"
+    },
     phone: "+33386000000",
     website: "https://agences.mondescale.com/nevers"
   });
