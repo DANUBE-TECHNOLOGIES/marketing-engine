@@ -96,10 +96,9 @@ export default function HeroV2Renderer({ section, site, page }) {
   const rightAligned = alignment === "right";
 
   return (
-    <section className="public-site-hero" data-has-hero-image={backgroundImage ? "true" : "false"}>
+    <section className="public-site-hero public-site-hero--immersive" data-has-hero-image={backgroundImage ? "true" : "false"}>
       {backgroundImage ? (
         <div className="public-site-hero-media" aria-hidden="true">
-          {/* A real img keeps the primary visual discoverable by image crawlers; CSS handles presentation. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={backgroundImage}
@@ -112,9 +111,10 @@ export default function HeroV2Renderer({ section, site, page }) {
           <span
             className="public-site-hero-overlay"
             style={{
-              background: `linear-gradient(90deg, rgba(8,31,52,${overlayOpacity}) 0%, rgba(8,31,52,${Math.max(overlayOpacity - 0.12, 0.2)}) 48%, rgba(8,31,52,${Math.max(overlayOpacity - 0.35, 0.08)}) 100%)`,
+              background: `linear-gradient(90deg, rgba(8,31,52,${Math.max(overlayOpacity - 0.52, 0.03)}) 0%, rgba(8,31,52,${Math.max(overlayOpacity - 0.6, 0.02)}) 48%, rgba(8,31,52,0) 100%)`,
             }}
           />
+          <span className="public-site-hero-fade" />
         </div>
       ) : null}
 
@@ -123,16 +123,8 @@ export default function HeroV2Renderer({ section, site, page }) {
         <h1 style={centered ? { marginInline: "auto" } : rightAligned ? { marginLeft: "auto" } : undefined}>{title}</h1>
         <p className="public-site-hero-text" style={centered ? { marginInline: "auto" } : rightAligned ? { marginLeft: "auto" } : undefined}>{subtitle}</p>
         <div className="public-site-hero-actions" style={{ justifyContent: centered ? "center" : rightAligned ? "flex-end" : "flex-start" }}>
-          {primaryHref ? (
-            <a className="public-site-button" href={primaryHref}>
-              {ctaLabel(primaryCta, content.primaryButton, primaryCta?.href ? "En savoir plus" : "Appeler l’agence")}
-            </a>
-          ) : null}
-          {secondaryHref ? (
-            <a className="public-site-button public-site-button-secondary" href={secondaryHref}>
-              {ctaLabel(secondaryCta, content.secondaryButton, "Nous contacter")}
-            </a>
-          ) : null}
+          {primaryHref ? <a className="public-site-button" href={primaryHref}>{ctaLabel(primaryCta, content.primaryButton, primaryCta?.href ? "En savoir plus" : "Appeler l’agence")}</a> : null}
+          {secondaryHref ? <a className="public-site-button public-site-button-secondary" href={secondaryHref}>{ctaLabel(secondaryCta, content.secondaryButton, "Nous contacter")}</a> : null}
         </div>
       </div>
     </section>
