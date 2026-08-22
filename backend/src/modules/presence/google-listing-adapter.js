@@ -3,41 +3,41 @@
 const { buildCanonicalAgencyIdentity } = require("./canonical-identity");
 const { compareNap } = require("./nap-diff");
 const { getPresenceProvider } = require("./provider-registry");
+const { readGoogleLocation } = require("./google-business-information");
 
 const PROVIDER_KEY = "google_business_profile";
 
-function googleListingFromAgency(agency) {
-  if (!agency?.googleLocationId) return null;
-  const canonical = buildCanonicalAgencyIdentity(agency);
-  return {
-    externalId: agency.googleLocationId,
-    listingUrl: agency.googleLocationId,
-    name: canonical.name,
-    address: canonical.address,
-    phone: canonical.phone,
-    website: canonical.website
-  };
-}
-
-function projectGooglePresence(agency) {
+async function projectGooglePresence(prisma, agency) {
   const provider = getPresenceProvider(PROVIDER_KEY);
   const canonical = buildCanonicalAgencyIdentity(agency);
-  const listing = googleListingFromAgency(agency);
-  const diff = listing ? compareNap(canonical, listing) : null;
+
+  if (!agency?.googleLocationId) {
+    return {
+      providerKey: PROVIDER_KEY,
+      provider,
+      connected: false,
+      externalId: null,
+      listingUrl: null,
+      status: "connection_required",
+      diff: null
+    };
+  }
+
+  const remote = await readGoogleLocation(prisma, agency.googleLocationId);
+  const diff = compareNap(canonical, remote.nap);
 
   return {
     providerKey: PROVIDER_KEY,
     provider,
-    connected: Boolean(listing),
-    externalId: listing?.externalId || null,
-    listingUrl: listing?.listingUrl || null,
-    status: !listing ? "connection_required" : diff?.match ? "in_sync" : "drift_detected",
+    connected: true,
+    externalId: remote.nap.externalId || agency.googleLocationId,
+    listingUrl: remote.nap.externalId || agency.googleLocationId,
+    status: diff.match ? "in_sync" : "drift_detected",
     diff
   };
 }
 
 module.exports = {
   PROVIDER_KEY,
-  googleListingFromAgency,
   projectGooglePresence
 };
