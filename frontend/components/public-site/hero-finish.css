@@ -133,12 +133,12 @@
   }
 
   .public-site-hero--home .public-site-hero-fade {
-    inset-right: -42%;
+    right: -42%;
     width: 68%;
   }
 
   .public-site-hero--home > .public-site-container {
-    width: min(100% - 48px, 1180px);
+    width: min(calc(100% - 48px), 1180px);
     grid-template-columns: minmax(0, 48%) minmax(0, 52%);
   }
 
