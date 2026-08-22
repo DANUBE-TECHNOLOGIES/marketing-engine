@@ -52,3 +52,20 @@ test("MSE-25.42 public renderers keep media-aware destination and team contracts
   assert.match(team, /member\.imageUrl/);
   assert.match(team, /member\.photoUrl/);
 });
+
+
+test("MSE-25.42 keeps hydrated public-site-read media ahead of the raw canonical fallback", () => {
+  const route = read(
+    "app/api/public-sites/[[...path]]/route.js"
+  );
+
+  assert.match(
+    route,
+    /const\s+selectedPage\s*=\s*legacySelectedPage\s*\|\|\s*\(canonicalMatchesRequest\s*\?\s*canonicalPage\s*:\s*null\)/
+  );
+
+  assert.match(
+    route,
+    /public-site-read is the canonical PUBLIC rendering contract/
+  );
+});

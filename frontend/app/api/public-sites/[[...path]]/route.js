@@ -278,7 +278,19 @@ function normalizeContract({
     (isHomeSlug(pageSlug) && isHomeSlug(canonicalPage.slug)) ||
     normalizePart(canonicalPage.slug) === normalizePart(pageSlug)
   );
-  const selectedPage = canonicalMatchesRequest ? canonicalPage : legacySelectedPage;
+  /*
+   * public-site-read is the canonical PUBLIC rendering contract because its
+   * PageBlocks have already been hydrated (Travel Core, Asset Engine, team
+   * media, destinations, etc.).
+   *
+   * The historical /public/agency-sites/.../pages endpoint is retained only
+   * as a compatibility fallback when public-site-read cannot expose the
+   * requested page. Preferring the raw canonical endpoint here would strip
+   * hydrated destination and team media before React rendering.
+   */
+  const selectedPage =
+    legacySelectedPage ||
+    (canonicalMatchesRequest ? canonicalPage : null);
 
   if (pageSlug && !isHomeSlug(pageSlug) && !selectedPage) {
     return {
