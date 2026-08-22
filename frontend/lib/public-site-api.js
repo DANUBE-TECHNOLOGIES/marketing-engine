@@ -257,16 +257,24 @@ function teamMemberIsMeaningful(member) {
   if (!member || typeof member !== "object") return false;
 
   const identity = normalizeTeamIdentity(member.name || member.title);
-  if (identity && !GENERIC_TEAM_IDENTITIES.has(identity)) return true;
+
+  /*
+   * Generated Team placeholders often carry descriptive copy. That copy must
+   * never make a generic identity authoritative, otherwise a secondary page
+   * containing "Conseiller voyage" blocks inheritance from the populated Home.
+   * A named advisor is authoritative. When no identity exists at all, retain
+   * support for media/contact-only legacy records.
+   */
+  if (identity) {
+    return !GENERIC_TEAM_IDENTITIES.has(identity);
+  }
 
   return Boolean(
     member.email ||
     member.image ||
     member.imageUrl ||
     member.photo ||
-    member.photoUrl ||
-    member.bio ||
-    member.description
+    member.photoUrl
   );
 }
 
