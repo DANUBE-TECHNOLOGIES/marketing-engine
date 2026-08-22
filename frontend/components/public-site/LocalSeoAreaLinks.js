@@ -27,29 +27,37 @@ export default function LocalSeoAreaLinks({ site }) {
   const root = basePath.replace(/\/$/, "");
   const closeArea = nearby.slice(0, 3);
   const extendedArea = nearby.slice(3);
+  const area = [...closeArea, ...extendedArea].slice(0, 5);
 
+  /*
+   * La home V2 porte déjà sa profondeur locale dans ses PageBlocks.
+   * Cette zone conserve l'intention locale et le maillage crawlable sans
+   * recréer une seconde grande section éditoriale en fin de page.
+   */
   return (
-    <section className="public-site-section" aria-labelledby="local-area-title">
-      <div className="public-site-container public-site-prose">
-        <p className="public-site-eyebrow">Votre agence de proximité</p>
-        <h2 id="local-area-title">Votre agence de voyages à {city} et dans les communes voisines</h2>
-        <p>
-          Installée à {city}, notre agence accompagne aussi les voyageurs de {joinCities(closeArea)}
-          pour préparer séjours, circuits, croisières, autotours et voyages sur mesure. Vous pouvez
-          échanger avec un conseiller qui suit votre projet depuis les premières recherches jusqu’au retour.
-        </p>
-        {extendedArea.length ? (
+    <section
+      className="public-site-section public-site-local-area-compact"
+      aria-labelledby="local-area-title"
+    >
+      <div className="public-site-container public-site-local-area-compact-inner">
+        <div className="public-site-local-area-compact-copy">
+          <p className="public-site-eyebrow">Votre agence de proximité</p>
+          <h2 id="local-area-title">Votre agence à {city} et ses environs</h2>
           <p>
-            Notre secteur de proximité s’étend également à {joinCities(extendedArea)} : vous pouvez
-            contacter l’équipe de {city} pour une recherche, un devis ou un rendez-vous en agence.
+            Nous accompagnons aussi les voyageurs de {joinCities(area)} avec le même conseil
+            personnalisé et le même suivi avant, pendant et après le voyage.
           </p>
-        ) : null}
-        <div className="public-site-related-links" aria-label={`Découvrir l’agence de voyages de ${city}`}>
-          <Link href={`${root}/services`}>Services de l’agence de voyages de {city}</Link>
-          <Link href={`${root}/destinations`}>Destinations conseillées depuis {city}</Link>
-          <Link href={`${root}/inspiration`}>Conseils et inspirations voyage à {city}</Link>
-          <Link href={`${root}/contact`}>Contacter l’agence de voyages de {city}</Link>
         </div>
+
+        <nav
+          className="public-site-related-links public-site-related-links--compact"
+          aria-label={`Découvrir l’agence de voyages de ${city}`}
+        >
+          <Link href={`${root}/services`}>Nos services</Link>
+          <Link href={`${root}/destinations`}>Nos destinations</Link>
+          <Link href={`${root}/inspiration`}>Inspirations voyage</Link>
+          <Link href={`${root}/contact`}>Contacter l’agence</Link>
+        </nav>
       </div>
     </section>
   );
