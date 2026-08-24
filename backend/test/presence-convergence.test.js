@@ -10,6 +10,7 @@ require("../src/modules/presence/citation-recording.test");
 require("../src/modules/presence/citation-discovery.test");
 require("../src/modules/presence/citation-discovery-dataforseo.test");
 require("../src/modules/presence/citation-discovery-recording.test");
+require("../src/modules/presence/discovery-selection.test");
 require("../src/modules/presence/network-discovery.test");
 require("../src/modules/presence/network-coverage.test");
 require("../src/modules/presence/anomaly-queue.test");
