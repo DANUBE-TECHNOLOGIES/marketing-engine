@@ -9,6 +9,7 @@ const { syncGoogleDirectoryListing } = require("./google-directory-sync");
 const { auditDirectorySchema } = require("./directory-schema-audit");
 const { getProviderReadiness } = require("./provider-readiness");
 const { buildNetworkCoverage } = require("./network-coverage");
+const { auditProviderCatalog } = require("./provider-catalog-audit");
 
 function routes({ prisma }) {
   const router = express.Router();
@@ -17,6 +18,16 @@ function routes({ prisma }) {
     try {
       const schema = await auditDirectorySchema(prisma);
       return res.status(schema.ready ? 200 : 503).json({ ok: schema.ready, schema });
+    } catch (error) {
+      return res.status(500).json({ ok: false, error: error.message });
+    }
+  });
+
+  router.get("/api/presence/health/provider-catalog", async (req, res) => {
+    try {
+      const directories = await prisma.localDirectory.findMany({ orderBy: { id: "asc" } });
+      const catalog = auditProviderCatalog(directories);
+      return res.status(catalog.ready ? 200 : 503).json({ ok: catalog.ready, catalog });
     } catch (error) {
       return res.status(500).json({ ok: false, error: error.message });
     }
