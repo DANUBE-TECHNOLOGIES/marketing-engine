@@ -3,6 +3,7 @@
 const express = require("express");
 const { buildNetworkDiscoveryPlan } = require("./network-discovery");
 const { submitDiscoveryTask } = require("./citation-discovery-dataforseo");
+const { assertDiscoveryReady } = require("./operational-readiness");
 
 function parseProviderKeys(value) {
   if (Array.isArray(value)) return value.filter(Boolean);
@@ -41,6 +42,7 @@ function networkDiscoveryRoutes({ prisma }) {
       if (req.body?.confirm !== true) {
         return res.status(409).json({ ok: false, error: "confirm=true requis pour consommer le budget de découverte" });
       }
+      await assertDiscoveryReady(prisma);
       const agencies = await loadAgencies(prisma, req.body || {});
       const plan = buildNetworkDiscoveryPlan(agencies, {
         maxTasks: req.body?.maxTasks,
@@ -64,7 +66,7 @@ function networkDiscoveryRoutes({ prisma }) {
         jobs
       });
     } catch (error) {
-      return res.status(error.status || 500).json({ ok: false, error: error.message, details: error.details || undefined });
+      return res.status(error.status || 500).json({ ok: false, error: error.message, readiness: error.readiness, details: error.details || undefined });
     }
   });
 
