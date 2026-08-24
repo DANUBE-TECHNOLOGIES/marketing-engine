@@ -11,3 +11,4 @@ require("../src/modules/presence/citation-discovery.test");
 require("../src/modules/presence/citation-discovery-dataforseo.test");
 require("../src/modules/presence/citation-discovery-recording.test");
 require("../src/modules/presence/network-discovery.test");
+require("../src/modules/presence/network-coverage.test");
