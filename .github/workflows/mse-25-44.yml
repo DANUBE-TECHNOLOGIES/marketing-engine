@@ -12,6 +12,7 @@ on:
       - 'frontend/components/public-site/payment-methods-band.css'
       - 'frontend/components/public-site/institutional-trust-band.css'
       - 'frontend/test/mse-25-44-trust-bands.test.mjs'
+      - 'scripts/mse-25-44-vm-deploy.sh'
       - '.github/workflows/mse-25-44.yml'
   workflow_dispatch:
 
@@ -43,3 +44,7 @@ jobs:
 
       - name: Lint MSE-25.44 public integration
         run: npx eslint "app/agence/[siteSlug]/layout.js" "components/public-site/PublicPaymentMethodsBand.js" "components/public-site/PublicInstitutionalTrustBand.js"
+
+      - name: Validate guarded VM deployment script
+        working-directory: .
+        run: bash -n scripts/mse-25-44-vm-deploy.sh
