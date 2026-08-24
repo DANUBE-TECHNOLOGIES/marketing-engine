@@ -12,6 +12,7 @@ function clampLimit(value, fallback = 10) {
 function buildGoogleRemediationRunPlan(agencies, directories, listings, options = {}) {
   const limit = clampLimit(options.limit, 10);
   const includeSensitive = options.includeSensitive === true;
+  const blockedListingIds = new Set((options.blockedListingIds || []).map(Number));
   const queue = buildAnomalyQueue(agencies, directories, listings)
     .filter((item) => item.providerKey === "google_business_profile")
     .filter((item) => item.status !== "validated")
@@ -19,7 +20,12 @@ function buildGoogleRemediationRunPlan(agencies, directories, listings, options 
 
   const items = [];
   let skippedSensitive = 0;
+  let skippedInFlight = 0;
   for (const item of queue) {
+    if (item.listingId && blockedListingIds.has(Number(item.listingId))) {
+      skippedInFlight += 1;
+      continue;
+    }
     const drift = item.drift.filter((field) => ["name", "address", "phone", "website"].includes(field));
     const risk = remediationRisk(drift);
     if (risk.requiresSensitiveConfirmation && !includeSensitive) {
@@ -41,6 +47,7 @@ function buildGoogleRemediationRunPlan(agencies, directories, listings, options 
     totalGoogleAnomalies: queue.length,
     planned: items.length,
     skippedSensitive,
+    skippedInFlight,
     limit,
     includeSensitive,
     items: Object.freeze(items)
