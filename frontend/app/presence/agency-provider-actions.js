@@ -40,3 +40,28 @@ export async function selectDiscoveryCandidateAction(formData){
   revalidatePath(`/presence/agencies/${agencyId}/providers/${providerKey}`); revalidatePath("/presence");
   redirect(`/presence/agencies/${agencyId}/providers/${providerKey}?candidateSaved=1`);
 }
+
+export async function startManualRemediationAction(formData){
+  const agencyId=Number(formData.get("agencyId")); const providerKey=String(formData.get("providerKey")||"");
+  const drift=String(formData.get("drift")||"").split(",").map(v=>v.trim()).filter(Boolean);
+  const note=String(formData.get("note")||"")||null;
+  const result=await post(`/api/presence/agencies/${agencyId}/providers/${encodeURIComponent(providerKey)}/manual-remediation/start`,{confirm:true,drift,note});
+  revalidatePath(`/presence/agencies/${agencyId}/providers/${providerKey}`); revalidatePath("/presence"); revalidatePath("/actions");
+  redirect(`/presence/agencies/${agencyId}/providers/${providerKey}?manualStarted=${encodeURIComponent(result.operationId||"1")}`);
+}
+
+export async function verifyManualRemediationAction(formData){
+  const agencyId=Number(formData.get("agencyId")); const providerKey=String(formData.get("providerKey")||"");
+  const observed={name:String(formData.get("name")||""),address:String(formData.get("address")||""),phone:String(formData.get("phone")||""),website:String(formData.get("website")||"")};
+  const listingUrl=String(formData.get("listingUrl")||"")||null;
+  const evidence=String(formData.get("evidence")||"")||null;
+  const operationId=String(formData.get("operationId")||"")||undefined;
+  try {
+    await post(`/api/presence/agencies/${agencyId}/providers/${encodeURIComponent(providerKey)}/manual-remediation/verify`,{confirm:true,operationId,observed,listingUrl,evidence});
+    revalidatePath(`/presence/agencies/${agencyId}/providers/${providerKey}`); revalidatePath("/presence"); revalidatePath("/actions");
+    redirect(`/presence/agencies/${agencyId}/providers/${providerKey}?manualVerified=1`);
+  } catch (error) {
+    const drift=error.payload?.result?.diff?.drift||error.payload?.result?.drift||[];
+    redirect(`/presence/agencies/${agencyId}/providers/${providerKey}?manualPending=${encodeURIComponent(drift.join(",")||"1")}`);
+  }
+}
