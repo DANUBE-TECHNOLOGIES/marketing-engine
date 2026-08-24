@@ -47,13 +47,23 @@ test("agency provider page exposes discovery and guided remediation without clai
   assert.doesNotMatch(code,/googleapis\.com/);
 });
 
-test("Presence cockpit uses backend summary contract and links matrix and intervention details", async()=>{
+test("Presence cockpit links deployment readiness matrix and intervention details", async()=>{
   const code=await source("app/presence/page.js");
   assert.match(code,/summary\.agencies/);
   assert.match(code,/summary\.executableRemediations/);
   assert.match(code,/item\.priority/);
   assert.match(code,/\/presence\/agencies\//);
   assert.match(code,/\/presence\/matrix/);
+  assert.match(code,/\/presence\/readiness/);
+});
+
+test("deployment readiness UI shows migration catalog Google and discovery gates", async()=>{
+  const code=await source("app/presence/readiness/page.js");
+  assert.match(code,/deployment-readiness/);
+  assert.match(code,/Migrations Presence/);
+  assert.match(code,/Catalogue providers/);
+  assert.match(code,/Couverture Google/);
+  assert.match(code,/DataForSEO discovery/);
 });
 
 test("provider matrix distinguishes conformity automation manual monitor and blocked states", async()=>{
