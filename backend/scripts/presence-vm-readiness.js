@@ -22,10 +22,20 @@ async function main() {
       catalog: readiness.catalog.summary,
       network: readiness.network,
       operational: {
+        readyForGoogleApi: readiness.operational.readyForGoogleApi,
         readyForGoogleManagedWrites: readiness.operational.readyForGoogleManagedWrites,
+        googleWritesEnabled: readiness.operational.googleWritesEnabled,
         readyForDiscovery: readiness.operational.readyForDiscovery,
         blockers: readiness.operational.blockers,
+        apiBlockers: readiness.operational.apiBlockers,
         warnings: readiness.operational.warnings
+      },
+      safety: {
+        googleWriteKillSwitch: {
+          env: "PRESENCE_GOOGLE_WRITES_ENABLED",
+          enabled: readiness.operational.googleWritesEnabled === true,
+          requiredForExternalWrites: true
+        }
       }
     };
     console.log(JSON.stringify(output, null, 2));
