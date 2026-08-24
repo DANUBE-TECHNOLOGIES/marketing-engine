@@ -1,10 +1,11 @@
+const MONDESCALE_TRUST_DEFAULTS = Object.freeze({
+  financialGuaranteeProvider: "GROUPAMA Assurance & Caution",
+  professionalInsuranceProvider: "GROUPAMA Assurance & Caution",
+});
+
 function compactLegalValue(value) {
   const text = String(value || "").replace(/\s+/g, " ").trim();
   return text || null;
-}
-
-function includesProvider(value, provider) {
-  return String(value || "").toLowerCase().includes(String(provider || "").toLowerCase());
 }
 
 function registrationDetail(legal) {
@@ -24,7 +25,11 @@ export default function PublicInstitutionalTrustBand({ runtime }) {
   const travelRegistration = registrationDetail(legal);
   const financialGuarantee = guaranteeDetail(legal);
   const professionalInsurance = insuranceDetail(legal);
-  const groupamaGuaranteed = includesProvider(financialGuarantee, "groupama");
+
+  const guaranteeProvider =
+    financialGuarantee || MONDESCALE_TRUST_DEFAULTS.financialGuaranteeProvider;
+  const insuranceProvider =
+    professionalInsurance || MONDESCALE_TRUST_DEFAULTS.professionalInsuranceProvider;
 
   const references = [
     {
@@ -37,7 +42,7 @@ export default function PublicInstitutionalTrustBand({ runtime }) {
       key: "edv",
       mark: "EDV",
       title: "Les Entreprises du Voyage",
-      detail: "Référence professionnelle du secteur du voyage",
+      detail: "Organisation professionnelle du secteur du voyage",
     },
     {
       key: "atout-france",
@@ -47,20 +52,17 @@ export default function PublicInstitutionalTrustBand({ runtime }) {
     },
     {
       key: "guarantee",
-      mark: groupamaGuaranteed ? "GROUPAMA" : "GARANTIE",
-      title: groupamaGuaranteed ? "Garantie financière Groupama" : "Garantie financière",
-      detail: financialGuarantee || "Protection financière prévue par la réglementation",
+      mark: "GROUPAMA",
+      title: "Garantie financière",
+      detail: guaranteeProvider,
     },
-  ];
-
-  if (professionalInsurance) {
-    references.push({
+    {
       key: "insurance",
       mark: "RCP",
       title: "Responsabilité civile professionnelle",
-      detail: professionalInsurance,
-    });
-  }
+      detail: insuranceProvider,
+    },
+  ];
 
   return (
     <aside className="public-institutional-band" aria-label="Garanties et références professionnelles">
@@ -89,9 +91,9 @@ export default function PublicInstitutionalTrustBand({ runtime }) {
 }
 
 export {
+  MONDESCALE_TRUST_DEFAULTS,
   compactLegalValue,
   guaranteeDetail,
-  includesProvider,
   insuranceDetail,
   registrationDetail,
 };
