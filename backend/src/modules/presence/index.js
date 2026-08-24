@@ -9,6 +9,7 @@ const { remediationRoutes } = require("./remediation-routes");
 const { remediationExecutionRoutes } = require("./remediation-execution-routes");
 const { networkGoogleRemediationRoutes } = require("./network-google-remediation-routes");
 const { operationalRoutes } = require("./operational-routes");
+const { operationAuditRoutes } = require("./operation-audit-routes");
 const providerRegistry = require("./provider-registry");
 
 function routes({ prisma }) {
@@ -21,6 +22,7 @@ function routes({ prisma }) {
   router.use(remediationExecutionRoutes({ prisma }));
   router.use(networkGoogleRemediationRoutes({ prisma }));
   router.use(operationalRoutes({ prisma }));
+  router.use(operationAuditRoutes({ prisma }));
   return router;
 }
 
