@@ -108,8 +108,9 @@ test("MSE-25.45 cockpit surfaces temporal comparison and network ranking without
   assert.doesNotMatch(dashboard, /method:\s*["'](?:POST|PUT|PATCH|DELETE)["']/);
 });
 
-test("MSE-25.45 health advertises temporal evidence gates", () => {
-  assert.match(routes, /version:\s*"25\.45\.1"/);
+test("MSE-25.45 health keeps temporal evidence gates in later engine versions", () => {
+  assert.match(routes, /version:\s*"25\.(?:45\.1|4[6-9]\.\d+|[5-9]\d?\.\d+)"/);
   assert.match(routes, /temporalComparison:\s*"current-vs-previous-equal-window"/);
   assert.match(routes, /evidenceGate:\s*"40-views-per-period"/);
+  assert.match(routes, /optimizationMode:\s*"read-only-recommendations"/);
 });
