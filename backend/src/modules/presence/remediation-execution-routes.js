@@ -7,7 +7,7 @@ const { readGoogleLocation } = require("./google-business-information");
 const { buildCanonicalAgencyIdentity } = require("./canonical-identity");
 const { compareNap } = require("./nap-diff");
 const { setRuntimeListingState } = require("./runtime-listing-state");
-const { assertGoogleManagedWriteReady } = require("./operational-readiness");
+const { assertGoogleApiReady, assertGoogleManagedWriteReady } = require("./operational-readiness");
 const { createOperationId, appendOperationAudit } = require("./operation-audit");
 const { appendOperationSnapshot, getOperationSubmittedAt } = require("./operation-snapshots");
 
@@ -44,7 +44,7 @@ function remediationExecutionRoutes({ prisma }) {
   router.post("/api/presence/agencies/:agencyId/google/remediation/validate", async (req, res) => {
     try {
       if (req.body?.confirm !== true) return res.status(409).json({ ok: false, error: "confirm=true requis pour appeler la validation Google" });
-      await assertGoogleManagedWriteReady(prisma);
+      await assertGoogleApiReady(prisma);
       const agency = await loadAgency(prisma, req.params.agencyId);
       const result = await patchGoogleLocation(prisma, { agency, drift: parseDrift(req.body?.drift), validateOnly: true });
       return res.json({ ok: true, persisted: false, externalWrite: false, providerValidated: true, result });
@@ -87,7 +87,7 @@ function remediationExecutionRoutes({ prisma }) {
   router.post("/api/presence/agencies/:agencyId/google/remediation/verify", async (req, res) => {
     const operationId = req.body?.operationId || createOperationId("google_verify");
     try {
-      await assertGoogleManagedWriteReady(prisma);
+      await assertGoogleApiReady(prisma);
       const agency = await loadAgency(prisma, req.params.agencyId);
       const listing = await loadGoogleListing(prisma, agency.id);
       const verification = await verifyGoogleRemediation(prisma, agency);
