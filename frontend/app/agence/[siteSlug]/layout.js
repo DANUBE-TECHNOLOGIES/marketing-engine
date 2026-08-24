@@ -7,6 +7,7 @@ import PublicPaymentMethodsBand from "../../../components/public-site/PublicPaym
 import PublicInstitutionalTrustBand from "../../../components/public-site/PublicInstitutionalTrustBand";
 import PublicSiteFooter from "../../../components/public-site/PublicSiteFooter";
 import PublicBrandLegalRuntime from "../../../components/public-site/PublicBrandLegalRuntime";
+import PublicConversionCapture from "../../../components/public-site/PublicConversionCapture";
 import JsonLd from "../../../components/JsonLd";
 import { buildWebSiteSchema } from "../../../lib/seo/json-ld";
 import {
@@ -61,6 +62,7 @@ export default async function PublicAgencySiteLayout({ children, params }) {
   return (
     <PublicBrandLegalRuntime runtime={publicBrandLegalRuntime}>
       <JsonLd data={buildWebSiteSchema()} />
+      <PublicConversionCapture siteSlug={siteSlug} />
 
       <div
         className="public-site-shell"

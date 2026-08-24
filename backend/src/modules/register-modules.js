@@ -39,6 +39,7 @@ const minisiteSemanticEngine = require("./minisite-semantic-engine");
 const minisiteStructuredData = require("./minisite-structured-data");
 const searchConsoleSubmission = require("./search-console-submission");
 const flexiblePaymentExperience = require("./flexible-payment-experience");
+const publicConversionEngine = require("./public-conversion-engine");
 
 module.exports = function registerModules(app, { prisma }) {
   if (tenantCore.routes) {
@@ -96,7 +97,6 @@ module.exports = function registerModules(app, { prisma }) {
     app.use(assetEngine.routes({ prisma }));
   }
 
-  // agency-seo exporte une factory et non un objet { routes }.
   const agencySeo = createAgencySeoModule(prisma);
   if (agencySeo.routes) {
     app.use(agencySeo.routes);
@@ -118,7 +118,6 @@ module.exports = function registerModules(app, { prisma }) {
     app.use(contentFactory.routes({ prisma }));
   }
 
-  // Knowledge Graph — Sprint 006
   if (knowledgeGraph.routes) {
     app.use(knowledgeGraph.routes({ prisma }));
   }
@@ -136,19 +135,11 @@ module.exports = function registerModules(app, { prisma }) {
   }
 
   if (editorialAi.routes) {
-    app.use(
-      editorialAi.routes({
-        prisma,
-      })
-    );
+    app.use(editorialAi.routes({ prisma }));
   }
 
   if (networkSiteProvisioning.routes) {
-    app.use(
-      networkSiteProvisioning.routes({
-        prisma,
-      })
-    );
+    app.use(networkSiteProvisioning.routes({ prisma }));
   }
 
   if (publishers.googleBusiness?.routes) {
@@ -176,9 +167,7 @@ module.exports = function registerModules(app, { prisma }) {
   }
 
   if (pageBuilderPersistence.routes) {
-    app.use(
-      pageBuilderPersistence.routes({ prisma })
-    );
+    app.use(pageBuilderPersistence.routes({ prisma }));
   }
 
   if (agencySite.routes) {
@@ -186,43 +175,23 @@ module.exports = function registerModules(app, { prisma }) {
   }
 
   if (minisiteBlueprint.routes) {
-    app.use(
-      minisiteBlueprint.routes({
-        prisma,
-      })
-    );
+    app.use(minisiteBlueprint.routes({ prisma }));
   }
 
   if (minisiteBlueprintPersistence.routes) {
-    app.use(
-      minisiteBlueprintPersistence.routes({
-        prisma,
-      })
-    );
+    app.use(minisiteBlueprintPersistence.routes({ prisma }));
   }
 
   if (minisiteSeoEnrichment.routes) {
-    app.use(
-      minisiteSeoEnrichment.routes({
-        prisma,
-      })
-    );
+    app.use(minisiteSeoEnrichment.routes({ prisma }));
   }
 
   if (minisiteSemanticEngine.routes) {
-    app.use(
-      minisiteSemanticEngine.routes({
-        prisma,
-      })
-    );
+    app.use(minisiteSemanticEngine.routes({ prisma }));
   }
 
   if (minisiteStructuredData.routes) {
-    app.use(
-      minisiteStructuredData.routes({
-        prisma,
-      })
-    );
+    app.use(minisiteStructuredData.routes({ prisma }));
   }
 
   if (searchConsoleSubmission.routes) {
@@ -232,5 +201,9 @@ module.exports = function registerModules(app, { prisma }) {
 
   if (flexiblePaymentExperience.routes) {
     app.use(flexiblePaymentExperience.routes({ prisma }));
+  }
+
+  if (publicConversionEngine.routes) {
+    app.use(publicConversionEngine.routes({ prisma }));
   }
 };

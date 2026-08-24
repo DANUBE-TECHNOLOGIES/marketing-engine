@@ -41,6 +41,13 @@ function canonicalPublicRedirect(request, pathname) {
   return NextResponse.redirect(target, 301);
 }
 
+function isPublicConversionIngest(request, pathname) {
+  return (
+    request.method === "POST" &&
+    /^\/api\/public-conversions\/[^/]+\/events\/?$/.test(pathname)
+  );
+}
+
 export function proxy(request) {
   const pathname =
     request.nextUrl?.pathname || new URL(request.url).pathname;
@@ -56,6 +63,15 @@ export function proxy(request) {
     request.method === "GET" &&
     (pathname === "/api/website-builder/inspirations" ||
       pathname.startsWith("/api/website-builder/inspirations/"));
+
+  /*
+   * MSE-25.43 public conversion ingestion is deliberately narrow:
+   * only POST /api/public-conversions/:siteSlug/events is anonymous.
+   * Aggregates (/api/public-conversions/summary) remain behind Local Engine
+   * authentication and are never exposed on the public mini-site hostname.
+   */
+  const publicConversionIngest =
+    isPublicConversionIngest(request, pathname);
 
   const isPublicRoute =
     pathname === "/agence" ||
@@ -77,6 +93,7 @@ export function proxy(request) {
     pathname === "/robots.txt" ||
     pathname === "/sitemap.xml" ||
     pathname === "/api/google/callback" ||
+    publicConversionIngest ||
     isPublicInspirationRead;
 
   if (isPublicRoute) {
@@ -169,3 +186,5 @@ export function proxy(request) {
 export const config = {
   matcher: ["/:path*"],
 };
+
+export { isPublicConversionIngest };
