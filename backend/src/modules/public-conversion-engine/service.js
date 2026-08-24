@@ -85,6 +85,158 @@ function buildFunnel(rows = []) {
   };
 }
 
+function confidenceForViews(pageViews) {
+  const views = Number(pageViews || 0);
+  if (views >= 100) return "strong";
+  if (views >= 40) return "usable";
+  return "insufficient";
+}
+
+function buildBenchmarks(pages = []) {
+  const groups = new Map();
+  for (const page of pages) {
+    if (Number(page.pageViews || 0) < 40 || page.conversionRate == null) continue;
+    const list = groups.get(page.pageSlug) || [];
+    list.push(Number(page.conversionRate));
+    groups.set(page.pageSlug, list);
+  }
+
+  const benchmarks = {};
+  for (const [pageSlug, rates] of groups.entries()) {
+    const sorted = [...rates].sort((a, b) => a - b);
+    const middle = Math.floor(sorted.length / 2);
+    const median = sorted.length % 2
+      ? sorted[middle]
+      : (sorted[middle - 1] + sorted[middle]) / 2;
+    benchmarks[pageSlug] = {
+      sampleSize: sorted.length,
+      medianRate: Number(median.toFixed(2)),
+      bestRate: Number(sorted[sorted.length - 1].toFixed(2)),
+    };
+  }
+  return benchmarks;
+}
+
+function buildOptimizationInsights(rows = [], pages = []) {
+  const benchmarks = buildBenchmarks(pages);
+  const actionsByPage = new Map();
+
+  for (const row of rows) {
+    if (row.action === "page_view") continue;
+    const key = `${row.siteSlug}:${row.pageSlug}`;
+    const actions = actionsByPage.get(key) || new Set();
+    actions.add(row.action);
+    actionsByPage.set(key, actions);
+  }
+
+  const opportunities = [];
+  const strengths = [];
+
+  for (const page of pages) {
+    const views = Number(page.pageViews || 0);
+    const conversions = Number(page.conversionEvents || 0);
+    const rate = page.conversionRate == null ? null : Number(page.conversionRate);
+    const confidence = confidenceForViews(views);
+    const benchmark = benchmarks[page.pageSlug] || null;
+    const key = `${page.siteSlug}:${page.pageSlug}`;
+    const actions = actionsByPage.get(key) || new Set();
+
+    if (views >= 75 && conversions === 0) {
+      opportunities.push({
+        siteSlug: page.siteSlug,
+        pageSlug: page.pageSlug,
+        priority: "critical",
+        kind: "high-traffic-zero-conversion",
+        confidence,
+        pageViews: views,
+        conversionEvents: conversions,
+        conversionRate: rate,
+        benchmarkRate: benchmark?.medianRate ?? null,
+        recommendation: "Revoir le CTA principal, sa visibilité et la proposition de valeur de cette page.",
+      });
+      continue;
+    }
+
+    if (
+      views >= 75 &&
+      benchmark?.sampleSize >= 2 &&
+      rate != null &&
+      benchmark.medianRate > 0 &&
+      rate < benchmark.medianRate * 0.6
+    ) {
+      opportunities.push({
+        siteSlug: page.siteSlug,
+        pageSlug: page.pageSlug,
+        priority: "high",
+        kind: "below-network-benchmark",
+        confidence,
+        pageViews: views,
+        conversionEvents: conversions,
+        conversionRate: rate,
+        benchmarkRate: benchmark.medianRate,
+        recommendation: "Comparer cette page aux agences les plus performantes et tester un CTA, un ordre de blocs ou un message plus direct.",
+      });
+    }
+
+    if (
+      views >= 75 &&
+      !["contact", "equipe", "team"].includes(page.pageSlug) &&
+      !actions.has("contact") &&
+      !actions.has("phone") &&
+      !actions.has("quote_request") &&
+      !actions.has("advisor_contact")
+    ) {
+      opportunities.push({
+        siteSlug: page.siteSlug,
+        pageSlug: page.pageSlug,
+        priority: "medium",
+        kind: "missing-commercial-action",
+        confidence,
+        pageViews: views,
+        conversionEvents: conversions,
+        conversionRate: rate,
+        benchmarkRate: benchmark?.medianRate ?? null,
+        recommendation: "Renforcer le chemin vers un devis, un appel ou un conseiller sans alourdir la page.",
+      });
+    }
+
+    if (
+      views >= 75 &&
+      benchmark?.sampleSize >= 2 &&
+      rate != null &&
+      benchmark.medianRate > 0 &&
+      rate >= benchmark.medianRate * 1.4
+    ) {
+      strengths.push({
+        siteSlug: page.siteSlug,
+        pageSlug: page.pageSlug,
+        confidence,
+        pageViews: views,
+        conversionRate: rate,
+        benchmarkRate: benchmark.medianRate,
+        recommendation: "Conserver cette composition comme référence et étudier sa réplication sur les pages comparables.",
+      });
+    }
+  }
+
+  const rank = { critical: 0, high: 1, medium: 2 };
+  opportunities.sort((a, b) =>
+    (rank[a.priority] ?? 9) - (rank[b.priority] ?? 9) ||
+    b.pageViews - a.pageViews ||
+    String(a.siteSlug).localeCompare(String(b.siteSlug))
+  );
+  strengths.sort((a, b) => b.conversionRate - a.conversionRate || b.pageViews - a.pageViews);
+
+  return {
+    benchmarks,
+    opportunityCount: opportunities.length,
+    strongEvidencePageCount: pages.filter((page) => confidenceForViews(page.pageViews) === "strong").length,
+    usableEvidencePageCount: pages.filter((page) => confidenceForViews(page.pageViews) !== "insufficient").length,
+    opportunities,
+    strengths,
+  };
+}
+
 class PublicConversionService {
   constructor(database) {
     this.database = database;
@@ -138,15 +290,25 @@ class PublicConversionService {
 
     const total = rows.reduce((sum, row) => sum + Number(row.events || 0), 0);
     const funnel = buildFunnel(rows);
+    const optimization = buildOptimizationInsights(rows, funnel.pages);
     return {
       tenantId: tenant.id,
       siteSlug: slug,
       days: boundedDays,
       totalEvents: total,
       ...funnel,
+      optimization,
       rows,
     };
   }
 }
 
-module.exports = { PublicConversionService, buildFunnel, resolveSite, resolveTenant };
+module.exports = {
+  PublicConversionService,
+  buildBenchmarks,
+  buildFunnel,
+  buildOptimizationInsights,
+  confidenceForViews,
+  resolveSite,
+  resolveTenant,
+};
