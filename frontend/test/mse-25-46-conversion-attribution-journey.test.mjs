@@ -12,6 +12,7 @@ const { buildJourneySummary, normalizeJourneyId, validateJourneyInput } = requir
 );
 const capture = fs.readFileSync(path.join(ROOT, "components/public-site/PublicConversionCapture.js"), "utf8");
 const routes = fs.readFileSync(path.join(REPO, "backend/src/modules/public-conversion-engine/routes.js"), "utf8");
+const proxy = fs.readFileSync(path.join(ROOT, "proxy.js"), "utf8");
 const migration = fs.readFileSync(path.join(REPO, "backend/prisma/migrations/20260824193000_mse_25_46_conversion_journey/migration.sql"), "utf8");
 
 test("MSE-25.46 accepts only opaque anonymous journey identifiers", () => {
@@ -64,6 +65,14 @@ test("MSE-25.46 exposes append-only journey ingestion and protected analysis rou
   assert.match(routes, /journeyAttribution:\s*"anonymous-session-storage"/);
   assert.match(routes, /router\.post\("\/public\/conversions\/sites\/:siteSlug\/journeys"/);
   assert.match(routes, /router\.get\("\/api\/conversions\/journeys"/);
+});
+
+test("MSE-25.46 exposes only event and journey POST ingestion on the public hostname", () => {
+  assert.match(proxy, /request\.method === "POST"/);
+  assert.match(proxy, /\(\?:events\|journeys\)/);
+  assert.match(proxy, /POST \/api\/public-conversions\/:siteSlug\/journeys are anonymous/);
+  assert.match(proxy, /Aggregate analysis routes remain behind Local Engine authentication/);
+  assert.doesNotMatch(proxy, /pathname\.startsWith\("\/api\/public-conversions\/"\)/);
 });
 
 test("MSE-25.46 migration stores no direct personal identifier", () => {
