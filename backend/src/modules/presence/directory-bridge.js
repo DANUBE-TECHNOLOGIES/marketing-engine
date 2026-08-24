@@ -10,7 +10,10 @@ const LEGACY_DIRECTORY_PROVIDER_KEYS = Object.freeze({
   Facebook: "facebook",
   Foursquare: "foursquare",
   TomTom: "tomtom",
+  HERE: "here",
   Mappy: "mappy",
+  Tripadvisor: "tripadvisor",
+  "Petit Futé": "petit_fute",
   "118000": "118000"
 });
 
