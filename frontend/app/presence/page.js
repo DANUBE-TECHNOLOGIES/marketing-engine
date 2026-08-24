@@ -36,12 +36,12 @@ export default async function PresencePage() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 xl:grid-cols-8">
         <Card label="Santé Presence" value={`${health.score ?? 0}/100`} hint={health.level || "—"} />
         <Card label="Couverture NAP" value={`${summary.coveragePercent ?? 0}%`} />
-        <Card label="Agences" value={summary.agencyCount ?? 0} />
-        <Card label="Annuaires actifs" value={summary.activeDirectoryCount ?? 0} />
-        <Card label="Anomalies" value={summary.anomalyCount ?? 0} />
-        <Card label="Remédiations API" value={summary.executableRemediationCount ?? 0} />
-        <Card label="Propagation" value={summary.propagationAlertCount ?? 0} />
-        <Card label="À traiter" value={summary.interventionQueueCount ?? queue.length} />
+        <Card label="Agences" value={summary.agencies ?? 0} />
+        <Card label="Annuaires actifs" value={summary.directories ?? 0} />
+        <Card label="Anomalies" value={summary.anomalies ?? 0} />
+        <Card label="Remédiations API" value={summary.executableRemediations ?? 0} />
+        <Card label="Propagation" value={summary.propagationAlerts ?? 0} />
+        <Card label="À traiter" value={summary.interventionQueue ?? queue.length} />
       </div>
 
       <section className="mt-6 grid gap-4 md:grid-cols-3">
@@ -52,7 +52,7 @@ export default async function PresencePage() {
 
       <section className="mt-6 rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-100 px-6 py-5"><h2 className="text-xl font-black">File d’intervention réseau</h2><p className="mt-1 text-sm text-slate-500">Priorités consolidées issues des anomalies NAP, propagations et actions ouvertes.</p></div>
-        <div className="divide-y divide-slate-100">{queue.slice(0, 30).map((item, index) => <div key={`${item.source}-${item.agencyId}-${item.providerKey}-${item.listingId || index}`} className="grid gap-3 px-6 py-4 lg:grid-cols-[0.7fr_1.2fr_1fr_2fr_0.8fr] lg:items-center"><div><span className={`rounded-full px-2.5 py-1 text-xs font-black uppercase ${levelClass(item.level)}`}>{item.level || "low"}</span></div><div><div className="font-bold">{item.agencyName || `Agence #${item.agencyId}`}</div><div className="text-xs text-slate-500">{item.source}</div></div><div className="font-semibold">{item.providerKey || "—"}</div><div className="text-sm text-slate-600">{Array.isArray(item.drift) && item.drift.length ? `Écarts : ${item.drift.join(", ")}` : item.status || item.title || "Intervention requise"}</div><div className="text-sm font-semibold">{item.executable === true ? "Automatisable" : "Contrôle manuel"}</div></div>)}{!queue.length ? <div className="px-6 py-12 text-center text-slate-500">Aucune intervention Presence prioritaire.</div> : null}</div>
+        <div className="divide-y divide-slate-100">{queue.slice(0, 30).map((item, index) => { const href=item.agencyId&&item.providerKey?`/presence/agencies/${item.agencyId}/providers/${item.providerKey}`:null; const body=<><div><span className={`rounded-full px-2.5 py-1 text-xs font-black uppercase ${levelClass(item.priority)}`}>{item.priority || "low"}</span></div><div><div className="font-bold">{item.agencyName || `Agence #${item.agencyId}`}</div><div className="text-xs text-slate-500">{item.source}</div></div><div className="font-semibold">{item.providerKey || "—"}</div><div className="text-sm text-slate-600">{Array.isArray(item.drift) && item.drift.length ? `Écarts : ${item.drift.join(", ")}` : item.status || item.title || "Intervention requise"}</div><div className="text-sm font-semibold">{item.executable === true ? "Automatisable" : "Contrôle manuel"}</div></>; return href?<Link href={href} key={`${item.source}-${item.agencyId}-${item.providerKey}-${item.listingId || index}`} className="grid gap-3 px-6 py-4 transition hover:bg-slate-50 lg:grid-cols-[0.7fr_1.2fr_1fr_2fr_0.8fr] lg:items-center">{body}</Link>:<div key={`${item.source}-${item.agencyId}-${item.providerKey}-${item.listingId || index}`} className="grid gap-3 px-6 py-4 lg:grid-cols-[0.7fr_1.2fr_1fr_2fr_0.8fr] lg:items-center">{body}</div>})}{!queue.length ? <div className="px-6 py-12 text-center text-slate-500">Aucune intervention Presence prioritaire.</div> : null}</div>
       </section>
     </>}
   </MainLayout>;
