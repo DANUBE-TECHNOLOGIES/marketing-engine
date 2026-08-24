@@ -2,11 +2,12 @@
 
 const express = require("express");
 const { buildCanonicalAgencyIdentity } = require("./canonical-identity");
-const { listPresenceProviders } = require("./provider-registry");
+const { listPresenceProviders, getPresenceProvider } = require("./provider-registry");
 const { enrichDirectoryWithProvider } = require("./directory-bridge");
 const { projectGooglePresence } = require("./google-listing-adapter");
 const { syncGoogleDirectoryListing } = require("./google-directory-sync");
 const { auditDirectorySchema } = require("./directory-schema-audit");
+const { getProviderReadiness } = require("./provider-readiness");
 
 function routes({ prisma }) {
   const router = express.Router();
@@ -37,6 +38,7 @@ function routes({ prisma }) {
           const directory = directoryByProvider.get(provider.key);
           return {
             ...provider,
+            readiness: getProviderReadiness(provider.key),
             legacyDirectory: directory
               ? {
                   id: directory.id,
@@ -53,6 +55,12 @@ function routes({ prisma }) {
     } catch (error) {
       return res.status(500).json({ error: error.message });
     }
+  });
+
+  router.get("/api/presence/providers/:providerKey/readiness", (req, res) => {
+    const provider = getPresenceProvider(req.params.providerKey);
+    if (!provider) return res.status(404).json({ error: "Provider Presence inconnu" });
+    return res.json({ provider, readiness: getProviderReadiness(provider.key) });
   });
 
   router.get("/api/presence/agencies/:agencyId", async (req, res) => {
