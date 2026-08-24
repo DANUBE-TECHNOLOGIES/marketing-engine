@@ -12,6 +12,7 @@ function classifyListing(listing) {
 
 function buildNetworkCoverage(agencies = [], directories = [], listings = []) {
   const mappedDirectories = directories
+    .filter((directory) => directory.active !== false)
     .map((directory) => ({ directory, providerKey: providerKeyForDirectory(directory) }))
     .filter((item) => item.providerKey);
   const byKey = new Map(listings.map((listing) => [`${listing.agencyId}:${listing.directoryId}`, listing]));
@@ -43,10 +44,7 @@ function buildNetworkCoverage(agencies = [], directories = [], listings = []) {
   }
 
   return Object.freeze({
-    summary: Object.freeze({
-      ...summary,
-      coveragePercent: summary.total ? Math.round((summary.validated / summary.total) * 100) : 0
-    }),
+    summary: Object.freeze({ ...summary, coveragePercent: summary.total ? Math.round((summary.validated / summary.total) * 100) : 0 }),
     rows: Object.freeze(rows)
   });
 }
