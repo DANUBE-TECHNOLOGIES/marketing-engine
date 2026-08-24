@@ -6,6 +6,7 @@ require("../src/modules/presence/directory-response-adapter.test");
 require("../src/modules/presence/directory-schema-audit.test");
 require("../src/modules/presence/provider-readiness.test");
 require("../src/modules/presence/provider-catalog-audit.test");
+require("../src/modules/presence/provider-catalog-reconcile.test");
 require("../src/modules/presence/citation-observation.test");
 require("../src/modules/presence/citation-recording.test");
 require("../src/modules/presence/citation-discovery.test");
