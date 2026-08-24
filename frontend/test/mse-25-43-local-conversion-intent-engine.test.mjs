@@ -13,7 +13,8 @@ const contract = require(path.join(REPO, "backend/src/modules/public-conversion-
 const { buildFunnel } = require(path.join(REPO, "backend/src/modules/public-conversion-engine/service.js"));
 const capture = read("frontend/components/public-site/PublicConversionCapture.js");
 const layout = read("frontend/app/agence/[siteSlug]/layout.js");
-const proxy = read("frontend/app/api/public-conversions/[siteSlug]/events/route.js");
+const eventProxy = read("frontend/app/api/public-conversions/[siteSlug]/events/route.js");
+const middlewareProxy = read("frontend/proxy.js");
 const summaryProxy = read("frontend/app/api/public-conversions/summary/route.js");
 const dashboard = read("frontend/app/conversion-intent/page.js");
 const routes = read("backend/src/modules/public-conversion-engine/routes.js");
@@ -64,12 +65,21 @@ test("MSE-25.43 captures commercial link families without blocking navigation", 
 });
 
 test("MSE-25.43 exposes a same-origin frontend proxy and first-party backend endpoints", () => {
-  assert.match(proxy, /\/public\/conversions\/sites\/\$\{encodeURIComponent\(siteSlug\)\}\/events/);
-  assert.match(proxy, /x-tenant-slug/);
+  assert.match(eventProxy, /\/public\/conversions\/sites\/\$\{encodeURIComponent\(siteSlug\)\}\/events/);
+  assert.match(eventProxy, /x-tenant-slug/);
   assert.match(summaryProxy, /\/api\/conversions\/summary/);
   assert.match(routes, /\/public\/conversions\/sites\/:siteSlug\/events/);
   assert.match(routes, /\/api\/conversions\/summary/);
   assert.match(routes, /status\(202\)/);
+});
+
+test("MSE-25.43 exposes only POST event ingestion anonymously through frontend proxy", () => {
+  assert.match(middlewareProxy, /function isPublicConversionIngest/);
+  assert.match(middlewareProxy, /request\.method === "POST"/);
+  assert.match(middlewareProxy, /public-conversions\\\/\[\^\/\]\+\\\/events/);
+  assert.match(middlewareProxy, /publicConversionIngest/);
+  assert.match(middlewareProxy, /Aggregates \(\/api\/public-conversions\/summary\) remain behind Local Engine/);
+  assert.doesNotMatch(middlewareProxy, /pathname\.startsWith\("\/api\/public-conversions\/"\)/);
 });
 
 test("MSE-25.43 computes page-level funnel baselines", () => {
