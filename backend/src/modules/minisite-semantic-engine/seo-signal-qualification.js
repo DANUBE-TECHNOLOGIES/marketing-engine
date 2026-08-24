@@ -26,8 +26,10 @@ function residualDecisionFor(residualPlan, siteSlug, intentKey) {
 
 function classifyGap(agency, coverage, residualPlan) {
   const decision = residualDecisionFor(residualPlan, agency.site?.slug, coverage.intentKey);
+  const bestPageSlug = String(coverage.bestPageSlug || "");
   let disposition = "observe";
   let evidenceGate = "none";
+  let suppressionReason = decision.suppressionReason;
 
   if (coverage.bestPageManagedRoute) {
     disposition = "managed-route-review";
@@ -35,6 +37,10 @@ function classifyGap(agency, coverage, residualPlan) {
   } else if (decision.executable) {
     disposition = "candidate-for-later-execution";
     evidenceGate = "sealed-write-intent-required";
+  } else if (bestPageSlug === "home") {
+    disposition = "observe";
+    evidenceGate = "no-write-under-current-architecture";
+    suppressionReason = suppressionReason || "home-secondary-fill-prohibited";
   } else if (!coverage.bestPageSlug) {
     disposition = "human-review";
     evidenceGate = "search-demand-and-architecture-evidence-required";
@@ -61,7 +67,7 @@ function classifyGap(agency, coverage, residualPlan) {
     bestPageManagedRoute: coverage.bestPageManagedRoute === true,
     bestPageWriteEligible: coverage.bestPageWriteEligible !== false,
     residualExecutable: decision.executable,
-    residualSuppressionReason: decision.suppressionReason,
+    residualSuppressionReason: suppressionReason,
     disposition,
     evidenceGate,
     automaticWrite: false,
