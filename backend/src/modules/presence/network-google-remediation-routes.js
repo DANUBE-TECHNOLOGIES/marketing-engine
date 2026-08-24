@@ -19,13 +19,22 @@ function agencyMap(agencies) {
   return new Map(agencies.map((agency) => [agency.id, agency]));
 }
 
+async function buildPlanWithRuntimeGuard(prisma, state, options = {}) {
+  const googleDirectory = state.directories.find((directory) => directory.name === "Google Business Profile");
+  const inFlight = googleDirectory ? await listSubmittedGoogleRuntimeListings(prisma, googleDirectory.id) : [];
+  return buildGoogleRemediationRunPlan(state.agencies, state.directories, state.listings, {
+    ...options,
+    blockedListingIds: inFlight.map((listing) => listing.id)
+  });
+}
+
 function networkGoogleRemediationRoutes({ prisma }) {
   const router = express.Router();
 
   router.post("/api/presence/network/google/remediation/preview", async (req, res) => {
     try {
       const state = await loadState(prisma);
-      const plan = buildGoogleRemediationRunPlan(state.agencies, state.directories, state.listings, {
+      const plan = await buildPlanWithRuntimeGuard(prisma, state, {
         limit: req.body?.limit,
         includeSensitive: req.body?.includeSensitive === true
       });
@@ -37,19 +46,14 @@ function networkGoogleRemediationRoutes({ prisma }) {
 
   router.post("/api/presence/network/google/remediation/execute", async (req, res) => {
     try {
-      if (req.body?.confirm !== true) {
-        return res.status(409).json({ ok: false, error: "confirm=true requis pour une remédiation Google réseau" });
-      }
+      if (req.body?.confirm !== true) return res.status(409).json({ ok: false, error: "confirm=true requis pour une remédiation Google réseau" });
       const includeSensitive = req.body?.includeSensitive === true;
       if (includeSensitive && req.body?.confirmSensitive !== true) {
         return res.status(409).json({ ok: false, error: "confirmSensitive=true requis pour inclure nom ou adresse" });
       }
 
       const state = await loadState(prisma);
-      const plan = buildGoogleRemediationRunPlan(state.agencies, state.directories, state.listings, {
-        limit: req.body?.limit,
-        includeSensitive
-      });
+      const plan = await buildPlanWithRuntimeGuard(prisma, state, { limit: req.body?.limit, includeSensitive });
       const agencies = agencyMap(state.agencies);
       const results = [];
 
@@ -62,10 +66,7 @@ function networkGoogleRemediationRoutes({ prisma }) {
           if (item.listingId) {
             await prisma.directoryListing.update({
               where: { id: item.listingId },
-              data: {
-                status: "pending",
-                notes: `Correction Google réseau soumise via Presence pour: ${item.drift.join(", ")}. Vérification requise.`
-              }
+              data: { status: "pending", notes: `Correction Google réseau soumise via Presence pour: ${item.drift.join(", ")}. Vérification requise.` }
             });
             await setRuntimeListingState(prisma, item.listingId, {
               automationStatus: "submitted",
@@ -85,7 +86,6 @@ function networkGoogleRemediationRoutes({ prisma }) {
         else acc.errors += 1;
         return acc;
       }, { total: 0, submitted: 0, errors: 0 });
-
       return res.json({ ok: summary.errors === 0, externalWrite: true, verificationRequired: true, plan, summary, results });
     } catch (error) {
       return res.status(500).json({ ok: false, error: error.message });
@@ -107,9 +107,7 @@ function networkGoogleRemediationRoutes({ prisma }) {
         try {
           const verification = await verifyGoogleRemediation(prisma, agency);
           const synced = await syncGoogleDirectoryListing(prisma, agency, listing);
-          await setRuntimeListingState(prisma, synced.id, {
-            automationStatus: verification.verified ? "validated" : "verification_pending"
-          });
+          await setRuntimeListingState(prisma, synced.id, { automationStatus: verification.verified ? "validated" : "verification_pending" });
           results.push({ agencyId: agency.id, agencyName: agency.name, verified: verification.verified, status: synced.status, drift: verification.diff.drift });
         } catch (error) {
           results.push({ agencyId: agency.id, agencyName: agency.name, verified: false, status: "error", error: error.message, googleStatus: error.status || null });
@@ -126,4 +124,4 @@ function networkGoogleRemediationRoutes({ prisma }) {
   return router;
 }
 
-module.exports = { networkGoogleRemediationRoutes, loadState };
+module.exports = { networkGoogleRemediationRoutes, loadState, buildPlanWithRuntimeGuard };
