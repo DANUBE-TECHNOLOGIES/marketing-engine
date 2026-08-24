@@ -17,3 +17,4 @@ require("../src/modules/presence/remediation-planner.test");
 require("../src/modules/presence/google-remediation.test");
 require("../src/modules/presence/remediation-execution-routes.test");
 require("../src/modules/presence/network-google-remediation.test");
+require("../src/modules/presence/runtime-listing-state.test");
