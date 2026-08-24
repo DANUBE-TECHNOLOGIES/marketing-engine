@@ -14,3 +14,5 @@ require("../src/modules/presence/network-discovery.test");
 require("../src/modules/presence/network-coverage.test");
 require("../src/modules/presence/anomaly-queue.test");
 require("../src/modules/presence/remediation-planner.test");
+require("../src/modules/presence/google-remediation.test");
+require("../src/modules/presence/remediation-execution-routes.test");
