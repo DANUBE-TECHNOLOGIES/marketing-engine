@@ -44,7 +44,8 @@
     "mse-25.40:network-apply": "node scripts/mse-25-40-network-apply.js",
     "mse-25.40:network-rollback": "node scripts/mse-25-40-network-rollback.js",
     "mse-25.40:post-rollout-validate": "node scripts/mse-25-40-post-rollout-validate.js",
-    "mse-25.47:seo-certify": "node scripts/mse-25-47-seo-certify.js"
+    "mse-25.47:seo-certify": "node scripts/mse-25-47-seo-certify.js",
+    "mse-25.47:seo-qualify": "node scripts/mse-25-47-seo-qualify.js"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",
