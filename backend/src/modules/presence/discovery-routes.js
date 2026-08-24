@@ -53,6 +53,7 @@ function discoveryRoutes({ prisma }) {
 
   router.post("/api/presence/agencies/:agencyId/providers/:providerKey/discovery/start", async (req, res) => {
     try {
+      if (req.body?.confirm !== true) return res.status(409).json({ ok: false, error: "confirm=true requis pour consommer le budget de découverte" });
       await assertDiscoveryReady(prisma);
       const agency = await loadAgency(prisma, req.params.agencyId);
       const provider = loadProvider(req.params.providerKey);
@@ -96,13 +97,7 @@ function discoveryRoutes({ prisma }) {
         persisted = await recordDiscoveredCitation(prisma, { agency, providerKey: provider.key, candidate });
       }
 
-      return res.json({
-        ok: true,
-        providerKey: provider.key,
-        tasks,
-        candidates,
-        persisted: persisted ? { id: persisted.id, status: persisted.status, listingUrl: persisted.listingUrl, notes: persisted.notes, lastCheckedAt: persisted.lastCheckedAt } : false
-      });
+      return res.json({ ok: true, providerKey: provider.key, tasks, candidates, persisted: persisted ? { id: persisted.id, status: persisted.status, listingUrl: persisted.listingUrl, notes: persisted.notes, lastCheckedAt: persisted.lastCheckedAt } : false });
     } catch (error) {
       return res.status(error.status || 500).json({ ok: false, error: error.message, readiness: error.readiness, details: error.details || undefined });
     }
