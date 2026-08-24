@@ -3,6 +3,13 @@ const MONDESCALE_TRUST_DEFAULTS = Object.freeze({
   professionalInsuranceProvider: "GROUPAMA Assurance & Caution",
 });
 
+const TRUST_LOGOS = Object.freeze({
+  cediv: "https://www.sport-et-tourisme.fr/wp-content/uploads/2021/10/Logo-Cediv-Travel.jpg",
+  edv: "https://www.depart-de-deauville.fr/assets/img/site/136/uploads/LOGOS/les_entreprises_du_voyage_logo.png",
+  atoutFrance: "https://commons.wikimedia.org/wiki/Special:Redirect/file/Atout_France.jpg",
+  groupama: "https://commons.wikimedia.org/wiki/Special:Redirect/file/Groupama_logo.svg",
+});
+
 function compactLegalValue(value) {
   const text = String(value || "").replace(/\s+/g, " ").trim();
   return text || null;
@@ -20,6 +27,28 @@ function insuranceDetail(legal) {
   return compactLegalValue(legal?.professionalInsurance);
 }
 
+function InstitutionalMark({ reference }) {
+  if (!reference.logoSrc) {
+    return (
+      <span className="public-institutional-mark" aria-hidden="true">
+        {reference.mark}
+      </span>
+    );
+  }
+
+  return (
+    <span className="public-institutional-mark public-institutional-logo-wrap" aria-hidden="true">
+      <img
+        className="public-institutional-logo"
+        src={reference.logoSrc}
+        alt=""
+        loading="lazy"
+        decoding="async"
+      />
+    </span>
+  );
+}
+
 export default function PublicInstitutionalTrustBand({ runtime }) {
   const legal = runtime?.runtime?.legal?.values || {};
   const travelRegistration = registrationDetail(legal);
@@ -35,30 +64,35 @@ export default function PublicInstitutionalTrustBand({ runtime }) {
     {
       key: "cediv",
       mark: "CEDIV",
+      logoSrc: TRUST_LOGOS.cediv,
       title: "CEDIV Travel",
       detail: "Réseau professionnel d’agences de voyages indépendantes",
     },
     {
       key: "edv",
       mark: "EDV",
+      logoSrc: TRUST_LOGOS.edv,
       title: "Les Entreprises du Voyage",
       detail: "Organisation professionnelle du secteur du voyage",
     },
     {
       key: "atout-france",
       mark: "AF",
+      logoSrc: TRUST_LOGOS.atoutFrance,
       title: "Atout France",
       detail: travelRegistration || "Immatriculation opérateur de voyages",
     },
     {
       key: "guarantee",
       mark: "GROUPAMA",
+      logoSrc: TRUST_LOGOS.groupama,
       title: "Garantie financière",
       detail: guaranteeProvider,
     },
     {
       key: "insurance",
       mark: "RCP",
+      logoSrc: TRUST_LOGOS.groupama,
       title: "Responsabilité civile professionnelle",
       detail: insuranceProvider,
     },
@@ -75,9 +109,7 @@ export default function PublicInstitutionalTrustBand({ runtime }) {
         <div className="public-institutional-band-items">
           {references.map((reference) => (
             <div className="public-institutional-item" key={reference.key}>
-              <span className="public-institutional-mark" aria-hidden="true">
-                {reference.mark}
-              </span>
+              <InstitutionalMark reference={reference} />
               <span className="public-institutional-copy">
                 <strong>{reference.title}</strong>
                 <small>{reference.detail}</small>
@@ -92,6 +124,7 @@ export default function PublicInstitutionalTrustBand({ runtime }) {
 
 export {
   MONDESCALE_TRUST_DEFAULTS,
+  TRUST_LOGOS,
   compactLegalValue,
   guaranteeDetail,
   insuranceDetail,
