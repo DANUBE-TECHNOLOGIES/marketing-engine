@@ -17,11 +17,12 @@ test("standard Google drift is planned while sensitive drift is skipped by defau
   assert.equal(plan.planned, 1);
   assert.equal(plan.skippedSensitive, 1);
   assert.equal(plan.items[0].agencyId, 1);
-  assert.equal(plan.items[0].risk, "standard");
+  assert.equal(plan.items[0].risk.level, "standard");
+  assert.equal(plan.items[0].risk.requiresSensitiveConfirmation, false);
 });
 
 test("sensitive Google drift can only enter an explicitly sensitive plan", () => {
   const plan = buildGoogleRemediationRunPlan(agencies, directories, listings, { limit: 10, includeSensitive: true });
   assert.equal(plan.planned, 2);
-  assert.ok(plan.items.some((item) => item.risk === "high"));
+  assert.ok(plan.items.some((item) => item.risk.level === "high" && item.risk.requiresSensitiveConfirmation));
 });
