@@ -1,6 +1,7 @@
 "use strict";
 
 const ACTIONS = Object.freeze(new Set([
+  "page_view",
   "quote_request",
   "contact",
   "phone",
