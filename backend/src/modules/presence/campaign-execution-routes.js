@@ -2,6 +2,7 @@
 
 const express = require("express");
 const { executeFrozenCampaign } = require("./campaign-executor");
+const { verifyCampaign } = require("./campaign-verifier");
 
 function campaignExecutionRoutes({ prisma }) {
   const router = express.Router();
@@ -16,6 +17,21 @@ function campaignExecutionRoutes({ prisma }) {
         confirmSensitive: req.body?.confirmSensitive === true
       });
       return res.status(result.summary.failed ? 207 : 200).json({ ok: result.summary.failed === 0, externalWrite: result.summary.submitted > 0, ...result });
+    } catch (error) {
+      return res.status(error.status || 500).json({ ok: false, error: error.message, readiness: error.readiness || undefined });
+    }
+  });
+
+  router.post("/api/presence/campaigns/:campaignId/verify", async (req, res) => {
+    try {
+      if (req.body?.confirm !== true) {
+        return res.status(409).json({ ok: false, error: "confirm=true requis pour vérifier une campagne Presence" });
+      }
+      const result = await verifyCampaign(prisma, req.params.campaignId, {
+        maxItems: req.body?.maxItems,
+        failOnExecutionFailure: req.body?.failOnExecutionFailure === true
+      });
+      return res.status(result.failed ? 207 : result.pending ? 202 : 200).json({ ok: result.failed === 0, externalWrite: false, ...result });
     } catch (error) {
       return res.status(error.status || 500).json({ ok: false, error: error.message, readiness: error.readiness || undefined });
     }
