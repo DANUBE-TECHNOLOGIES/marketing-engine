@@ -1,0 +1,50 @@
+name: MSE-25.44 public trust bands
+
+on:
+  push:
+    branches:
+      - 'feature/mse-25-44-*'
+  pull_request:
+    paths:
+      - 'frontend/app/agence/[siteSlug]/layout.js'
+      - 'frontend/components/public-site/PublicPaymentMethodsBand.js'
+      - 'frontend/components/public-site/PublicInstitutionalTrustBand.js'
+      - 'frontend/components/public-site/payment-methods-band.css'
+      - 'frontend/components/public-site/institutional-trust-band.css'
+      - 'frontend/test/mse-25-44-trust-bands.test.mjs'
+      - 'scripts/mse-25-44-vm-deploy.sh'
+      - '.github/workflows/mse-25-44.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-trust-bands:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Run MSE-25.44 contract tests
+        run: node --test test/mse-25-44-trust-bands.test.mjs
+
+      - name: Lint MSE-25.44 public integration
+        run: npx eslint "app/agence/[siteSlug]/layout.js" "components/public-site/PublicPaymentMethodsBand.js" "components/public-site/PublicInstitutionalTrustBand.js"
+
+      - name: Validate guarded VM deployment script
+        working-directory: .
+        run: bash -n scripts/mse-25-44-vm-deploy.sh
