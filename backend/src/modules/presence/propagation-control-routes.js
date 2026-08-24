@@ -6,7 +6,7 @@ const { buildPropagationControlPlan } = require("./propagation-control");
 const { verifyGoogleRemediation } = require("./google-remediation");
 const { syncGoogleDirectoryListing } = require("./google-directory-sync");
 const { setRuntimeListingState } = require("./runtime-listing-state");
-const { appendOperationAudit, createOperationId } = require("./operation-audit");
+const { appendOperationAudit, createOperationId, findLatestSubmittedOperationId } = require("./operation-audit");
 const { appendOperationSnapshot, getOperationSubmittedAt } = require("./operation-snapshots");
 const { buildCanonicalAgencyIdentity } = require("./canonical-identity");
 const { assertGoogleManagedWriteReady } = require("./operational-readiness");
@@ -55,7 +55,8 @@ function propagationControlRoutes({ prisma }) {
         staleAfterMs: req.body?.staleAfterMs
       });
       const plan = buildPropagationControlPlan(rows, { maxVerifications: req.body?.maxVerifications });
-      const agencies = await prisma.agency.findMany({ where: { id: { in: plan.verificationQueue.map((item) => item.agencyId) } } });
+      const agencyIds = [...new Set(plan.verificationQueue.map((item) => item.agencyId))];
+      const agencies = agencyIds.length ? await prisma.agency.findMany({ where: { id: { in: agencyIds } } }) : [];
       const agencyById = new Map(agencies.map((agency) => [agency.id, agency]));
       const results = [];
 
@@ -64,7 +65,7 @@ function propagationControlRoutes({ prisma }) {
         if (!agency) continue;
         const listing = await prisma.directoryListing.findUnique({ where: { id: item.listingId } });
         if (!listing) continue;
-        const operationId = listing.submissionPayload?.operationId || createOperationId("google_propagation_check");
+        const operationId = await findLatestSubmittedOperationId(prisma, listing.id) || createOperationId("google_propagation_check");
         try {
           const verification = await verifyGoogleRemediation(prisma, agency);
           const synced = await syncGoogleDirectoryListing(prisma, agency, listing);
@@ -92,9 +93,9 @@ function propagationControlRoutes({ prisma }) {
             status: verification.verified ? "verified" : "verification_pending",
             result: { verified: verification.verified, drift: verification.diff.drift, propagationMs }
           });
-          results.push({ agencyId: agency.id, listingId: synced.id, verified: verification.verified, propagationMs, drift: verification.diff.drift });
+          results.push({ agencyId: agency.id, listingId: synced.id, operationId, verified: verification.verified, propagationMs, drift: verification.diff.drift });
         } catch (error) {
-          results.push({ agencyId: agency.id, listingId: item.listingId, verified: false, error: error.message, googleStatus: error.status || null });
+          results.push({ agencyId: agency.id, listingId: item.listingId, operationId, verified: false, error: error.message, googleStatus: error.status || null });
         }
       }
 
