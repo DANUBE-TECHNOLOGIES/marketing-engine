@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 
 const TRACKABLE_ACTIONS = new Set([
+  "page_view",
   "quote_request",
   "contact",
   "phone",
@@ -28,6 +30,17 @@ function pageSlugFromPath(pathname, siteSlug) {
   if (!suffix) return "home";
   const [first] = suffix.split("/");
   return first || "home";
+}
+
+function intentFromPage(pageSlug) {
+  const slug = clean(pageSlug, 80).toLowerCase();
+  if (/billetterie|vols?|ticketing/.test(slug)) return "flight_ticketing";
+  if (/destinations?/.test(slug)) return "destination";
+  if (/services?/.test(slug)) return "service";
+  if (/equipe|équipe|team/.test(slug)) return "advisor";
+  if (/partenaires|partners/.test(slug)) return "partners";
+  if (/contact|agence/.test(slug)) return "local_contact";
+  return "general_travel";
 }
 
 function isPartnerContext(anchor) {
@@ -71,7 +84,7 @@ function inferIntent(anchor, action, pageSlug) {
   if (action === "advisor_contact" || /equipe|équipe|team/.test(context)) return "advisor";
   if (action === "partner_outbound" || isPartnerContext(anchor) || /partenaires|partners/.test(context)) return "partners";
   if (["phone", "email", "directions", "contact", "appointment"].includes(action)) return "local_contact";
-  return "general_travel";
+  return intentFromPage(pageSlug);
 }
 
 function inferPlacement(anchor) {
@@ -117,6 +130,26 @@ function dispatch(siteSlug, payload) {
 }
 
 export default function PublicConversionCapture({ siteSlug }) {
+  const pathname = usePathname();
+  const lastPageView = useRef(null);
+
+  useEffect(() => {
+    if (!siteSlug || !pathname || lastPageView.current === pathname) return;
+    lastPageView.current = pathname;
+    const pageSlug = pageSlugFromPath(pathname, siteSlug);
+    dispatch(siteSlug, {
+      pageSlug,
+      pagePath: pathname,
+      intent: intentFromPage(pageSlug),
+      action: "page_view",
+      placement: "public-site-page",
+      label: null,
+      target: null,
+      referrerPath: sameOriginReferrerPath(),
+      occurredAt: new Date().toISOString(),
+    });
+  }, [pathname, siteSlug]);
+
   useEffect(() => {
     if (!siteSlug) return undefined;
 
@@ -147,4 +180,4 @@ export default function PublicConversionCapture({ siteSlug }) {
   return null;
 }
 
-export { inferAction, inferIntent, inferPlacement, isPartnerContext, pageSlugFromPath };
+export { inferAction, inferIntent, inferPlacement, intentFromPage, isPartnerContext, pageSlugFromPath };
