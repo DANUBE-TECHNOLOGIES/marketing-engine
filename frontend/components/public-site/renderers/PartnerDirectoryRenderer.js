@@ -18,6 +18,7 @@ function PartnerCard({ partner }) {
   if (!profile) return null;
   const website = safePartnerHref(profile.details?.website, { allowInternal: false });
   const hasLogo = Boolean(profile.logoUrl);
+  const visibleTags = profile.visibleTags.slice(0, 3);
   return (
     <article className={styles.card} data-partner-id={profile.id} data-partner-logo={hasLogo ? "asset" : "initials"}>
       <div className={styles.logoFrame}>
@@ -26,7 +27,7 @@ function PartnerCard({ partner }) {
       <div className={styles.cardBody}>
         <h3>{profile.name}</h3>
         <p>{profile.summary}</p>
-        {profile.visibleTags.length ? <div className={styles.tags} aria-label={`Spécialités de ${profile.name}`}>{profile.visibleTags.map((tag) => <span key={tag}>{tag}</span>)}</div> : null}
+        {visibleTags.length ? <div className={styles.tags} aria-label={`Spécialités de ${profile.name}`}>{visibleTags.map((tag) => <span key={tag}>{tag}</span>)}</div> : null}
         {profile.details ? (
           <details className={styles.details}>
             <summary>Voir les spécialités</summary>
@@ -78,8 +79,8 @@ function PreferredPartners({ site }) {
     <section className={styles.preferred} aria-labelledby="partenaires-selection-title">
       <div className={styles.preferredHeading}>
         <span>La sélection Mondescale</span>
-        <h2 id="partenaires-selection-title">Des références solides pour imaginer chaque voyage</h2>
-        <p>Un socle de partenaires reconnus, complété lorsque nécessaire par les spécialistes retenus par votre agence.</p>
+        <h2 id="partenaires-selection-title">Nos partenaires de référence</h2>
+        <p>Les grandes marques que nous mobilisons régulièrement, complétées lorsque nécessaire par des spécialistes adaptés à votre projet.</p>
       </div>
       <div className={styles.networkPreferredGrid}>{networkItems.map((item) => <PreferredPartnerCard key={item.id} item={item} />)}</div>
       {agencyItems.length ? <div className={styles.agencyPreferred}><h3>Les spécialistes complémentaires de votre agence</h3><div className={styles.agencyPreferredGrid}>{agencyItems.map((item) => <PreferredPartnerCard key={item.id} item={item} agency />)}</div></div> : null}
@@ -89,7 +90,7 @@ function PreferredPartners({ site }) {
 
 function CategoryPanel({ category, index }) {
   return (
-    <details id={`partenaires-${category.id}`} className={styles.category} open={index < 2}>
+    <details id={`partenaires-${category.id}`} className={styles.category} open={index === 0}>
       <summary className={styles.categorySummary}>
         <span className={styles.categoryIdentity}><small>{category.eyebrow}</small><strong>{category.label}</strong></span>
         <span className={styles.categoryCount}>{category.partners.length} partenaire{category.partners.length > 1 ? "s" : ""}</span>
@@ -114,7 +115,7 @@ export default function PartnerDirectoryRenderer({ section, site }) {
           <p>{content.text || "Tour-opérateurs, croisiéristes, clubs, circuits et spécialistes : parcourez notre catalogue puis échangez avec votre conseiller pour identifier la solution la plus adaptée à votre projet."}</p>
         </header>
         <PreferredPartners site={site} />
-        <div className={styles.directoryIntro}><div><span className={styles.eyebrow}>Explorer le catalogue</span><h2>Choisissez votre univers de voyage</h2></div><p>Chaque univers rassemble les partenaires que nos conseillers peuvent mobiliser pour comparer les programmes, les prestations et les styles de voyage.</p></div>
+        <div className={styles.directoryIntro}><div><span className={styles.eyebrow}>Explorer le catalogue</span><h2>Choisissez votre univers de voyage</h2></div><p>Ouvrez un univers pour découvrir les partenaires correspondants. Les détails restent accessibles à la demande pour conserver une lecture claire.</p></div>
         <nav className={styles.categoryNav} aria-label="Univers de partenaires">
           {categories.map((category) => <a key={category.id} href={`#partenaires-${category.id}`}><span><small>{category.eyebrow}</small><strong>{category.label}</strong></span><b>{category.partners.length}</b></a>)}
         </nav>
