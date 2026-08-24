@@ -84,9 +84,10 @@ test("MSE-25.42 team page renders actual advisor media with a premium single-mem
 
 test("MSE-25.42 compacts Team and Partners secondary pages without altering stored content", () => {
   assert.match(publicSections, /function compactSecondarySections/);
-  assert.match(publicSections, /\["page-header", "team-introduction"\]/);
+  assert.match(publicSections, /\["page-header", "team-introduction", "expertise"\]/);
   assert.match(publicSections, /\["page-header", "partners-introduction"\]/);
   assert.match(publicSections, /\^votre équipe voyage/);
+  assert.match(publicSections, /\^notre expertise\$/);
   assert.match(publicSections, /\^des partenaires sélectionnés pour vos voyages/);
   assert.match(publicSections, /if \(type\.includes\("cta"\)\) return 30/);
   assert.match(publicSections, /compactSecondarySections\(/);
