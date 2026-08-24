@@ -30,6 +30,14 @@ function pageSlugFromPath(pathname, siteSlug) {
   return first || "home";
 }
 
+function isPartnerContext(anchor) {
+  return Boolean(
+    anchor.closest?.("[data-partner-directory]") ||
+    anchor.closest?.("[data-partner-id]") ||
+    anchor.closest?.("[data-preferred-partner-id]")
+  );
+}
+
 function inferAction(anchor) {
   const explicit = clean(anchor.dataset.conversionAction, 80).toLowerCase();
   if (TRACKABLE_ACTIONS.has(explicit)) return explicit;
@@ -47,7 +55,7 @@ function inferAction(anchor) {
   if (/conseiller|équipe|equipe/.test(`${label} ${context}`) && /contact|échanger|parler|appeler/.test(label)) return "advisor_contact";
   if (/destination/.test(`${href} ${context}`)) return "destination_explore";
   if (/service/.test(`${href} ${context}`)) return "service_explore";
-  if (/partner|partenaire/.test(context) && /^https?:/i.test(href)) return "partner_outbound";
+  if ((isPartnerContext(anchor) || /partner|partenaire/.test(context)) && /^https?:/i.test(href)) return "partner_outbound";
   if (/contact|nous contacter|parler|échanger/.test(`${href} ${label}`)) return "contact";
   return null;
 }
@@ -61,7 +69,7 @@ function inferIntent(anchor, action, pageSlug) {
   if (action === "destination_explore" || /destination/.test(context)) return "destination";
   if (action === "service_explore" || /services?/.test(context)) return "service";
   if (action === "advisor_contact" || /equipe|équipe|team/.test(context)) return "advisor";
-  if (action === "partner_outbound" || /partenaires|partners/.test(context)) return "partners";
+  if (action === "partner_outbound" || isPartnerContext(anchor) || /partenaires|partners/.test(context)) return "partners";
   if (["phone", "email", "directions", "contact", "appointment"].includes(action)) return "local_contact";
   return "general_travel";
 }
@@ -69,6 +77,7 @@ function inferIntent(anchor, action, pageSlug) {
 function inferPlacement(anchor) {
   const explicit = clean(anchor.dataset.conversionPlacement, 120);
   if (explicit) return explicit;
+  if (isPartnerContext(anchor)) return "public-site-partner-directory";
   const section = anchor.closest("section");
   if (section) {
     const stableClass = [...section.classList].find((name) => name.startsWith("public-site-"));
@@ -138,4 +147,4 @@ export default function PublicConversionCapture({ siteSlug }) {
   return null;
 }
 
-export { inferAction, inferIntent, inferPlacement, pageSlugFromPath };
+export { inferAction, inferIntent, inferPlacement, isPartnerContext, pageSlugFromPath };
