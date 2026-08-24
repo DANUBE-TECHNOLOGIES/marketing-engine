@@ -1,14 +1,60 @@
 const PAYMENT_METHODS = Object.freeze([
   { key: "cb", label: "Carte bancaire", mark: "CB", className: "payment-mark-cb" },
-  { key: "visa", label: "Visa", mark: "VISA", className: "payment-mark-visa" },
-  { key: "mastercard", label: "Mastercard", mark: "MC", className: "payment-mark-mastercard" },
-  { key: "amex", label: "American Express", mark: "AMEX", className: "payment-mark-amex" },
+  {
+    key: "visa",
+    label: "Visa",
+    mark: "VISA",
+    className: "payment-mark-visa",
+    logoSrc: "https://commons.wikimedia.org/wiki/Special:Redirect/file/Visa_2021.svg",
+  },
+  {
+    key: "mastercard",
+    label: "Mastercard",
+    mark: "MC",
+    className: "payment-mark-mastercard",
+    logoSrc: "https://commons.wikimedia.org/wiki/Special:Redirect/file/Mastercard_2019_logo.svg",
+  },
+  {
+    key: "amex",
+    label: "American Express",
+    mark: "AMEX",
+    className: "payment-mark-amex",
+    logoSrc: "https://commons.wikimedia.org/wiki/Special:Redirect/file/American_Express_logo_(2018).svg",
+  },
   { key: "transfer", label: "Virement bancaire", mark: "Virement", className: "payment-mark-neutral" },
   { key: "cheque", label: "Chèque", mark: "Chèque", className: "payment-mark-neutral" },
-  { key: "ancv", label: "Chèques-Vacances ANCV", mark: "ANCV", className: "payment-mark-ancv" },
+  {
+    key: "ancv",
+    label: "Chèques-Vacances ANCV",
+    mark: "ANCV",
+    className: "payment-mark-ancv",
+    logoSrc: "https://www.chateau-montreal.com/uploads/images/theme/ANCV.jpg",
+  },
 ]);
 
 const INSTALLMENT_COUNTS = Object.freeze([3, 4, 10]);
+
+function PaymentMark({ method }) {
+  if (!method.logoSrc) {
+    return (
+      <span className={`public-payment-mark ${method.className}`} aria-hidden="true">
+        {method.mark}
+      </span>
+    );
+  }
+
+  return (
+    <span className={`public-payment-mark public-payment-logo-wrap ${method.className}`} aria-hidden="true">
+      <img
+        className="public-payment-logo"
+        src={method.logoSrc}
+        alt=""
+        loading="lazy"
+        decoding="async"
+      />
+    </span>
+  );
+}
 
 export default function PublicPaymentMethodsBand() {
   return (
@@ -30,12 +76,7 @@ export default function PublicPaymentMethodsBand() {
         <div className="public-payment-methods" aria-label="Moyens de paiement acceptés">
           {PAYMENT_METHODS.map((method) => (
             <div className="public-payment-method" key={method.key}>
-              <span
-                className={`public-payment-mark ${method.className}`}
-                aria-hidden="true"
-              >
-                {method.mark}
-              </span>
+              <PaymentMark method={method} />
               <span>{method.label}</span>
             </div>
           ))}
