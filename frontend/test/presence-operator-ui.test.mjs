@@ -47,12 +47,31 @@ test("agency provider page exposes discovery and guided remediation without clai
   assert.doesNotMatch(code,/googleapis\.com/);
 });
 
-test("Presence cockpit uses backend summary contract and links intervention details", async()=>{
+test("Presence cockpit uses backend summary contract and links matrix and intervention details", async()=>{
   const code=await source("app/presence/page.js");
   assert.match(code,/summary\.agencies/);
   assert.match(code,/summary\.executableRemediations/);
   assert.match(code,/item\.priority/);
   assert.match(code,/\/presence\/agencies\//);
+  assert.match(code,/\/presence\/matrix/);
+});
+
+test("provider matrix distinguishes conformity automation manual monitor and blocked states", async()=>{
+  const code=await source("app/presence/matrix/page.js");
+  assert.match(code,/Matrice Presence/);
+  assert.match(code,/Automatisables/);
+  assert.match(code,/Manuelles/);
+  assert.match(code,/Surveillance/);
+  assert.match(code,/Bloquées/);
+  assert.match(code,/automationEligible/);
+});
+
+test("provider readiness UI exposes operational modes rather than theoretical capability", async()=>{
+  const code=await source("app/presence/providers/page.js");
+  assert.match(code,/Mode opérationnel/);
+  assert.match(code,/API gérée/);
+  assert.match(code,/Portail \/ correction manuelle/);
+  assert.match(code,/Intégration bloquée/);
 });
 
 test("admin network links to Presence cockpit", async()=>{
