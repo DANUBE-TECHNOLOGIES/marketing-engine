@@ -5,3 +5,4 @@ require("../src/modules/presence/presence-convergence.test");
 require("../src/modules/presence/directory-response-adapter.test");
 require("../src/modules/presence/directory-schema-audit.test");
 require("../src/modules/presence/provider-readiness.test");
+require("../src/modules/presence/citation-observation.test");
