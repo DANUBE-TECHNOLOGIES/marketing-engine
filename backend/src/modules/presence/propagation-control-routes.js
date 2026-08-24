@@ -3,6 +3,7 @@
 const express = require("express");
 const { listPendingPropagation } = require("./propagation-watch");
 const { buildPropagationControlPlan } = require("./propagation-control");
+const { buildPropagationDashboard } = require("./propagation-dashboard");
 const { verifyGoogleRemediation } = require("./google-remediation");
 const { syncGoogleDirectoryListing } = require("./google-directory-sync");
 const { setRuntimeListingState } = require("./runtime-listing-state");
@@ -44,6 +45,25 @@ async function resolveEscalationAction(prisma, agencyId) {
 
 function propagationControlRoutes({ prisma }) {
   const router = express.Router();
+
+  router.get("/api/presence/propagation/dashboard", async (req, res) => {
+    try {
+      const [rows, actions] = await Promise.all([
+        listPendingPropagation(prisma, {
+          limit: req.query.limit,
+          warnAfterMs: req.query.warnAfterMs,
+          staleAfterMs: req.query.staleAfterMs
+        }),
+        prisma.networkAction.findMany({
+          where: { lever: "presence_google_propagation", status: { in: ["todo", "in_progress"] } },
+          orderBy: { createdAt: "asc" }
+        })
+      ]);
+      return res.json({ ok: true, ...buildPropagationDashboard(rows, actions) });
+    } catch (error) {
+      return res.status(500).json({ ok: false, error: error.message });
+    }
+  });
 
   router.get("/api/presence/propagation/control-preview", async (req, res) => {
     try {
