@@ -12,6 +12,16 @@ const FIELD_MAP = Object.freeze({
   phone: "phoneNumbers",
   website: "websiteUri"
 });
+const SENSITIVE_FIELDS = Object.freeze(["name", "address"]);
+
+function remediationRisk(drift = []) {
+  const sensitive = [...new Set(drift)].filter((field) => SENSITIVE_FIELDS.includes(field));
+  return Object.freeze({
+    level: sensitive.length ? "high" : "standard",
+    sensitiveFields: Object.freeze(sensitive),
+    requiresSensitiveConfirmation: sensitive.length > 0
+  });
+}
 
 function buildGoogleRemediationPatch(agency, drift = []) {
   const canonical = buildCanonicalAgencyIdentity(agency);
@@ -37,6 +47,7 @@ function buildGoogleRemediationPatch(agency, drift = []) {
   return Object.freeze({
     locationName: normalizeLocationName(agency.googleLocationId),
     drift: Object.freeze(requested),
+    risk: remediationRisk(requested),
     updateMask: Object.freeze(updateMask),
     body: Object.freeze(body)
   });
@@ -85,6 +96,8 @@ async function verifyGoogleRemediation(prisma, agency) {
 
 module.exports = {
   FIELD_MAP,
+  SENSITIVE_FIELDS,
+  remediationRisk,
   buildGoogleRemediationPatch,
   patchGoogleLocation,
   verifyGoogleRemediation
