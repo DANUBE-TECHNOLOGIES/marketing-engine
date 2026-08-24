@@ -13,9 +13,15 @@ function schemaRows(ready = true) {
   return ready ? rows : rows.filter((row) => !(row.tableName === "DirectoryListing" && row.columnName === "automationStatus"));
 }
 
-function prismaMock({ schemaReady = true, refreshToken = "refresh" } = {}) {
+function storageRows(ready = true) {
+  return ready
+    ? [{ tableName: "PresenceOperationAudit" }, { tableName: "PresenceOperationSnapshot" }]
+    : [{ tableName: "PresenceOperationAudit" }];
+}
+
+function prismaMock({ schemaReady = true, storageReady = true, refreshToken = "refresh" } = {}) {
   return {
-    $queryRawUnsafe: async () => schemaRows(schemaReady),
+    $queryRawUnsafe: async (sql) => String(sql).includes("information_schema.tables") ? storageRows(storageReady) : schemaRows(schemaReady),
     googleToken: { findFirst: async () => refreshToken ? { refreshToken, createdAt: new Date() } : null }
   };
 }
@@ -31,6 +37,13 @@ test("schema drift blocks Google managed writes", async () => {
   const readiness = await buildOperationalReadiness(prismaMock({ schemaReady: false }), env);
   assert.equal(readiness.readyForGoogleManagedWrites, false);
   assert.ok(readiness.blockers.includes("directory_schema"));
+});
+
+test("missing Presence history storage blocks Google managed writes", async () => {
+  const env = { GOOGLE_CLIENT_ID: "id", GOOGLE_CLIENT_SECRET: "secret" };
+  const readiness = await buildOperationalReadiness(prismaMock({ storageReady: false }), env);
+  assert.equal(readiness.readyForGoogleManagedWrites, false);
+  assert.ok(readiness.blockers.includes("presence_storage"));
 });
 
 test("discovery readiness requires enablement and both DataForSEO credentials", async () => {
