@@ -7,6 +7,7 @@ const ROOT = path.resolve(import.meta.dirname, "..");
 function read(relative) { return fs.readFileSync(path.join(ROOT, relative), "utf8"); }
 
 const api = read("lib/public-site-api.js");
+const publicSections = read("components/public-site/PublicSiteSections.js");
 const heroCss = read("components/public-site/hero-finish.css");
 const destinations = read("components/public-site/renderers/DestinationsRenderer.js");
 const features = read("components/public-site/renderers/FeaturesV2Renderer.js");
@@ -71,13 +72,24 @@ test("MSE-25.42 inspirations expose editorial cards and link back to commercial 
   assert.match(inspirations, /\/contact/);
 });
 
-test("MSE-25.42 team page renders actual advisor media with adaptive single-member composition", () => {
+test("MSE-25.42 team page renders actual advisor media with a premium single-member composition", () => {
   assert.match(team, /member\.imageUrl/);
   assert.match(team, /member\.photoUrl/);
   assert.match(team, /const singleMember=uniqueMembers\.length===1/);
   assert.match(team, /styles\.single/);
-  assert.match(teamCss, /\.single\{grid-template-columns:minmax\(0,820px\)\}/);
-  assert.match(teamCss, /\.single \.card\{display:grid;grid-template-columns:250px minmax\(0,1fr\)/);
+  assert.match(teamCss, /\.single\{grid-template-columns:minmax\(0,1040px\);justify-content:start\}/);
+  assert.match(teamCss, /\.single \.card\{display:grid;grid-template-columns:330px minmax\(0,1fr\)/);
+  assert.match(teamCss, /\.single \.portrait\{width:252px/);
+});
+
+test("MSE-25.42 compacts Team and Partners secondary pages without altering stored content", () => {
+  assert.match(publicSections, /function compactSecondarySections/);
+  assert.match(publicSections, /\["page-header", "team-introduction"\]/);
+  assert.match(publicSections, /\["page-header", "partners-introduction"\]/);
+  assert.match(publicSections, /\^votre équipe voyage/);
+  assert.match(publicSections, /\^des partenaires sélectionnés pour vos voyages/);
+  assert.match(publicSections, /if \(type\.includes\("cta"\)\) return 30/);
+  assert.match(publicSections, /compactSecondarySections\(/);
 });
 
 test("MSE-25.42 keeps Home partners compact and reserves the full catalogue for the Partners page", () => {
@@ -90,7 +102,10 @@ test("MSE-25.42 keeps Home partners compact and reserves the full catalogue for 
   assert.match(partnerDirectory, /getPublishablePartnerProfiles/);
   assert.match(partnerDirectory, /data-partner-directory="full"/);
   assert.match(partnerDirectory, /PreferredPartners/);
-  assert.match(partnerDirectoryCss, /\.directory/);
+  assert.match(partnerDirectory, /open=\{index === 0\}/);
+  assert.match(partnerDirectory, /visibleTags\.slice\(0, 3\)/);
+  assert.match(partnerDirectoryCss, /width:min\(1480px,calc\(100% - 64px\)\)/);
+  assert.match(partnerDirectoryCss, /grid-template-columns:118px minmax\(0,1fr\)/);
 });
 
 test("MSE-25.42 promotes legacy secondary partners blocks to the full directory without duplication", () => {
