@@ -17,6 +17,7 @@ fail() {
 
 command -v git >/dev/null 2>&1 || fail "git is required"
 command -v docker >/dev/null 2>&1 || fail "docker is required"
+command -v curl >/dev/null 2>&1 || fail "curl is required"
 docker compose version >/dev/null 2>&1 || fail "docker compose plugin is required"
 
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || fail "run this script from the marketing-engine repository"
@@ -89,9 +90,49 @@ RUNNING="$(docker inspect -f '{{.State.Running}}' "$CONTAINER_ID")"
 if [[ -n "$PROBE_SITE_SLUG" ]]; then
   log "checking public SSR output for $PROBE_SITE_SLUG"
   PROBE_URL="http://127.0.0.1:3000/agence/${PROBE_SITE_SLUG}"
-  HTML="$(curl --fail --silent --show-error --location --max-time 20 "$PROBE_URL")"
-  grep -Fq "Solutions de paiement" <<<"$HTML" || fail "payment band is absent from public HTML"
-  grep -Fq "Voyagez en confiance" <<<"$HTML" || fail "institutional trust band is absent from public HTML"
+  PROBE_FILE="$(mktemp)"
+  trap 'rm -f "$PROBE_FILE"' EXIT
+
+  READY=false
+  for attempt in $(seq 1 30); do
+    CODE="$(curl --silent --show-error --location --connect-timeout 5 --max-time 30 \
+      --output "$PROBE_FILE" --write-out '%{http_code}' "$PROBE_URL" 2>/dev/null || true)"
+    log "probe attempt $attempt: HTTP ${CODE:-000}"
+    if [[ "$CODE" == "200" ]]; then
+      READY=true
+      break
+    fi
+    sleep 2
+  done
+
+  [[ "$READY" == "true" ]] || fail "public SSR probe did not return HTTP 200"
+
+  check_literal() {
+    local label="$1"
+    local token="$2"
+    grep -Fqi "$token" "$PROBE_FILE" || fail "$label is absent from public HTML"
+    log "validated: $label"
+  }
+
+  check_literal "payment band" "Solutions de paiement"
+  check_literal "Visa" "Visa"
+  check_literal "Mastercard" "Mastercard"
+  check_literal "American Express" "American Express"
+  check_literal "ANCV" "Chèques-Vacances ANCV"
+  check_literal "3x instalment" "3x"
+  check_literal "4x instalment" "4x"
+  check_literal "10x instalment" "10x"
+  check_literal "institutional trust band" "Voyagez en confiance"
+  check_literal "CEDIV Travel" "CEDIV Travel"
+  check_literal "Les Entreprises du Voyage" "Les Entreprises du Voyage"
+  check_literal "Atout France" "Atout France"
+  check_literal "financial guarantee" "Garantie financière"
+  check_literal "professional liability insurance" "Responsabilité civile professionnelle"
+
+  if ! grep -Eqi 'GROUPAMA Assurance (&|&amp;|\\u0026) Caution' "$PROBE_FILE"; then
+    fail "GROUPAMA Assurance & Caution is absent from public HTML"
+  fi
+  log "validated: GROUPAMA Assurance & Caution"
 fi
 
 ROLLBACK_REQUIRED=false
