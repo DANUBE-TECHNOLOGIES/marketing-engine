@@ -32,19 +32,23 @@
 
 .public-institutional-band-items {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(3, minmax(190px, 1fr)) minmax(300px, 1.45fr);
+  gap: 12px;
 }
 
 .public-institutional-item {
-  min-height: 88px;
+  min-height: 112px;
   display: flex;
   align-items: center;
-  gap: 13px;
-  padding: 13px 14px;
+  gap: 16px;
+  padding: 15px 16px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 15px;
   background: rgba(255, 255, 255, 0.045);
+}
+
+.public-institutional-item-groupama {
+  padding-right: 20px;
 }
 
 .public-institutional-mark {
@@ -55,7 +59,7 @@
   justify-content: center;
   padding: 0 8px;
   border-radius: 9px;
-  background: rgba(255, 255, 255, 0.94);
+  background: rgba(255, 255, 255, 0.96);
   color: #0b253a;
   font-size: 0.69rem;
   font-weight: 900;
@@ -64,11 +68,30 @@
 }
 
 .public-institutional-logo-wrap {
-  width: 76px;
-  height: 48px;
-  min-width: 76px;
-  padding: 5px 7px;
+  width: 104px;
+  height: 68px;
+  min-width: 104px;
+  padding: 6px 8px;
   overflow: hidden;
+}
+
+.public-institutional-logo-cediv {
+  width: 108px;
+  height: 76px;
+  min-width: 108px;
+}
+
+.public-institutional-logo-edv,
+.public-institutional-logo-atout-france {
+  width: 122px;
+  height: 72px;
+  min-width: 122px;
+}
+
+.public-institutional-logo-groupama {
+  width: 116px;
+  height: 72px;
+  min-width: 116px;
 }
 
 .public-institutional-logo {
@@ -82,23 +105,29 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
 }
 
 .public-institutional-copy strong {
   color: white;
-  font-size: 0.77rem;
+  font-size: 0.8rem;
   line-height: 1.25;
 }
 
 .public-institutional-copy small {
   display: -webkit-box;
   overflow: hidden;
-  color: rgba(255, 255, 255, 0.58);
-  font-size: 0.66rem;
-  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.68rem;
+  line-height: 1.4;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
+}
+
+@media (max-width: 1180px) {
+  .public-institutional-band-items {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 700px) {
@@ -110,5 +139,15 @@
 
   .public-institutional-band-items {
     grid-template-columns: 1fr;
+  }
+
+  .public-institutional-logo-wrap,
+  .public-institutional-logo-cediv,
+  .public-institutional-logo-edv,
+  .public-institutional-logo-atout-france,
+  .public-institutional-logo-groupama {
+    width: 104px;
+    height: 66px;
+    min-width: 104px;
   }
 }
