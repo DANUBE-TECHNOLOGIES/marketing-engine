@@ -35,6 +35,8 @@ test("MSE-25.44 institutional band uses legal runtime data instead of inventing 
   assert.match(institutions, /legal\?\.financialGuarantee/);
   assert.match(institutions, /legal\?\.professionalInsurance/);
   assert.match(institutions, /includesProvider\(financialGuarantee, "groupama"\)/);
+  assert.match(institutions, /groupamaGuaranteed \? "GROUPAMA" : "GARANTIE"/);
+  assert.match(institutions, /financialGuarantee \|\| "Protection financière prévue par la réglementation"/);
   assert.match(institutions, /Atout France/);
   assert.match(institutions, /CEDIV Travel/);
   assert.match(institutions, /Les Entreprises du Voyage/);
