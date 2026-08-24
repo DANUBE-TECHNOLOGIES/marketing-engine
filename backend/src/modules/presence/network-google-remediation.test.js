@@ -26,3 +26,14 @@ test("sensitive Google drift can only enter an explicitly sensitive plan", () =>
   assert.equal(plan.planned, 2);
   assert.ok(plan.items.some((item) => item.risk.level === "high" && item.risk.requiresSensitiveConfirmation));
 });
+
+test("an in-flight listing is never submitted twice", () => {
+  const plan = buildGoogleRemediationRunPlan(agencies, directories, listings, {
+    limit: 10,
+    includeSensitive: true,
+    blockedListingIds: [100]
+  });
+  assert.equal(plan.planned, 1);
+  assert.equal(plan.skippedInFlight, 1);
+  assert.equal(plan.items[0].listingId, 101);
+});
