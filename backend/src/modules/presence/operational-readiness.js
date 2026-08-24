@@ -39,4 +39,32 @@ async function buildOperationalReadiness(prisma, env = process.env) {
   });
 }
 
-module.exports = { buildOperationalReadiness, envPresent, envTrue };
+async function assertGoogleManagedWriteReady(prisma, env = process.env) {
+  const readiness = await buildOperationalReadiness(prisma, env);
+  if (!readiness.readyForGoogleManagedWrites) {
+    const error = new Error(`Presence Google non prêt: ${readiness.blockers.join(", ")}`);
+    error.status = 503;
+    error.readiness = readiness;
+    throw error;
+  }
+  return readiness;
+}
+
+async function assertDiscoveryReady(prisma, env = process.env) {
+  const readiness = await buildOperationalReadiness(prisma, env);
+  if (!readiness.readyForDiscovery) {
+    const error = new Error("Presence discovery non prêt: DataForSEO doit être activé et configuré");
+    error.status = 503;
+    error.readiness = readiness;
+    throw error;
+  }
+  return readiness;
+}
+
+module.exports = {
+  buildOperationalReadiness,
+  assertGoogleManagedWriteReady,
+  assertDiscoveryReady,
+  envPresent,
+  envTrue
+};
