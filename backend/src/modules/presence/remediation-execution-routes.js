@@ -3,6 +3,7 @@
 const express = require("express");
 const { buildGoogleRemediationPatch, patchGoogleLocation, verifyGoogleRemediation } = require("./google-remediation");
 const { syncGoogleDirectoryListing } = require("./google-directory-sync");
+const { setRuntimeListingState } = require("./runtime-listing-state");
 
 async function loadAgency(prisma, rawAgencyId) {
   const agencyId = Number(rawAgencyId);
@@ -83,10 +84,13 @@ function remediationExecutionRoutes({ prisma }) {
         where: { id: listing.id },
         data: {
           status: "pending",
-          automationStatus: "submitted",
-          submittedAt: new Date(),
           notes: `Correction Google soumise via Presence pour: ${drift.join(", ")}. Validation Google réussie; vérification distante requise.`
         }
+      });
+      const runtime = await setRuntimeListingState(prisma, tracked.id, {
+        automationStatus: "submitted",
+        submittedAt: new Date(),
+        submissionPayload: { provider: "google_business_profile", drift, risk: preview.risk }
       });
       return res.json({
         ok: true,
@@ -95,7 +99,7 @@ function remediationExecutionRoutes({ prisma }) {
         validation,
         verificationRequired: true,
         result,
-        listing: { id: tracked.id, status: tracked.status, automationStatus: tracked.automationStatus, submittedAt: tracked.submittedAt }
+        listing: { id: tracked.id, status: tracked.status, automationStatus: runtime.automationStatus, submittedAt: runtime.submittedAt }
       });
     } catch (error) {
       return res.status(error.status || 500).json({ ok: false, error: error.message, details: error.google || undefined });
@@ -108,9 +112,9 @@ function remediationExecutionRoutes({ prisma }) {
       const listing = await loadGoogleListing(prisma, agency.id);
       const verification = await verifyGoogleRemediation(prisma, agency);
       const synced = await syncGoogleDirectoryListing(prisma, agency, listing);
-      if (verification.verified) {
-        await prisma.directoryListing.update({ where: { id: synced.id }, data: { automationStatus: "validated" } });
-      }
+      await setRuntimeListingState(prisma, synced.id, {
+        automationStatus: verification.verified ? "validated" : "verification_pending"
+      });
       return res.status(verification.verified ? 200 : 409).json({
         ok: verification.verified,
         verification,
