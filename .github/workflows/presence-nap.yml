@@ -10,6 +10,10 @@ on:
       - 'backend/test/presence-convergence.test.js'
       - 'backend/prisma/migrations/*presence*/**'
       - 'backend/src/modules/register-modules.js'
+      - 'frontend/app/presence/**'
+      - 'frontend/app/admin-network/page.js'
+      - 'frontend/test/presence-operator-ui.test.mjs'
+      - 'frontend/package.json'
       - '.github/workflows/presence-nap.yml'
   workflow_dispatch:
 
@@ -17,7 +21,7 @@ permissions:
   contents: read
 
 jobs:
-  presence:
+  presence-backend:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -51,3 +55,25 @@ jobs:
 
       - name: Presence tests
         run: node --test test/presence-convergence.test.js
+
+  presence-frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Presence operator UI tests
+        run: npm run test:presence
