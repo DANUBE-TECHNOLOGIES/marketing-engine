@@ -2,6 +2,7 @@
 
 const { evaluateCitationObservation } = require("./citation-observation");
 const { directoryNameForProviderKey } = require("./directory-bridge");
+const { appendCitationObservation } = require("./citation-observation-store");
 
 function fieldMatch(diff, field) {
   return Boolean(diff?.checks?.find((item) => item.field === field)?.match);
@@ -34,11 +35,7 @@ async function recordCitationObservation(prisma, { agency, providerKey, observed
 
   if (!listing) {
     listing = await prisma.directoryListing.create({
-      data: {
-        agencyId: agency.id,
-        directoryId: directory.id,
-        status: "missing"
-      }
+      data: { agencyId: agency.id, directoryId: directory.id, status: "missing" }
     });
   }
 
@@ -56,6 +53,15 @@ async function recordCitationObservation(prisma, { agency, providerKey, observed
         : `Citation ${directoryName} observée : dérive NAP ${result.diff.drift.join(", ") || "inconnue"}.`,
       lastCheckedAt: new Date()
     }
+  });
+
+  await appendCitationObservation(prisma, {
+    agencyId: agency.id,
+    providerKey,
+    listingId: updated.id,
+    listingUrl: updated.listingUrl,
+    observed,
+    diff: result.diff
   });
 
   return { result, listing: updated };
