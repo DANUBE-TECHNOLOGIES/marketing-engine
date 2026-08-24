@@ -65,7 +65,8 @@ test("MSE-25.45 detects underperformance and preserves strong references", () =>
 
 test("MSE-25.45 keeps the optimization loop advisory and read-only", () => {
   assert.match(routes, /optimizationMode:\s*"read-only-recommendations"/);
-  assert.match(dashboard, /Aucune modification publique n’est appliquée automatiquement/);
+  assert.match(dashboard, /strictement read-only/);
+  assert.match(dashboard, /aucune page, aucun CTA et aucun contenu public n’est modifié automatiquement/);
   assert.match(dashboard, /Priorités d’optimisation/);
   assert.match(dashboard, /Références à préserver/);
   assert.doesNotMatch(dashboard, /fetch\([^)]*method:\s*["']POST["']/s);
