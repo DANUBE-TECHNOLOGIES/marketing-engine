@@ -25,6 +25,7 @@ require("../src/modules/presence/runtime-listing-state.test");
 require("../src/modules/presence/operational-readiness.test");
 require("../src/modules/presence/deployment-readiness.test");
 require("../src/modules/presence/pilot-readiness.test");
+require("../src/modules/presence/pilot-outcome.test");
 require("../src/modules/presence/presence-storage-audit.test");
 require("../src/modules/presence/operation-audit.test");
 require("../src/modules/presence/operation-snapshots.test");
