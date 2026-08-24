@@ -29,14 +29,19 @@ test("MSE-25.44 payment band advertises supported means and qualified instalment
   assert.match(paymentCss, /@media \(max-width: 620px\)/);
 });
 
-test("MSE-25.44 institutional band uses legal runtime data instead of inventing registration or guarantee details", () => {
+test("MSE-25.44 institutional band keeps legal runtime authoritative and falls back to the Mondescale Groupama network guarantee", () => {
   assert.match(institutions, /runtime\?\.runtime\?\.legal\?\.values/);
   assert.match(institutions, /legal\?\.travelRegistration/);
   assert.match(institutions, /legal\?\.financialGuarantee/);
   assert.match(institutions, /legal\?\.professionalInsurance/);
-  assert.match(institutions, /includesProvider\(financialGuarantee, "groupama"\)/);
-  assert.match(institutions, /groupamaGuaranteed \? "GROUPAMA" : "GARANTIE"/);
-  assert.match(institutions, /financialGuarantee \|\| "Protection financière prévue par la réglementation"/);
+  assert.match(institutions, /MONDESCALE_TRUST_DEFAULTS = Object\.freeze/);
+  assert.match(institutions, /financialGuaranteeProvider: "GROUPAMA Assurance & Caution"/);
+  assert.match(institutions, /professionalInsuranceProvider: "GROUPAMA Assurance & Caution"/);
+  assert.match(institutions, /financialGuarantee \|\| MONDESCALE_TRUST_DEFAULTS\.financialGuaranteeProvider/);
+  assert.match(institutions, /professionalInsurance \|\| MONDESCALE_TRUST_DEFAULTS\.professionalInsuranceProvider/);
+  assert.match(institutions, /mark: "GROUPAMA"/);
+  assert.match(institutions, /title: "Garantie financière"/);
+  assert.match(institutions, /title: "Responsabilité civile professionnelle"/);
   assert.match(institutions, /Atout France/);
   assert.match(institutions, /CEDIV Travel/);
   assert.match(institutions, /Les Entreprises du Voyage/);
