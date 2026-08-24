@@ -13,6 +13,7 @@ const { operationAuditRoutes } = require("./operation-audit-routes");
 const { operationRetryRoutes } = require("./operation-retry-routes");
 const { propagationControlRoutes } = require("./propagation-control-routes");
 const { propagationAlertRoutes } = require("./propagation-alert-routes");
+const { networkHealthRoutes } = require("./network-health-routes");
 const { manualRemediationRoutes } = require("./manual-remediation-routes");
 const providerRegistry = require("./provider-registry");
 
@@ -30,6 +31,7 @@ function routes({ prisma }) {
   router.use(operationRetryRoutes({ prisma }));
   router.use(propagationControlRoutes({ prisma }));
   router.use(propagationAlertRoutes({ prisma }));
+  router.use(networkHealthRoutes({ prisma }));
   router.use(manualRemediationRoutes({ prisma }));
   return router;
 }
