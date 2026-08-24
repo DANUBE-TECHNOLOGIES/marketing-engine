@@ -4,6 +4,7 @@ const express = require("express");
 const { buildGoogleRemediationRunPlan } = require("./network-google-remediation");
 const { patchGoogleLocation, verifyGoogleRemediation } = require("./google-remediation");
 const { syncGoogleDirectoryListing } = require("./google-directory-sync");
+const { setRuntimeListingState, listSubmittedGoogleRuntimeListings } = require("./runtime-listing-state");
 
 async function loadState(prisma) {
   const [agencies, directories, listings] = await Promise.all([
@@ -63,10 +64,13 @@ function networkGoogleRemediationRoutes({ prisma }) {
               where: { id: item.listingId },
               data: {
                 status: "pending",
-                automationStatus: "submitted",
-                submittedAt: new Date(),
                 notes: `Correction Google réseau soumise via Presence pour: ${item.drift.join(", ")}. Vérification requise.`
               }
+            });
+            await setRuntimeListingState(prisma, item.listingId, {
+              automationStatus: "submitted",
+              submittedAt: new Date(),
+              submissionPayload: { provider: "google_business_profile", drift: item.drift, risk: item.risk }
             });
           }
           results.push({ agencyId: item.agencyId, agencyName: item.agencyName, status: "submitted", drift: item.drift, risk: item.risk, write });
@@ -93,7 +97,7 @@ function networkGoogleRemediationRoutes({ prisma }) {
       const state = await loadState(prisma);
       const googleDirectory = state.directories.find((directory) => directory.name === "Google Business Profile");
       if (!googleDirectory) return res.status(409).json({ ok: false, error: "Annuaire Google Business Profile non initialisé" });
-      const pending = state.listings.filter((listing) => listing.directoryId === googleDirectory.id && listing.automationStatus === "submitted");
+      const pending = await listSubmittedGoogleRuntimeListings(prisma, googleDirectory.id);
       const agencies = agencyMap(state.agencies);
       const results = [];
 
@@ -103,9 +107,8 @@ function networkGoogleRemediationRoutes({ prisma }) {
         try {
           const verification = await verifyGoogleRemediation(prisma, agency);
           const synced = await syncGoogleDirectoryListing(prisma, agency, listing);
-          await prisma.directoryListing.update({
-            where: { id: synced.id },
-            data: { automationStatus: verification.verified ? "validated" : "verification_pending" }
+          await setRuntimeListingState(prisma, synced.id, {
+            automationStatus: verification.verified ? "validated" : "verification_pending"
           });
           results.push({ agencyId: agency.id, agencyName: agency.name, verified: verification.verified, status: synced.status, drift: verification.diff.drift });
         } catch (error) {
