@@ -23,12 +23,17 @@ test("Google remediation only patches requested NAP fields", () => {
     phoneNumbers: { primaryPhone: "+33386000000" },
     websiteUri: "https://agences.mondescale.com/nevers"
   });
+  assert.equal(patch.risk.level, "standard");
+  assert.equal(patch.risk.requiresSensitiveConfirmation, false);
 });
 
-test("Google remediation maps canonical address to storefrontAddress", () => {
-  const patch = buildGoogleRemediationPatch(agency, ["address"]);
-  assert.deepEqual(patch.updateMask, ["storefrontAddress"]);
+test("Google remediation maps canonical address and flags identity-sensitive edits", () => {
+  const patch = buildGoogleRemediationPatch(agency, ["address", "name"]);
+  assert.deepEqual(patch.updateMask, ["storefrontAddress", "title"]);
   assert.equal(patch.body.storefrontAddress.locality, "Nevers");
   assert.equal(patch.body.storefrontAddress.postalCode, "58000");
   assert.deepEqual(patch.body.storefrontAddress.addressLines, ["1 rue Exemple"]);
+  assert.equal(patch.risk.level, "high");
+  assert.deepEqual(patch.risk.sensitiveFields, ["address", "name"]);
+  assert.equal(patch.risk.requiresSensitiveConfirmation, true);
 });
