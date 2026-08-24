@@ -1,0 +1,79 @@
+name: Presence NAP Engine
+
+on:
+  push:
+    branches:
+      - 'feature/presence-nap-*'
+  pull_request:
+    paths:
+      - 'backend/src/modules/presence/**'
+      - 'backend/test/presence-convergence.test.js'
+      - 'backend/prisma/migrations/*presence*/**'
+      - 'backend/src/modules/register-modules.js'
+      - 'frontend/app/presence/**'
+      - 'frontend/app/admin-network/page.js'
+      - 'frontend/test/presence-operator-ui.test.mjs'
+      - 'frontend/package.json'
+      - '.github/workflows/presence-nap.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  presence-backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Prisma validate
+        run: npx prisma validate
+        env:
+          DATABASE_URL: postgresql://presence:presence@localhost:5432/presence
+
+      - name: Prisma client
+        run: npm run prisma:generate
+        env:
+          DATABASE_URL: postgresql://presence:presence@localhost:5432/presence
+
+      - name: Load Presence module
+        run: node -e "require('./src/modules/presence')"
+
+      - name: Presence tests
+        run: node --test test/presence-convergence.test.js
+
+  presence-frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Presence operator UI tests
+        run: npm run test:presence

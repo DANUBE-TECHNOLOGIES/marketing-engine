@@ -1,0 +1,47 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+
+function origin(){return String(process.env.BACKEND_INTERNAL_URL||process.env.API_INTERNAL_URL||"http://backend:4000").replace(/\/+$/g,"")}
+function headers(){return {Accept:"application/json","Content-Type":"application/json","x-tenant-slug":process.env.NEXT_PUBLIC_TENANT_SLUG||"mondescale"}}
+async function post(path,body){const r=await fetch(`${origin()}${path}`,{method:"POST",headers:headers(),body:JSON.stringify(body),cache:"no-store"});const text=await r.text();let data;try{data=JSON.parse(text)}catch{data={error:text}}if(!r.ok)throw new Error(data?.error||`Presence HTTP ${r.status}`);return data}
+function ids(value){return String(value||"").split(",").map(v=>Number(v.trim())).filter(v=>Number.isInteger(v)&&v>0)}
+function keys(value){return String(value||"").split(",").map(v=>v.trim()).filter(Boolean)}
+
+export async function createPresenceCampaign(formData){
+  const body={
+    confirm:true,
+    name:String(formData.get("name")||"").trim()||null,
+    maxItems:Number(formData.get("maxItems")||25),
+    agencyIds:ids(formData.get("agencyIds")),
+    providerKeys:keys(formData.get("providerKeys")),
+    allowSensitive:formData.get("allowSensitive")==="on"
+  };
+  const result=await post("/api/presence/campaigns",body);
+  revalidatePath("/presence/campaigns");
+  if(result?.campaign?.campaignId) redirect(`/presence/campaigns/${result.campaign.campaignId}`);
+}
+
+export async function transitionPresenceCampaign(campaignId,status){
+  await post(`/api/presence/campaigns/${encodeURIComponent(campaignId)}/transition`,{confirm:true,status,reason:"operator_ui"});
+  revalidatePath(`/presence/campaigns/${campaignId}`);
+  revalidatePath("/presence/campaigns");
+}
+
+export async function executePresenceCampaign(campaignId,formData){
+  await post(`/api/presence/campaigns/${encodeURIComponent(campaignId)}/execute`,{confirm:true,confirmSensitive:formData.get("confirmSensitive")==="on",maxItems:Number(formData.get("maxItems")||25)});
+  revalidatePath(`/presence/campaigns/${campaignId}`);
+  revalidatePath("/presence");
+}
+
+export async function verifyPresenceCampaign(campaignId){
+  await post(`/api/presence/campaigns/${encodeURIComponent(campaignId)}/verify`,{confirm:true});
+  revalidatePath(`/presence/campaigns/${campaignId}`);
+  revalidatePath("/presence");
+}
+
+export async function freezePresenceCampaignReport(campaignId){
+  await post(`/api/presence/campaigns/${encodeURIComponent(campaignId)}/report/freeze`,{confirm:true});
+  revalidatePath(`/presence/campaigns/${campaignId}`);
+}
