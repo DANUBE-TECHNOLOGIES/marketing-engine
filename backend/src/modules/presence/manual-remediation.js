@@ -10,6 +10,11 @@ function assertManualProvider(providerKey) {
     error.status = 404;
     throw error;
   }
+  if (providerKey === "google_business_profile") {
+    const error = new Error("Google Business Profile utilise le chemin de remédiation API géré");
+    error.status = 409;
+    throw error;
+  }
   const directoryName = directoryNameForProviderKey(providerKey);
   if (!directoryName) {
     const error = new Error("Aucun annuaire historique mappé pour ce provider");
