@@ -5,6 +5,7 @@ const { getPresenceProvider } = require("./provider-registry");
 const { buildDiscoveryQueries, rankDiscoveryCandidates } = require("./citation-discovery");
 const { submitDiscoveryTask, readDiscoveryTask } = require("./citation-discovery-dataforseo");
 const { recordDiscoveredCitation } = require("./citation-discovery-recording");
+const { assertDiscoveryReady } = require("./operational-readiness");
 
 async function loadAgency(prisma, rawAgencyId) {
   const agencyId = Number(rawAgencyId);
@@ -44,12 +45,7 @@ function discoveryRoutes({ prisma }) {
     try {
       const agency = await loadAgency(prisma, req.params.agencyId);
       const provider = loadProvider(req.params.providerKey);
-      return res.json({
-        ok: true,
-        persisted: false,
-        providerKey: provider.key,
-        queries: buildDiscoveryQueries(agency, provider.key)
-      });
+      return res.json({ ok: true, persisted: false, providerKey: provider.key, queries: buildDiscoveryQueries(agency, provider.key) });
     } catch (error) {
       return res.status(error.status || 400).json({ ok: false, error: error.message });
     }
@@ -57,12 +53,11 @@ function discoveryRoutes({ prisma }) {
 
   router.post("/api/presence/agencies/:agencyId/providers/:providerKey/discovery/start", async (req, res) => {
     try {
+      await assertDiscoveryReady(prisma);
       const agency = await loadAgency(prisma, req.params.agencyId);
       const provider = loadProvider(req.params.providerKey);
       const queries = buildDiscoveryQueries(agency, provider.key);
-      if (!queries.length) {
-        return res.status(409).json({ ok: false, error: "Aucun domaine de découverte configuré pour ce provider" });
-      }
+      if (!queries.length) return res.status(409).json({ ok: false, error: "Aucun domaine de découverte configuré pour ce provider" });
       const tasks = [];
       for (const query of queries) {
         const submitted = await submitDiscoveryTask(query);
@@ -70,16 +65,13 @@ function discoveryRoutes({ prisma }) {
       }
       return res.status(202).json({ ok: true, providerKey: provider.key, tasks });
     } catch (error) {
-      return res.status(error.status || 500).json({
-        ok: false,
-        error: error.message,
-        details: error.details || undefined
-      });
+      return res.status(error.status || 500).json({ ok: false, error: error.message, readiness: error.readiness, details: error.details || undefined });
     }
   });
 
   router.post("/api/presence/agencies/:agencyId/providers/:providerKey/discovery/result", async (req, res) => {
     try {
+      await assertDiscoveryReady(prisma);
       const agency = await loadAgency(prisma, req.params.agencyId);
       const provider = loadProvider(req.params.providerKey);
       const taskIds = Array.isArray(req.body?.taskIds) ? req.body.taskIds.filter(Boolean) : [];
@@ -89,12 +81,7 @@ function discoveryRoutes({ prisma }) {
       const tasks = [];
       for (const taskId of taskIds) {
         const result = await readDiscoveryTask(taskId);
-        tasks.push({
-          taskId,
-          ready: result.ready,
-          statusCode: result.statusCode,
-          statusMessage: result.statusMessage
-        });
+        tasks.push({ taskId, ready: result.ready, statusCode: result.statusCode, statusMessage: result.statusMessage });
         rawItems.push(...result.items);
       }
       const candidates = rankDiscoveryCandidates(agency, provider.key, rawItems);
@@ -104,18 +91,9 @@ function discoveryRoutes({ prisma }) {
         const candidate = candidates[0];
         const minimumScore = Number(req.body?.minimumScore ?? 80);
         if (candidate.score < minimumScore) {
-          return res.status(409).json({
-            ok: false,
-            error: `Meilleur candidat sous le seuil de confiance (${candidate.score} < ${minimumScore})`,
-            tasks,
-            candidates
-          });
+          return res.status(409).json({ ok: false, error: `Meilleur candidat sous le seuil de confiance (${candidate.score} < ${minimumScore})`, tasks, candidates });
         }
-        persisted = await recordDiscoveredCitation(prisma, {
-          agency,
-          providerKey: provider.key,
-          candidate
-        });
+        persisted = await recordDiscoveredCitation(prisma, { agency, providerKey: provider.key, candidate });
       }
 
       return res.json({
@@ -123,22 +101,10 @@ function discoveryRoutes({ prisma }) {
         providerKey: provider.key,
         tasks,
         candidates,
-        persisted: persisted
-          ? {
-              id: persisted.id,
-              status: persisted.status,
-              listingUrl: persisted.listingUrl,
-              notes: persisted.notes,
-              lastCheckedAt: persisted.lastCheckedAt
-            }
-          : false
+        persisted: persisted ? { id: persisted.id, status: persisted.status, listingUrl: persisted.listingUrl, notes: persisted.notes, lastCheckedAt: persisted.lastCheckedAt } : false
       });
     } catch (error) {
-      return res.status(error.status || 500).json({
-        ok: false,
-        error: error.message,
-        details: error.details || undefined
-      });
+      return res.status(error.status || 500).json({ ok: false, error: error.message, readiness: error.readiness, details: error.details || undefined });
     }
   });
 
