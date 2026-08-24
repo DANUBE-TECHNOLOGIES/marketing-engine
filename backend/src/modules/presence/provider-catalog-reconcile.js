@@ -16,7 +16,7 @@ function buildCatalogReconciliation(directories = []) {
       creates.push(Object.freeze({ providerKey: provider.key, ...expected }));
       continue;
     }
-    const fields = ["website", "category", "impactScore", "difficulty", "priority", "active"];
+    const fields = ["website", "category", "impactScore", "difficulty", "priority"];
     const drift = fields.filter((field) => current[field] !== expected[field]).map((field) => ({ field, current: current[field], expected: expected[field] }));
     if (drift.length) metadataDrift.push(Object.freeze({ providerKey: provider.key, directoryId: current.id, directoryName: current.name, drift: Object.freeze(drift) }));
   }
@@ -36,7 +36,7 @@ async function applyCatalogReconciliation(prisma, plan, options = {}) {
   if (options.alignMetadata === true) {
     for (const item of plan.metadataDrift || []) {
       const expected = directoryDefaultsForProvider(item.providerKey);
-      await prisma.localDirectory.update({ where: { id: item.directoryId }, data: { website: expected.website, category: expected.category, impactScore: expected.impactScore, difficulty: expected.difficulty, priority: expected.priority, active: expected.active } });
+      await prisma.localDirectory.update({ where: { id: item.directoryId }, data: { website: expected.website, category: expected.category, impactScore: expected.impactScore, difficulty: expected.difficulty, priority: expected.priority } });
       await prisma.$executeRawUnsafe('UPDATE "LocalDirectory" SET "submissionMode" = $1 WHERE "id" = $2', expected.submissionMode, item.directoryId);
       updated.push(item.directoryId);
     }
