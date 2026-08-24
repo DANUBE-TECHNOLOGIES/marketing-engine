@@ -1,5 +1,11 @@
 const PAYMENT_METHODS = Object.freeze([
-  { key: "cb", label: "Carte bancaire", mark: "CB", className: "payment-mark-cb" },
+  {
+    key: "cb",
+    label: "Carte bancaire",
+    mark: "CB",
+    className: "payment-mark-cb",
+    logoSrc: "https://commons.wikimedia.org/wiki/Special:Redirect/file/Logo_GIE_CB_(2024).svg",
+  },
   {
     key: "visa",
     label: "Visa",
