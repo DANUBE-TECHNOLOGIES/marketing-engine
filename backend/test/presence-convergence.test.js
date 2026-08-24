@@ -25,4 +25,6 @@ require("../src/modules/presence/operation-snapshots.test");
 require("../src/modules/presence/propagation-watch.test");
 require("../src/modules/presence/propagation-control.test");
 require("../src/modules/presence/propagation-dashboard.test");
+require("../src/modules/presence/provider-sla.test");
+require("../src/modules/presence/propagation-alerts.test");
 require("../src/modules/presence/manual-remediation.test");
