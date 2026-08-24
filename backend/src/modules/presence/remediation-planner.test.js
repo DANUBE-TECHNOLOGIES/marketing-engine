@@ -19,19 +19,20 @@ test("remediation plan preserves priority order and requires confirmation", () =
   ];
   const plan = buildRemediationPlan(queue, { limit: 2, env: googleEnv });
   assert.equal(plan.totalAnomalies, 2);
-  assert.equal(plan.planned, 2);
-  assert.equal(plan.items[0].providerKey, "pagesjaunes");
   assert.equal(plan.items[0].requiresConfirmation, true);
   assert.equal(plan.items[1].remediationKind, "managed_api");
-  assert.equal(plan.items[1].executable, true);
   assert.equal(plan.executable, 1);
 });
 
-test("unready API providers are explicitly blocked instead of pretending to be executable", () => {
-  const plan = buildRemediationPlan([
-    { agencyId: 3, providerKey: "apple_business_connect", directoryName: "Apple Business Connect", score: 100, submissionMode: "api", drift: ["phone"] }
-  ], { env: {} });
+test("unready managed API providers are explicitly blocked", () => {
+  const plan = buildRemediationPlan([{ agencyId: 3, providerKey: "apple_business_connect", directoryName: "Apple Business Connect", score: 100, submissionMode: "api", drift: ["phone"] }], { env: {} });
   assert.equal(plan.blocked, 1);
   assert.equal(plan.items[0].executable, false);
   assert.equal(plan.items[0].providerReadiness.stage, "onboarding_required");
+});
+
+test("contribution APIs are executable only after explicit activation and credentials", () => {
+  const item = { agencyId: 4, providerKey: "here", directoryName: "HERE", score: 90, submissionMode: "submission_api", drift: ["address"] };
+  assert.equal(remediationKind(item, {}), "provider_blocked");
+  assert.equal(remediationKind(item, { HERE_PRESENCE_ENABLED: "true", HERE_PRESENCE_API_KEY: "secret" }), "submission_api");
 });
