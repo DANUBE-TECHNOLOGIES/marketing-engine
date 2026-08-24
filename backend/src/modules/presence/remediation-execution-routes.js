@@ -66,6 +66,17 @@ function remediationExecutionRoutes({ prisma }) {
       if (req.body?.confirm !== true) return res.status(409).json({ ok: false, error: "confirm=true requis pour modifier Google Business Profile" });
       const agency = await loadAgency(prisma, req.params.agencyId);
       const drift = parseDrift(req.body?.drift);
+      const preview = buildGoogleRemediationPatch(agency, drift);
+      if (preview.risk.requiresSensitiveConfirmation && req.body?.confirmSensitive !== true) {
+        return res.status(409).json({
+          ok: false,
+          error: "confirmSensitive=true requis pour modifier le nom ou l’adresse Google",
+          risk: preview.risk,
+          patch: preview
+        });
+      }
+
+      const validation = await patchGoogleLocation(prisma, { agency, drift, validateOnly: true });
       const result = await patchGoogleLocation(prisma, { agency, drift, validateOnly: false });
       const listing = await loadGoogleListing(prisma, agency.id);
       const tracked = await prisma.directoryListing.update({
@@ -74,12 +85,14 @@ function remediationExecutionRoutes({ prisma }) {
           status: "pending",
           automationStatus: "submitted",
           submittedAt: new Date(),
-          notes: `Correction Google soumise via Presence pour: ${drift.join(", ")}. Vérification distante requise.`
+          notes: `Correction Google soumise via Presence pour: ${drift.join(", ")}. Validation Google réussie; vérification distante requise.`
         }
       });
       return res.json({
         ok: true,
         externalWrite: true,
+        providerValidated: true,
+        validation,
         verificationRequired: true,
         result,
         listing: { id: tracked.id, status: tracked.status, automationStatus: tracked.automationStatus, submittedAt: tracked.submittedAt }
