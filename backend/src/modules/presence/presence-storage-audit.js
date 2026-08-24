@@ -6,7 +6,8 @@ const REQUIRED_TABLES = Object.freeze([
   "PresenceCampaign",
   "PresenceCampaignEvent",
   "PresenceCampaignExecution",
-  "PresenceCampaignReport"
+  "PresenceCampaignReport",
+  "PresenceCitationObservation"
 ]);
 
 function evaluatePresenceStorage(rows = []) {
@@ -25,7 +26,7 @@ async function auditPresenceStorage(prisma) {
     SELECT table_name AS "tableName"
     FROM information_schema.tables
     WHERE table_schema = current_schema()
-      AND table_name IN ('PresenceOperationAudit', 'PresenceOperationSnapshot', 'PresenceCampaign', 'PresenceCampaignEvent', 'PresenceCampaignExecution', 'PresenceCampaignReport')
+      AND table_name IN ('PresenceOperationAudit', 'PresenceOperationSnapshot', 'PresenceCampaign', 'PresenceCampaignEvent', 'PresenceCampaignExecution', 'PresenceCampaignReport', 'PresenceCitationObservation')
     ORDER BY table_name
   `);
   return evaluatePresenceStorage(rows);
