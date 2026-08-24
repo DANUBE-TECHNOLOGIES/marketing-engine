@@ -41,9 +41,10 @@ function secondarySectionSuppressed(page, section) {
   const title = normalizedSectionTitle(section);
 
   if (isTeamPage(page)) {
-    if (["page-header", "team-introduction"].includes(type)) return true;
+    if (["page-header", "team-introduction", "expertise"].includes(type)) return true;
     if (/^notre équipe$/.test(title)) return true;
     if (/^votre équipe voyage(?:\s+à|$)/.test(title)) return true;
+    if (/^notre expertise$/.test(title)) return true;
   }
 
   if (isPartnersPage(page)) {
