@@ -29,6 +29,19 @@ async function ensureEscalationAction(prisma, item) {
   return { created: true, action };
 }
 
+async function resolveEscalationAction(prisma, agencyId) {
+  const actions = await prisma.networkAction.findMany({
+    where: { agencyId, lever: "presence_google_propagation", status: { in: ["todo", "in_progress"] } }
+  });
+  for (const action of actions) {
+    await prisma.networkAction.update({
+      where: { id: action.id },
+      data: { status: "done", comment: "Propagation Google confirmée par Presence; escalade clôturée automatiquement." }
+    });
+  }
+  return actions.length;
+}
+
 function propagationControlRoutes({ prisma }) {
   const router = express.Router();
 
@@ -93,14 +106,17 @@ function propagationControlRoutes({ prisma }) {
             status: verification.verified ? "verified" : "verification_pending",
             result: { verified: verification.verified, drift: verification.diff.drift, propagationMs }
           });
-          results.push({ agencyId: agency.id, listingId: synced.id, operationId, verified: verification.verified, propagationMs, drift: verification.diff.drift });
+          const escalationsResolved = verification.verified ? await resolveEscalationAction(prisma, agency.id) : 0;
+          results.push({ agencyId: agency.id, listingId: synced.id, operationId, verified: verification.verified, propagationMs, drift: verification.diff.drift, escalationsResolved });
         } catch (error) {
-          results.push({ agencyId: agency.id, listingId: item.listingId, operationId, verified: false, error: error.message, googleStatus: error.status || null });
+          results.push({ agencyId: agency.id, listingId: item.listingId, operationId, verified: false, error: error.message, googleStatus: error.status || null, escalationsResolved: 0 });
         }
       }
 
+      const verifiedListingIds = new Set(results.filter((item) => item.verified).map((item) => item.listingId));
       const escalations = [];
       for (const item of plan.escalationQueue) {
+        if (verifiedListingIds.has(item.listingId)) continue;
         const escalation = await ensureEscalationAction(prisma, item);
         escalations.push({ agencyId: item.agencyId, listingId: item.listingId, created: escalation.created, actionId: escalation.action.id });
       }
@@ -115,7 +131,8 @@ function propagationControlRoutes({ prisma }) {
           verified: results.filter((item) => item.verified).length,
           stillPending: results.filter((item) => !item.verified && !item.error).length,
           errors: results.filter((item) => item.error).length,
-          escalationsCreated: escalations.filter((item) => item.created).length
+          escalationsCreated: escalations.filter((item) => item.created).length,
+          escalationsResolved: results.reduce((sum, item) => sum + (item.escalationsResolved || 0), 0)
         },
         results,
         escalations
@@ -128,4 +145,4 @@ function propagationControlRoutes({ prisma }) {
   return router;
 }
 
-module.exports = { propagationControlRoutes, ensureEscalationAction };
+module.exports = { propagationControlRoutes, ensureEscalationAction, resolveEscalationAction };
