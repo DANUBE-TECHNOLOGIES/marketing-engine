@@ -4,17 +4,23 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 const { evaluatePresenceStorage } = require("./presence-storage-audit");
 
-test("Presence storage requires both audit and snapshot tables", () => {
-  const ready = evaluatePresenceStorage([
-    { tableName: "PresenceOperationAudit" },
-    { tableName: "PresenceOperationSnapshot" }
-  ]);
+const complete = [
+  "PresenceOperationAudit",
+  "PresenceOperationSnapshot",
+  "PresenceCampaign",
+  "PresenceCampaignEvent",
+  "PresenceCampaignExecution",
+  "PresenceCampaignReport"
+].map((tableName) => ({ tableName }));
+
+test("Presence storage requires audit snapshot and campaign tables", () => {
+  const ready = evaluatePresenceStorage(complete);
   assert.equal(ready.ready, true);
   assert.deepEqual(ready.missing, []);
 });
 
-test("Presence storage reports missing snapshot table", () => {
-  const state = evaluatePresenceStorage([{ tableName: "PresenceOperationAudit" }]);
+test("Presence storage reports every missing campaign table", () => {
+  const state = evaluatePresenceStorage(complete.filter((row) => row.tableName !== "PresenceCampaignReport"));
   assert.equal(state.ready, false);
-  assert.deepEqual(state.missing, ["PresenceOperationSnapshot"]);
+  assert.deepEqual(state.missing, ["PresenceCampaignReport"]);
 });
