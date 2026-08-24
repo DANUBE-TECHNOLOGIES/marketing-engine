@@ -44,6 +44,47 @@ async function resolveSite(database, tenantId, siteSlug) {
   return site;
 }
 
+function buildFunnel(rows = []) {
+  const byPage = new Map();
+  let pageViews = 0;
+  let conversionEvents = 0;
+
+  for (const row of rows) {
+    const events = Number(row.events || 0);
+    const isView = row.action === "page_view";
+    if (isView) pageViews += events;
+    else conversionEvents += events;
+
+    const key = `${row.siteSlug}:${row.pageSlug}`;
+    const current = byPage.get(key) || {
+      siteSlug: row.siteSlug,
+      pageSlug: row.pageSlug,
+      pageViews: 0,
+      conversionEvents: 0,
+      conversionRate: null,
+    };
+    if (isView) current.pageViews += events;
+    else current.conversionEvents += events;
+    byPage.set(key, current);
+  }
+
+  const pages = [...byPage.values()].map((item) => ({
+    ...item,
+    conversionRate: item.pageViews > 0
+      ? Number(((item.conversionEvents / item.pageViews) * 100).toFixed(2))
+      : null,
+  })).sort((a, b) => b.conversionEvents - a.conversionEvents || b.pageViews - a.pageViews);
+
+  return {
+    pageViews,
+    conversionEvents,
+    conversionRate: pageViews > 0
+      ? Number(((conversionEvents / pageViews) * 100).toFixed(2))
+      : null,
+    pages,
+  };
+}
+
 class PublicConversionService {
   constructor(database) {
     this.database = database;
@@ -96,8 +137,16 @@ class PublicConversionService {
     `);
 
     const total = rows.reduce((sum, row) => sum + Number(row.events || 0), 0);
-    return { tenantId: tenant.id, siteSlug: slug, days: boundedDays, totalEvents: total, rows };
+    const funnel = buildFunnel(rows);
+    return {
+      tenantId: tenant.id,
+      siteSlug: slug,
+      days: boundedDays,
+      totalEvents: total,
+      ...funnel,
+      rows,
+    };
   }
 }
 
-module.exports = { PublicConversionService, resolveSite, resolveTenant };
+module.exports = { PublicConversionService, buildFunnel, resolveSite, resolveTenant };
