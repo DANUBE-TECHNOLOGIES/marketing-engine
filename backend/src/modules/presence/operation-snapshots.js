@@ -5,6 +5,14 @@ function jsonOrNull(value) {
   return JSON.stringify(value);
 }
 
+function calculatePropagationMs(submittedAt, observedAt = new Date()) {
+  if (!submittedAt) return null;
+  const start = new Date(submittedAt).getTime();
+  const end = new Date(observedAt).getTime();
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return null;
+  return Math.max(0, end - start);
+}
+
 async function appendOperationSnapshot(prisma, snapshot) {
   const propagationMs = snapshot.propagationMs == null ? null : BigInt(Math.max(0, Number(snapshot.propagationMs)));
   await prisma.$executeRaw`
@@ -63,6 +71,7 @@ async function summarizePropagation(prisma, providerKey = null) {
 }
 
 module.exports = {
+  calculatePropagationMs,
   appendOperationSnapshot,
   listOperationSnapshots,
   getOperationSubmittedAt,
