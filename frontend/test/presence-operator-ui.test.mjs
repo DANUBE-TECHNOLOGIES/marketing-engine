@@ -21,19 +21,24 @@ test("campaign detail exposes lifecycle controls without raw external URLs", asy
   assert.doesNotMatch(code,/googleapis\.com/);
 });
 
-test("daily agency provider actions confirm observations and discovery spend", async()=>{
+test("daily agency provider actions confirm observations discovery spend and candidate persistence", async()=>{
   const code=await source("app/presence/agency-provider-actions.js");
   assert.match(code,/\/observe/);
   assert.match(code,/discovery\/start/);
+  assert.match(code,/discovery\/result/);
+  assert.match(code,/candidateUrl/);
+  assert.match(code,/confirmLowConfidence/);
   assert.match(code,/confirm:true/);
 });
 
-test("agency provider page exposes canonical observed comparison and history", async()=>{
+test("agency provider page exposes discovery candidates without claiming NAP conformity", async()=>{
   const code=await source("app/presence/agencies/[agencyId]/providers/[providerKey]/page.js");
   assert.match(code,/Canonique/);
   assert.match(code,/Observé/);
   assert.match(code,/Historique des observations/);
-  assert.match(code,/Découverte assistée/);
+  assert.match(code,/Candidats détectés/);
+  assert.match(code,/reste en statut pending/);
+  assert.match(code,/Sélectionner cette fiche/);
   assert.doesNotMatch(code,/googleapis\.com/);
 });
 
