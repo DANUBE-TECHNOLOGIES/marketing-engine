@@ -24,6 +24,7 @@ test("MSE-25.44 payment band advertises supported means, brand artwork and quali
   for (const token of ["Carte bancaire", "Visa", "Mastercard", "American Express", "Virement bancaire", "Chèque", "Chèques-Vacances ANCV"]) {
     assert.match(payments, new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
+  assert.match(payments, /Logo_GIE_CB_\(2024\)\.svg/);
   assert.match(payments, /logoSrc:[\s\S]*Visa_2021\.svg/);
   assert.match(payments, /logoSrc:[\s\S]*Mastercard_2019_logo\.svg/);
   assert.match(payments, /logoSrc:[\s\S]*American_Express_logo_\(2018\)\.svg/);
@@ -36,7 +37,7 @@ test("MSE-25.44 payment band advertises supported means, brand artwork and quali
   assert.match(paymentCss, /@media \(max-width: 620px\)/);
 });
 
-test("MSE-25.44 institutional band keeps legal runtime authoritative, renders trust artwork and falls back to Mondescale Groupama", () => {
+test("MSE-25.44 institutional band keeps legal runtime authoritative, enlarges trust artwork and groups Groupama", () => {
   assert.match(institutions, /runtime\?\.runtime\?\.legal\?\.values/);
   assert.match(institutions, /legal\?\.travelRegistration/);
   assert.match(institutions, /legal\?\.financialGuarantee/);
@@ -52,11 +53,16 @@ test("MSE-25.44 institutional band keeps legal runtime authoritative, renders tr
   assert.match(institutions, /Atout_France\.jpg/);
   assert.match(institutions, /Groupama_logo\.svg/);
   assert.match(institutions, /className="public-institutional-logo"/);
-  assert.match(institutions, /title: "Garantie financière"/);
-  assert.match(institutions, /title: "Responsabilité civile professionnelle"/);
+  assert.match(institutions, /title: "Garantie financière & responsabilité civile professionnelle"/);
+  assert.match(institutions, /Garantie financière et RCP/);
+  assert.match(institutions, /key: "groupama"/);
+  assert.doesNotMatch(institutions, /key: "insurance"/);
   assert.match(institutions, /Atout France/);
   assert.match(institutions, /CEDIV Travel/);
   assert.match(institutions, /Les Entreprises du Voyage/);
-  assert.match(institutionCss, /public-institutional-logo-wrap/);
-  assert.match(institutionCss, /grid-template-columns: repeat\(auto-fit, minmax\(210px, 1fr\)\)/);
+  assert.match(institutionCss, /public-institutional-logo-cediv/);
+  assert.match(institutionCss, /public-institutional-logo-edv/);
+  assert.match(institutionCss, /public-institutional-logo-atout-france/);
+  assert.match(institutionCss, /public-institutional-item-groupama/);
+  assert.match(institutionCss, /grid-template-columns: repeat\(3, minmax\(190px, 1fr\)\) minmax\(300px, 1\.45fr\)/);
 });
