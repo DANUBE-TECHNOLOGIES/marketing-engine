@@ -1,6 +1,7 @@
 "use strict";
 
 const { auditDirectorySchema } = require("./directory-schema-audit");
+const { auditPresenceStorage } = require("./presence-storage-audit");
 const { getProviderReadiness } = require("./provider-readiness");
 
 function envPresent(env, key) {
@@ -12,7 +13,10 @@ function envTrue(env, key) {
 }
 
 async function buildOperationalReadiness(prisma, env = process.env) {
-  const schema = await auditDirectorySchema(prisma);
+  const [schema, storage] = await Promise.all([
+    auditDirectorySchema(prisma),
+    auditPresenceStorage(prisma)
+  ]);
   const googleProvider = getProviderReadiness("google_business_profile", env);
   const appleProvider = getProviderReadiness("apple_business_connect", env);
   const googleToken = await prisma.googleToken.findFirst({ orderBy: { createdAt: "desc" } });
@@ -20,6 +24,7 @@ async function buildOperationalReadiness(prisma, env = process.env) {
 
   const checks = [
     { key: "directory_schema", ok: schema.ready, blocking: true, details: schema },
+    { key: "presence_storage", ok: storage.ready, blocking: true, details: storage },
     { key: "google_oauth_config", ok: Boolean(googleProvider?.ready), blocking: true, details: googleProvider },
     { key: "google_refresh_token", ok: Boolean(googleToken?.refreshToken), blocking: true },
     { key: "dataforseo_enabled", ok: envTrue(env, "DATAFORSEO_ENABLED"), blocking: false },
