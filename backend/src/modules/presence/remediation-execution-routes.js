@@ -4,6 +4,7 @@ const express = require("express");
 const { buildGoogleRemediationPatch, patchGoogleLocation, verifyGoogleRemediation } = require("./google-remediation");
 const { syncGoogleDirectoryListing } = require("./google-directory-sync");
 const { setRuntimeListingState } = require("./runtime-listing-state");
+const { assertGoogleManagedWriteReady } = require("./operational-readiness");
 
 async function loadAgency(prisma, rawAgencyId) {
   const agencyId = Number(rawAgencyId);
@@ -54,17 +55,19 @@ function remediationExecutionRoutes({ prisma }) {
   router.post("/api/presence/agencies/:agencyId/google/remediation/validate", async (req, res) => {
     try {
       if (req.body?.confirm !== true) return res.status(409).json({ ok: false, error: "confirm=true requis pour appeler la validation Google" });
+      await assertGoogleManagedWriteReady(prisma);
       const agency = await loadAgency(prisma, req.params.agencyId);
       const result = await patchGoogleLocation(prisma, { agency, drift: parseDrift(req.body?.drift), validateOnly: true });
       return res.json({ ok: true, persisted: false, externalWrite: false, providerValidated: true, result });
     } catch (error) {
-      return res.status(error.status || 500).json({ ok: false, error: error.message, details: error.google || undefined });
+      return res.status(error.status || 500).json({ ok: false, error: error.message, readiness: error.readiness, details: error.google || undefined });
     }
   });
 
   router.post("/api/presence/agencies/:agencyId/google/remediation/execute", async (req, res) => {
     try {
       if (req.body?.confirm !== true) return res.status(409).json({ ok: false, error: "confirm=true requis pour modifier Google Business Profile" });
+      await assertGoogleManagedWriteReady(prisma);
       const agency = await loadAgency(prisma, req.params.agencyId);
       const drift = parseDrift(req.body?.drift);
       const preview = buildGoogleRemediationPatch(agency, drift);
@@ -82,10 +85,7 @@ function remediationExecutionRoutes({ prisma }) {
       const listing = await loadGoogleListing(prisma, agency.id);
       const tracked = await prisma.directoryListing.update({
         where: { id: listing.id },
-        data: {
-          status: "pending",
-          notes: `Correction Google soumise via Presence pour: ${drift.join(", ")}. Validation Google réussie; vérification distante requise.`
-        }
+        data: { status: "pending", notes: `Correction Google soumise via Presence pour: ${drift.join(", ")}. Validation Google réussie; vérification distante requise.` }
       });
       const runtime = await setRuntimeListingState(prisma, tracked.id, {
         automationStatus: "submitted",
@@ -102,12 +102,13 @@ function remediationExecutionRoutes({ prisma }) {
         listing: { id: tracked.id, status: tracked.status, automationStatus: runtime.automationStatus, submittedAt: runtime.submittedAt }
       });
     } catch (error) {
-      return res.status(error.status || 500).json({ ok: false, error: error.message, details: error.google || undefined });
+      return res.status(error.status || 500).json({ ok: false, error: error.message, readiness: error.readiness, details: error.google || undefined });
     }
   });
 
   router.post("/api/presence/agencies/:agencyId/google/remediation/verify", async (req, res) => {
     try {
+      await assertGoogleManagedWriteReady(prisma);
       const agency = await loadAgency(prisma, req.params.agencyId);
       const listing = await loadGoogleListing(prisma, agency.id);
       const verification = await verifyGoogleRemediation(prisma, agency);
@@ -121,7 +122,7 @@ function remediationExecutionRoutes({ prisma }) {
         listing: { id: synced.id, status: synced.status, lastCheckedAt: synced.lastCheckedAt }
       });
     } catch (error) {
-      return res.status(error.status || 500).json({ ok: false, error: error.message, details: error.google || undefined });
+      return res.status(error.status || 500).json({ ok: false, error: error.message, readiness: error.readiness, details: error.google || undefined });
     }
   });
 
