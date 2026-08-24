@@ -31,4 +31,5 @@ require("../src/modules/presence/network-health.test");
 require("../src/modules/presence/network-cockpit.test");
 require("../src/modules/presence/campaign-planner.test");
 require("../src/modules/presence/campaign-store.test");
+require("../src/modules/presence/campaign-executor.test");
 require("../src/modules/presence/manual-remediation.test");
