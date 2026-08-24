@@ -3,11 +3,14 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
 const { assertManualProvider, manualActionTitle, buildManualRemediationPayload } = require("./manual-remediation");
+const { directoryDefaultsForProvider } = require("./provider-directory-catalog");
 
 test("manual provider helper resolves mapped directories", () => {
   const pagesJaunes = assertManualProvider("pagesjaunes");
   assert.equal(pagesJaunes.directoryName, "PagesJaunes");
   assert.equal(manualActionTitle(pagesJaunes.directoryName), "Présence locale — PagesJaunes");
+  assert.equal(assertManualProvider("tripadvisor").directoryName, "Tripadvisor");
+  assert.equal(assertManualProvider("petit_fute").directoryName, "Petit Futé");
 });
 
 test("manual remediation payload is explicit about human action and no external write", () => {
@@ -24,6 +27,12 @@ test("manual remediation payload is explicit about human action and no external 
   assert.equal(payload.listingId, 42);
 });
 
-test("unmapped providers cannot start the legacy manual workflow", () => {
-  assert.throws(() => assertManualProvider("tripadvisor"), /Aucun annuaire historique mappé/);
+test("provider directory defaults cover newly aligned providers", () => {
+  assert.equal(directoryDefaultsForProvider("here").submissionMode, "submission_api");
+  assert.equal(directoryDefaultsForProvider("tripadvisor").name, "Tripadvisor");
+  assert.equal(directoryDefaultsForProvider("petit_fute").name, "Petit Futé");
+});
+
+test("unknown providers cannot start the manual workflow", () => {
+  assert.throws(() => assertManualProvider("unknown_provider"), /Provider Presence inconnu/);
 });
