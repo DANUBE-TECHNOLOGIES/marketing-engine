@@ -21,7 +21,7 @@ export async function recordObservationAction(formData){
 export async function startDiscoveryAction(formData){
   const agencyId=Number(formData.get("agencyId"));
   const providerKey=String(formData.get("providerKey")||"");
-  const result=await post(`/api/presence/agencies/${agencyId}/providers/${encodeURIComponent(providerKey)}/discovery/start`,{});
+  const result=await post(`/api/presence/agencies/${agencyId}/providers/${encodeURIComponent(providerKey)}/discovery/start`,{confirm:true});
   const ids=(result.tasks||[]).map(t=>t.taskId).filter(Boolean).join(",");
   redirect(`/presence/agencies/${agencyId}/providers/${providerKey}?discovery=${encodeURIComponent(ids)}`);
 }
