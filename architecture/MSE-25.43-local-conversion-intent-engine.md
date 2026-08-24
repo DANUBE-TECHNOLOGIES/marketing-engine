@@ -6,17 +6,17 @@ Turn the consolidated public mini-sites into measurable commercial acquisition s
 
 ## First-party event contract
 
-Every public conversion event must carry a deterministic, privacy-minimal context:
+Every public event carries a deterministic, privacy-minimal context:
 
 - `siteSlug` — public agency mini-site slug;
-- `agencyId` — agency identifier when available;
+- `agencyId` — resolved server-side from the published mini-site;
 - `pageSlug` — canonical public page slug (`home`, `services`, `destinations`, etc.);
-- `pagePath` — public path at click time;
+- `pagePath` — public path at event time, without query string;
 - `intent` — normalized commercial intent family;
-- `action` — normalized conversion action;
+- `action` — normalized event/conversion action;
 - `placement` — stable renderer/CTA placement identifier;
-- `label` — visible CTA label, truncated server-side;
-- `target` — normalized destination class/value, never arbitrary client data;
+- `label` — visible CTA label, truncated server-side when applicable;
+- `target` — privacy-normalized destination class/value, never arbitrary client data;
 - `occurredAt` — client event timestamp accepted only within a bounded window;
 - `referrerPath` — same-origin path only when available.
 
@@ -24,6 +24,7 @@ No name, email address, phone number, free-form message, cookie identifier, IP a
 
 ## Initial action taxonomy
 
+- `page_view` — denominator for first-party funnel baselines;
 - `quote_request`
 - `contact`
 - `phone`
@@ -49,17 +50,24 @@ No name, email address, phone number, free-form message, cookie identifier, IP a
 
 ## Architecture
 
-1. Public renderers annotate conversion-capable links with `data-conversion-*` attributes.
-2. A single client-side capture component listens for clicks at the public-site root.
-3. The capture component sends a non-blocking POST to the same-origin `/api/public-conversions/events` endpoint with `navigator.sendBeacon` when possible and `fetch(..., { keepalive: true })` as fallback.
-4. The Next.js route proxies validated events to the backend public conversion endpoint.
-5. The backend validates taxonomy/context and persists the event in PostgreSQL through Prisma.
-6. A read-only summary endpoint provides aggregates by site/page/action/intent for Local Engine dashboards.
+1. One client-side capture component is mounted once at the public agency-site layout.
+2. It records one `page_view` per client navigation and listens for commercial link clicks at the public-site root.
+3. Existing explicit conversion metadata remains compatible; otherwise action, intent and placement are inferred from stable public context.
+4. The capture component sends a non-blocking POST to the same-origin `/api/public-conversions/[siteSlug]/events` endpoint with `navigator.sendBeacon` when possible and `fetch(..., { keepalive: true })` as fallback.
+5. The Next.js route proxies events to the backend public conversion endpoint with tenant context.
+6. The backend resolves the published site and agency, validates the closed taxonomy, strips PII-bearing target values and persists the event in PostgreSQL.
+7. Anonymous public ingestion is bounded per mini-site without storing an IP identifier.
+8. A read-only summary endpoint provides totals, page views, commercial interactions and interaction/view rate by site and page.
+9. `/conversion-intent` exposes the first Local Engine manager dashboard for these first-party metrics.
+
+## Compatibility
+
+The pre-existing `TrackedConversionLink` / `dataLayer` shim used by Flexible Payment remains an optional analytics/export surface. MSE-25.43 does not depend on it and does not require GA4; the first-party event store is canonical for Local Engine conversion measurement.
 
 ## Guardrails
 
-- First-party only; no GA4 dependency.
-- No PII in event payload or persistence.
+- First-party canonical storage; no GA4 dependency.
+- No PII in persisted event context.
 - Tracking failure must never block navigation.
 - No automatic mutation of public page content.
 - Event endpoints are append-only for public callers.
@@ -68,10 +76,11 @@ No name, email address, phone number, free-form message, cookie identifier, IP a
 
 ## Phase 1 scope
 
-- schema + migration;
-- backend ingest and summary services/routes;
-- frontend same-origin API proxy;
-- shared conversion link attributes;
-- root click capture;
-- instrumentation of CTA, contact, payment, map, team and partner outbound surfaces;
+- first-party event migration;
+- closed event and intent contract;
+- backend ingest, bounded anonymous rate guard and summary service/routes;
+- frontend same-origin event and summary proxies;
+- root click capture plus `page_view` funnel baseline;
+- CTA/contact/payment/map/team/destination/service/partner-outbound detection;
+- manager dashboard `/conversion-intent`;
 - unit/contract tests.
