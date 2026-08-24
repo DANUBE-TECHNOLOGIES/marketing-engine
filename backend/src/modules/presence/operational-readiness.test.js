@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 const { buildOperationalReadiness } = require("./operational-readiness");
 const { REQUIRED_COLUMNS } = require("./directory-schema-audit");
+const { REQUIRED_TABLES } = require("./presence-storage-audit");
 
 function schemaRows(ready = true) {
   const rows = [];
@@ -14,9 +15,8 @@ function schemaRows(ready = true) {
 }
 
 function storageRows(ready = true) {
-  return ready
-    ? [{ tableName: "PresenceOperationAudit" }, { tableName: "PresenceOperationSnapshot" }]
-    : [{ tableName: "PresenceOperationAudit" }];
+  const rows = REQUIRED_TABLES.map((tableName) => ({ tableName }));
+  return ready ? rows : rows.filter((row) => row.tableName !== "PresenceOperationSnapshot");
 }
 
 function prismaMock({ schemaReady = true, storageReady = true, refreshToken = "refresh" } = {}) {
