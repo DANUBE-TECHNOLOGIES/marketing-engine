@@ -5,6 +5,7 @@ const { buildGoogleRemediationRunPlan } = require("./network-google-remediation"
 const { patchGoogleLocation, verifyGoogleRemediation } = require("./google-remediation");
 const { syncGoogleDirectoryListing } = require("./google-directory-sync");
 const { setRuntimeListingState, listSubmittedGoogleRuntimeListings } = require("./runtime-listing-state");
+const { assertGoogleManagedWriteReady } = require("./operational-readiness");
 
 async function loadState(prisma) {
   const [agencies, directories, listings] = await Promise.all([
@@ -51,6 +52,7 @@ function networkGoogleRemediationRoutes({ prisma }) {
       if (includeSensitive && req.body?.confirmSensitive !== true) {
         return res.status(409).json({ ok: false, error: "confirmSensitive=true requis pour inclure nom ou adresse" });
       }
+      await assertGoogleManagedWriteReady(prisma);
 
       const state = await loadState(prisma);
       const plan = await buildPlanWithRuntimeGuard(prisma, state, { limit: req.body?.limit, includeSensitive });
@@ -88,12 +90,13 @@ function networkGoogleRemediationRoutes({ prisma }) {
       }, { total: 0, submitted: 0, errors: 0 });
       return res.json({ ok: summary.errors === 0, externalWrite: true, verificationRequired: true, plan, summary, results });
     } catch (error) {
-      return res.status(500).json({ ok: false, error: error.message });
+      return res.status(error.status || 500).json({ ok: false, error: error.message, readiness: error.readiness });
     }
   });
 
   router.post("/api/presence/network/google/remediation/verify", async (req, res) => {
     try {
+      await assertGoogleManagedWriteReady(prisma);
       const state = await loadState(prisma);
       const googleDirectory = state.directories.find((directory) => directory.name === "Google Business Profile");
       if (!googleDirectory) return res.status(409).json({ ok: false, error: "Annuaire Google Business Profile non initialisé" });
@@ -117,7 +120,7 @@ function networkGoogleRemediationRoutes({ prisma }) {
       const verified = results.filter((item) => item.verified).length;
       return res.json({ ok: results.every((item) => item.verified), total: results.length, verified, pending: results.length - verified, results });
     } catch (error) {
-      return res.status(500).json({ ok: false, error: error.message });
+      return res.status(error.status || 500).json({ ok: false, error: error.message, readiness: error.readiness });
     }
   });
 
