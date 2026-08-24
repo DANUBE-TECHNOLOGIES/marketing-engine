@@ -3,19 +3,10 @@
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 
+const JOURNEY_KEY = "mse.publicJourney.v1";
 const TRACKABLE_ACTIONS = new Set([
-  "page_view",
-  "quote_request",
-  "contact",
-  "phone",
-  "email",
-  "directions",
-  "appointment",
-  "payment_options",
-  "destination_explore",
-  "service_explore",
-  "advisor_contact",
-  "partner_outbound",
+  "page_view", "quote_request", "contact", "phone", "email", "directions", "appointment",
+  "payment_options", "destination_explore", "service_explore", "advisor_contact", "partner_outbound",
 ]);
 
 function clean(value, max = 160) {
@@ -25,8 +16,7 @@ function clean(value, max = 160) {
 function pageSlugFromPath(pathname, siteSlug) {
   const root = `/agence/${siteSlug}`;
   const suffix = String(pathname || "").startsWith(root)
-    ? String(pathname || "").slice(root.length).replace(/^\/+|\/+$/g, "")
-    : "";
+    ? String(pathname || "").slice(root.length).replace(/^\/+|\/+$/g, "") : "";
   if (!suffix) return "home";
   const [first] = suffix.split("/");
   return first || "home";
@@ -44,21 +34,15 @@ function intentFromPage(pageSlug) {
 }
 
 function isPartnerContext(anchor) {
-  return Boolean(
-    anchor.closest?.("[data-partner-directory]") ||
-    anchor.closest?.("[data-partner-id]") ||
-    anchor.closest?.("[data-preferred-partner-id]")
-  );
+  return Boolean(anchor.closest?.("[data-partner-directory]") || anchor.closest?.("[data-partner-id]") || anchor.closest?.("[data-preferred-partner-id]"));
 }
 
 function inferAction(anchor) {
   const explicit = clean(anchor.dataset.conversionAction, 80).toLowerCase();
   if (TRACKABLE_ACTIONS.has(explicit)) return explicit;
-
   const href = String(anchor.getAttribute("href") || "").trim();
   const label = clean(anchor.textContent, 120).toLowerCase();
   const context = `${anchor.className || ""} ${anchor.closest("section")?.className || ""}`.toLowerCase();
-
   if (/^tel:/i.test(href)) return "phone";
   if (/^mailto:/i.test(href)) return "email";
   if (/google\.[^/]+\/maps|maps\.google|itin[eé]raire/.test(`${href} ${label}`)) return "directions";
@@ -106,13 +90,27 @@ function sameOriginReferrerPath() {
   try {
     const referrer = new URL(document.referrer);
     return referrer.origin === window.location.origin ? referrer.pathname : null;
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
-function dispatch(siteSlug, payload) {
-  const endpoint = `/api/public-conversions/${encodeURIComponent(siteSlug)}/events`;
+function createJourneyId() {
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+  const bytes = new Uint8Array(16);
+  globalThis.crypto?.getRandomValues?.(bytes);
+  return [...bytes].map((value) => value.toString(16).padStart(2, "0")).join("");
+}
+
+function getJourneyId() {
+  try {
+    const existing = sessionStorage.getItem(JOURNEY_KEY);
+    if (/^[a-f0-9-]{20,64}$/i.test(existing || "")) return existing;
+    const created = createJourneyId();
+    if (/^[a-f0-9-]{20,64}$/i.test(created)) sessionStorage.setItem(JOURNEY_KEY, created);
+    return created;
+  } catch { return createJourneyId(); }
+}
+
+function send(endpoint, payload) {
   const body = JSON.stringify(payload);
   try {
     if (navigator.sendBeacon) {
@@ -120,13 +118,24 @@ function dispatch(siteSlug, payload) {
       if (sent) return;
     }
   } catch {}
-  fetch(endpoint, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body,
-    keepalive: true,
-    credentials: "same-origin",
-  }).catch(() => {});
+  fetch(endpoint, { method: "POST", headers: { "content-type": "application/json" }, body, keepalive: true, credentials: "same-origin" }).catch(() => {});
+}
+
+function dispatch(siteSlug, payload) {
+  send(`/api/public-conversions/${encodeURIComponent(siteSlug)}/events`, payload);
+  const journeyId = getJourneyId();
+  if (journeyId) {
+    send(`/api/public-conversions/${encodeURIComponent(siteSlug)}/journeys`, {
+      journeyId,
+      pageSlug: payload.pageSlug,
+      pagePath: payload.pagePath,
+      intent: payload.intent,
+      action: payload.action,
+      placement: payload.placement,
+      referrerPath: payload.referrerPath,
+      occurredAt: payload.occurredAt,
+    });
+  }
 }
 
 export default function PublicConversionCapture({ siteSlug }) {
@@ -138,21 +147,14 @@ export default function PublicConversionCapture({ siteSlug }) {
     lastPageView.current = pathname;
     const pageSlug = pageSlugFromPath(pathname, siteSlug);
     dispatch(siteSlug, {
-      pageSlug,
-      pagePath: pathname,
-      intent: intentFromPage(pageSlug),
-      action: "page_view",
-      placement: "public-site-page",
-      label: null,
-      target: null,
-      referrerPath: sameOriginReferrerPath(),
-      occurredAt: new Date().toISOString(),
+      pageSlug, pagePath: pathname, intent: intentFromPage(pageSlug), action: "page_view",
+      placement: "public-site-page", label: null, target: null,
+      referrerPath: sameOriginReferrerPath(), occurredAt: new Date().toISOString(),
     });
   }, [pathname, siteSlug]);
 
   useEffect(() => {
     if (!siteSlug) return undefined;
-
     function onClick(event) {
       if (event.defaultPrevented) return;
       const anchor = event.target?.closest?.("a[href]");
@@ -161,18 +163,12 @@ export default function PublicConversionCapture({ siteSlug }) {
       if (!action) return;
       const pageSlug = pageSlugFromPath(window.location.pathname, siteSlug);
       dispatch(siteSlug, {
-        pageSlug,
-        pagePath: window.location.pathname,
-        intent: inferIntent(anchor, action, pageSlug),
-        action,
-        placement: inferPlacement(anchor),
-        label: clean(anchor.dataset.conversionLabel || anchor.textContent, 160),
+        pageSlug, pagePath: window.location.pathname, intent: inferIntent(anchor, action, pageSlug), action,
+        placement: inferPlacement(anchor), label: clean(anchor.dataset.conversionLabel || anchor.textContent, 160),
         target: anchor.href || anchor.getAttribute("href") || null,
-        referrerPath: sameOriginReferrerPath(),
-        occurredAt: new Date().toISOString(),
+        referrerPath: sameOriginReferrerPath(), occurredAt: new Date().toISOString(),
       });
     }
-
     document.addEventListener("click", onClick, { capture: true });
     return () => document.removeEventListener("click", onClick, { capture: true });
   }, [siteSlug]);
@@ -180,4 +176,4 @@ export default function PublicConversionCapture({ siteSlug }) {
   return null;
 }
 
-export { inferAction, inferIntent, inferPlacement, intentFromPage, isPartnerContext, pageSlugFromPath };
+export { createJourneyId, getJourneyId, inferAction, inferIntent, inferPlacement, intentFromPage, isPartnerContext, pageSlugFromPath };
