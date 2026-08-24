@@ -3,6 +3,7 @@
 const express = require("express");
 const { loadCockpitState } = require("./network-cockpit-routes");
 const { buildCampaignPlan } = require("./campaign-planner");
+const { createCampaign, getCampaign, listCampaigns, transitionCampaign, listCampaignEvents } = require("./campaign-store");
 
 function campaignRoutes({ prisma }) {
   const router = express.Router();
@@ -20,6 +21,45 @@ function campaignRoutes({ prisma }) {
     } catch (error) {
       return res.status(400).json({ ok: false, error: error.message });
     }
+  });
+
+  router.post("/api/presence/campaigns", async (req, res) => {
+    try {
+      if (req.body?.confirm !== true) return res.status(409).json({ ok: false, error: "confirm=true requis pour figer une campagne Presence" });
+      const state = await loadCockpitState(prisma);
+      const plan = buildCampaignPlan(state, {
+        agencyIds: req.body?.agencyIds,
+        providerKeys: req.body?.providerKeys,
+        maxItems: req.body?.maxItems,
+        allowSensitive: req.body?.allowSensitive === true
+      });
+      const campaign = await createCampaign(prisma, plan, req.body?.name || null);
+      return res.status(201).json({ ok: true, persisted: true, externalWrite: false, campaign });
+    } catch (error) {
+      return res.status(error.status || 500).json({ ok: false, error: error.message });
+    }
+  });
+
+  router.get("/api/presence/campaigns", async (req, res) => {
+    try { const campaigns = await listCampaigns(prisma, req.query.limit); return res.json({ ok: true, campaigns }); }
+    catch (error) { return res.status(500).json({ ok: false, error: error.message }); }
+  });
+
+  router.get("/api/presence/campaigns/:campaignId", async (req, res) => {
+    try {
+      const campaign = await getCampaign(prisma, req.params.campaignId);
+      if (!campaign) return res.status(404).json({ ok: false, error: "Campagne Presence introuvable" });
+      const events = await listCampaignEvents(prisma, req.params.campaignId);
+      return res.json({ ok: true, campaign, events });
+    } catch (error) { return res.status(500).json({ ok: false, error: error.message }); }
+  });
+
+  router.post("/api/presence/campaigns/:campaignId/transition", async (req, res) => {
+    try {
+      if (req.body?.confirm !== true) return res.status(409).json({ ok: false, error: "confirm=true requis pour changer l’état d’une campagne" });
+      const campaign = await transitionCampaign(prisma, req.params.campaignId, req.body?.status, { reason: req.body?.reason, payload: req.body?.payload });
+      return res.json({ ok: true, externalWrite: false, campaign });
+    } catch (error) { return res.status(error.status || 500).json({ ok: false, error: error.message }); }
   });
 
   return router;
