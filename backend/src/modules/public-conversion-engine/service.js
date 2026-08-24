@@ -237,6 +237,139 @@ function buildOptimizationInsights(rows = [], pages = []) {
   };
 }
 
+function percentDelta(current, previous) {
+  const currentValue = Number(current || 0);
+  const previousValue = Number(previous || 0);
+  if (previousValue === 0) return currentValue === 0 ? 0 : null;
+  return Number((((currentValue - previousValue) / previousValue) * 100).toFixed(2));
+}
+
+function buildNetworkRankings(pages = []) {
+  const groups = new Map();
+  for (const page of pages) {
+    if (Number(page.pageViews || 0) < 40 || page.conversionRate == null) continue;
+    const list = groups.get(page.pageSlug) || [];
+    list.push(page);
+    groups.set(page.pageSlug, list);
+  }
+
+  const rankings = [];
+  for (const [pageSlug, group] of groups.entries()) {
+    const sorted = [...group].sort((a, b) =>
+      Number(b.conversionRate || 0) - Number(a.conversionRate || 0) ||
+      Number(b.pageViews || 0) - Number(a.pageViews || 0) ||
+      String(a.siteSlug).localeCompare(String(b.siteSlug))
+    );
+    sorted.forEach((page, index) => {
+      rankings.push({
+        siteSlug: page.siteSlug,
+        pageSlug,
+        pageViews: Number(page.pageViews || 0),
+        conversionRate: Number(page.conversionRate || 0),
+        rank: index + 1,
+        peerCount: sorted.length,
+        percentile: sorted.length > 1
+          ? Number((((sorted.length - 1 - index) / (sorted.length - 1)) * 100).toFixed(1))
+          : 100,
+      });
+    });
+  }
+  return rankings.sort((a, b) => a.pageSlug.localeCompare(b.pageSlug) || a.rank - b.rank);
+}
+
+function buildTemporalComparison(currentPages = [], previousPages = []) {
+  const previousByKey = new Map(
+    previousPages.map((page) => [`${page.siteSlug}:${page.pageSlug}`, page])
+  );
+  const comparisons = [];
+
+  for (const current of currentPages) {
+    const key = `${current.siteSlug}:${current.pageSlug}`;
+    const previous = previousByKey.get(key);
+    if (!previous) continue;
+
+    const currentViews = Number(current.pageViews || 0);
+    const previousViews = Number(previous.pageViews || 0);
+    const currentRate = current.conversionRate == null ? null : Number(current.conversionRate);
+    const previousRate = previous.conversionRate == null ? null : Number(previous.conversionRate);
+    const comparable = currentViews >= 40 && previousViews >= 40 && currentRate != null && previousRate != null;
+    const rateDeltaPoints = comparable ? Number((currentRate - previousRate).toFixed(2)) : null;
+    const relativeRateDelta = comparable ? percentDelta(currentRate, previousRate) : null;
+    const viewDeltaPercent = percentDelta(currentViews, previousViews);
+
+    let trend = "insufficient";
+    if (comparable) {
+      const meaningfulAbsolute = Math.abs(rateDeltaPoints) >= 2;
+      const meaningfulRelative = relativeRateDelta == null || Math.abs(relativeRateDelta) >= 20;
+      if (meaningfulAbsolute && meaningfulRelative) {
+        trend = rateDeltaPoints > 0 ? "improving" : "degrading";
+      } else {
+        trend = "stable";
+      }
+    }
+
+    comparisons.push({
+      siteSlug: current.siteSlug,
+      pageSlug: current.pageSlug,
+      currentPageViews: currentViews,
+      previousPageViews: previousViews,
+      currentConversionEvents: Number(current.conversionEvents || 0),
+      previousConversionEvents: Number(previous.conversionEvents || 0),
+      currentConversionRate: currentRate,
+      previousConversionRate: previousRate,
+      rateDeltaPoints,
+      relativeRateDelta,
+      viewDeltaPercent,
+      confidence: confidenceForViews(Math.min(currentViews, previousViews)),
+      comparable,
+      trend,
+    });
+  }
+
+  comparisons.sort((a, b) => {
+    const order = { degrading: 0, improving: 1, stable: 2, insufficient: 3 };
+    return (order[a.trend] ?? 9) - (order[b.trend] ?? 9) ||
+      Math.abs(Number(b.rateDeltaPoints || 0)) - Math.abs(Number(a.rateDeltaPoints || 0)) ||
+      b.currentPageViews - a.currentPageViews;
+  });
+
+  const comparable = comparisons.filter((item) => item.comparable);
+  return {
+    comparablePageCount: comparable.length,
+    improvingCount: comparable.filter((item) => item.trend === "improving").length,
+    degradingCount: comparable.filter((item) => item.trend === "degrading").length,
+    stableCount: comparable.filter((item) => item.trend === "stable").length,
+    comparisons,
+    improving: comparisons.filter((item) => item.trend === "improving"),
+    degrading: comparisons.filter((item) => item.trend === "degrading"),
+  };
+}
+
+function buildTemporalOptimization(currentRows = [], currentPages = [], previousRows = [], previousPages = []) {
+  const comparison = buildTemporalComparison(currentPages, previousPages);
+  const rankings = buildNetworkRankings(currentPages);
+  const degradingPriorities = comparison.degrading.map((item) => ({
+    siteSlug: item.siteSlug,
+    pageSlug: item.pageSlug,
+    priority: item.confidence === "strong" ? "high" : "medium",
+    kind: "temporal-degradation",
+    confidence: item.confidence,
+    pageViews: item.currentPageViews,
+    conversionRate: item.currentConversionRate,
+    previousConversionRate: item.previousConversionRate,
+    rateDeltaPoints: item.rateDeltaPoints,
+    recommendation: "Comparer les changements récents de cette page et restaurer les éléments ayant historiquement mieux converti avant tout nouveau test.",
+  }));
+
+  return {
+    ...comparison,
+    rankings,
+    degradingPriorities,
+    currentActionCount: currentRows.filter((row) => row.action !== "page_view").reduce((sum, row) => sum + Number(row.events || 0), 0),
+    previousActionCount: previousRows.filter((row) => row.action !== "page_view").reduce((sum, row) => sum + Number(row.events || 0), 0),
+  };
+}
+
 class PublicConversionService {
   constructor(database) {
     this.database = database;
@@ -265,13 +398,16 @@ class PublicConversionService {
     };
   }
 
-  async summary({ request, siteSlug = null, days = 30 }) {
+  async summary({ request, siteSlug = null, days = 30, now = new Date() }) {
     const tenant = await resolveTenant(this.database, request);
     const boundedDays = Math.min(Math.max(Number(days) || 30, 1), 365);
-    const from = new Date(Date.now() - boundedDays * 86400000);
+    const windowMs = boundedDays * 86400000;
+    const currentTo = new Date(now);
+    const currentFrom = new Date(currentTo.getTime() - windowMs);
+    const previousFrom = new Date(currentFrom.getTime() - windowMs);
     const slug = String(siteSlug || "").trim() || null;
 
-    const rows = await this.database.$queryRaw(Prisma.sql`
+    const readPeriod = async (from, to) => this.database.$queryRaw(Prisma.sql`
       SELECT
         "siteSlug",
         "pageSlug",
@@ -283,14 +419,23 @@ class PublicConversionService {
       FROM "PublicConversionEvent"
       WHERE "tenantId" = ${tenant.id}
         AND "occurredAt" >= ${from}
+        AND "occurredAt" < ${to}
         AND (${slug}::text IS NULL OR "siteSlug" = ${slug})
       GROUP BY "siteSlug", "pageSlug", "action", "intent"
       ORDER BY "events" DESC, "siteSlug", "pageSlug"
     `);
 
+    const [rows, previousRows] = await Promise.all([
+      readPeriod(currentFrom, currentTo),
+      readPeriod(previousFrom, currentFrom),
+    ]);
+
     const total = rows.reduce((sum, row) => sum + Number(row.events || 0), 0);
     const funnel = buildFunnel(rows);
+    const previousFunnel = buildFunnel(previousRows);
     const optimization = buildOptimizationInsights(rows, funnel.pages);
+    const temporal = buildTemporalOptimization(rows, funnel.pages, previousRows, previousFunnel.pages);
+
     return {
       tenantId: tenant.id,
       siteSlug: slug,
@@ -298,6 +443,21 @@ class PublicConversionService {
       totalEvents: total,
       ...funnel,
       optimization,
+      temporal: {
+        periodDays: boundedDays,
+        currentPeriod: { from: currentFrom, to: currentTo },
+        previousPeriod: { from: previousFrom, to: currentFrom },
+        previousPageViews: previousFunnel.pageViews,
+        previousConversionEvents: previousFunnel.conversionEvents,
+        previousConversionRate: previousFunnel.conversionRate,
+        pageViewDeltaPercent: percentDelta(funnel.pageViews, previousFunnel.pageViews),
+        conversionEventDeltaPercent: percentDelta(funnel.conversionEvents, previousFunnel.conversionEvents),
+        conversionRateDeltaPoints:
+          funnel.conversionRate != null && previousFunnel.conversionRate != null
+            ? Number((funnel.conversionRate - previousFunnel.conversionRate).toFixed(2))
+            : null,
+        ...temporal,
+      },
       rows,
     };
   }
@@ -307,8 +467,12 @@ module.exports = {
   PublicConversionService,
   buildBenchmarks,
   buildFunnel,
+  buildNetworkRankings,
   buildOptimizationInsights,
+  buildTemporalComparison,
+  buildTemporalOptimization,
   confidenceForViews,
+  percentDelta,
   resolveSite,
   resolveTenant,
 };
