@@ -56,12 +56,10 @@ export async function verifyManualRemediationAction(formData){
   const listingUrl=String(formData.get("listingUrl")||"")||null;
   const evidence=String(formData.get("evidence")||"")||null;
   const operationId=String(formData.get("operationId")||"")||undefined;
-  try {
-    await post(`/api/presence/agencies/${agencyId}/providers/${encodeURIComponent(providerKey)}/manual-remediation/verify`,{confirm:true,operationId,observed,listingUrl,evidence});
-    revalidatePath(`/presence/agencies/${agencyId}/providers/${providerKey}`); revalidatePath("/presence"); revalidatePath("/actions");
-    redirect(`/presence/agencies/${agencyId}/providers/${providerKey}?manualVerified=1`);
-  } catch (error) {
-    const drift=error.payload?.result?.diff?.drift||error.payload?.result?.drift||[];
-    redirect(`/presence/agencies/${agencyId}/providers/${providerKey}?manualPending=${encodeURIComponent(drift.join(",")||"1")}`);
-  }
+  let pendingDrift=null;
+  try { await post(`/api/presence/agencies/${agencyId}/providers/${encodeURIComponent(providerKey)}/manual-remediation/verify`,{confirm:true,operationId,observed,listingUrl,evidence}); }
+  catch(error){ pendingDrift=error.payload?.result?.diff?.drift||error.payload?.result?.drift||["verification_pending"]; }
+  revalidatePath(`/presence/agencies/${agencyId}/providers/${providerKey}`); revalidatePath("/presence"); revalidatePath("/actions");
+  if(pendingDrift) redirect(`/presence/agencies/${agencyId}/providers/${providerKey}?manualPending=${encodeURIComponent(pendingDrift.join(","))}`);
+  redirect(`/presence/agencies/${agencyId}/providers/${providerKey}?manualVerified=1`);
 }
