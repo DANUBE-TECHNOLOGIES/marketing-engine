@@ -14,12 +14,22 @@ const LEGACY_DIRECTORY_PROVIDER_KEYS = Object.freeze({
   "118000": "118000"
 });
 
+const LEGACY_DIRECTORY_NAMES_BY_PROVIDER = Object.freeze(
+  Object.fromEntries(
+    Object.entries(LEGACY_DIRECTORY_PROVIDER_KEYS).map(([name, providerKey]) => [providerKey, name])
+  )
+);
+
 function providerKeyForDirectory(directory) {
   if (!directory) return null;
   if (directory.providerKey && getPresenceProvider(directory.providerKey)) {
     return directory.providerKey;
   }
   return LEGACY_DIRECTORY_PROVIDER_KEYS[directory.name] || null;
+}
+
+function directoryNameForProviderKey(providerKey) {
+  return LEGACY_DIRECTORY_NAMES_BY_PROVIDER[providerKey] || null;
 }
 
 function enrichDirectoryWithProvider(directory) {
@@ -44,7 +54,9 @@ function legacySubmissionModeForProvider(provider) {
 
 module.exports = {
   LEGACY_DIRECTORY_PROVIDER_KEYS,
+  LEGACY_DIRECTORY_NAMES_BY_PROVIDER,
   providerKeyForDirectory,
+  directoryNameForProviderKey,
   enrichDirectoryWithProvider,
   legacySubmissionModeForProvider
 };
