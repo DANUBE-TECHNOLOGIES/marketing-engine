@@ -18,21 +18,6 @@ const service = read("backend/src/modules/public-conversion-engine/service.js");
 const register = read("backend/src/modules/register-modules.js");
 const migration = read("backend/prisma/migrations/20260824114500_mse_25_43_public_conversion_events/migration.sql");
 
-function anchor({ href, text = "", className = "", sectionClass = "", dataset = {} }) {
-  return {
-    className,
-    dataset,
-    textContent: text,
-    href,
-    getAttribute(name) { return name === "href" ? href : null; },
-    closest(selector) {
-      if (selector === "section") return sectionClass ? { className: sectionClass, classList: sectionClass.split(/\s+/) } : null;
-      if (selector === "header" || selector === "footer") return null;
-      return null;
-    },
-  };
-}
-
 test("MSE-25.43 contract keeps a closed conversion taxonomy", () => {
   assert.equal(contract.ACTIONS.has("quote_request"), true);
   assert.equal(contract.ACTIONS.has("phone"), true);
@@ -77,6 +62,13 @@ test("MSE-25.43 exposes a same-origin frontend proxy and first-party backend end
   assert.match(routes, /\/public\/conversions\/sites\/:siteSlug\/events/);
   assert.match(routes, /\/api\/conversions\/summary/);
   assert.match(routes, /status\(202\)/);
+});
+
+test("MSE-25.43 bounds anonymous ingestion without storing an IP identifier", () => {
+  assert.match(routes, /createSiteRateGuard/);
+  assert.match(routes, /limit = 300/);
+  assert.match(routes, /PUBLIC_CONVERSION_RATE_LIMITED/);
+  assert.doesNotMatch(routes, /request\.ip|x-forwarded-for|user-agent/i);
 });
 
 test("MSE-25.43 persists only privacy-minimal conversion context", () => {
