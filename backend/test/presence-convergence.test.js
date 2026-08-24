@@ -9,3 +9,4 @@ require("../src/modules/presence/citation-observation.test");
 require("../src/modules/presence/citation-recording.test");
 require("../src/modules/presence/citation-discovery.test");
 require("../src/modules/presence/citation-discovery-dataforseo.test");
+require("../src/modules/presence/citation-discovery-recording.test");
