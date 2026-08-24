@@ -33,4 +33,5 @@ require("../src/modules/presence/campaign-planner.test");
 require("../src/modules/presence/campaign-store.test");
 require("../src/modules/presence/campaign-executor.test");
 require("../src/modules/presence/campaign-execution-ledger.test");
+require("../src/modules/presence/campaign-report.test");
 require("../src/modules/presence/manual-remediation.test");
