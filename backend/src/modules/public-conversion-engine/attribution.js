@@ -72,8 +72,10 @@ function buildJourneySummary(events = []) {
   for (const journey of journeys.values()) {
     journey.steps.sort((a, b) => new Date(a.occurredAt) - new Date(b.occurredAt));
     totalSteps += journey.steps.length;
-    if (journey.steps.length > 1) multiStepJourneys += 1;
-    if (journey.steps.some((step) => COMMERCIAL_ACTIONS.has(step.action))) commercialJourneys += 1;
+    const isMultiStep = journey.steps.length > 1;
+    const isCommercial = journey.steps.some((step) => COMMERCIAL_ACTIONS.has(step.action));
+    if (isMultiStep) multiStepJourneys += 1;
+    if (isCommercial) commercialJourneys += 1;
 
     const compact = [];
     for (const step of journey.steps) {
@@ -81,13 +83,32 @@ function buildJourneySummary(events = []) {
       if (compact[compact.length - 1] !== token) compact.push(token);
     }
     const signature = compact.slice(-8).join(" → ");
-    if (signature) pathCounts.set(signature, Number(pathCounts.get(signature) || 0) + 1);
+    if (signature) {
+      const current = pathCounts.get(signature) || {
+        path: signature,
+        journeys: 0,
+        commercial: false,
+        multiStep: false,
+        steps: compact.length,
+      };
+      current.journeys += 1;
+      current.commercial = current.commercial || isCommercial;
+      current.multiStep = current.multiStep || isMultiStep;
+      current.steps = Math.max(current.steps, compact.length);
+      pathCounts.set(signature, current);
+    }
   }
 
-  const topPaths = [...pathCounts.entries()]
-    .map(([path, journeys]) => ({ path, journeys }))
-    .sort((a, b) => b.journeys - a.journeys || a.path.localeCompare(b.path))
-    .slice(0, 20);
+  const topPaths = [...pathCounts.values()]
+    .sort((a, b) =>
+      b.journeys - a.journeys ||
+      Number(b.commercial) - Number(a.commercial) ||
+      Number(b.multiStep) - Number(a.multiStep) ||
+      b.steps - a.steps ||
+      a.path.localeCompare(b.path)
+    )
+    .slice(0, 20)
+    .map(({ path, journeys: count }) => ({ path, journeys: count }));
 
   return {
     journeyCount: journeys.size,
