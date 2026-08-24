@@ -2,6 +2,7 @@
 
 const express = require("express");
 const { buildGoogleRemediationPatch, patchGoogleLocation, verifyGoogleRemediation } = require("./google-remediation");
+const { syncGoogleDirectoryListing } = require("./google-directory-sync");
 
 async function loadAgency(prisma, rawAgencyId) {
   const agencyId = Number(rawAgencyId);
@@ -17,6 +18,18 @@ async function loadAgency(prisma, rawAgencyId) {
     throw error;
   }
   return agency;
+}
+
+async function loadGoogleListing(prisma, agencyId) {
+  const directory = await prisma.localDirectory.findUnique({ where: { name: "Google Business Profile" } });
+  if (!directory) {
+    const error = new Error("Annuaire Google Business Profile non initialisé");
+    error.status = 409;
+    throw error;
+  }
+  let listing = await prisma.directoryListing.findUnique({ where: { agencyId_directoryId: { agencyId, directoryId: directory.id } } });
+  if (!listing) listing = await prisma.directoryListing.create({ data: { agencyId, directoryId: directory.id, status: "missing" } });
+  return listing;
 }
 
 function parseDrift(value) {
@@ -54,7 +67,23 @@ function remediationExecutionRoutes({ prisma }) {
       const agency = await loadAgency(prisma, req.params.agencyId);
       const drift = parseDrift(req.body?.drift);
       const result = await patchGoogleLocation(prisma, { agency, drift, validateOnly: false });
-      return res.json({ ok: true, externalWrite: true, verificationRequired: true, result });
+      const listing = await loadGoogleListing(prisma, agency.id);
+      const tracked = await prisma.directoryListing.update({
+        where: { id: listing.id },
+        data: {
+          status: "pending",
+          automationStatus: "submitted",
+          submittedAt: new Date(),
+          notes: `Correction Google soumise via Presence pour: ${drift.join(", ")}. Vérification distante requise.`
+        }
+      });
+      return res.json({
+        ok: true,
+        externalWrite: true,
+        verificationRequired: true,
+        result,
+        listing: { id: tracked.id, status: tracked.status, automationStatus: tracked.automationStatus, submittedAt: tracked.submittedAt }
+      });
     } catch (error) {
       return res.status(error.status || 500).json({ ok: false, error: error.message, details: error.google || undefined });
     }
@@ -63,8 +92,17 @@ function remediationExecutionRoutes({ prisma }) {
   router.post("/api/presence/agencies/:agencyId/google/remediation/verify", async (req, res) => {
     try {
       const agency = await loadAgency(prisma, req.params.agencyId);
+      const listing = await loadGoogleListing(prisma, agency.id);
       const verification = await verifyGoogleRemediation(prisma, agency);
-      return res.status(verification.verified ? 200 : 409).json({ ok: verification.verified, verification });
+      const synced = await syncGoogleDirectoryListing(prisma, agency, listing);
+      if (verification.verified) {
+        await prisma.directoryListing.update({ where: { id: synced.id }, data: { automationStatus: "validated" } });
+      }
+      return res.status(verification.verified ? 200 : 409).json({
+        ok: verification.verified,
+        verification,
+        listing: { id: synced.id, status: synced.status, lastCheckedAt: synced.lastCheckedAt }
+      });
     } catch (error) {
       return res.status(error.status || 500).json({ ok: false, error: error.message, details: error.google || undefined });
     }
@@ -73,4 +111,4 @@ function remediationExecutionRoutes({ prisma }) {
   return router;
 }
 
-module.exports = { remediationExecutionRoutes, parseDrift };
+module.exports = { remediationExecutionRoutes, parseDrift, loadGoogleListing };
