@@ -28,4 +28,5 @@ require("../src/modules/presence/propagation-dashboard.test");
 require("../src/modules/presence/provider-sla.test");
 require("../src/modules/presence/propagation-alerts.test");
 require("../src/modules/presence/network-health.test");
+require("../src/modules/presence/network-cockpit.test");
 require("../src/modules/presence/manual-remediation.test");
