@@ -15,6 +15,7 @@ const { propagationControlRoutes } = require("./propagation-control-routes");
 const { propagationAlertRoutes } = require("./propagation-alert-routes");
 const { networkHealthRoutes } = require("./network-health-routes");
 const { networkCockpitRoutes } = require("./network-cockpit-routes");
+const { networkProviderMatrixRoutes } = require("./network-provider-matrix-routes");
 const { campaignRoutes } = require("./campaign-routes");
 const { campaignExecutionRoutes } = require("./campaign-execution-routes");
 const { campaignReportRoutes } = require("./campaign-report-routes");
@@ -37,6 +38,7 @@ function routes({ prisma }) {
   router.use(propagationAlertRoutes({ prisma }));
   router.use(networkHealthRoutes({ prisma }));
   router.use(networkCockpitRoutes({ prisma }));
+  router.use(networkProviderMatrixRoutes({ prisma }));
   router.use(campaignRoutes({ prisma }));
   router.use(campaignExecutionRoutes({ prisma }));
   router.use(campaignReportRoutes({ prisma }));
@@ -44,7 +46,4 @@ function routes({ prisma }) {
   return router;
 }
 
-module.exports = {
-  routes,
-  providerRegistry
-};
+module.exports = { routes, providerRegistry };
