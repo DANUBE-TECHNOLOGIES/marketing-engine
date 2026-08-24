@@ -19,6 +19,7 @@ const { networkProviderMatrixRoutes } = require("./network-provider-matrix-route
 const { campaignRoutes } = require("./campaign-routes");
 const { campaignExecutionRoutes } = require("./campaign-execution-routes");
 const { campaignReportRoutes } = require("./campaign-report-routes");
+const { pilotRoutes } = require("./pilot-routes");
 const { manualRemediationRoutes } = require("./manual-remediation-routes");
 const providerRegistry = require("./provider-registry");
 
@@ -42,6 +43,7 @@ function routes({ prisma }) {
   router.use(campaignRoutes({ prisma }));
   router.use(campaignExecutionRoutes({ prisma }));
   router.use(campaignReportRoutes({ prisma }));
+  router.use(pilotRoutes({ prisma }));
   router.use(manualRemediationRoutes({ prisma }));
   return router;
 }
