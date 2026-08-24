@@ -41,4 +41,18 @@ async function listOperationAudit(prisma, options = {}) {
   `;
 }
 
-module.exports = { createOperationId, appendOperationAudit, listOperationAudit };
+async function findLatestSubmittedOperationId(prisma, listingId, providerKey = "google_business_profile") {
+  const rows = await prisma.$queryRaw`
+    SELECT "operationId"
+    FROM "PresenceOperationAudit"
+    WHERE "listingId" = ${Number(listingId)}
+      AND "providerKey" = ${providerKey}
+      AND "eventType" = 'external_write'
+      AND "status" = 'submitted'
+    ORDER BY "createdAt" DESC, "id" DESC
+    LIMIT 1
+  `;
+  return rows[0]?.operationId || null;
+}
+
+module.exports = { createOperationId, appendOperationAudit, listOperationAudit, findLatestSubmittedOperationId };
