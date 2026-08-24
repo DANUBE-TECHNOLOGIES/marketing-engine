@@ -73,12 +73,12 @@ test("MSE-25.43 exposes a same-origin frontend proxy and first-party backend end
   assert.match(routes, /status\(202\)/);
 });
 
-test("MSE-25.43 exposes only POST event ingestion anonymously through frontend proxy", () => {
+test("MSE-25.43 keeps anonymous ingestion narrowly allowlisted while aggregate analysis stays protected", () => {
   assert.match(middlewareProxy, /function isPublicConversionIngest/);
   assert.match(middlewareProxy, /request\.method === "POST"/);
-  assert.match(middlewareProxy, /public-conversions\\\/\[\^\/\]\+\\\/events/);
+  assert.match(middlewareProxy, /public-conversions\\\/\[\^\/\]\+\\\/\(\?:events\|journeys\)/);
   assert.match(middlewareProxy, /publicConversionIngest/);
-  assert.match(middlewareProxy, /Aggregates \(\/api\/public-conversions\/summary\) remain behind Local Engine/);
+  assert.match(middlewareProxy, /Aggregate analysis routes remain behind Local Engine authentication/);
   assert.doesNotMatch(middlewareProxy, /pathname\.startsWith\("\/api\/public-conversions\/"\)/);
 });
 
