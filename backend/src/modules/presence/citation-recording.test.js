@@ -6,8 +6,14 @@ const { recordCitationObservation } = require("./citation-recording");
 
 function prismaMock() {
   const stored = [];
+  const observations = [];
   return {
     stored,
+    observations,
+    $executeRaw: async (strings, ...values) => {
+      observations.push({ strings: Array.from(strings), values });
+      return 1;
+    },
     localDirectory: {
       findUnique: async ({ where }) => where.name === "PagesJaunes"
         ? { id: 4, name: "PagesJaunes" }
@@ -59,4 +65,5 @@ test("recording a monitored citation updates only Local Engine state", async () 
   assert.equal(response.listing.phoneCorrect, true);
   assert.equal(response.listing.websiteCorrect, true);
   assert.equal(response.listing.listingUrl, "https://www.pagesjaunes.fr/pros/example");
+  assert.equal(prisma.observations.length, 1);
 });
