@@ -5,11 +5,11 @@ const { getProviderReadiness } = require("./provider-readiness");
 function remediationKind(item, env = process.env) {
   const readiness = item.providerKey ? getProviderReadiness(item.providerKey, env) : null;
   if (item.submissionMode === "api") {
-    if (readiness && !readiness.ready) return "provider_blocked";
+    if (!readiness?.ready || readiness.operationalMode !== "managed_api") return "provider_blocked";
     return "managed_api";
   }
   if (item.submissionMode === "submission_api") {
-    if (readiness && readiness.stage === "monitor_only") return "provider_blocked";
+    if (!readiness?.ready || readiness.operationalMode !== "submission_api") return "provider_blocked";
     return "submission_api";
   }
   return "manual";
@@ -31,22 +31,9 @@ function buildRemediationPlan(queue = [], options = {}) {
   const items = queue.slice(0, limit).map((item) => {
     const kind = remediationKind(item, env);
     const readiness = item.providerKey ? getProviderReadiness(item.providerKey, env) : null;
-    return Object.freeze({
-      ...item,
-      remediationKind: kind,
-      providerReadiness: readiness,
-      instruction: remediationInstruction(item, env),
-      executable: kind === "managed_api" || kind === "submission_api",
-      requiresConfirmation: true
-    });
+    return Object.freeze({ ...item, remediationKind: kind, providerReadiness: readiness, instruction: remediationInstruction(item, env), executable: kind === "managed_api" || kind === "submission_api", requiresConfirmation: true });
   });
-  return Object.freeze({
-    totalAnomalies: queue.length,
-    planned: items.length,
-    executable: items.filter((item) => item.executable).length,
-    blocked: items.filter((item) => item.remediationKind === "provider_blocked").length,
-    items: Object.freeze(items)
-  });
+  return Object.freeze({ totalAnomalies: queue.length, planned: items.length, executable: items.filter((item) => item.executable).length, blocked: items.filter((item) => item.remediationKind === "provider_blocked").length, items: Object.freeze(items) });
 }
 
 module.exports = { buildRemediationPlan, remediationKind, remediationInstruction };
