@@ -47,7 +47,7 @@ test("agency provider page exposes discovery and guided remediation without clai
   assert.doesNotMatch(code,/googleapis\.com/);
 });
 
-test("Presence cockpit links deployment readiness matrix and intervention details", async()=>{
+test("Presence cockpit links deployment readiness pilot matrix and intervention details", async()=>{
   const code=await source("app/presence/page.js");
   assert.match(code,/summary\.agencies/);
   assert.match(code,/summary\.executableRemediations/);
@@ -55,6 +55,7 @@ test("Presence cockpit links deployment readiness matrix and intervention detail
   assert.match(code,/\/presence\/agencies\//);
   assert.match(code,/\/presence\/matrix/);
   assert.match(code,/\/presence\/readiness/);
+  assert.match(code,/\/presence\/pilot/);
 });
 
 test("deployment readiness UI shows migration catalog Google and discovery gates", async()=>{
@@ -64,6 +65,17 @@ test("deployment readiness UI shows migration catalog Google and discovery gates
   assert.match(code,/Catalogue providers/);
   assert.match(code,/Couverture Google/);
   assert.match(code,/DataForSEO discovery/);
+});
+
+test("pilot UI is read-only and exposes go no-go criteria", async()=>{
+  const code=await source("app/presence/pilot/page.js");
+  assert.match(code,/\/api\/presence\/pilot\/preview/);
+  assert.match(code,/GO/);
+  assert.match(code,/NO-GO/);
+  assert.match(code,/3 agences maximum/);
+  assert.match(code,/aucun changement sensible nom\/adresse/);
+  assert.match(code,/ne déclenche aucune écriture externe/);
+  assert.doesNotMatch(code,/\/execute/);
 });
 
 test("provider matrix distinguishes conformity automation manual monitor and blocked states", async()=>{
