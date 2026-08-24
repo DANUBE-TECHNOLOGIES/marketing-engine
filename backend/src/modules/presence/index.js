@@ -5,6 +5,7 @@ const { routes: coreRoutes } = require("./routes");
 const { observationRoutes } = require("./observation-routes");
 const { discoveryRoutes } = require("./discovery-routes");
 const { networkDiscoveryRoutes } = require("./network-discovery-routes");
+const { remediationRoutes } = require("./remediation-routes");
 const providerRegistry = require("./provider-registry");
 
 function routes({ prisma }) {
@@ -13,6 +14,7 @@ function routes({ prisma }) {
   router.use(observationRoutes({ prisma }));
   router.use(discoveryRoutes({ prisma }));
   router.use(networkDiscoveryRoutes({ prisma }));
+  router.use(remediationRoutes({ prisma }));
   return router;
 }
 
