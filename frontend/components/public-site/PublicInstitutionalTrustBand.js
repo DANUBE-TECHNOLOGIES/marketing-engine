@@ -37,7 +37,10 @@ function InstitutionalMark({ reference }) {
   }
 
   return (
-    <span className="public-institutional-mark public-institutional-logo-wrap" aria-hidden="true">
+    <span
+      className={`public-institutional-mark public-institutional-logo-wrap public-institutional-logo-${reference.key}`}
+      aria-hidden="true"
+    >
       <img
         className="public-institutional-logo"
         src={reference.logoSrc}
@@ -59,6 +62,11 @@ export default function PublicInstitutionalTrustBand({ runtime }) {
     financialGuarantee || MONDESCALE_TRUST_DEFAULTS.financialGuaranteeProvider;
   const insuranceProvider =
     professionalInsurance || MONDESCALE_TRUST_DEFAULTS.professionalInsuranceProvider;
+
+  const groupamaDetail =
+    guaranteeProvider === insuranceProvider
+      ? `Garantie financière et RCP · ${guaranteeProvider}`
+      : `Garantie financière · ${guaranteeProvider} · RCP · ${insuranceProvider}`;
 
   const references = [
     {
@@ -83,18 +91,12 @@ export default function PublicInstitutionalTrustBand({ runtime }) {
       detail: travelRegistration || "Immatriculation opérateur de voyages",
     },
     {
-      key: "guarantee",
+      key: "groupama",
       mark: "GROUPAMA",
       logoSrc: TRUST_LOGOS.groupama,
-      title: "Garantie financière",
-      detail: guaranteeProvider,
-    },
-    {
-      key: "insurance",
-      mark: "RCP",
-      logoSrc: TRUST_LOGOS.groupama,
-      title: "Responsabilité civile professionnelle",
-      detail: insuranceProvider,
+      title: "Garantie financière & responsabilité civile professionnelle",
+      detail: groupamaDetail,
+      className: "public-institutional-item-groupama",
     },
   ];
 
@@ -108,7 +110,10 @@ export default function PublicInstitutionalTrustBand({ runtime }) {
 
         <div className="public-institutional-band-items">
           {references.map((reference) => (
-            <div className="public-institutional-item" key={reference.key}>
+            <div
+              className={`public-institutional-item ${reference.className || ""}`.trim()}
+              key={reference.key}
+            >
               <InstitutionalMark reference={reference} />
               <span className="public-institutional-copy">
                 <strong>{reference.title}</strong>
