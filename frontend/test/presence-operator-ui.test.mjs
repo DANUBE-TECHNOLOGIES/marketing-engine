@@ -21,17 +21,19 @@ test("campaign detail exposes lifecycle controls without raw external URLs", asy
   assert.doesNotMatch(code,/googleapis\.com/);
 });
 
-test("daily agency provider actions confirm observations discovery spend and candidate persistence", async()=>{
+test("daily agency provider actions confirm observations discovery and manual remediation", async()=>{
   const code=await source("app/presence/agency-provider-actions.js");
   assert.match(code,/\/observe/);
   assert.match(code,/discovery\/start/);
   assert.match(code,/discovery\/result/);
   assert.match(code,/candidateUrl/);
   assert.match(code,/confirmLowConfidence/);
+  assert.match(code,/manual-remediation\/start/);
+  assert.match(code,/manual-remediation\/verify/);
   assert.match(code,/confirm:true/);
 });
 
-test("agency provider page exposes discovery candidates without claiming NAP conformity", async()=>{
+test("agency provider page exposes discovery and guided remediation without claiming provider write", async()=>{
   const code=await source("app/presence/agencies/[agencyId]/providers/[providerKey]/page.js");
   assert.match(code,/Canonique/);
   assert.match(code,/Observé/);
@@ -39,6 +41,9 @@ test("agency provider page exposes discovery candidates without claiming NAP con
   assert.match(code,/Candidats détectés/);
   assert.match(code,/reste en statut pending/);
   assert.match(code,/Sélectionner cette fiche/);
+  assert.match(code,/Remédiation manuelle guidée/);
+  assert.match(code,/Local Engine prépare l’action, mais n’écrit pas chez ce provider/);
+  assert.match(code,/Recontrôler et clôturer si conforme/);
   assert.doesNotMatch(code,/googleapis\.com/);
 });
 
