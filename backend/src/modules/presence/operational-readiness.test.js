@@ -26,46 +26,65 @@ function prismaMock({ schemaReady = true, storageReady = true, refreshToken = "r
   };
 }
 
+function googleEnv(extra = {}) {
+  return { GOOGLE_CLIENT_ID: "id", GOOGLE_CLIENT_SECRET: "secret", ...extra };
+}
+
 test("Google managed writes are blocked without OAuth environment", async () => {
   const readiness = await buildOperationalReadiness(prismaMock(), {});
   assert.equal(readiness.readyForGoogleManagedWrites, false);
+  assert.equal(readiness.readyForGoogleApi, false);
   assert.ok(readiness.blockers.includes("google_oauth_config"));
 });
 
-test("schema drift blocks Google managed writes", async () => {
-  const env = { GOOGLE_CLIENT_ID: "id", GOOGLE_CLIENT_SECRET: "secret" };
-  const readiness = await buildOperationalReadiness(prismaMock({ schemaReady: false }), env);
+test("Google API can be ready while managed writes remain disabled by kill-switch", async () => {
+  const readiness = await buildOperationalReadiness(prismaMock(), googleEnv());
+  assert.equal(readiness.readyForGoogleApi, true);
   assert.equal(readiness.readyForGoogleManagedWrites, false);
+  assert.equal(readiness.googleWritesEnabled, false);
+  assert.ok(readiness.blockers.includes("google_writes_enabled"));
+  assert.equal(readiness.apiBlockers.includes("google_writes_enabled"), false);
+});
+
+test("explicit Google write enablement opens managed writes only after API prerequisites", async () => {
+  const readiness = await buildOperationalReadiness(prismaMock(), googleEnv({ PRESENCE_GOOGLE_WRITES_ENABLED: "true" }));
+  assert.equal(readiness.readyForGoogleApi, true);
+  assert.equal(readiness.readyForGoogleManagedWrites, true);
+  assert.equal(readiness.googleWritesEnabled, true);
+});
+
+test("schema drift blocks Google managed writes", async () => {
+  const readiness = await buildOperationalReadiness(prismaMock({ schemaReady: false }), googleEnv({ PRESENCE_GOOGLE_WRITES_ENABLED: "true" }));
+  assert.equal(readiness.readyForGoogleManagedWrites, false);
+  assert.equal(readiness.readyForGoogleApi, false);
   assert.ok(readiness.blockers.includes("directory_schema"));
 });
 
 test("missing Presence history storage blocks Google managed writes", async () => {
-  const env = { GOOGLE_CLIENT_ID: "id", GOOGLE_CLIENT_SECRET: "secret" };
-  const readiness = await buildOperationalReadiness(prismaMock({ storageReady: false }), env);
+  const readiness = await buildOperationalReadiness(prismaMock({ storageReady: false }), googleEnv({ PRESENCE_GOOGLE_WRITES_ENABLED: "true" }));
   assert.equal(readiness.readyForGoogleManagedWrites, false);
+  assert.equal(readiness.readyForGoogleApi, false);
   assert.ok(readiness.blockers.includes("presence_storage"));
 });
 
 test("discovery readiness requires enablement and both DataForSEO credentials", async () => {
-  const env = {
-    GOOGLE_CLIENT_ID: "id",
-    GOOGLE_CLIENT_SECRET: "secret",
+  const env = googleEnv({
+    PRESENCE_GOOGLE_WRITES_ENABLED: "true",
     DATAFORSEO_ENABLED: "true",
     DATAFORSEO_LOGIN: "login",
     DATAFORSEO_PASSWORD: "password"
-  };
+  });
   const readiness = await buildOperationalReadiness(prismaMock(), env);
   assert.equal(readiness.readyForDiscovery, true);
   assert.equal(readiness.readyForGoogleManagedWrites, true);
 });
 
 test("DataForSEO credentials alone do not enable discovery", async () => {
-  const readiness = await buildOperationalReadiness(prismaMock(), {
-    GOOGLE_CLIENT_ID: "id",
-    GOOGLE_CLIENT_SECRET: "secret",
+  const readiness = await buildOperationalReadiness(prismaMock(), googleEnv({
+    PRESENCE_GOOGLE_WRITES_ENABLED: "true",
     DATAFORSEO_LOGIN: "login",
     DATAFORSEO_PASSWORD: "password"
-  });
+  }));
   assert.equal(readiness.readyForDiscovery, false);
   assert.ok(readiness.warnings.includes("dataforseo_enabled"));
 });
