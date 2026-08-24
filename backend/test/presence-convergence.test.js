@@ -21,3 +21,4 @@ require("../src/modules/presence/runtime-listing-state.test");
 require("../src/modules/presence/operational-readiness.test");
 require("../src/modules/presence/operation-audit.test");
 require("../src/modules/presence/operation-snapshots.test");
+require("../src/modules/presence/propagation-watch.test");
