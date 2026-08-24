@@ -22,7 +22,7 @@ function buildGoogleRemediationRunPlan(agencies, directories, listings, options 
   for (const item of queue) {
     const drift = item.drift.filter((field) => ["name", "address", "phone", "website"].includes(field));
     const risk = remediationRisk(drift);
-    if (risk === "high" && !includeSensitive) {
+    if (risk.requiresSensitiveConfirmation && !includeSensitive) {
       skippedSensitive += 1;
       continue;
     }
