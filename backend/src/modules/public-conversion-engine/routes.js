@@ -47,11 +47,13 @@ function routes({ prisma }) {
     response.json({
       ok: true,
       capability: "public-conversion-engine",
-      version: "25.45.0",
+      version: "25.45.1",
       storage: "first-party",
       pii: false,
       writeMode: "append-only",
       optimizationMode: "read-only-recommendations",
+      temporalComparison: "current-vs-previous-equal-window",
+      evidenceGate: "40-views-per-period",
       publicRateLimit: "300/site/minute",
     });
   });
