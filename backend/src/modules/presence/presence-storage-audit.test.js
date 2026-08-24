@@ -10,17 +10,18 @@ const complete = [
   "PresenceCampaign",
   "PresenceCampaignEvent",
   "PresenceCampaignExecution",
-  "PresenceCampaignReport"
+  "PresenceCampaignReport",
+  "PresenceCitationObservation"
 ].map((tableName) => ({ tableName }));
 
-test("Presence storage requires audit snapshot and campaign tables", () => {
+test("Presence storage requires audit snapshot campaign and citation observation tables", () => {
   const ready = evaluatePresenceStorage(complete);
   assert.equal(ready.ready, true);
   assert.deepEqual(ready.missing, []);
 });
 
-test("Presence storage reports every missing campaign table", () => {
-  const state = evaluatePresenceStorage(complete.filter((row) => row.tableName !== "PresenceCampaignReport"));
+test("Presence storage reports missing citation observation table", () => {
+  const state = evaluatePresenceStorage(complete.filter((row) => row.tableName !== "PresenceCitationObservation"));
   assert.equal(state.ready, false);
-  assert.deepEqual(state.missing, ["PresenceCampaignReport"]);
+  assert.deepEqual(state.missing, ["PresenceCitationObservation"]);
 });
