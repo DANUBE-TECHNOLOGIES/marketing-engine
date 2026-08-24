@@ -7,7 +7,9 @@ const { recordCitationObservation } = require("./citation-recording");
 const { appendOperationAudit, createOperationId } = require("./operation-audit");
 const { setRuntimeListingState } = require("./runtime-listing-state");
 const { assertManualProvider, manualActionTitle, buildManualRemediationPayload } = require("./manual-remediation");
+const { buildManualRemediationGuide } = require("./manual-remediation-guide");
 const { directoryNameForProviderKey } = require("./directory-bridge");
+const { buildCanonicalAgencyIdentity } = require("./canonical-identity");
 
 async function loadAgency(prisma, rawAgencyId) {
   const agencyId = Number(rawAgencyId);
@@ -30,9 +32,7 @@ async function closeManualActions(prisma, agencyId, directoryName, comment) {
   const actions = await prisma.networkAction.findMany({
     where: { agencyId, lever: "citations", title: manualActionTitle(directoryName), status: { in: ["todo", "in_progress"] } }
   });
-  for (const action of actions) {
-    await prisma.networkAction.update({ where: { id: action.id }, data: { status: "done", comment } });
-  }
+  for (const action of actions) await prisma.networkAction.update({ where: { id: action.id }, data: { status: "done", comment } });
   return actions.length;
 }
 
@@ -52,6 +52,21 @@ function manualRemediationRoutes({ prisma }) {
     } catch (error) { return res.status(500).json({ ok: false, error: error.message }); }
   });
 
+  router.get("/api/presence/agencies/:agencyId/providers/:providerKey/manual-remediation/preview", async (req, res) => {
+    try {
+      const agency = await loadAgency(prisma, req.params.agencyId);
+      assertManualProvider(req.params.providerKey);
+      const { listing } = await loadDirectoryAndListing(prisma, agency.id, req.params.providerKey);
+      const drift = String(req.query.drift || "").split(",").map((v) => v.trim()).filter(Boolean);
+      const guide = buildManualRemediationGuide(req.params.providerKey, {
+        drift,
+        canonical: buildCanonicalAgencyIdentity(agency),
+        listingUrl: listing.listingUrl
+      });
+      return res.json({ ok: true, externalWrite: false, guide, listing: { id: listing.id, status: listing.status, listingUrl: listing.listingUrl } });
+    } catch (error) { return res.status(error.status || 500).json({ ok: false, error: error.message }); }
+  });
+
   router.post("/api/presence/agencies/:agencyId/providers/:providerKey/manual-remediation/start", async (req, res) => {
     const operationId = createOperationId("manual_remediation");
     try {
@@ -62,11 +77,8 @@ function manualRemediationRoutes({ prisma }) {
       const drift = Array.isArray(req.body?.drift) ? req.body.drift.filter(Boolean) : [];
       const payload = buildManualRemediationPayload({ providerKey: req.params.providerKey, listingId: listing.id, drift, listingUrl: listing.listingUrl, note: req.body?.note });
       let action = await prisma.networkAction.findFirst({ where: { agencyId: agency.id, lever: "citations", title: manualActionTitle(directoryName), status: { in: ["todo", "in_progress"] } } });
-      if (!action) {
-        action = await prisma.networkAction.create({ data: { agencyId: agency.id, lever: "citations", title: manualActionTitle(directoryName), description: `Correction manuelle Presence requise. Dérive: ${drift.join(", ") || "citation absente/non validée"}.`, status: "in_progress", deadline: new Date(Date.now() + 14 * 86400000) } });
-      } else if (action.status === "todo") {
-        action = await prisma.networkAction.update({ where: { id: action.id }, data: { status: "in_progress" } });
-      }
+      if (!action) action = await prisma.networkAction.create({ data: { agencyId: agency.id, lever: "citations", title: manualActionTitle(directoryName), description: `Correction manuelle Presence requise. Dérive: ${drift.join(", ") || "citation absente/non validée"}.`, status: "in_progress", deadline: new Date(Date.now() + 14 * 86400000) } });
+      else if (action.status === "todo") action = await prisma.networkAction.update({ where: { id: action.id }, data: { status: "in_progress" } });
       await setRuntimeListingState(prisma, listing.id, { automationStatus: "manual_in_progress", submissionPayload: { operationId, ...payload } });
       await appendOperationAudit(prisma, { operationId, providerKey: req.params.providerKey, agencyId: agency.id, listingId: listing.id, scope: "agency", eventType: "manual_remediation_started", status: "in_progress", payload: { actionId: action.id, ...payload } });
       return res.json({ ok: true, operationId, externalWrite: false, action: { id: action.id, status: action.status }, listingId: listing.id, payload });
@@ -80,9 +92,8 @@ function manualRemediationRoutes({ prisma }) {
       const agency = await loadAgency(prisma, req.params.agencyId);
       const { directoryName } = assertManualProvider(req.params.providerKey);
       const { listing } = await loadDirectoryAndListing(prisma, agency.id, req.params.providerKey);
-      const observed = req.body?.observed || {};
-      const recorded = await recordCitationObservation(prisma, { agency, providerKey: req.params.providerKey, observed, listingUrl: req.body?.listingUrl || listing.listingUrl || null });
-      const verified = Boolean(recorded.result?.match);
+      const recorded = await recordCitationObservation(prisma, { agency, providerKey: req.params.providerKey, observed: req.body?.observed || {}, listingUrl: req.body?.listingUrl || listing.listingUrl || null });
+      const verified = Boolean(recorded.result?.diff?.match ?? recorded.result?.match);
       await setRuntimeListingState(prisma, recorded.listing.id, { automationStatus: verified ? "validated" : "manual_verification_pending" });
       const closedActions = verified ? await closeManualActions(prisma, agency.id, directoryName, "Citation vérifiée conforme par Presence après correction manuelle.") : 0;
       await appendOperationAudit(prisma, { operationId, providerKey: req.params.providerKey, agencyId: agency.id, listingId: recorded.listing.id, scope: "agency", eventType: "manual_verification", status: verified ? "verified" : "verification_pending", payload: { evidence: req.body?.evidence || null, listingUrl: req.body?.listingUrl || null }, result: recorded.result });
