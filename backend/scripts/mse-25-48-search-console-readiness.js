@@ -8,7 +8,7 @@ const { getSearchConsoleTokenReadiness } = require("../src/modules/minisite-sema
 
 function bootstrapEnv() {
   const envFile = process.env.MSE_25_48_ENV_FILE || process.env.MSE_25_40_ENV_FILE;
-  if (envFile) dotenv.config({ path: path.resolve(envFile) });
+  if (envFile) dotenv.config({ path: path.resolve(envFile), quiet: true });
 }
 
 async function run({ prisma } = {}) {
