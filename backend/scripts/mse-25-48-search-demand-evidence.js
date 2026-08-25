@@ -21,7 +21,23 @@ async function run() {
   fs.mkdirSync(reportDir, { recursive: true });
   const reportPath = path.join(reportDir, `mse-25-48-search-demand-evidence-${report.evidenceFingerprint.slice(0, 12)}.json`);
   fs.writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`);
-  console.log(JSON.stringify({ ok: true, readOnly: true, writes: false, reportPath, evidenceFingerprint: report.evidenceFingerprint, analyticsAvailable: report.analyticsAvailable, summary: report.summary }, null, 2));
+  console.log(JSON.stringify({
+    ok: true,
+    readOnly: true,
+    writes: false,
+    reportPath,
+    evidenceFingerprint: report.evidenceFingerprint,
+    sourceAnalyticsFingerprint: report.sourceAnalyticsFingerprint,
+    analyticsProvided: report.analyticsProvided,
+    analyticsInputState: report.analyticsInputState,
+    analyticsAvailable: report.analyticsAvailable,
+    analyticsRowCount: report.analyticsRowCount,
+    dataState: report.dataState,
+    lifecycleState: report.lifecycleState,
+    demandConclusion: report.demandConclusion,
+    noDataIsNotNoDemand: report.noDataIsNotNoDemand,
+    summary: report.summary,
+  }, null, 2));
   return report;
 }
 
