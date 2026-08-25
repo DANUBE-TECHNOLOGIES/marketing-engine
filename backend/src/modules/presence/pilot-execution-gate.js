@@ -3,7 +3,15 @@
 const { getLatestDeploymentPreflight } = require("./deployment-preflight-store");
 const { buildDeploymentReadiness } = require("./deployment-readiness");
 const { evaluatePilotActivationGate } = require("./pilot-activation-gate");
-const { evaluatePilotCampaignBinding } = require("./pilot-campaign-binding");
+const { normalizedScope, scopeMatchesPlan } = require("./pilot-campaign-approval");
+
+function evaluateCampaignBinding(campaign) {
+  const blockers = [];
+  if (!campaign?.preflightId) blockers.push("campaign_preflight_missing");
+  if (!campaign?.approvedScope) blockers.push("campaign_scope_missing");
+  if (!scopeMatchesPlan(campaign)) blockers.push("campaign_scope_changed");
+  return Object.freeze({ ready: blockers.length === 0, scope: normalizedScope(campaign), blockers: Object.freeze(blockers) });
+}
 
 async function evaluatePilotExecutionGate(prisma, campaign) {
   if (!campaign?.pilot) return Object.freeze({ ready: true, decision: "go", pilot: false, blockers: Object.freeze([]), warnings: Object.freeze([]) });
@@ -11,22 +19,12 @@ async function evaluatePilotExecutionGate(prisma, campaign) {
     getLatestDeploymentPreflight(prisma),
     buildDeploymentReadiness(prisma)
   ]);
-  const binding = evaluatePilotCampaignBinding(campaign);
+  const binding = evaluateCampaignBinding(campaign);
   const activation = evaluatePilotActivationGate({ preflight, currentReadiness });
   const blockers = [...new Set([...(binding.blockers || []), ...(activation.blockers || [])])];
   if (campaign.preflightId !== preflight?.preflightId) blockers.push("pilot_campaign_preflight_mismatch");
   const ready = binding.ready === true && activation.ready === true && campaign.preflightId === preflight?.preflightId;
-  return Object.freeze({
-    ready,
-    decision: ready ? "go" : "no_go",
-    pilot: true,
-    preflightId: campaign.preflightId || null,
-    latestPreflightId: preflight?.preflightId || null,
-    binding,
-    activation,
-    blockers: Object.freeze([...new Set(blockers)]),
-    warnings: Object.freeze([...(activation.warnings || [])])
-  });
+  return Object.freeze({ ready, decision: ready ? "go" : "no_go", pilot: true, preflightId: campaign.preflightId || null, latestPreflightId: preflight?.preflightId || null, binding, activation, blockers: Object.freeze([...new Set(blockers)]), warnings: Object.freeze([...(activation.warnings || [])]) });
 }
 
 async function assertPilotExecutionReady(prisma, campaign) {
@@ -39,4 +37,4 @@ async function assertPilotExecutionReady(prisma, campaign) {
   throw error;
 }
 
-module.exports = { evaluatePilotExecutionGate, assertPilotExecutionReady };
+module.exports = { evaluateCampaignBinding, evaluatePilotExecutionGate, assertPilotExecutionReady };
