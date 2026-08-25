@@ -5,13 +5,13 @@ import { redirect } from "next/navigation";
 function origin(){return String(process.env.BACKEND_INTERNAL_URL||process.env.API_INTERNAL_URL||"http://backend:4000").replace(/\/+$/g,"")}
 
 export async function createPilotCampaign(formData){
-  const agencyIds=String(formData.get("agencyIds")||"").split(",").map(Number).filter(Number.isInteger);
+  const agencyIds=String(formData.get("agencyIds")||"").split(",").map(Number).filter(Number.isInteger).slice(0,1);
   const preflightId=String(formData.get("preflightId")||"").trim()||null;
   const name=String(formData.get("name")||"").trim()||null;
   const response=await fetch(`${origin()}/api/presence/pilot/campaign`,{
     method:"POST",
     headers:{"content-type":"application/json",Accept:"application/json","x-tenant-slug":process.env.NEXT_PUBLIC_TENANT_SLUG||"mondescale"},
-    body:JSON.stringify({confirm:true,agencyIds,preflightId,name,maxAgencies:3,maxItems:10,allowSensitive:false,requireNoSensitive:true,minGoogleCoveragePercent:80}),
+    body:JSON.stringify({confirm:true,agencyIds,preflightId,name,maxAgencies:1,maxItems:1,allowSensitive:false,requireNoSensitive:true,minGoogleCoveragePercent:80}),
     cache:"no-store"
   });
   const data=await response.json().catch(()=>({}));
