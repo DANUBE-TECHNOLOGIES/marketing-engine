@@ -28,6 +28,7 @@ require("../src/modules/presence/deployment-preflight-store.test");
 require("../src/modules/presence/vm-handoff-contract.test");
 require("../src/modules/presence/pilot-readiness.test");
 require("../src/modules/presence/pilot-activation-gate.test");
+require("../src/modules/presence/pilot-routes.test");
 require("../src/modules/presence/pilot-outcome.test");
 require("../src/modules/presence/presence-storage-audit.test");
 require("../src/modules/presence/operation-audit.test");
