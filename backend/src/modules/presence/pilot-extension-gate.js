@@ -29,7 +29,7 @@ async function findLatestCompletedCanary(prisma) {
 
 async function evaluatePilotExtensionGate(prisma) {
   const evidence = await findLatestCompletedCanary(prisma);
-  if (!evidence) return Object.freeze({ ready: false, decision: "no_go", blockers: Object.freeze(["completed_canary_frozen_report_missing"]), warnings: Object.freeze([]), canaryCampaignId: null, reportCreatedAt: null, rollout: null });
+  if (!evidence) return Object.freeze({ ready: false, decision: "no_go", blockers: Object.freeze(["completed_canary_frozen_report_missing"]), warnings: Object.freeze([]), canaryCampaignId: null, reportId: null, reportCreatedAt: null, rollout: null });
   const criticalPropagationAlerts = Number(evidence.frozen.report?.pilotEvidence?.criticalPropagationAlerts ?? 0);
   const rollout = evaluatePilotOutcome(evidence.frozen.report, { criticalPropagationAlerts });
   const blockers = [...rollout.blockers];
@@ -42,6 +42,7 @@ async function evaluatePilotExtensionGate(prisma) {
     blockers: Object.freeze([...new Set(blockers)]),
     warnings: Object.freeze(rollout.warnings || []),
     canaryCampaignId: evidence.campaign.campaignId,
+    reportId: evidence.frozen.id || null,
     reportCreatedAt: evidence.frozen.createdAt,
     rollout
   });
