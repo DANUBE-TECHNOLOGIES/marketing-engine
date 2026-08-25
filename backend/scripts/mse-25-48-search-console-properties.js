@@ -1,15 +1,9 @@
 #!/usr/bin/env node
 "use strict";
 
-const path = require("node:path");
-const dotenv = require("dotenv");
 const { PrismaClient } = require("@prisma/client");
 const { getSearchConsoleAccessToken } = require("../src/modules/minisite-semantic-engine/search-console-token-provider");
-
-function bootstrapEnv() {
-  const envFile = process.env.MSE_25_48_ENV_FILE || process.env.MSE_25_40_ENV_FILE;
-  if (envFile) dotenv.config({ path: path.resolve(envFile) });
-}
+const { bootstrapMse2548Env } = require("../src/modules/minisite-semantic-engine/mse-25-48-env");
 
 async function fetchProperties({ accessToken, fetchImpl = fetch } = {}) {
   const response = await fetchImpl("https://www.googleapis.com/webmasters/v3/sites", {
@@ -27,7 +21,7 @@ async function fetchProperties({ accessToken, fetchImpl = fetch } = {}) {
 }
 
 async function run({ prisma } = {}) {
-  bootstrapEnv();
+  bootstrapMse2548Env();
   const client = prisma || new PrismaClient();
   try {
     const token = await getSearchConsoleAccessToken({ prisma: client });
@@ -46,4 +40,4 @@ if (require.main === module) run().catch((error) => {
   process.exitCode = 1;
 });
 
-module.exports = { bootstrapEnv, fetchProperties, run };
+module.exports = { bootstrapEnv: bootstrapMse2548Env, fetchProperties, run };
