@@ -42,10 +42,7 @@ async function buildPilotContext(prisma, body = {}) {
     extended ? evaluatePilotExtensionGate(prisma) : Promise.resolve(null),
     requestedRolloutStage ? evaluateNetworkRolloutGate(prisma, state.agencies.length) : Promise.resolve(null)
   ]);
-
-  const maxAgencies = requestedRolloutStage
-    ? Math.max(1, Number(rolloutGate?.maxAgencies || 1))
-    : extended ? 3 : 1;
+  const maxAgencies = requestedRolloutStage ? Math.max(1, Number(rolloutGate?.maxAgencies || 1)) : extended ? 3 : 1;
   const maxItems = requestedRolloutStage ? maxAgencies : extended ? 3 : 1;
   const cockpit = buildNetworkCockpit(state);
   const recommendations = buildPilotAgencyRecommendations({ agencies: state.agencies, interventionQueue: cockpit.interventionQueue }, { maxAgencies });
@@ -54,7 +51,6 @@ async function buildPilotContext(prisma, body = {}) {
   const controlled = evaluateControlledPilot({ deploymentReadiness, plan }, { maxAgencies, maxItems, minGoogleCoveragePercent: body.minGoogleCoveragePercent || 80, requireNoSensitive: true });
   const activationGate = evaluatePilotActivationGate({ preflight: frozenPreflight, currentReadiness: deploymentReadiness });
   const readiness = mergePilotReadiness(controlled, activationGate, extensionGate, rolloutGate, requestedRolloutStage);
-
   if (!requestedRolloutStage && !extended) {
     const canaryBlockers = [];
     const planAgencyCount = Array.isArray(plan.policy?.agencyIds) ? plan.policy.agencyIds.length : 0;
@@ -65,28 +61,19 @@ async function buildPilotContext(prisma, body = {}) {
       return { state, deploymentReadiness, frozenPreflight, recommendations, plan, extended, extensionGate, rolloutGate, requestedRolloutStage, readiness: Object.freeze({ ...readiness, ready: false, decision: "no_go", blockers: Object.freeze(blockers) }) };
     }
   }
-
   return { state, deploymentReadiness, frozenPreflight, recommendations, plan, readiness, extended, extensionGate, rolloutGate, requestedRolloutStage };
 }
 
 function pilotRoutes({ prisma }) {
   const router = express.Router();
-
   router.get("/api/presence/pilot/extension-gate", async (req, res) => {
-    try {
-      const gate = await evaluatePilotExtensionGate(prisma);
-      return res.status(gate.ready ? 200 : 409).json({ ok: gate.ready, externalWrite: false, persisted: false, gate });
-    } catch (error) { return res.status(500).json({ ok: false, error: error.message }); }
+    try { const gate = await evaluatePilotExtensionGate(prisma); return res.status(gate.ready ? 200 : 409).json({ ok: gate.ready, externalWrite: false, persisted: false, gate }); }
+    catch (error) { return res.status(500).json({ ok: false, error: error.message }); }
   });
-
   router.get("/api/presence/pilot/network-rollout-gate", async (req, res) => {
-    try {
-      const state = await loadCockpitState(prisma);
-      const gate = await evaluateNetworkRolloutGate(prisma, state.agencies.length);
-      return res.status(gate.ready ? 200 : 409).json({ ok: gate.ready, externalWrite: false, persisted: false, agencyCount: state.agencies.length, gate });
-    } catch (error) { return res.status(500).json({ ok: false, error: error.message }); }
+    try { const state = await loadCockpitState(prisma); const gate = await evaluateNetworkRolloutGate(prisma, state.agencies.length); return res.status(gate.ready ? 200 : 409).json({ ok: gate.ready, externalWrite: false, persisted: false, agencyCount: state.agencies.length, gate }); }
+    catch (error) { return res.status(500).json({ ok: false, error: error.message }); }
   });
-
   router.get("/api/presence/pilot/recommendations", async (req, res) => {
     try {
       const requestedRolloutStage = normalizeRolloutStage(req.query?.rolloutStage);
@@ -94,47 +81,33 @@ function pilotRoutes({ prisma }) {
       const state = await loadCockpitState(prisma);
       let maxAgencies = extended ? 3 : 1;
       let gate = null;
-      if (extended) {
-        gate = await evaluatePilotExtensionGate(prisma);
-        if (!gate.ready) return res.status(409).json({ ok: false, externalWrite: false, persisted: false, error: "Pilot extension gate NO-GO", gate });
-      }
-      if (requestedRolloutStage) {
-        gate = await evaluateNetworkRolloutGate(prisma, state.agencies.length);
-        if (!gate.ready || gate.nextStagePercent !== requestedRolloutStage) return res.status(409).json({ ok: false, externalWrite: false, persisted: false, error: "Network rollout gate NO-GO", gate });
-        maxAgencies = gate.maxAgencies;
-      }
+      if (extended) { gate = await evaluatePilotExtensionGate(prisma); if (!gate.ready) return res.status(409).json({ ok: false, externalWrite: false, persisted: false, error: "Pilot extension gate NO-GO", gate }); }
+      if (requestedRolloutStage) { gate = await evaluateNetworkRolloutGate(prisma, state.agencies.length); if (!gate.ready || gate.nextStagePercent !== requestedRolloutStage) return res.status(409).json({ ok: false, externalWrite: false, persisted: false, error: "Network rollout gate NO-GO", gate }); maxAgencies = gate.maxAgencies; }
       const cockpit = buildNetworkCockpit(state);
       const recommendations = buildPilotAgencyRecommendations({ agencies: state.agencies, interventionQueue: cockpit.interventionQueue }, { maxAgencies });
       return res.json({ ok: true, externalWrite: false, persisted: false, extended, rolloutStage: requestedRolloutStage, maxAgencies, gate, recommendations });
     } catch (error) { return res.status(500).json({ ok: false, error: error.message }); }
   });
-
   router.post("/api/presence/pilot/preview", async (req, res) => {
-    try {
-      const context = await buildPilotContext(prisma, req.body || {});
-      return res.status(context.readiness.ready ? 200 : 409).json({ ok: context.readiness.ready, externalWrite: false, persisted: false, extended: context.extended, rolloutStage: context.requestedRolloutStage, readiness: context.readiness, recommendations: context.recommendations, plan: context.plan, extensionGate: context.extensionGate, rolloutGate: context.rolloutGate, frozenPreflight: context.frozenPreflight ? { preflightId: context.frozenPreflight.preflightId, createdAt: context.frozenPreflight.createdAt, status: context.frozenPreflight.status } : null });
-    } catch (error) { return res.status(error.status || 500).json({ ok: false, error: error.message }); }
+    try { const context = await buildPilotContext(prisma, req.body || {}); return res.status(context.readiness.ready ? 200 : 409).json({ ok: context.readiness.ready, externalWrite: false, persisted: false, extended: context.extended, rolloutStage: context.requestedRolloutStage, readiness: context.readiness, recommendations: context.recommendations, plan: context.plan, extensionGate: context.extensionGate, rolloutGate: context.rolloutGate, frozenPreflight: context.frozenPreflight ? { preflightId: context.frozenPreflight.preflightId, createdAt: context.frozenPreflight.createdAt, status: context.frozenPreflight.status } : null }); }
+    catch (error) { return res.status(error.status || 500).json({ ok: false, error: error.message }); }
   });
-
   router.post("/api/presence/pilot/campaign", async (req, res) => {
     try {
       if (req.body?.confirm !== true) return res.status(409).json({ ok: false, error: "confirm=true requis pour figer la campagne pilote" });
       const context = await buildPilotContext(prisma, req.body || {});
       if (!context.readiness.ready) return res.status(409).json({ ok: false, externalWrite: false, persisted: false, error: "Pilot activation gate NO-GO", readiness: context.readiness, extensionGate: context.extensionGate, rolloutGate: context.rolloutGate, recommendations: context.recommendations, plan: context.plan });
       if (req.body?.preflightId && req.body.preflightId !== context.frozenPreflight?.preflightId) return res.status(409).json({ ok: false, error: "Le preflightId fourni ne correspond pas à la dernière preuve figée" });
-      const approvedScope = { agencyIds: context.plan.policy?.agencyIds || [], providerKeys: context.plan.policy?.providerKeys || [], maxItems: context.plan.policy?.maxItems || 0, allowSensitive: false, rolloutStage: context.requestedRolloutStage || null };
-      const approvedPlanFingerprint = stableId({ approvedScope, selected: context.plan.selected || [] });
-      const defaultName = context.requestedRolloutStage
-        ? `Rollout ${context.requestedRolloutStage}% Google Presence ${new Date().toISOString().slice(0, 10)}`
-        : `${context.extended ? "Pilote étendu" : "Canari"} Google Presence ${new Date().toISOString().slice(0, 10)}`;
-      const campaign = await createCampaign(prisma, context.plan, req.body?.name || defaultName, { pilot: true, preflightId: context.frozenPreflight?.preflightId || null, approvedScope, approvedPlanFingerprint });
       const sourceEvidenceCampaignId = context.requestedRolloutStage
         ? context.rolloutGate?.stages?.[context.rolloutGate.stages.length - 1]?.campaignId || null
-        : context.extensionGate?.canaryCampaignId || null;
+        : context.extended ? context.extensionGate?.canaryCampaignId || null : null;
+      const approvedScope = { agencyIds: context.plan.policy?.agencyIds || [], providerKeys: context.plan.policy?.providerKeys || [], maxItems: context.plan.policy?.maxItems || 0, allowSensitive: false, rolloutStage: context.requestedRolloutStage || null, sourceEvidenceCampaignId };
+      const approvedPlanFingerprint = stableId({ approvedScope, selected: context.plan.selected || [] });
+      const defaultName = context.requestedRolloutStage ? `Rollout ${context.requestedRolloutStage}% Google Presence ${new Date().toISOString().slice(0, 10)}` : `${context.extended ? "Pilote étendu" : "Canari"} Google Presence ${new Date().toISOString().slice(0, 10)}`;
+      const campaign = await createCampaign(prisma, context.plan, req.body?.name || defaultName, { pilot: true, preflightId: context.frozenPreflight?.preflightId || null, approvedScope, approvedPlanFingerprint });
       return res.status(201).json({ ok: true, persisted: true, externalWrite: false, pilot: true, extended: context.extended, rolloutStage: context.requestedRolloutStage, preflightId: context.frozenPreflight?.preflightId || null, approvedScope, approvedPlanFingerprint, sourceEvidenceCampaignId, campaign, readiness: context.readiness });
     } catch (error) { return res.status(error.status || 500).json({ ok: false, error: error.message }); }
   });
-
   return router;
 }
 
