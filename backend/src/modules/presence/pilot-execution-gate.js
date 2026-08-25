@@ -3,7 +3,7 @@
 const { getLatestDeploymentPreflight } = require("./deployment-preflight-store");
 const { buildDeploymentReadiness } = require("./deployment-readiness");
 const { evaluatePilotActivationGate } = require("./pilot-activation-gate");
-const { normalizedScope, scopeMatchesPlan } = require("./pilot-campaign-approval");
+const { normalizedScope, scopeMatchesPlan, approvedFingerprintMatches } = require("./pilot-campaign-approval");
 const { evaluatePilotExtensionGate } = require("./pilot-extension-gate");
 const { evaluateNetworkRolloutGate } = require("./network-rollout-gate");
 
@@ -12,6 +12,7 @@ function evaluateCampaignBinding(campaign) {
   if (!campaign?.preflightId) blockers.push("campaign_preflight_missing");
   if (!campaign?.approvedScope) blockers.push("campaign_scope_missing");
   if (!scopeMatchesPlan(campaign)) blockers.push("campaign_scope_changed");
+  if (!approvedFingerprintMatches(campaign)) blockers.push("campaign_approved_fingerprint_mismatch");
   return Object.freeze({ ready: blockers.length === 0, scope: normalizedScope(campaign), blockers: Object.freeze(blockers) });
 }
 
