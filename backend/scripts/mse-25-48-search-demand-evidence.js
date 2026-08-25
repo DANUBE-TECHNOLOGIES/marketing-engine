@@ -13,16 +13,25 @@ function loadOptional(file) {
   return JSON.parse(fs.readFileSync(resolved, "utf8"));
 }
 
-async function run() {
+async function run({ emitOutput = true } = {}) {
   const preview = await previewNetwork({ emitOutput: false });
   const analytics = loadOptional(process.env.MSE_25_48_SEARCH_ANALYTICS_FILE);
   const report = buildSearchDemandEvidence({ preview, analytics });
   const reportDir = process.env.MSE_25_48_REPORT_DIR || process.env.MSE_25_47_REPORT_DIR || "/tmp";
   fs.mkdirSync(reportDir, { recursive: true });
   const reportPath = path.join(reportDir, `mse-25-48-search-demand-evidence-${report.evidenceFingerprint.slice(0, 12)}.json`);
-  fs.writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`);
-  console.log(JSON.stringify({ ok: true, readOnly: true, writes: false, reportPath, evidenceFingerprint: report.evidenceFingerprint, analyticsAvailable: report.analyticsAvailable, summary: report.summary }, null, 2));
-  return report;
+  fs.writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`, { mode: 0o600 });
+  const output = {
+    ok: true,
+    readOnly: true,
+    writes: false,
+    reportPath,
+    evidenceFingerprint: report.evidenceFingerprint,
+    analyticsAvailable: report.analyticsAvailable,
+    summary: report.summary,
+  };
+  if (emitOutput) console.log(JSON.stringify(output, null, 2));
+  return { report, ...output };
 }
 
 if (require.main === module) run().catch((error) => {
