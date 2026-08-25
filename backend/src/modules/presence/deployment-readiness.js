@@ -12,7 +12,8 @@ const REQUIRED_PRESENCE_MIGRATIONS = Object.freeze([
   "20260824142000_presence_campaigns",
   "20260824142500_presence_campaign_report",
   "20260824143000_presence_citation_observations",
-  "20260825104500_presence_deployment_preflight"
+  "20260825104500_presence_deployment_preflight",
+  "20260825154500_presence_campaign_pilot_binding"
 ]);
 
 function evaluateMigrationReadiness(applied = []) {
