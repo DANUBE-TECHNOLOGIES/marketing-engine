@@ -47,7 +47,8 @@
     "mse-25.47:seo-certify": "node scripts/mse-25-47-seo-certify.js",
     "mse-25.47:seo-qualify": "node scripts/mse-25-47-seo-qualify.js",
     "mse-25.47:seo-action-plan": "node scripts/mse-25-47-seo-action-plan.js",
-    "mse-25.47:internal-link-evidence": "node scripts/mse-25-47-internal-link-evidence.js"
+    "mse-25.47:internal-link-evidence": "node scripts/mse-25-47-internal-link-evidence.js",
+    "mse-25.47:internal-link-proof": "node scripts/mse-25-47-internal-link-proof.js"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",
