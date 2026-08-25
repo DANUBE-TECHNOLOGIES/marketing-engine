@@ -3,6 +3,8 @@
 const { fingerprint } = require("./search-demand-evidence");
 
 const ACTIVE = new Set(["weak", "medium", "high"]);
+const REVIEW_QUALIFYING = new Set(["medium", "high"]);
+const MIN_QUALIFYING_SNAPSHOTS = 2;
 
 function signalKey(signal = {}) {
   return [signal.siteSlug || "", signal.intentKey || ""].join("::");
@@ -17,6 +19,11 @@ function classifyTransition(previous, current, { currentDataAvailable }) {
   if (wasActive && isActive) return "PERSISTING";
   if (wasActive && !isActive) return "DISAPPEARED";
   return "UNOBSERVED";
+}
+
+function qualifyingPersistence(previous, current, { currentDataAvailable }) {
+  if (!currentDataAvailable || !REVIEW_QUALIFYING.has(current?.evidenceStrength)) return 0;
+  return REVIEW_QUALIFYING.has(previous?.evidenceStrength) ? 2 : 1;
 }
 
 function buildSearchDemandLifecycle({ previous = null, current } = {}) {
@@ -36,6 +43,8 @@ function buildSearchDemandLifecycle({ previous = null, current } = {}) {
   const signals = (current.signals || []).map((signal) => {
     const prior = previousSignals.get(signalKey(signal)) || null;
     const transition = classifyTransition(prior, signal, { currentDataAvailable });
+    const qualifyingSnapshotCount = qualifyingPersistence(prior, signal, { currentDataAvailable });
+    const persistentReviewEvidence = qualifyingSnapshotCount >= MIN_QUALIFYING_SNAPSHOTS;
     return {
       siteSlug: signal.siteSlug,
       agencyId: signal.agencyId,
@@ -47,7 +56,9 @@ function buildSearchDemandLifecycle({ previous = null, current } = {}) {
       clicks: signal.clicks,
       impressions: signal.impressions,
       position: signal.position,
-      humanReviewEligible: currentDataAvailable && ["NEW", "PERSISTING"].includes(transition) && ["medium", "high"].includes(signal.evidenceStrength),
+      qualifyingSnapshotCount,
+      persistentReviewEvidence,
+      humanReviewEligible: currentDataAvailable && transition === "PERSISTING" && persistentReviewEvidence,
       automaticWrite: false,
     };
   });
@@ -64,6 +75,10 @@ function buildSearchDemandLifecycle({ previous = null, current } = {}) {
     destructive: false,
     policy: {
       humanReviewBeforeSeoExecution: true,
+      persistentDemandRequiredBeforeHumanReview: true,
+      minimumConsecutiveQualifyingSnapshots: MIN_QUALIFYING_SNAPSHOTS,
+      qualifyingEvidenceStrengths: [...REVIEW_QUALIFYING],
+      singleSnapshotSpikeIsInsufficient: true,
       noAutomaticPageCreation: true,
       noAutomaticContentWrite: true,
       noAutomaticPublication: true,
@@ -77,6 +92,8 @@ function buildSearchDemandLifecycle({ previous = null, current } = {}) {
       persistingCount: signals.filter((s) => s.transition === "PERSISTING").length,
       disappearedCount: signals.filter((s) => s.transition === "DISAPPEARED").length,
       unknownNoDataCount: signals.filter((s) => s.transition === "UNKNOWN_NO_DATA").length,
+      singleSnapshotQualifyingCount: signals.filter((s) => s.qualifyingSnapshotCount === 1).length,
+      persistentReviewEvidenceCount: signals.filter((s) => s.persistentReviewEvidence).length,
       humanReviewEligibleCount: signals.filter((s) => s.humanReviewEligible).length,
       automaticWriteCount: 0,
     },
@@ -84,4 +101,10 @@ function buildSearchDemandLifecycle({ previous = null, current } = {}) {
   return { ...result, lifecycleFingerprint: fingerprint(result) };
 }
 
-module.exports = { buildSearchDemandLifecycle, classifyTransition, signalKey };
+module.exports = {
+  buildSearchDemandLifecycle,
+  classifyTransition,
+  qualifyingPersistence,
+  signalKey,
+  MIN_QUALIFYING_SNAPSHOTS,
+};
