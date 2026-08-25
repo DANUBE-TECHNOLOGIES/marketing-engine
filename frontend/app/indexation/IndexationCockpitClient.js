@@ -13,6 +13,15 @@ const LABELS = Object.freeze({
   running: "En cours",
 });
 
+const READINESS_LABELS = Object.freeze({
+  "read-only-ready": "connectée en lecture seule",
+  "oauth-token-missing": "connexion OAuth requise",
+  "feature-disabled": "fonction désactivée",
+  "property-not-accessible": "propriété inaccessible",
+  "search-console-api-error": "erreur API Google",
+  "readiness-error": "contrôle indisponible",
+});
+
 function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
@@ -68,8 +77,14 @@ function Metric({ value, label }) {
   );
 }
 
+function providerLabel(health, readiness) {
+  if (readiness?.state) return READINESS_LABELS[readiness.state] || readiness.state;
+  return health?.providerConfigured ? "provider configuré" : "provider non actif";
+}
+
 export default function IndexationCockpitClient() {
   const [health, setHealth] = useState(null);
+  const [readiness, setReadiness] = useState(null);
   const [candidates, setCandidates] = useState({ sites: [] });
   const [history, setHistory] = useState({ runs: [] });
   const [properties, setProperties] = useState({ properties: [] });
@@ -81,19 +96,13 @@ export default function IndexationCockpitClient() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
-  const load = async () => {
-    setLoading(true);
-    setError("");
-
-    const [healthResult, candidatesResult, historyResult, propertiesResult] =
-      await Promise.allSettled([
-        indexationApi.health(),
-        indexationApi.candidates(),
-        indexationApi.history({ limit: 100 }),
-        indexationApi.properties(),
-      ]);
-
+  const applyResults = ([healthResult, readinessResult, candidatesResult, historyResult, propertiesResult]) => {
     if (healthResult.status === "fulfilled") setHealth(healthResult.value);
+    if (readinessResult.status === "fulfilled") {
+      const nextReadiness = readinessResult.value || null;
+      setReadiness(nextReadiness);
+      if (nextReadiness?.property) setSiteUrl((current) => current || nextReadiness.property);
+    }
     if (candidatesResult.status === "fulfilled") setCandidates(candidatesResult.value || { sites: [] });
     if (historyResult.status === "fulfilled") setHistory(historyResult.value || { runs: [] });
 
@@ -101,7 +110,7 @@ export default function IndexationCockpitClient() {
       const nextProperties = propertiesResult.value || { properties: [] };
       setProperties(nextProperties);
       const owner = asArray(nextProperties.properties).find(
-        (property) => property.eligibleForSitemapSubmission === true
+        (property) => property.permissionLevel === "siteOwner"
       );
       if (owner?.siteUrl) setSiteUrl((current) => current || owner.siteUrl);
     } else {
@@ -111,40 +120,31 @@ export default function IndexationCockpitClient() {
     if (candidatesResult.status === "rejected") {
       setError(candidatesResult.reason?.message || "Impossible de charger les candidats à l’indexation.");
     }
+  };
 
+  const fetchCockpit = () =>
+    Promise.allSettled([
+      indexationApi.health(),
+      indexationApi.readiness(),
+      indexationApi.candidates(),
+      indexationApi.history({ limit: 100 }),
+      indexationApi.properties(),
+    ]);
+
+  const load = async () => {
+    setLoading(true);
+    setError("");
+    const results = await fetchCockpit();
+    applyResults(results);
     setLoading(false);
   };
 
   useEffect(() => {
     let cancelled = false;
 
-    Promise.allSettled([
-      indexationApi.health(),
-      indexationApi.candidates(),
-      indexationApi.history({ limit: 100 }),
-      indexationApi.properties(),
-    ]).then(([healthResult, candidatesResult, historyResult, propertiesResult]) => {
+    fetchCockpit().then((results) => {
       if (cancelled) return;
-
-      if (healthResult.status === "fulfilled") setHealth(healthResult.value);
-      if (candidatesResult.status === "fulfilled") setCandidates(candidatesResult.value || { sites: [] });
-      if (historyResult.status === "fulfilled") setHistory(historyResult.value || { runs: [] });
-
-      if (propertiesResult.status === "fulfilled") {
-        const nextProperties = propertiesResult.value || { properties: [] };
-        setProperties(nextProperties);
-        const owner = asArray(nextProperties.properties).find(
-          (property) => property.eligibleForSitemapSubmission === true
-        );
-        if (owner?.siteUrl) setSiteUrl(owner.siteUrl);
-      } else {
-        setProperties({ properties: [] });
-      }
-
-      if (candidatesResult.status === "rejected") {
-        setError(candidatesResult.reason?.message || "Impossible de charger les candidats à l’indexation.");
-      }
-
+      applyResults(results);
       setLoading(false);
     });
 
@@ -197,6 +197,10 @@ export default function IndexationCockpitClient() {
   };
 
   const preflight = async (site) => {
+    if (readiness?.ready !== true) {
+      setError("Search Console doit être connectée et la propriété vérifiée avant le préflight.");
+      return;
+    }
     if (!siteUrl) {
       setError("Sélectionnez d’abord la propriété Search Console propriétaire.");
       return;
@@ -250,6 +254,11 @@ export default function IndexationCockpitClient() {
   };
 
   const submit = async (site, run) => {
+    if (health?.submissionCapable !== true) {
+      setError("Le provider Search Console actuel est en lecture seule. Aucune soumission Google n’est autorisée.");
+      return;
+    }
+
     const result = await runAction(
       `${site.siteSlug}:submit`,
       () => indexationApi.submit({ runId: run.id }),
@@ -260,8 +269,12 @@ export default function IndexationCockpitClient() {
   };
 
   const ownerProperties = asArray(properties?.properties).filter(
-    (property) => property.eligibleForSitemapSubmission === true
+    (property) => property.permissionLevel === "siteOwner"
   );
+  const providerReady = readiness?.ready === true;
+  const readOnly = readiness?.accessMode === "read-only" || health?.accessMode === "read-only";
+  const submissionCapable = health?.submissionCapable === true && readiness?.submissionCapable === true;
+  const configuredProperty = readiness?.property || health?.configuredProperty || "sc-domain:agences.mondescale.com";
 
   return (
     <main className="indexation-shell">
@@ -270,7 +283,7 @@ export default function IndexationCockpitClient() {
           <p className="indexation-eyebrow">Marketing Engine · SEO</p>
           <h1>Opérations d’indexation</h1>
           <p>
-            Pilotez la readiness, le préflight, l’approbation et la soumission Search Console agence par agence.
+            Pilotez la readiness, le préflight et l’approbation Search Console agence par agence, avec des gardes explicites avant toute écriture Google.
           </p>
         </div>
         <button type="button" className="indexation-secondary" onClick={load} disabled={loading}>
@@ -278,16 +291,51 @@ export default function IndexationCockpitClient() {
         </button>
       </header>
 
-      <section className={`provider-banner ${health?.providerConfigured ? "provider-ready" : "provider-disabled"}`}>
+      <section className={`provider-banner ${providerReady ? "provider-ready" : "provider-disabled"}`}>
         <div>
-          <strong>Search Console : {health?.providerConfigured ? "provider prêt" : "provider non actif"}</strong>
+          <strong>Search Console : {providerLabel(health, readiness)}</strong>
           <span>
-            {health?.provider || "inconnu"}
-            {health?.disabledReason ? ` · ${health.disabledReason}` : ""}
+            {health?.provider || readiness?.provider || "inconnu"}
+            {health?.credentialMode ? ` · ${health.credentialMode}` : ""}
+            {readOnly ? " · read-only" : ""}
+          </span>
+          <span>
+            Propriété : {configuredProperty}
+            {readiness?.propertyAccess?.permissionLevel ? ` · ${readiness.propertyAccess.permissionLevel}` : ""}
           </span>
         </div>
-        <small>Approbation explicite obligatoire · Soumission automatique désactivée</small>
+        <small>
+          Approbation explicite obligatoire · Soumission automatique désactivée
+          {!submissionCapable ? " · Écriture Google désactivée" : ""}
+        </small>
       </section>
+
+      {readiness?.state === "oauth-token-missing" ? (
+        <div className="indexation-message indexation-notice">
+          <strong>Connexion Search Console requise.</strong>{" "}
+          Le consentement demandé est limité à la lecture Search Console.
+          {" "}
+          <a href="/api/search-console/auth">Connecter Search Console</a>
+        </div>
+      ) : null}
+
+      {readiness?.state === "feature-disabled" ? (
+        <div className="indexation-message indexation-error">
+          La connexion est prête côté application mais SEARCH_CONSOLE_ENABLED est encore désactivé dans le runtime.
+        </div>
+      ) : null}
+
+      {readiness?.state === "property-not-accessible" ? (
+        <div className="indexation-message indexation-error">
+          Le compte Google connecté n’a pas accès à {configuredProperty}. Vérifiez les droits de propriété dans Search Console.
+        </div>
+      ) : null}
+
+      {providerReady && readOnly ? (
+        <div className="indexation-message indexation-notice">
+          Search Console est opérationnelle en lecture seule. Les contrôles de propriété, performances, sitemap et préflight sont actifs ; aucune soumission Google ne peut partir avec ce provider.
+        </div>
+      ) : null}
 
       <section className="indexation-controls">
         <label>
@@ -303,7 +351,7 @@ export default function IndexationCockpitClient() {
             </select>
           ) : (
             <input
-              value={siteUrl}
+              value={siteUrl || configuredProperty}
               onChange={(event) => setSiteUrl(event.target.value)}
               placeholder="sc-domain:agences.mondescale.com"
             />
@@ -394,7 +442,7 @@ export default function IndexationCockpitClient() {
                       type="button"
                       className="indexation-secondary"
                       onClick={() => preflight(site)}
-                      disabled={busy[`${site.siteSlug}:preflight`]}
+                      disabled={!providerReady || busy[`${site.siteSlug}:preflight`]}
                     >
                       {busy[`${site.siteSlug}:preflight`] ? "Vérification…" : run?.status === "failed" ? "Relancer le préflight" : "Lancer le préflight"}
                     </button>
@@ -418,7 +466,7 @@ export default function IndexationCockpitClient() {
                   </button>
                 ) : null}
 
-                {run?.status === "approved" ? (
+                {run?.status === "approved" && submissionCapable ? (
                   <button
                     type="button"
                     className="submit-button"
@@ -427,6 +475,12 @@ export default function IndexationCockpitClient() {
                   >
                     Soumettre à Google Search Console
                   </button>
+                ) : null}
+
+                {run?.status === "approved" && !submissionCapable ? (
+                  <div className="indexation-message indexation-notice">
+                    Approbation enregistrée. Envoi Google indisponible tant que le provider reste en lecture seule.
+                  </div>
                 ) : null}
               </div>
             </article>
