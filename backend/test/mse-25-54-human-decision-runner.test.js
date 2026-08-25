@@ -55,7 +55,19 @@ test("runner persists a certified immutable non executable decision report with 
     assert.ok(result.chainFingerprint);
     assert.equal(fs.existsSync(result.reportPath), true);
     assert.equal((fs.statSync(result.reportPath).mode & 0o777), 0o600);
-    await assert.rejects(() => run({ emitOutput: false }), /EEXIST/);
+
+    const persistedBefore = fs.readFileSync(result.reportPath, "utf8");
+    await new Promise((resolve) => setTimeout(resolve, 2));
+    const second = await run({ emitOutput: false });
+    assert.equal(second.certified, true);
+    assert.notEqual(second.decision.decidedAt, result.decision.decidedAt);
+    assert.notEqual(second.decision.decisionFingerprint, result.decision.decisionFingerprint);
+    assert.notEqual(second.reportPath, result.reportPath);
+    assert.equal(fs.readFileSync(result.reportPath, "utf8"), persistedBefore);
+    assert.equal((fs.statSync(second.reportPath).mode & 0o777), 0o600);
+    assert.equal(second.decision.sourcePacketFingerprint, result.decision.sourcePacketFingerprint);
+    assert.equal(second.decision.executable, false);
+    assert.equal(second.decision.automaticWrite, false);
   } finally { restore(); }
 });
 
