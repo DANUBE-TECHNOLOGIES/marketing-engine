@@ -10,14 +10,7 @@ function ids(value){return String(value||"").split(",").map(v=>Number(v.trim()))
 function keys(value){return String(value||"").split(",").map(v=>v.trim()).filter(Boolean)}
 
 export async function createPresenceCampaign(formData){
-  const body={
-    confirm:true,
-    name:String(formData.get("name")||"").trim()||null,
-    maxItems:Number(formData.get("maxItems")||25),
-    agencyIds:ids(formData.get("agencyIds")),
-    providerKeys:keys(formData.get("providerKeys")),
-    allowSensitive:formData.get("allowSensitive")==="on"
-  };
+  const body={confirm:true,name:String(formData.get("name")||"").trim()||null,maxItems:Number(formData.get("maxItems")||25),agencyIds:ids(formData.get("agencyIds")),providerKeys:keys(formData.get("providerKeys")),allowSensitive:formData.get("allowSensitive")==="on"};
   const result=await post("/api/presence/campaigns",body);
   revalidatePath("/presence/campaigns");
   if(result?.campaign?.campaignId) redirect(`/presence/campaigns/${result.campaign.campaignId}`);
@@ -25,23 +18,27 @@ export async function createPresenceCampaign(formData){
 
 export async function transitionPresenceCampaign(campaignId,status){
   await post(`/api/presence/campaigns/${encodeURIComponent(campaignId)}/transition`,{confirm:true,status,reason:"operator_ui"});
-  revalidatePath(`/presence/campaigns/${campaignId}`);
-  revalidatePath("/presence/campaigns");
+  revalidatePath(`/presence/campaigns/${campaignId}`);revalidatePath("/presence/campaigns");
 }
 
 export async function executePresenceCampaign(campaignId,formData){
   await post(`/api/presence/campaigns/${encodeURIComponent(campaignId)}/execute`,{confirm:true,confirmSensitive:formData.get("confirmSensitive")==="on",maxItems:Number(formData.get("maxItems")||25)});
-  revalidatePath(`/presence/campaigns/${campaignId}`);
-  revalidatePath("/presence");
+  revalidatePath(`/presence/campaigns/${campaignId}`);revalidatePath("/presence");
 }
 
 export async function verifyPresenceCampaign(campaignId){
   await post(`/api/presence/campaigns/${encodeURIComponent(campaignId)}/verify`,{confirm:true});
-  revalidatePath(`/presence/campaigns/${campaignId}`);
-  revalidatePath("/presence");
+  revalidatePath(`/presence/campaigns/${campaignId}`);revalidatePath("/presence");
 }
 
 export async function freezePresenceCampaignReport(campaignId){
   await post(`/api/presence/campaigns/${encodeURIComponent(campaignId)}/report/freeze`,{confirm:true});
   revalidatePath(`/presence/campaigns/${campaignId}`);
+}
+
+export async function recoverPresenceCampaign(campaignId,formData){
+  const name=String(formData.get("name")||"").trim()||null;
+  const result=await post(`/api/presence/campaigns/${encodeURIComponent(campaignId)}/recovery`,{confirm:true,name});
+  revalidatePath(`/presence/campaigns/${campaignId}`);revalidatePath("/presence/campaigns");revalidatePath("/presence/readiness");
+  if(result?.campaign?.campaignId) redirect(`/presence/campaigns/${result.campaign.campaignId}`);
 }
