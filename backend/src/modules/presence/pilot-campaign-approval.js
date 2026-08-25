@@ -3,6 +3,7 @@
 const { getLatestDeploymentPreflight } = require("./deployment-preflight-store");
 const { buildDeploymentReadiness } = require("./deployment-readiness");
 const { evaluatePilotActivationGate } = require("./pilot-activation-gate");
+const { evaluateSourceEvidenceBinding } = require("./rollout-promotion-gate");
 const { stableId } = require("./campaign-planner");
 
 function normalizedScope(campaign) {
@@ -13,7 +14,9 @@ function normalizedScope(campaign) {
     maxItems: Number(scope.maxItems || 0),
     allowSensitive: scope.allowSensitive === true,
     rolloutStage: [50, 100].includes(Number(scope.rolloutStage)) ? Number(scope.rolloutStage) : null,
-    sourceEvidenceCampaignId: scope.sourceEvidenceCampaignId || null
+    sourceEvidenceCampaignId: scope.sourceEvidenceCampaignId || null,
+    sourceEvidenceReportId: scope.sourceEvidenceReportId || null,
+    sourceEvidenceReportCreatedAt: scope.sourceEvidenceReportCreatedAt || null
   };
 }
 
@@ -45,11 +48,14 @@ async function assertPilotCampaignTransition(prisma, campaign, toStatus) {
   if (!latestPreflight || latestPreflight.preflightId !== campaign.preflightId) blockers.push("campaign_preflight_not_latest");
   const activationGate = evaluatePilotActivationGate({ preflight: latestPreflight, currentReadiness });
   blockers.push(...activationGate.blockers);
+  const sourceGate = await evaluateSourceEvidenceBinding(prisma, campaign, currentReadiness?.network?.agencyCount || 0);
+  blockers.push(...(sourceGate.blockers || []));
   if (blockers.length) {
     const error = new Error(`Pilot campaign transition blocked: ${[...new Set(blockers)].join(",")}`);
     error.status = 409;
     error.code = "PILOT_CAMPAIGN_GATE_NO_GO";
     error.blockers = [...new Set(blockers)];
+    error.sourceEvidence = sourceGate;
     throw error;
   }
 }
