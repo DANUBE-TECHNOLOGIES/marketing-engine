@@ -2,13 +2,8 @@
 
 const { buildNetworkCockpit } = require("./network-cockpit");
 
-function number(value) {
-  return Number.isFinite(Number(value)) ? Number(value) : 0;
-}
-
-function delta(after, before) {
-  return number(after) - number(before);
-}
+function number(value) { return Number.isFinite(Number(value)) ? Number(value) : 0; }
+function delta(after, before) { return number(after) - number(before); }
 
 function summarizeExecutions(executions = []) {
   const summary = { total: executions.length, submitted: 0, verified: 0, skipped: 0, failed: 0, blocked_sensitive: 0, other: 0 };
@@ -18,19 +13,16 @@ function summarizeExecutions(executions = []) {
     else summary.other += 1;
   }
   const processed = summary.submitted + summary.verified + summary.skipped + summary.failed + summary.blocked_sensitive + summary.other;
-  return Object.freeze({
-    ...summary,
-    processed,
-    successRate: summary.total ? Math.round((summary.verified / summary.total) * 100) : 0
-  });
+  return Object.freeze({ ...summary, processed, successRate: summary.total ? Math.round((summary.verified / summary.total) * 100) : 0 });
 }
 
-function buildCampaignReport(campaign, currentState, executions = []) {
+function buildCampaignReport(campaign, currentState, executions = [], options = {}) {
   const current = buildNetworkCockpit(currentState);
   const baseline = campaign?.baseline || campaign?.plan?.baseline || {};
   const beforeHealth = baseline.health || {};
   const beforeSummary = baseline.summary || {};
   const execution = summarizeExecutions(executions);
+  const criticalPropagationAlerts = number(options.criticalPropagationAlerts);
 
   const comparison = Object.freeze({
     healthScore: Object.freeze({ before: number(beforeHealth.score), after: number(current.health.score), delta: delta(current.health.score, beforeHealth.score) }),
@@ -49,6 +41,12 @@ function buildCampaignReport(campaign, currentState, executions = []) {
     status: campaign.status,
     generatedAt: new Date().toISOString(),
     outcome,
+    pilotEvidence: Object.freeze({
+      pilot: campaign?.pilot === true,
+      preflightId: campaign?.preflightId || null,
+      approvedScope: campaign?.approvedScope || null,
+      criticalPropagationAlerts
+    }),
     baseline: Object.freeze({ health: beforeHealth, summary: beforeSummary }),
     current: Object.freeze({ health: current.health, summary: current.summary }),
     comparison,
