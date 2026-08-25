@@ -56,7 +56,9 @@
     "mse-25.48:search-console-readiness": "node scripts/mse-25-48-search-console-readiness.js",
     "mse-25.48:search-console-properties": "node scripts/mse-25-48-search-console-properties.js",
     "mse-25.48:search-console-ingest": "node scripts/mse-25-48-search-console-ingest.js",
-    "mse-25.48:search-demand-evidence": "node scripts/mse-25-48-search-demand-evidence.js"
+    "mse-25.48:search-demand-evidence": "node scripts/mse-25-48-search-demand-evidence.js",
+    "mse-25.49:lifecycle": "node scripts/mse-25-49-search-demand-lifecycle.js",
+    "mse-25.49:certify": "node scripts/mse-25-49-certify.js"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",
