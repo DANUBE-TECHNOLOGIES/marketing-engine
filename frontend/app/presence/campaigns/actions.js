@@ -42,3 +42,9 @@ export async function recoverPresenceCampaign(campaignId,formData){
   revalidatePath(`/presence/campaigns/${campaignId}`);revalidatePath("/presence/campaigns");revalidatePath("/presence/readiness");
   if(result?.campaign?.campaignId) redirect(`/presence/campaigns/${result.campaign.campaignId}`);
 }
+
+export async function qualifyPresenceRecoveryItem(campaignId,campaignIndex){
+  await post(`/api/presence/campaigns/${encodeURIComponent(campaignId)}/recovery/qualify`,{confirm:true,campaignIndex:Number(campaignIndex)});
+  revalidatePath(`/presence/campaigns/${campaignId}/recovery`);
+  revalidatePath(`/presence/campaigns/${campaignId}`);
+}
