@@ -47,6 +47,10 @@ function buildSearchDemandEvidence({ preview = {}, analytics = null } = {}) {
     position: Number(row.position || 0),
   })).filter((row) => row.query || row.page);
 
+  const analyticsProvided = analytics !== null && analytics !== undefined;
+  const analyticsAvailable = normalizedRows.length > 0;
+  const dataState = analyticsAvailable ? "DATA_AVAILABLE" : "NO_DATA_YET";
+
   const signals = [];
   for (const agency of preview.agencies || []) {
     for (const coverage of agency.coverage || []) {
@@ -84,7 +88,8 @@ function buildSearchDemandEvidence({ preview = {}, analytics = null } = {}) {
         position: Number(position.toFixed(2)),
         matchingQueryCount: matching.length,
         evidenceStrength: strength,
-        eligibleForSeoReview: ["medium", "high"].includes(strength),
+        evidenceState: analyticsAvailable ? (strength === "none" ? "NO_MATCHING_EVIDENCE" : "EVIDENCE_OBSERVED") : "UNKNOWN_NO_DATA",
+        eligibleForSeoReview: analyticsAvailable && ["medium", "high"].includes(strength),
         automaticWrite: false,
       });
     }
@@ -93,14 +98,19 @@ function buildSearchDemandEvidence({ preview = {}, analytics = null } = {}) {
   const result = {
     type: "mse-25.48-search-demand-evidence",
     sourcePlanFingerprint: preview.planFingerprint,
-    analyticsAvailable: normalizedRows.length > 0,
+    analyticsProvided,
+    analyticsAvailable,
     analyticsRowCount: normalizedRows.length,
+    dataState,
+    lifecycleState: analyticsAvailable ? "SEARCH_DEMAND_EVIDENCE_READY" : "WAITING_FOR_SEARCH_DEMAND_DATA",
+    noDataIsNotNoDemand: true,
     readOnly: true,
     writes: false,
     destructive: false,
     policy: {
       demandEvidenceRequiredBeforeNewSeoExecution: true,
       semanticGapAloneIsInsufficient: true,
+      noDataMustNotBeInterpretedAsNoDemand: true,
       noAutomaticPageCreation: true,
       noAutomaticContentWrite: true,
       automaticWrites: false,
@@ -111,7 +121,8 @@ function buildSearchDemandEvidence({ preview = {}, analytics = null } = {}) {
       highEvidenceCount: signals.filter((r) => r.evidenceStrength === "high").length,
       mediumEvidenceCount: signals.filter((r) => r.evidenceStrength === "medium").length,
       weakEvidenceCount: signals.filter((r) => r.evidenceStrength === "weak").length,
-      noEvidenceCount: signals.filter((r) => r.evidenceStrength === "none").length,
+      noEvidenceCount: analyticsAvailable ? signals.filter((r) => r.evidenceStrength === "none").length : 0,
+      unknownDueToNoDataCount: analyticsAvailable ? 0 : signals.length,
       reviewEligibleCount: signals.filter((r) => r.eligibleForSeoReview).length,
       automaticWriteCount: 0,
     },
