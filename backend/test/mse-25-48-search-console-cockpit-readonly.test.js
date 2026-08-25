@@ -51,6 +51,6 @@ test("MSE-25.48 cockpit never exposes Google submission for readonly provider", 
 
   assert.match(cockpit, /run\?\.status === "approved" && submissionCapable/);
   assert.match(cockpit, /Écriture Google désactivée/);
-  assert.match(provider, /submissionCapable === false/);
+  assert.match(provider, /if \(!this\.submissionCapable\)/);
   assert.match(provider, /SEARCH_CONSOLE_PROVIDER_READ_ONLY/);
 });
