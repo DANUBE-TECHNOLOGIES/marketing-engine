@@ -14,8 +14,8 @@ async function main() {
   try {
     const readiness = await buildDeploymentReadiness(prisma, process.env);
     const output = {
-      ok: readiness.pilot.readyForGooglePilot,
-      mode: "presence-deployment-readiness",
+      ok: readiness.pilot.readyForReadOnlyPreflight,
+      mode: "presence-read-only-preflight",
       generatedAt: readiness.generatedAt,
       pilot: readiness.pilot,
       migrations: readiness.migrations,
@@ -31,6 +31,8 @@ async function main() {
         warnings: readiness.operational.warnings
       },
       safety: {
+        readOnlyPreflight: true,
+        externalWritesPerformed: false,
         googleWriteKillSwitch: {
           env: "PRESENCE_GOOGLE_WRITES_ENABLED",
           enabled: readiness.operational.googleWritesEnabled === true,
