@@ -4,6 +4,7 @@ const express = require("express");
 const { loadCockpitState } = require("./network-cockpit-routes");
 const { buildCampaignPlan } = require("./campaign-planner");
 const { createCampaign, getCampaign, listCampaigns, transitionCampaign, listCampaignEvents } = require("./campaign-store");
+const { assertPilotCampaignTransition } = require("./pilot-campaign-approval");
 
 function campaignRoutes({ prisma }) {
   const router = express.Router();
@@ -57,9 +58,15 @@ function campaignRoutes({ prisma }) {
   router.post("/api/presence/campaigns/:campaignId/transition", async (req, res) => {
     try {
       if (req.body?.confirm !== true) return res.status(409).json({ ok: false, error: "confirm=true requis pour changer l’état d’une campagne" });
-      const campaign = await transitionCampaign(prisma, req.params.campaignId, req.body?.status, { reason: req.body?.reason, payload: req.body?.payload });
+      const campaign = await transitionCampaign(prisma, req.params.campaignId, req.body?.status, {
+        reason: req.body?.reason,
+        payload: req.body?.payload,
+        beforeTransition: async (current, toStatus) => assertPilotCampaignTransition(prisma, current, toStatus)
+      });
       return res.json({ ok: true, externalWrite: false, campaign });
-    } catch (error) { return res.status(error.status || 500).json({ ok: false, error: error.message }); }
+    } catch (error) {
+      return res.status(error.status || 500).json({ ok: false, error: error.message, code: error.code || null, blockers: error.blockers || [] });
+    }
   });
 
   return router;
