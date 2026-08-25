@@ -49,6 +49,9 @@ function buildSearchDemandEvidence({ preview = {}, analytics = null } = {}) {
 
   const analyticsProvided = analytics !== null && analytics !== undefined;
   const analyticsAvailable = normalizedRows.length > 0;
+  const analyticsInputState = analyticsProvided
+    ? (analyticsAvailable ? "PROVIDED_WITH_ROWS" : "PROVIDED_EMPTY")
+    : "NOT_PROVIDED";
   const dataState = analyticsAvailable ? "DATA_AVAILABLE" : "NO_DATA_YET";
 
   const signals = [];
@@ -98,12 +101,22 @@ function buildSearchDemandEvidence({ preview = {}, analytics = null } = {}) {
   const result = {
     type: "mse-25.48-search-demand-evidence",
     sourcePlanFingerprint: preview.planFingerprint,
+    sourceAnalyticsFingerprint: analytics?.analyticsFingerprint || null,
     analyticsProvided,
+    analyticsInputState,
     analyticsAvailable,
     analyticsRowCount: normalizedRows.length,
+    analyticsSource: analyticsProvided ? {
+      source: analytics?.source || null,
+      siteUrl: analytics?.siteUrl || null,
+      startDate: analytics?.startDate || null,
+      endDate: analytics?.endDate || null,
+      dataState: analytics?.dataState || null,
+    } : null,
     dataState,
     lifecycleState: analyticsAvailable ? "SEARCH_DEMAND_EVIDENCE_READY" : "WAITING_FOR_SEARCH_DEMAND_DATA",
     noDataIsNotNoDemand: true,
+    demandConclusion: analyticsAvailable ? "EVIDENCE_EVALUATED" : "UNDETERMINED_NO_DATA",
     readOnly: true,
     writes: false,
     destructive: false,
