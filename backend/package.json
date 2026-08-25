@@ -48,7 +48,11 @@
     "mse-25.47:seo-qualify": "node scripts/mse-25-47-seo-qualify.js",
     "mse-25.47:seo-action-plan": "node scripts/mse-25-47-seo-action-plan.js",
     "mse-25.47:internal-link-evidence": "node scripts/mse-25-47-internal-link-evidence.js",
-    "mse-25.47:internal-link-proof": "node scripts/mse-25-47-internal-link-proof.js"
+    "mse-25.47:internal-link-proof": "node scripts/mse-25-47-internal-link-proof.js",
+    "mse-25.47:internal-link-write-intent": "node scripts/mse-25-47-internal-link-write-intent.js",
+    "mse-25.47:internal-link-apply": "node scripts/mse-25-47-internal-link-apply.js",
+    "mse-25.47:internal-link-rollback": "node scripts/mse-25-47-internal-link-rollback.js",
+    "mse-25.47:post-rollout-validate": "node scripts/mse-25-47-post-rollout-validate.js"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",
