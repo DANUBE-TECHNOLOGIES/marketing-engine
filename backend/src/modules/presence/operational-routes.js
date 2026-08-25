@@ -21,7 +21,8 @@ function operationalRoutes({ prisma }) {
       const readiness = await buildDeploymentReadiness(prisma);
       const preflightReady = readiness.pilot.readyForReadOnlyPreflight === true;
       const latest = await getLatestDeploymentPreflight(prisma).catch(() => null);
-      return res.status(preflightReady ? 200 : 503).json({ ok: preflightReady, mode: "read_only_preflight", externalWritesPerformed: false, googlePilotEnabled: readiness.pilot.readyForGooglePilot === true, latestFrozenPreflight: latest, readiness });
+      const activationGate = evaluatePilotActivationGate({ preflight: latest, currentReadiness: readiness });
+      return res.status(preflightReady ? 200 : 503).json({ ok: preflightReady, mode: "read_only_preflight", externalWritesPerformed: false, googlePilotEnabled: readiness.pilot.readyForGooglePilot === true, latestFrozenPreflight: latest, activationGate, readiness });
     } catch (error) { return res.status(500).json({ ok: false, error: error.message }); }
   });
 
