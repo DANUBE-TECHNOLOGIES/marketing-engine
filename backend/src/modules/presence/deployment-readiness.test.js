@@ -13,22 +13,37 @@ test("deployment migration gate requires every Presence migration", () => {
   assert.equal(complete.applied, complete.required);
 });
 
-test("Google pilot is blocked by storage/catalog/write blockers but not discovery warning", () => {
+test("read-only preflight can be green while Google writes remain killed", () => {
   const readiness = evaluatePilotReadiness({
-    operational: { readyForGoogleManagedWrites: true, readyForDiscovery: false },
+    operational: { readyForGoogleApi: true, readyForGoogleManagedWrites: false, readyForDiscovery: false },
     catalog: { ready: true },
     migrations: { ready: true },
     agencyCount: 7,
     googleListingCount: 7
   });
+  assert.equal(readiness.readyForReadOnlyPreflight, true);
+  assert.equal(readiness.readyForGooglePilot, false);
+  assert.deepEqual(readiness.preflightBlockers, []);
+  assert.ok(readiness.blockers.includes("google_managed_writes"));
+  assert.deepEqual(readiness.warnings, ["dataforseo_discovery"]);
+});
+
+test("Google pilot is allowed only when API and managed writes are ready", () => {
+  const readiness = evaluatePilotReadiness({
+    operational: { readyForGoogleApi: true, readyForGoogleManagedWrites: true, readyForDiscovery: false },
+    catalog: { ready: true },
+    migrations: { ready: true },
+    agencyCount: 7,
+    googleListingCount: 7
+  });
+  assert.equal(readiness.readyForReadOnlyPreflight, true);
   assert.equal(readiness.readyForGooglePilot, true);
   assert.equal(readiness.readyForDiscoveryPilot, false);
-  assert.deepEqual(readiness.warnings, ["dataforseo_discovery"]);
 });
 
 test("incomplete Google listing coverage is a warning, not a false pilot blocker", () => {
   const readiness = evaluatePilotReadiness({
-    operational: { readyForGoogleManagedWrites: true, readyForDiscovery: true },
+    operational: { readyForGoogleApi: true, readyForGoogleManagedWrites: true, readyForDiscovery: true },
     catalog: { ready: true },
     migrations: { ready: true },
     agencyCount: 7,
