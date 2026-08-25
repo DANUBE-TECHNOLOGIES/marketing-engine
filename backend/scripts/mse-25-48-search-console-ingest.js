@@ -8,7 +8,7 @@ const { fetchSearchAnalytics } = require("../src/modules/minisite-semantic-engin
 const { getSearchConsoleAccessToken } = require("../src/modules/minisite-semantic-engine/search-console-token-provider");
 const { bootstrapMse2548Env } = require("../src/modules/minisite-semantic-engine/mse-25-48-env");
 
-async function run({ prisma } = {}) {
+async function run({ prisma, emitOutput = true } = {}) {
   bootstrapMse2548Env();
   const client = prisma || new PrismaClient();
   try {
@@ -24,7 +24,19 @@ async function run({ prisma } = {}) {
     fs.mkdirSync(reportDir, { recursive: true });
     const reportPath = path.join(reportDir, `mse-25-48-search-console-analytics-${analytics.analyticsFingerprint.slice(0, 12)}.json`);
     fs.writeFileSync(reportPath, `${JSON.stringify(analytics, null, 2)}\n`, { mode: 0o600 });
-    console.log(JSON.stringify({ ok: true, readOnly: true, writes: false, tokenSource: token.source, reportPath, analyticsFingerprint: analytics.analyticsFingerprint, siteUrl: analytics.siteUrl, startDate: analytics.startDate, endDate: analytics.endDate, rowCount: analytics.rowCount }, null, 2));
+    const output = {
+      ok: true,
+      readOnly: true,
+      writes: false,
+      tokenSource: token.source,
+      reportPath,
+      analyticsFingerprint: analytics.analyticsFingerprint,
+      siteUrl: analytics.siteUrl,
+      startDate: analytics.startDate,
+      endDate: analytics.endDate,
+      rowCount: analytics.rowCount,
+    };
+    if (emitOutput) console.log(JSON.stringify(output, null, 2));
     return { analytics, reportPath, tokenSource: token.source };
   } finally {
     if (!prisma) await client.$disconnect();
