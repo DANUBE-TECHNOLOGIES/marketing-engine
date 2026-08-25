@@ -12,24 +12,34 @@ function readJson(file) {
 }
 
 function hydrateLifecycleFromObservation(observation) {
-  if (!observation?.observationReportPath) return { observation, lifecycle: observation?.lifecycle || null };
-  const mse50Report = readJson(observation.observationReportPath);
-  const mse49Path = mse50Report.observationReportPath;
+  if (!observation) throw new Error("MSE_25_51_OBSERVATION_REQUIRED");
+
+  // The end-to-end MSE-25.50 runner returns:
+  // - reportPath: its own final MSE-25.50 observation report
+  // - observationReportPath: the MSE-25.49 observation report
+  // The MSE-25.49 report is therefore the direct source for lifecycleReportPath.
+  const mse50Report = observation.reportPath ? readJson(observation.reportPath) : null;
+  const mse49Path = observation.observationReportPath || mse50Report?.observationReportPath || null;
   const mse49Report = readJson(mse49Path);
   const lifecyclePath = mse49Report.lifecycleReportPath;
   const lifecycle = readJson(lifecyclePath);
+
   return {
     observation: {
       ...observation,
       observationFingerprint: observation.observationFingerprint || mse49Report.observationFingerprint || null,
       dataState: observation.dataState || mse49Report.dataState || lifecycle.dataState || null,
       lifecycleState: observation.lifecycleState || mse49Report.lifecycleState || lifecycle.lifecycleState || null,
-      certified: observation.certified === true && mse50Report.certified === true && mse49Report.certified === true,
+      certified:
+        observation.certified === true &&
+        (mse50Report ? mse50Report.certified === true : true) &&
+        mse49Report.certified === true,
       lifecycle,
     },
     lifecycle,
     mse50Report,
     mse49Report,
+    mse49Path,
     lifecyclePath,
   };
 }
@@ -43,8 +53,8 @@ async function run({ observer = observeHistory, emitOutput = true } = {}) {
   const reportPath = path.join(reportDir, `mse-25-51-review-queue-${queue.queueFingerprint.slice(0, 12)}.json`);
   const report = {
     ...queue,
-    sourceMse50ReportPath: observation.observationReportPath || null,
-    sourceMse49ReportPath: hydrated.mse50Report?.observationReportPath || null,
+    sourceMse50ReportPath: observation.reportPath || null,
+    sourceMse49ReportPath: hydrated.mse49Path || null,
     sourceLifecycleReportPath: hydrated.lifecyclePath || null,
   };
   fs.writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`, { mode: 0o600 });
