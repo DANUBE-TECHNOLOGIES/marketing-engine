@@ -23,7 +23,7 @@ test("read-only preflight can be green while Google writes remain killed", () =>
   });
   assert.equal(readiness.readyForReadOnlyPreflight, true);
   assert.equal(readiness.readyForGooglePilot, false);
-  assert.deepEqual(readiness.preflightBlockers, []);
+  assert.deepEqual(readiness.readOnlyBlockers, []);
   assert.ok(readiness.blockers.includes("google_managed_writes"));
   assert.deepEqual(readiness.warnings, ["dataforseo_discovery"]);
 });
