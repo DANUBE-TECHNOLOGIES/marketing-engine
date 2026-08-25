@@ -8,6 +8,10 @@ function digest(value) { return crypto.createHash("sha256").update(JSON.stringif
 function clone(value) { return JSON.parse(JSON.stringify(value)); }
 function error(code, message, details = {}) { const e = new Error(message); e.code = code; e.status = 409; e.details = details; return e; }
 function blockType(block = {}) { return String(block.type || block.blockType || "").trim().toLowerCase(); }
+function normalizedPageSlug(value) {
+  const slug = String(value || "").trim().replace(/^\/+|\/+$/g, "");
+  return !slug || slug === "accueil" ? "home" : slug;
+}
 
 function appendContextualLink(page, proof) {
   const blocks = Array.isArray(page.blocks) ? page.blocks : [];
@@ -27,10 +31,14 @@ function appendContextualLink(page, proof) {
 
 function buildInternalLinkWriteIntent({ proof = {}, currentPages = [] } = {}) {
   if (proof.readOnly !== true || proof.writes !== false || proof.policy?.antiDuplicationRequired !== true || proof.policy?.sourceSnapshotRequired !== true) throw error("MSE_25_47_LINK_WRITE_INTENT_PROOF_INVALID", "La preuve de lien MSE-25.47 n'est pas sûre.");
-  const pageMap = new Map(currentPages.map((row) => [`${row.siteSlug}:${row.pageSlug}`, row.page || row]));
+  const pageMap = new Map(currentPages.map((row) => {
+    const page = row.page || row;
+    const slug = normalizedPageSlug(row.pageSlug || page.slug);
+    return [`${row.siteSlug}:${slug}`, page];
+  }));
   const intents = [];
   for (const item of (proof.items || []).filter((row) => row.decision === "sealed-link-candidate")) {
-    const key = `${item.siteSlug}:${item.sourcePageSlug}`;
+    const key = `${item.siteSlug}:${normalizedPageSlug(item.sourcePageSlug)}`;
     const page = pageMap.get(key);
     if (!page) throw error("MSE_25_47_LINK_SOURCE_MISSING", "Snapshot source absent.", { key });
     if (digest(page) !== item.sourceSnapshotFingerprint) throw error("MSE_25_47_LINK_SOURCE_FINGERPRINT_MISMATCH", "La page source ne correspond pas à la preuve scellée.", { key });
@@ -41,14 +49,14 @@ function buildInternalLinkWriteIntent({ proof = {}, currentPages = [] } = {}) {
       key,
       agencyId: item.agencyId,
       siteSlug: item.siteSlug,
-      pageSlug: item.sourcePageSlug,
+      pageSlug: normalizedPageSlug(item.sourcePageSlug),
       targetPageSlug: item.targetPageSlug,
       targetHref: item.targetHref,
       anchorText: item.anchorText,
       sourceSnapshotFingerprint: digest(before),
       targetSnapshotFingerprint: digest(after),
       snapshot: { before, after },
-      persistence: { method: "PageBuilderPersistenceService.save", agencyId: item.agencyId, pageSlug: item.sourcePageSlug, body: after },
+      persistence: { method: "PageBuilderPersistenceService.save", agencyId: item.agencyId, pageSlug: normalizedPageSlug(item.sourcePageSlug), body: after },
     });
   }
   const result = {
@@ -64,4 +72,4 @@ function buildInternalLinkWriteIntent({ proof = {}, currentPages = [] } = {}) {
   return { ...result, writeIntentFingerprint: digest(result) };
 }
 
-module.exports = { appendContextualLink, buildInternalLinkWriteIntent, digest };
+module.exports = { appendContextualLink, buildInternalLinkWriteIntent, digest, normalizedPageSlug };
