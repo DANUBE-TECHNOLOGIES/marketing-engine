@@ -60,9 +60,10 @@ test("MSE-25.46 uses sessionStorage and no cookie or localStorage identity", () 
   assert.doesNotMatch(capture, /document\.cookie/);
 });
 
-test("MSE-25.46 exposes append-only journey ingestion and protected analysis route", () => {
-  assert.match(routes, /version:\s*"25\.46\.0"/);
+test("MSE-25.46 capabilities remain present in the current conversion engine", () => {
+  assert.match(routes, /version:\s*"25\.(?:4[6-9]|[5-9][0-9])\.0"/);
   assert.match(routes, /journeyAttribution:\s*"anonymous-session-storage"/);
+  assert.match(routes, /writeMode:\s*"append-only"/);
   assert.match(routes, /router\.post\("\/public\/conversions\/sites\/:siteSlug\/journeys"/);
   assert.match(routes, /router\.get\("\/api\/conversions\/journeys"/);
 });
