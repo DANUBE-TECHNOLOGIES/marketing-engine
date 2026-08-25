@@ -10,15 +10,29 @@ const { loadCockpitState } = require("./network-cockpit-routes");
 const { buildNetworkCockpit } = require("./network-cockpit");
 const { stableId } = require("./campaign-planner");
 const { buildRecoveryPlan, evaluateRecoveryEligibility } = require("./campaign-recovery");
+const { qualifyRecoveryItem } = require("./campaign-recovery-qualification");
+
+async function listRecoveryQualifications(prisma, campaignId) {
+  return prisma.$queryRaw`
+    SELECT DISTINCT ON (("payload"->>'campaignIndex')::INTEGER)
+      "id", "operationId", "agencyId", "status", "payload", "result", "createdAt"
+    FROM "PresenceOperationAudit"
+    WHERE "scope" = 'campaign_recovery'
+      AND "eventType" = 'recovery_qualification'
+      AND "payload"->>'sourceCampaignId' = ${campaignId}
+    ORDER BY ("payload"->>'campaignIndex')::INTEGER, "createdAt" DESC, "id" DESC
+  `;
+}
 
 async function buildRecoveryContext(prisma, campaignId) {
   const sourceCampaign = await getCampaign(prisma, campaignId);
   if (!sourceCampaign) { const error = new Error("Campagne Presence introuvable"); error.status = 404; throw error; }
-  const [executions, latestPreflight, deploymentReadiness, state] = await Promise.all([
+  const [executions, latestPreflight, deploymentReadiness, state, qualifications] = await Promise.all([
     listCampaignExecutions(prisma, campaignId),
     getLatestDeploymentPreflight(prisma),
     buildDeploymentReadiness(prisma),
-    loadCockpitState(prisma)
+    loadCockpitState(prisma),
+    listRecoveryQualifications(prisma, campaignId)
   ]);
   const eligibility = evaluateRecoveryEligibility(sourceCampaign, executions, latestPreflight);
   const activationGate = evaluatePilotActivationGate({ preflight: latestPreflight, currentReadiness: deploymentReadiness });
@@ -27,7 +41,7 @@ async function buildRecoveryContext(prisma, campaignId) {
   const blockers = [...new Set([...(eligibility.blockers || []), ...(activationGate.blockers || [])])];
   if (!plan.executableCount) blockers.push("no_untouched_items_to_recover");
   const ready = blockers.length === 0;
-  return { sourceCampaign, executions, latestPreflight, deploymentReadiness, eligibility, activationGate, plan, readiness: { ready, decision: ready ? "go" : "no_go", blockers } };
+  return { sourceCampaign, executions, latestPreflight, deploymentReadiness, eligibility, activationGate, plan, qualifications, readiness: { ready, decision: ready ? "go" : "no_go", blockers } };
 }
 
 function campaignRecoveryRoutes({ prisma }) {
@@ -45,9 +59,25 @@ function campaignRecoveryRoutes({ prisma }) {
         readiness: context.readiness,
         eligibility: context.eligibility,
         activationGate: context.activationGate,
+        qualifications: context.qualifications,
         plan: context.plan
       });
     } catch (error) { return res.status(error.status || 500).json({ ok: false, error: error.message }); }
+  });
+
+  router.post("/api/presence/campaigns/:campaignId/recovery/qualify", async (req, res) => {
+    try {
+      if (req.body?.confirm !== true) return res.status(409).json({ ok: false, externalWrite: false, error: "confirm=true requis pour interroger Google en lecture seule" });
+      const sourceCampaign = await getCampaign(prisma, req.params.campaignId);
+      if (!sourceCampaign) return res.status(404).json({ ok: false, externalWrite: false, error: "Campagne Presence introuvable" });
+      if (sourceCampaign.status !== "failed") return res.status(409).json({ ok: false, externalWrite: false, error: "La qualification recovery exige une campagne failed" });
+      const executions = await listCampaignExecutions(prisma, req.params.campaignId);
+      const campaignIndex = Number(req.body?.campaignIndex);
+      const execution = executions.find((row) => Number(row.campaignIndex) === campaignIndex);
+      if (!execution || !(execution.status === "failed" || execution.operationId)) return res.status(409).json({ ok: false, externalWrite: false, error: "Item non ambigu ou sans trace d’exécution" });
+      const qualification = await qualifyRecoveryItem(prisma, sourceCampaign, execution);
+      return res.json({ ok: true, externalWrite: false, persisted: true, retryAutomaticallyAllowed: false, qualification });
+    } catch (error) { return res.status(error.status || 500).json({ ok: false, externalWrite: false, error: error.message, readiness: error.readiness, details: error.google || undefined }); }
   });
 
   router.post("/api/presence/campaigns/:campaignId/recovery", async (req, res) => {
@@ -81,4 +111,4 @@ function campaignRecoveryRoutes({ prisma }) {
   return router;
 }
 
-module.exports = { campaignRecoveryRoutes, buildRecoveryContext };
+module.exports = { campaignRecoveryRoutes, buildRecoveryContext, listRecoveryQualifications };
