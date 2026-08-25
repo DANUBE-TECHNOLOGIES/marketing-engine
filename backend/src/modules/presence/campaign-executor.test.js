@@ -2,7 +2,7 @@
 
 const assert = require("node:assert/strict");
 const test = require("node:test");
-const { frozenExecutableItems } = require("./campaign-executor");
+const { frozenExecutableItems, approvedExecutionLimit, shouldPilotFailFast } = require("./campaign-executor");
 
 test("campaign executor only reads persisted executable items", () => {
   const campaign = {
@@ -23,4 +23,19 @@ test("campaign executor only reads persisted executable items", () => {
 
 test("campaign executor returns empty list when frozen executable plan is absent", () => {
   assert.deepEqual(frozenExecutableItems({ plan: {} }), []);
+});
+
+test("execution limit can never exceed approved campaign scope", () => {
+  const campaign = { approvedScope: { maxItems: 3 }, plan: { policy: { maxItems: 10 } } };
+  assert.equal(approvedExecutionLimit(campaign, 100), 3);
+  assert.equal(approvedExecutionLimit(campaign, 2), 2);
+});
+
+test("pilot campaigns fail fast on any unsafe execution outcome", () => {
+  const pilot = { pilot: true };
+  assert.equal(shouldPilotFailFast(pilot, { status: "failed" }), true);
+  assert.equal(shouldPilotFailFast(pilot, { status: "blocked_sensitive" }), true);
+  assert.equal(shouldPilotFailFast(pilot, { status: "skipped" }), true);
+  assert.equal(shouldPilotFailFast(pilot, { status: "submitted" }), false);
+  assert.equal(shouldPilotFailFast({ pilot: false }, { status: "failed" }), false);
 });
