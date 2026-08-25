@@ -11,6 +11,7 @@ const TENANT_SLUG =
 
 const READ_RESOURCES = Object.freeze({
   health: "/search-console-submissions/health",
+  readiness: "/api/search-console/readiness",
   candidates: "/search-console-submissions/candidates",
   history: "/search-console-submissions",
   properties: "/search-console-submissions/properties",
