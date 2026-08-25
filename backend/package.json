@@ -65,7 +65,10 @@
     "mse-25.50:observe": "node scripts/mse-25-50-observe-history.js",
     "mse-25.51:review-queue": "node scripts/mse-25-51-review-queue.js",
     "mse-25.51:certify": "node scripts/mse-25-51-certify.js",
-    "mse-25.51:observe": "node scripts/mse-25-51-observe.js"
+    "mse-25.51:observe": "node scripts/mse-25-51-observe.js",
+    "mse-25.52:prioritize": "node scripts/mse-25-52-prioritize.js",
+    "mse-25.52:certify": "node scripts/mse-25-52-certify.js",
+    "mse-25.52:observe": "node scripts/mse-25-52-observe.js"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",
