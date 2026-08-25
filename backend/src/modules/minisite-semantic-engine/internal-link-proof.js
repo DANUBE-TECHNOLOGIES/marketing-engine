@@ -31,7 +31,7 @@ function scoreBlock(block = {}, index = 0) {
   const type = blockType(block);
   const text = normalize(blockText(block));
   let score = 0;
-  if (["rich_text", "rich-text", "text"].includes(type)) score += 50;
+  if (type === "rich_text") score += 50;
   if (text.includes("service")) score += 25;
   if (text.includes("accompagn")) score += 15;
   if (text.includes("conseil")) score += 10;
@@ -42,7 +42,7 @@ function scoreBlock(block = {}, index = 0) {
 function preferredBlock(page = {}) {
   return (page.blocks || [])
     .map(scoreBlock)
-    .filter((row) => row.score > 0)
+    .filter((row) => row.type === "rich_text" && row.score > 0)
     .sort((a, b) => b.score - a.score || a.index - b.index)[0] || null;
 }
 
@@ -90,6 +90,7 @@ function buildInternalLinkProof(evidence = {}, currentPages = []) {
     destructive: false,
     policy: {
       exactLinkProofOnly: true,
+      richTextSourceRequired: true,
       antiDuplicationRequired: true,
       sourceSnapshotRequired: true,
       noAutomaticInternalLinks: true,
