@@ -39,11 +39,11 @@ function certifyLifecycle(lifecycle = {}) {
   };
 }
 
-async function run({ lifecycle = null } = {}) {
+async function run({ lifecycle = null, emitOutput = true } = {}) {
   let source = lifecycle;
   let sourcePath = null;
   if (!source) {
-    const result = await runLifecycle();
+    const result = await runLifecycle({ emitOutput: false });
     source = result.lifecycle;
     sourcePath = result.reportPath;
   }
@@ -76,7 +76,7 @@ async function run({ lifecycle = null } = {}) {
     certification,
     summary: source.summary,
   };
-  console.log(JSON.stringify(output, null, 2));
+  if (emitOutput) console.log(JSON.stringify(output, null, 2));
   if (!certification.certified) {
     const error = new Error("MSE-25.49 lifecycle certification failed.");
     error.code = "MSE_25_49_CERTIFICATION_FAILED";
