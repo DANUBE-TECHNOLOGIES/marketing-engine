@@ -1,12 +1,13 @@
 import MainLayout from "../../../../components/MainLayout";
 import Link from "next/link";
-import { recoverPresenceCampaign } from "../../actions";
+import { recoverPresenceCampaign, qualifyPresenceRecoveryItem } from "../../actions";
 
 export const dynamic="force-dynamic";
 function origin(){return String(process.env.BACKEND_INTERNAL_URL||process.env.API_INTERNAL_URL||"http://backend:4000").replace(/\/+$/g,"")}
 async function get(path){const r=await fetch(`${origin()}${path}`,{headers:{Accept:"application/json","x-tenant-slug":process.env.NEXT_PUBLIC_TENANT_SLUG||"mondescale"},cache:"no-store"});const text=await r.text();let data;try{data=JSON.parse(text)}catch{data={error:text}}return {ok:r.ok,status:r.status,data}}
 function Card({title,count,children,tone="slate"}){const cls=tone==="green"?"border-emerald-200 bg-emerald-50":tone==="red"?"border-red-200 bg-red-50":tone==="amber"?"border-amber-200 bg-amber-50":"border-slate-200 bg-white";return <section className={`rounded-2xl border p-5 ${cls}`}><div className="flex items-center justify-between gap-4"><h2 className="text-lg font-black">{title}</h2><div className="rounded-full bg-white px-3 py-1 text-sm font-black">{count}</div></div>{children}</section>}
-function Items({items=[]}){return items.length?<div className="mt-4 space-y-2">{items.map((x,i)=><div key={`${x.campaignIndex??i}-${x.agencyId??"x"}`} className="rounded-xl border bg-white/80 p-3 text-sm"><div className="font-bold">Agence {x.agencyId??"—"} · {x.providerKey||"provider"}</div><div className="mt-1 text-slate-600">{Array.isArray(x.drift)?x.drift.join(", "):x.status||x.reason||"—"}</div>{x.operationId?<div className="mt-1 font-mono text-xs text-slate-500">operationId {x.operationId}</div>:null}</div>)}</div>:<p className="mt-3 text-sm text-slate-600">Aucun item.</p>}
+function qualificationLabel(value){if(value==="already_applied")return "Déjà appliqué chez Google";if(value==="not_applied")return "Non appliqué chez Google";if(value==="partial_or_changed")return "État partiel / différent";return "Non qualifié"}
+function Items({items=[],campaignId,qualifications={}}){return items.length?<div className="mt-4 space-y-2">{items.map((x,i)=>{const index=Number(x.campaignIndex??x.sourceCampaignIndex??i);const q=qualifications[index];return <div key={`${index}-${x.agencyId??"x"}`} className="rounded-xl border bg-white/80 p-3 text-sm"><div className="font-bold">Agence {x.agencyId??"—"} · {x.providerKey||"provider"}</div><div className="mt-1 text-slate-600">{Array.isArray(x.drift)?x.drift.join(", "):x.status||x.reason||"—"}</div>{x.operationId?<div className="mt-1 font-mono text-xs text-slate-500">operationId {x.operationId}</div>:null}{q?<div className="mt-3 rounded-lg bg-slate-50 p-3"><div className="font-bold">{qualificationLabel(q.status||q.result?.classification)}</div><div className="mt-1 text-xs text-slate-600">Lecture Google du {q.createdAt?new Date(q.createdAt).toLocaleString("fr-FR"):q.result?.observedAt||"—"}. Retry automatique : interdit.</div></div>:campaignId&&x.operationId?<form action={qualifyPresenceRecoveryItem.bind(null,campaignId,index)} className="mt-3"><button className="rounded-lg border border-amber-300 bg-amber-100 px-3 py-2 text-xs font-bold text-amber-950">Qualifier par lecture Google</button></form>:null}</div>})}</div>:<p className="mt-3 text-sm text-slate-600">Aucun item.</p>}
 
 export default async function Page({params}){
   const {campaignId}=await params;
@@ -17,6 +18,7 @@ export default async function Page({params}){
   const safe=plan.executable||[];
   const uncertain=eligibility.uncertain||plan.uncertain||[];
   const excluded=eligibility.alreadyProcessed||plan.alreadyProcessed||[];
+  const qualificationMap=Object.fromEntries((d.qualifications||[]).map(q=>[Number(q.payload?.campaignIndex),q]));
   const blockers=d.readiness?.blockers||[];
   const ready=response.ok&&d.readiness?.ready===true;
   return <MainLayout title="Reprise contrôlée Presence" subtitle={`Campagne source ${campaignId}`}>
@@ -29,7 +31,7 @@ export default async function Page({params}){
     </section>
     <div className="grid gap-4 lg:grid-cols-3">
       <Card title="Sûrs à reprendre" count={safe.length} tone="green"><p className="mt-2 text-sm text-emerald-900">Items n’ayant jamais créé de ligne d’exécution. Eux seuls peuvent entrer dans la nouvelle campagne.</p><Items items={safe}/></Card>
-      <Card title="Ambigus à vérifier" count={uncertain.length} tone="amber"><p className="mt-2 text-sm text-amber-900">Un operationId ou un état d’exécution existe. Aucun retry automatique n’est permis.</p><Items items={uncertain}/></Card>
+      <Card title="Ambigus à vérifier" count={uncertain.length} tone="amber"><p className="mt-2 text-sm text-amber-900">Un operationId ou un état d’exécution existe. La qualification relit Google sans écriture et ne transforme jamais automatiquement l’item en retry.</p><Items items={uncertain} campaignId={campaignId} qualifications={qualificationMap}/></Card>
       <Card title="Déjà traités / exclus" count={excluded.length}><p className="mt-2 text-sm text-slate-700">Ces items restent attachés à la campagne source et ne sont jamais dupliqués.</p><Items items={excluded}/></Card>
     </div>
     <section className="mt-6 rounded-2xl border bg-white p-6 shadow-sm">
