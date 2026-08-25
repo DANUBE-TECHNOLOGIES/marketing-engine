@@ -52,7 +52,8 @@
     "mse-25.47:internal-link-write-intent": "node scripts/mse-25-47-internal-link-write-intent.js",
     "mse-25.47:internal-link-apply": "node scripts/mse-25-47-internal-link-apply.js",
     "mse-25.47:internal-link-rollback": "node scripts/mse-25-47-internal-link-rollback.js",
-    "mse-25.47:post-rollout-validate": "node scripts/mse-25-47-post-rollout-validate.js"
+    "mse-25.47:post-rollout-validate": "node scripts/mse-25-47-post-rollout-validate.js",
+    "mse-25.48:search-demand-evidence": "node scripts/mse-25-48-search-demand-evidence.js"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",
