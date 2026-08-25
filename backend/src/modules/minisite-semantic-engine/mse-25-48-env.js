@@ -12,6 +12,15 @@ function loadEnvFile(file) {
   return true;
 }
 
+function databaseHost(databaseUrl) {
+  if (!databaseUrl) return null;
+  try {
+    return new URL(databaseUrl).hostname;
+  } catch (_) {
+    return null;
+  }
+}
+
 function bootstrapMse2548Env() {
   const explicit = process.env.MSE_25_48_ENV_FILE || process.env.MSE_25_40_ENV_FILE;
   const loaded = [];
@@ -23,19 +32,28 @@ function bootstrapMse2548Env() {
       ? path.resolve(dir, "..", ".env")
       : null;
 
-    // Host-side scripts must keep the backend runtime DATABASE_URL (typically
-    // localhost/forwarded) ahead of the repository root Docker DATABASE_URL
-    // (typically postgres:5432). Root .env is only a fallback for missing
-    // credentials such as GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET.
+    // Host-side scripts must keep the backend runtime DATABASE_URL ahead of
+    // the repository-root Docker DATABASE_URL. The root file remains only a
+    // fallback for missing Google credentials.
     if (loadEnvFile(resolved)) loaded.push(resolved);
     if (rootCandidate && loadEnvFile(rootCandidate)) loaded.push(rootCandidate);
   }
 
+  // Shell sessions may already contain the Docker DATABASE_URL before dotenv
+  // runs, in which case override:false correctly refuses to replace it. MSE-25.48
+  // therefore supports an explicit host-side database URL for CLI/read-only
+  // jobs. It is intentionally scoped to MSE-25.48 and never rewrites .env files.
+  if (process.env.MSE_25_48_HOST_DATABASE_URL) {
+    process.env.DATABASE_URL = process.env.MSE_25_48_HOST_DATABASE_URL;
+  }
+
   return {
     loadedFiles: loaded,
+    databaseHost: databaseHost(process.env.DATABASE_URL),
+    hostDatabaseOverrideApplied: Boolean(process.env.MSE_25_48_HOST_DATABASE_URL),
     googleClientConfigured: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
     googleRedirectUriConfigured: Boolean(process.env.GOOGLE_REDIRECT_URI),
   };
 }
 
-module.exports = { bootstrapMse2548Env, loadEnvFile };
+module.exports = { bootstrapMse2548Env, loadEnvFile, databaseHost };
