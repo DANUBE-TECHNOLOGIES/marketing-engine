@@ -1,0 +1,49 @@
+name: MSE-25.48 Search Demand Evidence
+
+on:
+  push:
+    branches:
+      - 'feature/mse-25-48-*'
+  pull_request:
+    paths:
+      - 'backend/src/modules/search-console-submission/**'
+      - 'backend/src/routes/searchConsoleOAuth.js'
+      - 'backend/src/routes/googleOAuth.js'
+      - 'backend/scripts/mse-25-48-*.js'
+      - 'backend/test/mse-25-48-*.test.js'
+      - 'frontend/app/indexation/**'
+      - 'frontend/app/api/indexation/**'
+      - 'frontend/app/api/search-console/**'
+      - 'frontend/app/api/google/callback/**'
+      - 'frontend/lib/indexation-api.js'
+      - '.github/workflows/mse-25-48.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  search-demand-evidence:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Prisma client
+        run: npm run prisma:generate
+
+      - name: MSE-25.48 tests
+        run: node --test test/mse-25-48-*.test.js
