@@ -33,12 +33,7 @@ function findPreviousEvidence(reportDir, currentFingerprint) {
 }
 
 async function run({ currentEvidence = null, previousEvidence = undefined, emitOutput = true } = {}) {
-  let current = currentEvidence;
-  if (!current) {
-    const evidenceResult = await buildCurrentEvidence({ emitOutput: false });
-    current = evidenceResult.report;
-  }
-
+  const current = currentEvidence || await buildCurrentEvidence({ emitOutput: false });
   const reportDir = process.env.MSE_25_49_REPORT_DIR || process.env.MSE_25_48_REPORT_DIR || "/tmp";
   fs.mkdirSync(reportDir, { recursive: true });
 
