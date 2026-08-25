@@ -38,7 +38,13 @@ const minisiteSeoEnrichment = require("./minisite-seo-enrichment");
 const minisiteSemanticEngine = require("./minisite-semantic-engine");
 const minisiteStructuredData = require("./minisite-structured-data");
 const searchConsoleSubmission = require("./search-console-submission");
+const { createSearchConsoleOAuthRoutes } = require("../routes/searchConsoleOAuth");
+
 module.exports = function registerModules(app, { prisma }) {
+  // MSE-25.48 : OAuth Search Console est monté avant le middleware tenant.
+  // Le callback Google et le statut du token restent isolés du token Google Business.
+  app.use(createSearchConsoleOAuthRoutes(prisma));
+
   if (tenantCore.routes) {
     app.use(tenantCore.routes({ prisma }));
   }
@@ -224,7 +230,7 @@ module.exports = function registerModules(app, { prisma }) {
   }
 
   if (searchConsoleSubmission.routes) {
-    const provider = searchConsoleSubmission.createConfiguredSearchConsoleProvider();
+    const provider = searchConsoleSubmission.createConfiguredSearchConsoleProvider({ prisma });
     app.use(searchConsoleSubmission.routes({ prisma, provider }));
   }
 };
