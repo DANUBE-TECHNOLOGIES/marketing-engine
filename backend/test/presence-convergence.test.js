@@ -38,6 +38,7 @@ require("../src/modules/presence/rollout-evidence-comparison.test");
 require("../src/modules/presence/rollout-promotion-gate.test");
 require("../src/modules/presence/pilot-outcome.test");
 require("../src/modules/presence/campaign-recovery.test");
+require("../src/modules/presence/campaign-recovery-qualification.test");
 require("../src/modules/presence/presence-storage-audit.test");
 require("../src/modules/presence/operation-audit.test");
 require("../src/modules/presence/operation-snapshots.test");
