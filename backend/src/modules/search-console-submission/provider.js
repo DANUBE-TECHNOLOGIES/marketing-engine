@@ -6,6 +6,8 @@ const SEARCH_CONSOLE_OWNER_PERMISSION = "siteOwner";
 class DisabledSearchConsoleProvider {
   constructor() {
     this.name = "disabled";
+    this.accessMode = "none";
+    this.submissionCapable = false;
   }
 
   isConfigured() {
@@ -40,10 +42,12 @@ class DisabledSearchConsoleProvider {
 }
 
 class GoogleSearchConsoleProvider {
-  constructor({ accessTokenProvider, fetchImpl } = {}) {
+  constructor({ accessTokenProvider, fetchImpl, accessMode = "configured-scope", submissionCapable = true } = {}) {
     this.name = "google-search-console";
     this.accessTokenProvider = accessTokenProvider;
     this.fetchImpl = fetchImpl || globalThis.fetch;
+    this.accessMode = accessMode;
+    this.submissionCapable = submissionCapable === true;
   }
 
   isConfigured() {
@@ -143,6 +147,13 @@ class GoogleSearchConsoleProvider {
   }
 
   async submitSitemap({ siteUrl, sitemapUrl } = {}) {
+    if (!this.submissionCapable) {
+      const error = new Error("Le provider Search Console courant est volontairement en lecture seule. Aucune soumission Google n’est autorisée.");
+      error.code = "SEARCH_CONSOLE_PROVIDER_READ_ONLY";
+      error.statusCode = 409;
+      error.details = { accessMode: this.accessMode, submissionCapable: false };
+      throw error;
+    }
     const target = validateSearchConsoleSubmissionTarget({ siteUrl, sitemapUrl });
     const property = await this.assertSiteOwner(target.siteUrl);
     const endpoint = `${SEARCH_CONSOLE_API_ROOT}/sites/${encodeURIComponent(target.siteUrl)}/sitemaps/${encodeURIComponent(target.sitemapUrl)}`;
