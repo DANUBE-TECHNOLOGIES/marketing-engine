@@ -11,10 +11,11 @@ const complete = [
   "PresenceCampaignEvent",
   "PresenceCampaignExecution",
   "PresenceCampaignReport",
-  "PresenceCitationObservation"
+  "PresenceCitationObservation",
+  "PresenceDeploymentPreflight"
 ].map((tableName) => ({ tableName }));
 
-test("Presence storage requires audit snapshot campaign and citation observation tables", () => {
+test("Presence storage requires audit snapshot campaign citation and preflight tables", () => {
   const ready = evaluatePresenceStorage(complete);
   assert.equal(ready.ready, true);
   assert.deepEqual(ready.missing, []);
