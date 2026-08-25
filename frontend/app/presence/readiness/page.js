@@ -1,8 +1,94 @@
 import MainLayout from "../../components/MainLayout";
 import { freezePresencePreflight } from "./actions";
-export const dynamic="force-dynamic";
-function origin(){return String(process.env.BACKEND_INTERNAL_URL||process.env.API_INTERNAL_URL||"http://backend:4000").replace(/\/+$/g,"")}
-async function load(){const r=await fetch(`${origin()}/api/presence/health/deployment-readiness`,{headers:{Accept:"application/json","x-tenant-slug":process.env.NEXT_PUBLIC_TENANT_SLUG||"mondescale"},cache:"no-store"});const data=await r.json().catch(()=>({}));return {status:r.status,data}}
-function Badge({ok,label}){return <span className={`rounded-full px-3 py-1 text-xs font-black uppercase ${ok?"bg-emerald-100 text-emerald-900":"bg-red-100 text-red-900"}`}>{label}</span>}
-function Card({label,value,hint}){return <div className="rounded-2xl border bg-white p-5 shadow-sm"><div className="text-sm text-slate-500">{label}</div><div className="mt-2 text-3xl font-black">{value}</div>{hint?<div className="mt-1 text-xs text-slate-500">{hint}</div>:null}</div>}
-export default async function Page(){let payload,error;try{payload=await load()}catch(e){error=e}const root=payload?.data||{},r=root.readiness||{},pilot=r.pilot||{},m=r.migrations||{},c=r.catalog||{},n=r.network||{},o=r.operational||{},latest=root.latestFrozenPreflight||null;return <MainLayout title="Readiness Presence" subtitle="Préflight lecture seule, preuve figée et activation contrôlée du pilote NAP.">{error?<div className="rounded-2xl bg-red-50 p-5 text-red-900">{error.message}</div>:<><div className="flex flex-wrap gap-3"><Badge ok={pilot.readyForReadOnlyPreflight} label={pilot.readyForReadOnlyPreflight?"Préflight lecture seule prêt":"Préflight lecture seule bloqué"}/><Badge ok={pilot.readyForGooglePilot} label={pilot.readyForGooglePilot?"Pilote Google autorisable":"Pilote Google verrouillé"}/><Badge ok={pilot.readyForDiscoveryPilot} label={pilot.readyForDiscoveryPilot?"Discovery autorisable":"Discovery non prête"}/></div><div className="mt-5 grid grid-cols-2 gap-4 lg:grid-cols-4"><Card label="Migrations Presence" value={`${m.applied??0}/${m.required??0}`} hint={m.ready?"Toutes appliquées":"Migrations manquantes"}/><Card label="Catalogue providers" value={`${c.summary?.present??0}/${c.summary?.providers??0}`} hint={c.ready?"Complet":"Providers manquants"}/><Card label="Agences" value={n.agencyCount??0}/><Card label="Couverture Google" value={`${n.googleListingCoveragePercent??0}%`} hint={`${n.googleListingCount??0} listings`}/></div><section className="mt-6 grid gap-4 lg:grid-cols-2"><div className="rounded-2xl border bg-white p-6 shadow-sm"><h2 className="text-xl font-black">Préflight lecture seule</h2>{pilot.readOnlyBlockers?.length?<div className="mt-4 grid gap-2">{pilot.readOnlyBlockers.map(x=><div key={x} className="rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-900">{x}</div>)}</div>:<div className="mt-4 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-900">Aucun bloquant lecture seule détecté.</div>}<h3 className="mt-6 font-black">Warnings</h3>{pilot.warnings?.length?<div className="mt-3 grid gap-2">{pilot.warnings.map(x=><div key={x} className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">{x}</div>)}</div>:<div className="mt-3 text-sm text-slate-500">Aucun warning.</div>}</div><div className="rounded-2xl border bg-white p-6 shadow-sm"><h2 className="text-xl font-black">Configuration opérationnelle</h2><div className="mt-4 grid gap-3"><div className="flex justify-between gap-4 border-b pb-3"><span>Google API lecture / validation</span><strong>{o.readyForGoogleApi?"Prêt":"Bloqué"}</strong></div><div className="flex justify-between gap-4 border-b pb-3"><span>Google managed writes</span><strong>{o.readyForGoogleManagedWrites?"Prêt":"Bloqué"}</strong></div><div className="flex justify-between gap-4 border-b pb-3"><span>Kill-switch PRESENCE_GOOGLE_WRITES_ENABLED</span><strong>{o.googleWritesEnabled?"ACTIF":"OFF"}</strong></div><div className="flex justify-between gap-4 border-b pb-3"><span>DataForSEO discovery</span><strong>{o.readyForDiscovery?"Prêt":"Non prêt"}</strong></div><div><div className="font-bold">Migrations manquantes</div><div className="mt-2 text-sm text-slate-600">{m.missing?.length?m.missing.join(", "):"Aucune"}</div></div></div></div></section><section className="mt-6 rounded-2xl border bg-white p-6 shadow-sm"><div className="flex flex-wrap items-start justify-between gap-4"><div><h2 className="text-xl font-black">Preuve de préflight</h2><p className="mt-1 text-sm text-slate-600">Fige un snapshot immutable de la readiness réelle. Cette action ne déclenche aucune écriture externe et est refusée si le kill-switch Google est actif.</p></div>{pilot.readyForReadOnlyPreflight&&!o.googleWritesEnabled?<form action={freezePresencePreflight}><button className="rounded-xl bg-slate-950 px-4 py-2 text-sm font-black text-white">Figer ce préflight</button></form>:null}</div>{latest?<div className="mt-5 grid gap-3 rounded-xl bg-slate-50 p-4 md:grid-cols-4"><div><div className="text-xs uppercase text-slate-500">ID</div><div className="font-bold break-all">{latest.preflightId}</div></div><div><div className="text-xs uppercase text-slate-500">Statut</div><div className="font-bold">{latest.status}</div></div><div><div className="text-xs uppercase text-slate-500">Créé</div><div className="font-bold">{latest.createdAt?new Date(latest.createdAt).toLocaleString("fr-FR"):"—"}</div></div><div><div className="text-xs uppercase text-slate-500">Écritures Google</div><div className="font-bold">{latest.googleWritesEnabled?"Actives":"Désactivées"}</div></div></div>:<div className="mt-5 text-sm text-slate-500">Aucune preuve de préflight figée pour le moment.</div>}</section><div className="mt-4 rounded-2xl border border-cyan-200 bg-cyan-50 p-4 text-sm text-cyan-950"><strong>Mode sûr :</strong> cette page et le préflight VM n’effectuent aucune écriture externe. Le pilote Google reste impossible tant que le kill-switch n’est pas explicitement activé.</div></>}</MainLayout>}
+
+export const dynamic = "force-dynamic";
+
+function origin() {
+  return String(process.env.BACKEND_INTERNAL_URL || process.env.API_INTERNAL_URL || "http://backend:4000").replace(/\/+$/g, "");
+}
+
+async function load() {
+  const response = await fetch(`${origin()}/api/presence/health/deployment-readiness`, {
+    headers: { Accept: "application/json", "x-tenant-slug": process.env.NEXT_PUBLIC_TENANT_SLUG || "mondescale" },
+    cache: "no-store"
+  });
+  const data = await response.json().catch(() => ({}));
+  return { status: response.status, data };
+}
+
+function Badge({ ok, label }) {
+  return <span className={`rounded-full px-3 py-1 text-xs font-black uppercase ${ok ? "bg-emerald-100 text-emerald-900" : "bg-red-100 text-red-900"}`}>{label}</span>;
+}
+
+function Card({ label, value, hint }) {
+  return <div className="rounded-2xl border bg-white p-5 shadow-sm"><div className="text-sm text-slate-500">{label}</div><div className="mt-2 text-3xl font-black">{value}</div>{hint ? <div className="mt-1 text-xs text-slate-500">{hint}</div> : null}</div>;
+}
+
+export default async function Page() {
+  let payload, error;
+  try { payload = await load(); } catch (e) { error = e; }
+  const root = payload?.data || {};
+  const readiness = root.readiness || {};
+  const pilot = readiness.pilot || {};
+  const migrations = readiness.migrations || {};
+  const catalog = readiness.catalog || {};
+  const network = readiness.network || {};
+  const operational = readiness.operational || {};
+  const latest = root.latestFrozenPreflight || null;
+  const activation = root.activationGate || {};
+
+  return <MainLayout title="Readiness Presence" subtitle="Préflight lecture seule, preuve figée et activation contrôlée du pilote NAP.">
+    {error ? <div className="rounded-2xl bg-red-50 p-5 text-red-900">{error.message}</div> : <>
+      <div className="flex flex-wrap gap-3">
+        <Badge ok={pilot.readyForReadOnlyPreflight} label={pilot.readyForReadOnlyPreflight ? "Préflight lecture seule prêt" : "Préflight lecture seule bloqué"} />
+        <Badge ok={pilot.readyForGooglePilot} label={pilot.readyForGooglePilot ? "Pilote Google techniquement prêt" : "Pilote Google verrouillé"} />
+        <Badge ok={activation.ready} label={activation.ready ? "Activation pilote GO" : "Activation pilote NO-GO"} />
+        <Badge ok={pilot.readyForDiscoveryPilot} label={pilot.readyForDiscoveryPilot ? "Discovery autorisable" : "Discovery non prête"} />
+      </div>
+
+      <div className="mt-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <Card label="Migrations Presence" value={`${migrations.applied ?? 0}/${migrations.required ?? 0}`} hint={migrations.ready ? "Toutes appliquées" : "Migrations manquantes"} />
+        <Card label="Catalogue providers" value={`${catalog.summary?.present ?? 0}/${catalog.summary?.providers ?? 0}`} hint={catalog.ready ? "Complet" : "Providers manquants"} />
+        <Card label="Agences" value={network.agencyCount ?? 0} />
+        <Card label="Couverture Google" value={`${network.googleListingCoveragePercent ?? 0}%`} hint={`${network.googleListingCount ?? 0} listings`} />
+      </div>
+
+      <section className="mt-6 grid gap-4 lg:grid-cols-2">
+        <div className="rounded-2xl border bg-white p-6 shadow-sm">
+          <h2 className="text-xl font-black">Préflight lecture seule</h2>
+          {pilot.preflightBlockers?.length ? <div className="mt-4 grid gap-2">{pilot.preflightBlockers.map((item) => <div key={item} className="rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-900">{item}</div>)}</div> : <div className="mt-4 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-900">Aucun bloquant lecture seule détecté.</div>}
+          <h3 className="mt-6 font-black">Warnings</h3>
+          {pilot.warnings?.length ? <div className="mt-3 grid gap-2">{pilot.warnings.map((item) => <div key={item} className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">{item}</div>)}</div> : <div className="mt-3 text-sm text-slate-500">Aucun warning.</div>}
+        </div>
+
+        <div className="rounded-2xl border bg-white p-6 shadow-sm">
+          <h2 className="text-xl font-black">Configuration opérationnelle</h2>
+          <div className="mt-4 grid gap-3">
+            <div className="flex justify-between gap-4 border-b pb-3"><span>Google API lecture / validation</span><strong>{operational.readyForGoogleApi ? "Prêt" : "Bloqué"}</strong></div>
+            <div className="flex justify-between gap-4 border-b pb-3"><span>Google managed writes</span><strong>{operational.readyForGoogleManagedWrites ? "Prêt" : "Bloqué"}</strong></div>
+            <div className="flex justify-between gap-4 border-b pb-3"><span>Kill-switch PRESENCE_GOOGLE_WRITES_ENABLED</span><strong>{operational.googleWritesEnabled ? "ACTIF" : "OFF"}</strong></div>
+            <div className="flex justify-between gap-4 border-b pb-3"><span>DataForSEO discovery</span><strong>{operational.readyForDiscovery ? "Prêt" : "Non prêt"}</strong></div>
+            <div><div className="font-bold">Migrations manquantes</div><div className="mt-2 text-sm text-slate-600">{migrations.missing?.length ? migrations.missing.join(", ") : "Aucune"}</div></div>
+          </div>
+        </div>
+      </section>
+
+      <section className="mt-6 rounded-2xl border bg-white p-6 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div><h2 className="text-xl font-black">Preuve de préflight</h2><p className="mt-1 text-sm text-slate-600">Fige un snapshot immutable de la readiness réelle. Cette action ne déclenche aucune écriture externe et est refusée si le kill-switch Google est actif.</p></div>
+          {pilot.readyForReadOnlyPreflight && !operational.googleWritesEnabled ? <form action={freezePresencePreflight}><button className="rounded-xl bg-slate-950 px-4 py-2 text-sm font-black text-white">Figer ce préflight</button></form> : null}
+        </div>
+        {latest ? <div className="mt-5 grid gap-3 rounded-xl bg-slate-50 p-4 md:grid-cols-4"><div><div className="text-xs uppercase text-slate-500">ID</div><div className="font-bold break-all">{latest.preflightId}</div></div><div><div className="text-xs uppercase text-slate-500">Statut</div><div className="font-bold">{latest.status}</div></div><div><div className="text-xs uppercase text-slate-500">Créé</div><div className="font-bold">{latest.createdAt ? new Date(latest.createdAt).toLocaleString("fr-FR") : "—"}</div></div><div><div className="text-xs uppercase text-slate-500">Écritures Google</div><div className="font-bold">{latest.googleWritesEnabled ? "Actives" : "Désactivées"}</div></div></div> : <div className="mt-5 text-sm text-slate-500">Aucune preuve de préflight figée pour le moment.</div>}
+      </section>
+
+      <section className="mt-6 rounded-2xl border bg-white p-6 shadow-sm">
+        <div className="flex items-center justify-between gap-4"><div><h2 className="text-xl font-black">Gate d’activation du pilote</h2><p className="mt-1 text-sm text-slate-600">Exige un préflight figé récent en lecture seule puis une readiness Google toujours conforme après activation volontaire du kill-switch.</p></div><Badge ok={activation.ready} label={activation.decision || "NO-GO"} /></div>
+        <div className="mt-4 grid gap-4 md:grid-cols-3"><Card label="Preflight ID" value={activation.preflightId ? "Présent" : "Absent"} hint={activation.preflightId || "Aucune preuve figée"} /><Card label="Âge preuve" value={activation.preflightAgeMs == null ? "—" : `${Math.round(activation.preflightAgeMs / 60000)} min`} hint="Maximum 24 h" /><Card label="Kill-switch courant" value={activation.current?.googleWritesEnabled ? "ACTIF" : "OFF"} /></div>
+        {activation.blockers?.length ? <div className="mt-4 grid gap-2">{activation.blockers.map((item) => <div key={item} className="rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-900">{item}</div>)}</div> : <div className="mt-4 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-900">Tous les gates d’activation sont satisfaits.</div>}
+        {activation.warnings?.length ? <div className="mt-4 grid gap-2">{activation.warnings.map((item) => <div key={item} className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">{item}</div>)}</div> : null}
+      </section>
+
+      <div className="mt-4 rounded-2xl border border-cyan-200 bg-cyan-50 p-4 text-sm text-cyan-950"><strong>Mode sûr :</strong> cette page et le préflight VM n’effectuent aucune écriture externe. Le pilote Google reste impossible tant que le kill-switch n’est pas explicitement activé et que le gate d’activation n’est pas GO.</div>
+    </>}
+  </MainLayout>;
+}
