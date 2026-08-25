@@ -5,6 +5,7 @@ const { Prisma } = require("@prisma/client");
 const COMMERCIAL_ACTIONS = new Set([
   "quote_request", "contact", "phone", "email", "appointment", "advisor_contact",
 ]);
+const MIN_JOURNEYS_FOR_SIGNAL = 5;
 
 function normalizeJourneyId(value) {
   const id = String(value || "").trim().toLowerCase();
@@ -54,6 +55,10 @@ function validateJourneyInput(input = {}, { siteSlug, now = new Date() } = {}) {
   };
 }
 
+function percent(numerator, denominator) {
+  return denominator ? Number(((numerator / denominator) * 100).toFixed(2)) : null;
+}
+
 function buildJourneySummary(events = []) {
   const journeys = new Map();
   for (const event of events) {
@@ -65,6 +70,8 @@ function buildJourneySummary(events = []) {
   }
 
   const pathCounts = new Map();
+  const pageStats = new Map();
+  const transitionStats = new Map();
   let commercialJourneys = 0;
   let multiStepJourneys = 0;
   let totalSteps = 0;
@@ -82,6 +89,30 @@ function buildJourneySummary(events = []) {
       const token = `${step.pageSlug}:${step.action}`;
       if (compact[compact.length - 1] !== token) compact.push(token);
     }
+
+    const uniquePages = [...new Set(journey.steps.map((step) => step.pageSlug).filter(Boolean))];
+    for (const pageSlug of uniquePages) {
+      const stat = pageStats.get(pageSlug) || { pageSlug, journeys: 0, commercialJourneys: 0, terminalJourneys: 0 };
+      stat.journeys += 1;
+      if (isCommercial) stat.commercialJourneys += 1;
+      if (journey.steps[journey.steps.length - 1]?.pageSlug === pageSlug && !isCommercial) stat.terminalJourneys += 1;
+      pageStats.set(pageSlug, stat);
+    }
+
+    const transitionKeys = new Set();
+    for (let index = 0; index < journey.steps.length - 1; index += 1) {
+      const from = journey.steps[index]?.pageSlug;
+      const to = journey.steps[index + 1]?.pageSlug;
+      if (!from || !to || from === to) continue;
+      transitionKeys.add(`${from} → ${to}`);
+    }
+    for (const key of transitionKeys) {
+      const stat = transitionStats.get(key) || { transition: key, journeys: 0, commercialJourneys: 0 };
+      stat.journeys += 1;
+      if (isCommercial) stat.commercialJourneys += 1;
+      transitionStats.set(key, stat);
+    }
+
     const signature = compact.slice(-8).join(" → ");
     if (signature) {
       const current = pathCounts.get(signature) || {
@@ -100,23 +131,53 @@ function buildJourneySummary(events = []) {
   }
 
   const topPaths = [...pathCounts.values()]
-    .sort((a, b) =>
-      b.journeys - a.journeys ||
-      Number(b.commercial) - Number(a.commercial) ||
-      Number(b.multiStep) - Number(a.multiStep) ||
-      b.steps - a.steps ||
-      a.path.localeCompare(b.path)
-    )
+    .sort((a, b) => b.journeys - a.journeys || Number(b.commercial) - Number(a.commercial) || Number(b.multiStep) - Number(a.multiStep) || b.steps - a.steps || a.path.localeCompare(b.path))
     .slice(0, 20)
     .map(({ path, journeys: count }) => ({ path, journeys: count }));
+
+  const pageIntelligence = [...pageStats.values()]
+    .map((item) => ({
+      ...item,
+      commercialRate: percent(item.commercialJourneys, item.journeys),
+      terminalRate: percent(item.terminalJourneys, item.journeys),
+      evidence: item.journeys >= MIN_JOURNEYS_FOR_SIGNAL ? "usable" : "insufficient",
+    }))
+    .sort((a, b) => b.journeys - a.journeys || a.pageSlug.localeCompare(b.pageSlug));
+
+  const transitions = [...transitionStats.values()]
+    .map((item) => ({
+      ...item,
+      commercialRate: percent(item.commercialJourneys, item.journeys),
+      evidence: item.journeys >= MIN_JOURNEYS_FOR_SIGNAL ? "usable" : "insufficient",
+    }))
+    .sort((a, b) => b.journeys - a.journeys || b.commercialJourneys - a.commercialJourneys || a.transition.localeCompare(b.transition));
+
+  const strengths = transitions
+    .filter((item) => item.evidence === "usable" && item.commercialRate >= 50)
+    .slice(0, 15)
+    .map((item) => ({ ...item, recommendation: "Préserver ce passage : il accompagne fréquemment un parcours qui atteint une action commerciale." }));
+
+  const frictionPoints = pageIntelligence
+    .filter((item) => item.evidence === "usable" && item.terminalRate >= 40 && item.commercialRate < 35)
+    .sort((a, b) => b.terminalRate - a.terminalRate || a.commercialRate - b.commercialRate)
+    .slice(0, 15)
+    .map((item) => ({ ...item, recommendation: "Investiguer cette page comme point de rupture potentiel avant toute modification : vérifier lisibilité, continuité et accès au contact." }));
 
   return {
     journeyCount: journeys.size,
     multiStepJourneyCount: multiStepJourneys,
     commercialJourneyCount: commercialJourneys,
-    commercialJourneyRate: journeys.size ? Number(((commercialJourneys / journeys.size) * 100).toFixed(2)) : null,
+    commercialJourneyRate: percent(commercialJourneys, journeys.size),
     averageSteps: journeys.size ? Number((totalSteps / journeys.size).toFixed(2)) : null,
     topPaths,
+    intelligence: {
+      mode: "read-only-recommendations",
+      evidenceGate: `${MIN_JOURNEYS_FOR_SIGNAL}-journeys`,
+      pageIntelligence,
+      transitions,
+      strengths,
+      frictionPoints,
+    },
   };
 }
 
@@ -156,6 +217,7 @@ class PublicJourneyAttributionService {
 
 module.exports = {
   COMMERCIAL_ACTIONS,
+  MIN_JOURNEYS_FOR_SIGNAL,
   PublicJourneyAttributionService,
   buildJourneySummary,
   normalizeJourneyId,
