@@ -21,15 +21,27 @@ function evaluateMigrationReadiness(applied = []) {
 }
 
 function evaluatePilotReadiness({ operational, catalog, migrations, agencyCount = 0, googleListingCount = 0 } = {}) {
-  const blockers = [];
-  if (!migrations?.ready) blockers.push("presence_migrations");
-  if (!catalog?.ready) blockers.push("provider_catalog");
-  if (!operational?.readyForGoogleManagedWrites) blockers.push("google_managed_writes");
-  if (agencyCount < 1) blockers.push("agencies");
+  const preflightBlockers = [];
+  if (!migrations?.ready) preflightBlockers.push("presence_migrations");
+  if (!catalog?.ready) preflightBlockers.push("provider_catalog");
+  if (!operational?.readyForGoogleApi) preflightBlockers.push("google_api");
+  if (agencyCount < 1) preflightBlockers.push("agencies");
+
+  const writeBlockers = [...preflightBlockers];
+  if (!operational?.readyForGoogleManagedWrites) writeBlockers.push("google_managed_writes");
+
   const warnings = [];
   if (!operational?.readyForDiscovery) warnings.push("dataforseo_discovery");
   if (googleListingCount < agencyCount) warnings.push("google_listing_coverage");
-  return Object.freeze({ readyForGooglePilot: blockers.length === 0, readyForDiscoveryPilot: blockers.filter((key) => key !== "google_managed_writes").length === 0 && operational?.readyForDiscovery === true, blockers: Object.freeze(blockers), warnings: Object.freeze(warnings) });
+
+  return Object.freeze({
+    readyForReadOnlyPreflight: preflightBlockers.length === 0,
+    readyForGooglePilot: writeBlockers.length === 0,
+    readyForDiscoveryPilot: preflightBlockers.filter((key) => key !== "google_api").length === 0 && operational?.readyForDiscovery === true,
+    preflightBlockers: Object.freeze(preflightBlockers),
+    blockers: Object.freeze(writeBlockers),
+    warnings: Object.freeze(warnings)
+  });
 }
 
 async function listAppliedMigrations(prisma) {
