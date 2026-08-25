@@ -4,6 +4,7 @@ const express = require("express");
 const { buildOperationalReadiness } = require("./operational-readiness");
 const { buildDeploymentReadiness } = require("./deployment-readiness");
 const { freezeDeploymentPreflight, listDeploymentPreflights, getLatestDeploymentPreflight } = require("./deployment-preflight-store");
+const { evaluatePilotActivationGate } = require("./pilot-activation-gate");
 
 function operationalRoutes({ prisma }) {
   const router = express.Router();
@@ -29,6 +30,7 @@ function operationalRoutes({ prisma }) {
       if (req.body?.confirm !== true) return res.status(409).json({ ok: false, error: "confirm=true requis pour figer la preuve de préflight" });
       const readiness = await buildDeploymentReadiness(prisma);
       if (readiness.operational?.googleWritesEnabled === true) return res.status(409).json({ ok: false, error: "Le préflight lecture seule doit être figé avec PRESENCE_GOOGLE_WRITES_ENABLED désactivé" });
+      if (readiness.pilot?.readyForReadOnlyPreflight !== true) return res.status(409).json({ ok: false, error: "Le préflight lecture seule n'est pas conforme", blockers: readiness.pilot?.preflightBlockers || [] });
       const frozen = await freezeDeploymentPreflight(prisma, readiness);
       return res.status(201).json({ ok: true, persisted: true, externalWritesPerformed: false, frozen });
     } catch (error) { return res.status(error.status || 500).json({ ok: false, error: error.message }); }
@@ -38,6 +40,14 @@ function operationalRoutes({ prisma }) {
     try {
       const rows = await listDeploymentPreflights(prisma, req.query?.limit);
       return res.json({ ok: true, preflights: rows });
+    } catch (error) { return res.status(500).json({ ok: false, error: error.message }); }
+  });
+
+  router.get("/api/presence/health/pilot-activation-gate", async (req, res) => {
+    try {
+      const [readiness, latest] = await Promise.all([buildDeploymentReadiness(prisma), getLatestDeploymentPreflight(prisma)]);
+      const gate = evaluatePilotActivationGate({ preflight: latest, currentReadiness: readiness });
+      return res.status(gate.ready ? 200 : 409).json({ ok: gate.ready, gate });
     } catch (error) { return res.status(500).json({ ok: false, error: error.message }); }
   });
 
