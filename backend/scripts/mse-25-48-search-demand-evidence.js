@@ -21,17 +21,18 @@ async function run({ emitOutput = true } = {}) {
   fs.mkdirSync(reportDir, { recursive: true });
   const reportPath = path.join(reportDir, `mse-25-48-search-demand-evidence-${report.evidenceFingerprint.slice(0, 12)}.json`);
   fs.writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`, { mode: 0o600 });
-  const output = {
-    ok: true,
-    readOnly: true,
-    writes: false,
-    reportPath,
-    evidenceFingerprint: report.evidenceFingerprint,
-    analyticsAvailable: report.analyticsAvailable,
-    summary: report.summary,
-  };
-  if (emitOutput) console.log(JSON.stringify(output, null, 2));
-  return { report, ...output };
+  if (emitOutput) {
+    console.log(JSON.stringify({
+      ok: true,
+      readOnly: true,
+      writes: false,
+      reportPath,
+      evidenceFingerprint: report.evidenceFingerprint,
+      analyticsAvailable: report.analyticsAvailable,
+      summary: report.summary,
+    }, null, 2));
+  }
+  return report;
 }
 
 if (require.main === module) run().catch((error) => {
