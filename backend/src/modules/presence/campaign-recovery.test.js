@@ -2,7 +2,7 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { buildRecoveryPlan, evaluateRecoveryEligibility } = require("./campaign-recovery");
+const { buildRecoveryPlan, evaluateRecoveryEligibility, evaluateRecoveryQualificationState } = require("./campaign-recovery");
 
 const source = {
   campaignId: "source-1",
@@ -40,4 +40,18 @@ test("failed or operation-bearing executions are surfaced as uncertain and never
   const gate = evaluateRecoveryEligibility(source, [{ campaignIndex: 1, agencyId: 2, status: "failed", operationId: "op-2" }], { preflightId: "pf-new" });
   assert.equal(gate.uncertainCount, 1);
   assert.equal(gate.uncertain[0].operationId, "op-2");
+});
+
+test("recovery qualification state blocks until every ambiguous item has explicit evidence", () => {
+  const uncertain = [{ campaignIndex: 0, agencyId: 1, operationId: "op-1", status: "failed" }, { campaignIndex: 1, agencyId: 2, operationId: "op-2", status: "failed" }];
+  const partial = evaluateRecoveryQualificationState(uncertain, [{ status: "already_applied", payload: { campaignIndex: 0 }, result: { classification: "already_applied" } }]);
+  assert.equal(partial.complete, false);
+  assert.equal(partial.unresolvedCount, 1);
+  const complete = evaluateRecoveryQualificationState(uncertain, [
+    { status: "already_applied", payload: { campaignIndex: 0 }, result: { classification: "already_applied" } },
+    { status: "not_applied", payload: { campaignIndex: 1 }, result: { classification: "not_applied" } }
+  ]);
+  assert.equal(complete.complete, true);
+  assert.equal(complete.manualInterventionRequired, true);
+  assert.equal(complete.manualCount, 1);
 });
