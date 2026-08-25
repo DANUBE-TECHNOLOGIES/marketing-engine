@@ -23,8 +23,12 @@ function bootstrapMse2548Env() {
       ? path.resolve(dir, "..", ".env")
       : null;
 
-    if (rootCandidate && loadEnvFile(rootCandidate)) loaded.push(rootCandidate);
+    // Host-side scripts must keep the backend runtime DATABASE_URL (typically
+    // localhost/forwarded) ahead of the repository root Docker DATABASE_URL
+    // (typically postgres:5432). Root .env is only a fallback for missing
+    // credentials such as GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET.
     if (loadEnvFile(resolved)) loaded.push(resolved);
+    if (rootCandidate && loadEnvFile(rootCandidate)) loaded.push(rootCandidate);
   }
 
   return {
