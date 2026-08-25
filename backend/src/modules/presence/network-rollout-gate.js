@@ -29,6 +29,7 @@ async function evidenceForCampaign(prisma, campaign) {
   const criticalPropagationAlerts = Number(frozen.report?.pilotEvidence?.criticalPropagationAlerts ?? 0);
   const rollout = evaluatePilotOutcome(frozen.report, { criticalPropagationAlerts });
   if (!rollout.readyForNetworkRollout) return null;
+  if (frozen.report?.predecessorComparison?.required === true && frozen.report.predecessorComparison.ready !== true) return null;
   return { campaign, frozen, rollout };
 }
 
@@ -63,4 +64,4 @@ async function evaluateNetworkRolloutGate(prisma, totalAgencies) {
   return Object.freeze({ ready: true, decision: "complete", nextStagePercent: null, maxAgencies: total, blockers: Object.freeze([]), stages: Object.freeze([{ stagePercent: 25, campaignId: stage25.campaign.campaignId, agencyCount: stage25.actualAgencyCount, reportCreatedAt: stage25.frozen.createdAt }, { stagePercent: 50, campaignId: stage50.campaign.campaignId, agencyCount: stage50.actualAgencyCount, reportCreatedAt: stage50.frozen.createdAt }, { stagePercent: 100, campaignId: stage100.campaign.campaignId, agencyCount: stage100.actualAgencyCount, reportCreatedAt: stage100.frozen.createdAt }]) });
 }
 
-module.exports = { ROLLOUT_STAGES, stageTargetAgencyCount, campaignAgencyCount, campaignStage, findStageEvidence, evaluateNetworkRolloutGate };
+module.exports = { ROLLOUT_STAGES, stageTargetAgencyCount, campaignAgencyCount, campaignStage, evidenceForCampaign, findStageEvidence, evaluateNetworkRolloutGate };
