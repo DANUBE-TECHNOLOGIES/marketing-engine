@@ -2,10 +2,27 @@
 
 const crypto = require("node:crypto");
 const express = require("express");
+const {
+  createStoredSearchConsoleAccessTokenProvider,
+} = require("../modules/search-console-submission/auth");
 
 const SEARCH_CONSOLE_SCOPE = "https://www.googleapis.com/auth/webmasters.readonly";
 const SEARCH_CONSOLE_PROVIDER = "search-console";
+const SEARCH_CONSOLE_API_ROOT = "https://www.googleapis.com/webmasters/v3";
+const DEFAULT_SEARCH_CONSOLE_PROPERTY = "sc-domain:agences.mondescale.com";
 const STATE_TTL_MS = 10 * 60 * 1000;
+
+function isEnabled(value) {
+  return ["1", "true", "yes", "on"].includes(String(value || "").trim().toLowerCase());
+}
+
+function configuredProperty() {
+  return String(
+    process.env.SEARCH_CONSOLE_PROPERTY ||
+    process.env.SEARCH_CONSOLE_SITE_URL ||
+    DEFAULT_SEARCH_CONSOLE_PROPERTY
+  ).trim();
+}
 
 function getRedirectUri() {
   return process.env.GOOGLE_REDIRECT_URI || "https://localengine.mondescale.com/api/google/callback";
@@ -53,6 +70,24 @@ function buildAuthorizationUrl() {
   url.searchParams.set("include_granted_scopes", "false");
   url.searchParams.set("state", createState());
   return url.toString();
+}
+
+async function storedTokenStatus(prisma) {
+  const token = await prisma.googleToken.findFirst({
+    where: { provider: SEARCH_CONSOLE_PROVIDER },
+    orderBy: { createdAt: "desc" },
+  });
+  return {
+    token,
+    publicStatus: {
+      provider: SEARCH_CONSOLE_PROVIDER,
+      exists: Boolean(token),
+      hasAccessToken: Boolean(token?.accessToken),
+      hasRefreshToken: Boolean(token?.refreshToken),
+      expiryDate: token?.expiryDate ? String(token.expiryDate) : null,
+      expired: token?.expiryDate ? Number(token.expiryDate) < Date.now() : true,
+    },
+  };
 }
 
 function createSearchConsoleOAuthRoutes(prisma, { fetchImpl = fetch } = {}) {
@@ -113,20 +148,98 @@ function createSearchConsoleOAuthRoutes(prisma, { fetchImpl = fetch } = {}) {
     }
   });
 
-  router.get(["/search-console/token-status", "/api/search-console/token-status"], async (req, res) => {
+  router.get(["/search-console/token-status", "/api/search-console/token-status"], async (_req, res) => {
     try {
-      const token = await prisma.googleToken.findFirst({ where: { provider: SEARCH_CONSOLE_PROVIDER }, orderBy: { createdAt: "desc" } });
+      const status = await storedTokenStatus(prisma);
       return res.json({
         ok: true,
-        provider: SEARCH_CONSOLE_PROVIDER,
-        exists: Boolean(token),
-        hasAccessToken: Boolean(token?.accessToken),
-        hasRefreshToken: Boolean(token?.refreshToken),
-        expiryDate: token?.expiryDate ? String(token.expiryDate) : null,
-        expired: token?.expiryDate ? Number(token.expiryDate) < Date.now() : true,
+        ...status.publicStatus,
+        featureEnabled: isEnabled(process.env.SEARCH_CONSOLE_ENABLED),
+        property: configuredProperty(),
+        oauthScope: SEARCH_CONSOLE_SCOPE,
+        accessMode: "read-only",
+        submissionCapable: false,
+        autoSubmit: false,
       });
     } catch (error) {
       return res.status(500).json({ ok: false, error: "SEARCH_CONSOLE_TOKEN_STATUS_FAILED", message: error.message });
+    }
+  });
+
+  router.get(["/search-console/readiness", "/api/search-console/readiness"], async (_req, res) => {
+    const property = configuredProperty();
+    const featureEnabled = isEnabled(process.env.SEARCH_CONSOLE_ENABLED);
+    const base = {
+      ok: true,
+      provider: SEARCH_CONSOLE_PROVIDER,
+      property,
+      featureEnabled,
+      oauthScope: SEARCH_CONSOLE_SCOPE,
+      accessMode: "read-only",
+      submissionCapable: false,
+      explicitApprovalRequired: true,
+      autoSubmit: false,
+    };
+
+    try {
+      const status = await storedTokenStatus(prisma);
+      if (!featureEnabled) {
+        return res.json({ ...base, ready: false, state: "feature-disabled", token: status.publicStatus });
+      }
+      if (!status.token?.refreshToken) {
+        return res.json({ ...base, ready: false, state: "oauth-token-missing", token: status.publicStatus });
+      }
+
+      const accessTokenProvider = createStoredSearchConsoleAccessTokenProvider({ prisma, fetchImpl });
+      const accessToken = await accessTokenProvider();
+      const googleResponse = await fetchImpl(`${SEARCH_CONSOLE_API_ROOT}/sites`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${accessToken}`, Accept: "application/json" },
+      });
+      const googleBody = await googleResponse.json();
+      if (!googleResponse.ok) {
+        return res.status(Number(googleResponse.status || 502)).json({
+          ...base,
+          ok: false,
+          ready: false,
+          state: "search-console-api-error",
+          error: googleBody?.error?.status || "SEARCH_CONSOLE_API_ERROR",
+          message: googleBody?.error?.message || "Search Console a refusé la vérification de propriété.",
+        });
+      }
+
+      const properties = Array.isArray(googleBody?.siteEntry) ? googleBody.siteEntry : [];
+      const match = properties.find((item) => String(item?.siteUrl || "").trim() === property);
+      if (!match) {
+        return res.json({
+          ...base,
+          ready: false,
+          state: "property-not-accessible",
+          token: status.publicStatus,
+          accessiblePropertyCount: properties.length,
+        });
+      }
+
+      return res.json({
+        ...base,
+        ready: true,
+        state: "read-only-ready",
+        token: status.publicStatus,
+        propertyAccess: {
+          siteUrl: match.siteUrl || property,
+          permissionLevel: match.permissionLevel || null,
+        },
+        accessiblePropertyCount: properties.length,
+      });
+    } catch (error) {
+      return res.status(Number(error?.statusCode || 500)).json({
+        ...base,
+        ok: false,
+        ready: false,
+        state: "readiness-error",
+        error: error?.code || "SEARCH_CONSOLE_READINESS_FAILED",
+        message: error?.message || "Échec du contrôle Search Console.",
+      });
     }
   });
 
@@ -136,9 +249,13 @@ function createSearchConsoleOAuthRoutes(prisma, { fetchImpl = fetch } = {}) {
 module.exports = {
   SEARCH_CONSOLE_SCOPE,
   SEARCH_CONSOLE_PROVIDER,
+  SEARCH_CONSOLE_API_ROOT,
+  DEFAULT_SEARCH_CONSOLE_PROPERTY,
   STATE_TTL_MS,
+  configuredProperty,
   createState,
   verifyState,
   buildAuthorizationUrl,
+  storedTokenStatus,
   createSearchConsoleOAuthRoutes,
 };
