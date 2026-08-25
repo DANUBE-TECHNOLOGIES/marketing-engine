@@ -6,6 +6,26 @@ function executionIndexes(executions = []) {
   return new Set(executions.map((row) => Number(row.campaignIndex)).filter(Number.isInteger));
 }
 
+function qualificationIndexes(qualifications = []) {
+  return new Set(qualifications.map((row) => Number(row?.payload?.campaignIndex ?? row?.result?.campaignIndex)).filter(Number.isInteger));
+}
+
+function evaluateRecoveryQualificationState(uncertain = [], qualifications = []) {
+  const qualified = qualificationIndexes(qualifications);
+  const unresolved = uncertain.filter((row) => !qualified.has(Number(row.campaignIndex)));
+  const manual = qualifications.filter((row) => {
+    const classification = row?.result?.classification || row?.status;
+    return classification === "not_applied" || classification === "partial_or_changed";
+  });
+  return Object.freeze({
+    complete: unresolved.length === 0,
+    unresolvedCount: unresolved.length,
+    unresolved: Object.freeze(unresolved.map((row) => ({ campaignIndex: Number(row.campaignIndex), agencyId: row.agencyId || null, operationId: row.operationId || null, status: row.status || null }))),
+    manualInterventionRequired: manual.length > 0,
+    manualCount: manual.length
+  });
+}
+
 function buildRecoveryPlan(sourceCampaign, currentCockpit, executions = [], preflightId = null) {
   const sourcePlan = sourceCampaign?.plan || {};
   const touched = executionIndexes(executions);
@@ -15,12 +35,7 @@ function buildRecoveryPlan(sourceCampaign, currentCockpit, executions = [], pref
     .filter((item) => !touched.has(item.sourceCampaignIndex));
   const agencyIds = [...new Set(remainingExecutable.map((item) => Number(item.agencyId)).filter(Number.isInteger))];
   const approved = sourceCampaign?.approvedScope || {};
-  const policy = {
-    maxItems: remainingExecutable.length,
-    allowSensitive: false,
-    agencyIds,
-    providerKeys: ["google_business_profile"]
-  };
+  const policy = { maxItems: remainingExecutable.length, allowSensitive: false, agencyIds, providerKeys: ["google_business_profile"] };
   const fingerprintInput = remainingExecutable.map((item) => [item.sourceCampaignIndex, item.agencyId, item.providerKey, item.listingId, item.drift]);
   return Object.freeze({
     campaignId: `presence-recovery-${stableId({ sourceCampaignId: sourceCampaign?.campaignId, preflightId, fingerprintInput })}`,
@@ -34,12 +49,7 @@ function buildRecoveryPlan(sourceCampaign, currentCockpit, executions = [], pref
     selected: Object.freeze(remainingExecutable),
     executable: Object.freeze(remainingExecutable),
     manual: Object.freeze([]),
-    sourceScope: Object.freeze({
-      rolloutStage: approved.rolloutStage || null,
-      sourceEvidenceCampaignId: approved.sourceEvidenceCampaignId || null,
-      sourceEvidenceReportId: approved.sourceEvidenceReportId || null,
-      sourceEvidenceReportCreatedAt: approved.sourceEvidenceReportCreatedAt || null
-    })
+    sourceScope: Object.freeze({ rolloutStage: approved.rolloutStage || null, sourceEvidenceCampaignId: approved.sourceEvidenceCampaignId || null, sourceEvidenceReportId: approved.sourceEvidenceReportId || null, sourceEvidenceReportCreatedAt: approved.sourceEvidenceReportCreatedAt || null })
   });
 }
 
@@ -61,4 +71,4 @@ function evaluateRecoveryEligibility(sourceCampaign, executions = [], latestPref
   });
 }
 
-module.exports = { executionIndexes, buildRecoveryPlan, evaluateRecoveryEligibility };
+module.exports = { executionIndexes, qualificationIndexes, evaluateRecoveryQualificationState, buildRecoveryPlan, evaluateRecoveryEligibility };
