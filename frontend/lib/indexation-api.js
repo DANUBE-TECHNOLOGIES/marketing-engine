@@ -37,6 +37,7 @@ async function action(operation, payload = {}, runId = null) {
 
 export const indexationApi = Object.freeze({
   health: () => read("health"),
+  readiness: () => read("readiness"),
   candidates: () => read("candidates"),
   history: (params = {}) => read("history", params),
   properties: () => read("properties"),
