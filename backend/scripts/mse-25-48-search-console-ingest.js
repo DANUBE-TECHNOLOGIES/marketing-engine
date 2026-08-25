@@ -3,32 +3,37 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
+const dotenv = require("dotenv");
+const { PrismaClient } = require("@prisma/client");
 const { fetchSearchAnalytics } = require("../src/modules/minisite-semantic-engine/search-console-analytics");
+const { getSearchConsoleAccessToken } = require("../src/modules/minisite-semantic-engine/search-console-token-provider");
 
-async function run() {
-  const analytics = await fetchSearchAnalytics({
-    siteUrl: process.env.SEARCH_CONSOLE_SITE_URL,
-    accessToken: process.env.SEARCH_CONSOLE_ACCESS_TOKEN,
-    startDate: process.env.MSE_25_48_START_DATE,
-    endDate: process.env.MSE_25_48_END_DATE,
-    rowLimit: process.env.MSE_25_48_ROW_LIMIT,
-  });
-  const reportDir = process.env.MSE_25_48_REPORT_DIR || "/tmp";
-  fs.mkdirSync(reportDir, { recursive: true });
-  const reportPath = path.join(reportDir, `mse-25-48-search-console-analytics-${analytics.analyticsFingerprint.slice(0, 12)}.json`);
-  fs.writeFileSync(reportPath, `${JSON.stringify(analytics, null, 2)}\n`, { mode: 0o600 });
-  console.log(JSON.stringify({
-    ok: true,
-    readOnly: true,
-    writes: false,
-    reportPath,
-    analyticsFingerprint: analytics.analyticsFingerprint,
-    siteUrl: analytics.siteUrl,
-    startDate: analytics.startDate,
-    endDate: analytics.endDate,
-    rowCount: analytics.rowCount,
-  }, null, 2));
-  return { analytics, reportPath };
+function bootstrapEnv() {
+  const envFile = process.env.MSE_25_48_ENV_FILE || process.env.MSE_25_40_ENV_FILE;
+  if (envFile) dotenv.config({ path: path.resolve(envFile) });
+}
+
+async function run({ prisma } = {}) {
+  bootstrapEnv();
+  const client = prisma || new PrismaClient();
+  try {
+    const token = await getSearchConsoleAccessToken({ prisma: client });
+    const analytics = await fetchSearchAnalytics({
+      siteUrl: process.env.SEARCH_CONSOLE_SITE_URL,
+      accessToken: token.accessToken,
+      startDate: process.env.MSE_25_48_START_DATE,
+      endDate: process.env.MSE_25_48_END_DATE,
+      rowLimit: process.env.MSE_25_48_ROW_LIMIT,
+    });
+    const reportDir = process.env.MSE_25_48_REPORT_DIR || "/tmp";
+    fs.mkdirSync(reportDir, { recursive: true });
+    const reportPath = path.join(reportDir, `mse-25-48-search-console-analytics-${analytics.analyticsFingerprint.slice(0, 12)}.json`);
+    fs.writeFileSync(reportPath, `${JSON.stringify(analytics, null, 2)}\n`, { mode: 0o600 });
+    console.log(JSON.stringify({ ok: true, readOnly: true, writes: false, tokenSource: token.source, reportPath, analyticsFingerprint: analytics.analyticsFingerprint, siteUrl: analytics.siteUrl, startDate: analytics.startDate, endDate: analytics.endDate, rowCount: analytics.rowCount }, null, 2));
+    return { analytics, reportPath, tokenSource: token.source };
+  } finally {
+    if (!prisma) await client.$disconnect();
+  }
 }
 
 if (require.main === module) run().catch((error) => {
@@ -36,4 +41,4 @@ if (require.main === module) run().catch((error) => {
   process.exitCode = 1;
 });
 
-module.exports = { run };
+module.exports = { bootstrapEnv, run };
