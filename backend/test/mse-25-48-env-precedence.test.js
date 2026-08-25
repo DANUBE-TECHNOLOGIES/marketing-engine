@@ -19,7 +19,14 @@ test("backend env keeps DATABASE_URL while root env supplies missing Google cred
   fs.writeFileSync(backendEnv, "DATABASE_URL=postgresql://host-user:host-pass@127.0.0.1:5432/local_engine\n");
   fs.writeFileSync(rootEnv, "DATABASE_URL=postgresql://docker-user:docker-pass@postgres:5432/local_engine\nGOOGLE_CLIENT_ID=test-client\nGOOGLE_CLIENT_SECRET=test-secret\n");
 
-  const keys = ["DATABASE_URL", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "MSE_25_48_ENV_FILE", "MSE_25_40_ENV_FILE"];
+  const keys = [
+    "DATABASE_URL",
+    "GOOGLE_CLIENT_ID",
+    "GOOGLE_CLIENT_SECRET",
+    "MSE_25_48_ENV_FILE",
+    "MSE_25_40_ENV_FILE",
+    "MSE_25_48_HOST_DATABASE_URL",
+  ];
   const previous = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
 
   try {
@@ -32,6 +39,7 @@ test("backend env keeps DATABASE_URL while root env supplies missing Google cred
     assert.equal(process.env.GOOGLE_CLIENT_ID, "test-client");
     assert.equal(process.env.GOOGLE_CLIENT_SECRET, "test-secret");
     assert.equal(result.googleClientConfigured, true);
+    assert.equal(result.hostDatabaseOverrideApplied, false);
     assert.deepEqual(result.loadedFiles, [backendEnv, rootEnv]);
   } finally {
     for (const key of keys) {
