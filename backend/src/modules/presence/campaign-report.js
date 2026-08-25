@@ -1,6 +1,7 @@
 "use strict";
 
 const { buildNetworkCockpit } = require("./network-cockpit");
+const { evaluatePredecessorNonRegression } = require("./rollout-evidence-comparison");
 
 function number(value) { return Number.isFinite(Number(value)) ? Number(value) : 0; }
 function delta(after, before) { return number(after) - number(before); }
@@ -35,23 +36,32 @@ function buildCampaignReport(campaign, currentState, executions = [], options = 
   const improved = comparison.healthScore.delta > 0 || comparison.coveragePercent.delta > 0 || comparison.anomalies.delta < 0;
   const regressed = comparison.healthScore.delta < 0 || comparison.coveragePercent.delta < 0 || comparison.anomalies.delta > 0;
   const outcome = regressed ? "regressed" : improved ? "improved" : "stable";
-
-  return Object.freeze({
+  const provisional = {
     campaignId: campaign.campaignId,
     status: campaign.status,
     generatedAt: new Date().toISOString(),
     outcome,
-    pilotEvidence: Object.freeze({
+    pilotEvidence: {
       pilot: campaign?.pilot === true,
       preflightId: campaign?.preflightId || null,
       approvedScope: campaign?.approvedScope || null,
       criticalPropagationAlerts
-    }),
-    baseline: Object.freeze({ health: beforeHealth, summary: beforeSummary }),
-    current: Object.freeze({ health: current.health, summary: current.summary }),
+    },
+    baseline: { health: beforeHealth, summary: beforeSummary },
+    current: { health: current.health, summary: current.summary },
     comparison,
     execution,
-    remainingPriorityItems: Object.freeze(current.interventionQueue.slice(0, 25))
+    remainingPriorityItems: current.interventionQueue.slice(0, 25)
+  };
+  const predecessorComparison = evaluatePredecessorNonRegression(provisional, options.predecessorReport || null);
+
+  return Object.freeze({
+    ...provisional,
+    pilotEvidence: Object.freeze(provisional.pilotEvidence),
+    baseline: Object.freeze(provisional.baseline),
+    current: Object.freeze(provisional.current),
+    predecessorComparison,
+    remainingPriorityItems: Object.freeze(provisional.remainingPriorityItems)
   });
 }
 
