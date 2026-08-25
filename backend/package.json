@@ -61,7 +61,8 @@
     "mse-25.49:certify": "node scripts/mse-25-49-certify.js",
     "mse-25.49:observe": "node scripts/mse-25-49-observe.js",
     "mse-25.50:history": "node scripts/mse-25-50-search-demand-history.js",
-    "mse-25.50:certify": "node scripts/mse-25-50-certify.js"
+    "mse-25.50:certify": "node scripts/mse-25-50-certify.js",
+    "mse-25.50:observe": "node scripts/mse-25-50-observe-history.js"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",
