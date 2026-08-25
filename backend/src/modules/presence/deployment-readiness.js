@@ -11,7 +11,8 @@ const REQUIRED_PRESENCE_MIGRATIONS = Object.freeze([
   "20260824142000_presence_campaign_execution_ledger",
   "20260824142000_presence_campaigns",
   "20260824142500_presence_campaign_report",
-  "20260824143000_presence_citation_observations"
+  "20260824143000_presence_citation_observations",
+  "20260825104500_presence_deployment_preflight"
 ]);
 
 function evaluateMigrationReadiness(applied = []) {
@@ -21,25 +22,22 @@ function evaluateMigrationReadiness(applied = []) {
 }
 
 function evaluatePilotReadiness({ operational, catalog, migrations, agencyCount = 0, googleListingCount = 0 } = {}) {
-  const preflightBlockers = [];
-  if (!migrations?.ready) preflightBlockers.push("presence_migrations");
-  if (!catalog?.ready) preflightBlockers.push("provider_catalog");
-  if (!operational?.readyForGoogleApi) preflightBlockers.push("google_api");
-  if (agencyCount < 1) preflightBlockers.push("agencies");
-
-  const writeBlockers = [...preflightBlockers];
-  if (!operational?.readyForGoogleManagedWrites) writeBlockers.push("google_managed_writes");
-
+  const readOnlyBlockers = [];
+  if (!migrations?.ready) readOnlyBlockers.push("presence_migrations");
+  if (!catalog?.ready) readOnlyBlockers.push("provider_catalog");
+  if (!operational?.readyForGoogleApi) readOnlyBlockers.push("google_api");
+  if (agencyCount < 1) readOnlyBlockers.push("agencies");
+  const pilotBlockers = [...readOnlyBlockers];
+  if (!operational?.readyForGoogleManagedWrites) pilotBlockers.push("google_managed_writes");
   const warnings = [];
   if (!operational?.readyForDiscovery) warnings.push("dataforseo_discovery");
   if (googleListingCount < agencyCount) warnings.push("google_listing_coverage");
-
   return Object.freeze({
-    readyForReadOnlyPreflight: preflightBlockers.length === 0,
-    readyForGooglePilot: writeBlockers.length === 0,
-    readyForDiscoveryPilot: preflightBlockers.filter((key) => key !== "google_api").length === 0 && operational?.readyForDiscovery === true,
-    preflightBlockers: Object.freeze(preflightBlockers),
-    blockers: Object.freeze(writeBlockers),
+    readyForReadOnlyPreflight: readOnlyBlockers.length === 0,
+    readyForGooglePilot: pilotBlockers.length === 0,
+    readyForDiscoveryPilot: readOnlyBlockers.filter((key) => key !== "google_api").length === 0 && operational?.readyForDiscovery === true,
+    readOnlyBlockers: Object.freeze(readOnlyBlockers),
+    blockers: Object.freeze(pilotBlockers),
     warnings: Object.freeze(warnings)
   });
 }
