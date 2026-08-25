@@ -6,6 +6,7 @@ on:
       - 'feature/mse-25-48-*'
   pull_request:
     paths:
+      - 'backend/package.json'
       - 'backend/src/modules/search-console-submission/**'
       - 'backend/src/routes/searchConsoleOAuth.js'
       - 'backend/src/routes/googleOAuth.js'
@@ -45,5 +46,5 @@ jobs:
       - name: Prisma client
         run: npm run prisma:generate
 
-      - name: MSE-25.48 tests
-        run: node --test test/mse-25-48-*.test.js
+      - name: MSE-25.48 certification
+        run: npm run mse-25.48:certify
