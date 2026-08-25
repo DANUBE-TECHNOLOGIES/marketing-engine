@@ -4,9 +4,9 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const {
-  buildHumanSeoReviewDecision,
-  certifyHumanSeoReviewDecision,
-} = require("../src/modules/minisite-semantic-engine/human-seo-review-decisions");
+  buildHumanDecisionChain,
+  certifyHumanDecisionChain,
+} = require("../src/modules/minisite-semantic-engine/human-seo-review-decision-chain");
 
 function readJson(file) {
   if (!file || !fs.existsSync(file)) throw new Error(`MSE_25_54_SOURCE_REPORT_MISSING:${file || "null"}`);
@@ -28,12 +28,13 @@ async function run({ emitOutput = true } = {}) {
   fs.mkdirSync(reportDir, { recursive: true });
 
   const packetReport = readJson(sourcePath);
-  const record = buildHumanSeoReviewDecision({ packetReport, packetKey, decision, reviewer, rationale });
-  const certification = certifyHumanSeoReviewDecision(record);
+  const chain = buildHumanDecisionChain({ packetReport, packetKey, decision, reviewer, rationale });
+  const certification = certifyHumanDecisionChain(chain);
   if (certification.certified !== true) {
-    throw new Error(`MSE_25_54_DECISION_CERTIFICATION_FAILED:${certification.reasons.join(",")}`);
+    throw new Error(`MSE_25_54_CHAIN_CERTIFICATION_FAILED:${certification.reasons.join(",")}`);
   }
 
+  const record = chain.decision;
   const report = {
     type: "MSE_25_54_HUMAN_SEO_REVIEW_DECISION_REPORT",
     generatedAt: new Date().toISOString(),
@@ -41,7 +42,12 @@ async function run({ emitOutput = true } = {}) {
     writes: false,
     publicWrites: false,
     sourceDecisionPacketReportPath: sourcePath,
+    sourcePacketFingerprint: chain.sourcePacketFingerprint,
+    sourcePrioritizationFingerprint: chain.sourcePrioritizationFingerprint,
+    chainFingerprint: chain.chainFingerprint,
     decision: record,
+    sourceCertification: chain.sourceCertification,
+    decisionCertification: chain.decisionCertification,
     certification,
     summary: {
       decisionCount: 1,
