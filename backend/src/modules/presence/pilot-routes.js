@@ -3,7 +3,7 @@
 const express = require("express");
 const { loadCockpitState } = require("./network-cockpit-routes");
 const { buildNetworkCockpit } = require("./network-cockpit");
-const { buildCampaignPlan } = require("./campaign-planner");
+const { buildCampaignPlan, stableId } = require("./campaign-planner");
 const { createCampaign } = require("./campaign-store");
 const { buildDeploymentReadiness } = require("./deployment-readiness");
 const { evaluateControlledPilot } = require("./pilot-readiness");
@@ -67,8 +67,20 @@ function pilotRoutes({ prisma }) {
       const context = await buildPilotContext(prisma, req.body || {});
       if (!context.readiness.ready) return res.status(409).json({ ok: false, externalWrite: false, persisted: false, error: "Pilot activation gate NO-GO", readiness: context.readiness, recommendations: context.recommendations, plan: context.plan });
       if (req.body?.preflightId && req.body.preflightId !== context.frozenPreflight?.preflightId) return res.status(409).json({ ok: false, error: "Le preflightId fourni ne correspond pas à la dernière preuve figée" });
-      const campaign = await createCampaign(prisma, context.plan, req.body?.name || `Pilote Google Presence ${new Date().toISOString().slice(0, 10)}`);
-      return res.status(201).json({ ok: true, persisted: true, externalWrite: false, pilot: true, preflightId: context.frozenPreflight?.preflightId || null, campaign, readiness: context.readiness });
+      const approvedScope = {
+        agencyIds: context.plan.policy?.agencyIds || [],
+        providerKeys: context.plan.policy?.providerKeys || [],
+        maxItems: context.plan.policy?.maxItems || 0,
+        allowSensitive: context.plan.policy?.allowSensitive === true
+      };
+      const approvedPlanFingerprint = stableId({ approvedScope, selected: context.plan.selected || [] });
+      const campaign = await createCampaign(
+        prisma,
+        context.plan,
+        req.body?.name || `Pilote Google Presence ${new Date().toISOString().slice(0, 10)}`,
+        { pilot: true, preflightId: context.frozenPreflight?.preflightId || null, approvedScope, approvedPlanFingerprint }
+      );
+      return res.status(201).json({ ok: true, persisted: true, externalWrite: false, pilot: true, preflightId: context.frozenPreflight?.preflightId || null, approvedScope, approvedPlanFingerprint, campaign, readiness: context.readiness });
     } catch (error) { return res.status(error.status || 500).json({ ok: false, error: error.message }); }
   });
 
