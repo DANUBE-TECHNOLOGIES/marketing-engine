@@ -19,7 +19,7 @@ function evidence({ fingerprint, available = true, strength = "none", impression
   };
 }
 
-test("runner compares current evidence with explicit previous snapshot and writes only a report", async () => {
+test("runner records a first qualifying snapshot without making it review eligible", async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "mse-25-49-"));
   const oldDir = process.env.MSE_25_49_REPORT_DIR;
   process.env.MSE_25_49_REPORT_DIR = dir;
@@ -31,9 +31,30 @@ test("runner compares current evidence with explicit previous snapshot and write
     assert.equal(result.readOnly, true);
     assert.equal(result.writes, false);
     assert.equal(result.lifecycle.signals[0].transition, "NEW");
-    assert.equal(result.lifecycle.summary.humanReviewEligibleCount, 1);
+    assert.equal(result.lifecycle.signals[0].qualifyingSnapshotCount, 1);
+    assert.equal(result.lifecycle.summary.humanReviewEligibleCount, 0);
     assert.equal(result.lifecycle.summary.automaticWriteCount, 0);
     assert.equal(fs.existsSync(result.reportPath), true);
+  } finally {
+    if (oldDir === undefined) delete process.env.MSE_25_49_REPORT_DIR;
+    else process.env.MSE_25_49_REPORT_DIR = oldDir;
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("runner makes persistent qualifying demand review eligible on the second snapshot", async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "mse-25-49-"));
+  const oldDir = process.env.MSE_25_49_REPORT_DIR;
+  process.env.MSE_25_49_REPORT_DIR = dir;
+  try {
+    const result = await run({
+      previousEvidence: evidence({ fingerprint: "previous", strength: "medium", impressions: 40 }),
+      currentEvidence: evidence({ fingerprint: "current", strength: "high", impressions: 120 }),
+    });
+    assert.equal(result.lifecycle.signals[0].transition, "PERSISTING");
+    assert.equal(result.lifecycle.signals[0].qualifyingSnapshotCount, 2);
+    assert.equal(result.lifecycle.summary.humanReviewEligibleCount, 1);
+    assert.equal(result.lifecycle.summary.automaticWriteCount, 0);
   } finally {
     if (oldDir === undefined) delete process.env.MSE_25_49_REPORT_DIR;
     else process.env.MSE_25_49_REPORT_DIR = oldDir;
