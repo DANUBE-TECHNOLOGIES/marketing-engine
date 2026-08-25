@@ -10,6 +10,18 @@ const { SearchConsolePerformanceService } = require("./performance");
 const { SeoOpportunityWorkQueueService } = require("./opportunity-work-queue");
 const { resolveLocalSeoContext } = require("./local-seo-intent");
 
+function enabled(value) {
+  return ["1", "true", "yes", "on"].includes(String(value || "").trim().toLowerCase());
+}
+
+function configuredProperty() {
+  return String(
+    process.env.SEARCH_CONSOLE_PROPERTY ||
+    process.env.SEARCH_CONSOLE_SITE_URL ||
+    "sc-domain:agences.mondescale.com"
+  ).trim();
+}
+
 function sendError(response, error) {
   response.status(Number(error?.statusCode || error?.status || 500)).json({
     error: error?.code || "SEARCH_CONSOLE_SUBMISSION_ERROR",
@@ -25,7 +37,27 @@ function routes({ prisma, service, provider } = {}) {
   const performanceService = new SearchConsolePerformanceService({ provider: submissionService.provider });
   const opportunityQueue = new SeoOpportunityWorkQueueService({ prisma });
 
-  router.get("/search-console-submissions/health", (_request, response) => { const activeProvider = submissionService.provider; response.json({ ok: true, capability: "search-console-submission-journal", provider: activeProvider?.name || "unknown", providerConfigured: activeProvider?.isConfigured?.() === true, requestedEnabled: activeProvider?.requestedEnabled === true, disabledReason: activeProvider?.disabledReason || null, credentialMode: activeProvider?.credentialMode || null, requiredPermissionLevel: SEARCH_CONSOLE_OWNER_PERMISSION, explicitApprovalRequired: true, autoSubmit: false, readOnlySitemapObservability: true, readOnlySearchPerformance: true }); });
+  router.get("/search-console-submissions/health", (_request, response) => {
+    const activeProvider = submissionService.provider;
+    response.json({
+      ok: true,
+      capability: "search-console-submission-journal",
+      provider: activeProvider?.name || "unknown",
+      providerConfigured: activeProvider?.isConfigured?.() === true,
+      requestedEnabled: activeProvider?.requestedEnabled === true,
+      featureEnabled: enabled(process.env.SEARCH_CONSOLE_ENABLED),
+      disabledReason: activeProvider?.disabledReason || null,
+      credentialMode: activeProvider?.credentialMode || null,
+      accessMode: activeProvider?.accessMode || null,
+      submissionCapable: activeProvider?.submissionCapable === true,
+      configuredProperty: configuredProperty(),
+      requiredPermissionLevel: SEARCH_CONSOLE_OWNER_PERMISSION,
+      explicitApprovalRequired: true,
+      autoSubmit: false,
+      readOnlySitemapObservability: true,
+      readOnlySearchPerformance: true,
+    });
+  });
   router.get("/search-console-submissions/properties", async (request, response) => { try { await tenantIdForRequest(prisma, request); const properties = await submissionService.provider.listSites(); response.json({ provider: submissionService.provider?.name || "unknown", count: properties.length, requiredPermissionLevel: SEARCH_CONSOLE_OWNER_PERMISSION, properties: properties.map((property) => ({ siteUrl: property?.siteUrl || null, permissionLevel: property?.permissionLevel || null, eligibleForSitemapSubmission: property?.permissionLevel === SEARCH_CONSOLE_OWNER_PERMISSION })) }); } catch (error) { sendError(response, error); } });
   router.get("/search-console-submissions/candidates", async (request, response) => { try { const tenantId = await tenantIdForRequest(prisma, request); response.json(await submissionService.candidates({ tenantId })); } catch (error) { sendError(response, error); } });
   router.get("/search-console-submissions/sites/:siteSlug/status", async (request, response) => { try { const tenantId = await tenantIdForRequest(prisma, request); response.json(await observabilityService.sitemapStatus({ tenantId, siteSlug: request.params.siteSlug, siteUrl: request.query?.siteUrl })); } catch (error) { sendError(response, error); } });
@@ -44,4 +76,4 @@ function routes({ prisma, service, provider } = {}) {
   return router;
 }
 
-module.exports = { routes, sendError };
+module.exports = { configuredProperty, enabled, routes, sendError };
