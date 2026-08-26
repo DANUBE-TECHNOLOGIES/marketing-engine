@@ -1,3 +1,5 @@
+import { preload } from "react-dom";
+
 import {
   getSectionContent,
 } from "./helpers";
@@ -80,6 +82,13 @@ export default function HeroV2Renderer({ section, site, page }) {
   const imageAlt = resolvedHeroAlt({ content, site, title });
   const overlayOpacity = Math.min(Math.max(Number(content.overlayOpacity ?? 68), 20), 90) / 100;
 
+  if (backgroundImage) {
+    preload(backgroundImage, {
+      as: "image",
+      fetchPriority: "high",
+    });
+  }
+
   const primaryCta = content.primaryCta || null;
   const secondaryCta = content.secondaryCta || null;
   const primaryHref = primaryCta?.href
@@ -106,7 +115,8 @@ export default function HeroV2Renderer({ section, site, page }) {
             alt={imageAlt}
             loading="eager"
             fetchPriority="high"
-            decoding="async"
+            width="1920"
+            height="1080"
             style={{ objectPosition: backgroundPosition }}
           />
           <span
