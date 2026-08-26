@@ -1,3 +1,5 @@
+import { cache } from "react";
+
 function normalizeSiteSlug(value) {
   return String(value || "")
     .trim()
@@ -28,7 +30,7 @@ const PUBLIC_RUNTIME_REVALIDATE_SECONDS = Math.max(
   Number(process.env.PUBLIC_SITE_REVALIDATE_SECONDS || 300) || 300
 );
 
-export async function fetchPublicBrandLegalRuntime(siteSlug) {
+export const fetchPublicBrandLegalRuntime = cache(async (siteSlug) => {
   const normalizedSlug = normalizeSiteSlug(siteSlug);
   if (!normalizedSlug) return null;
 
@@ -66,7 +68,7 @@ export async function fetchPublicBrandLegalRuntime(siteSlug) {
     });
     return null;
   }
-}
+});
 
 export function runtimeCssVariables(contract) {
   const variables = contract?.runtime?.brand?.cssVariables;
