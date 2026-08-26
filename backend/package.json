@@ -92,7 +92,10 @@
     "mse-25.63:readiness": "node scripts/mse-25-63-readiness.js",
     "mse-25.63:pre-apply-gate": "node scripts/mse-25-63-pre-apply-gate.js",
     "mse-25.64:readiness": "node scripts/mse-25-64-readiness.js",
-    "mse-25.64:guarded-apply": "node scripts/mse-25-64-guarded-apply.js"
+    "mse-25.64:guarded-apply": "node scripts/mse-25-64-guarded-apply.js",
+    "mse-25.65:readiness": "node scripts/mse-25-65-readiness.js",
+    "mse-25.65:post-apply-verify": "node scripts/mse-25-65-post-apply-verify.js",
+    "mse-25.65:rollback-intent": "node scripts/mse-25-65-rollback-intent.js"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",
