@@ -101,7 +101,8 @@
     "mse-25.67:readiness": "node scripts/mse-25-67-readiness.js",
     "mse-25.67:guarded-rollback": "node scripts/mse-25-67-guarded-rollback.js",
     "mse-25.68:readiness": "node scripts/mse-25-68-readiness.js",
-    "mse-25.68:post-rollback-verify": "node scripts/mse-25-68-post-rollback-verify.js"
+    "mse-25.68:post-rollback-verify": "node scripts/mse-25-68-post-rollback-verify.js",
+    "mse-25:operational-status": "node scripts/mse-25-operational-status.js"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",
