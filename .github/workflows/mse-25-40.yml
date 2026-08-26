@@ -53,6 +53,10 @@ jobs:
         working-directory: backend
         run: node --test test/mse-25-40-*.test.js
 
+      - name: Search Console contract tests
+        working-directory: backend
+        run: node --test test/mse-25-48-search-console-analytics.test.js test/mse-25-48-search-console-property-resolver.test.js
+
       - name: Operational orchestrator tests
         working-directory: backend
         run: node --test test/mse-25-operational-*.test.js
