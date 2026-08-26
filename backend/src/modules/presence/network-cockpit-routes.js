@@ -5,6 +5,7 @@ const { listPendingPropagation } = require("./propagation-watch");
 const { buildNetworkCockpit } = require("./network-cockpit");
 const { buildRecoveryTrustOverview } = require("./recovery-trust-overview");
 const { evaluateNetworkRolloutGate } = require("./network-rollout-gate");
+const { buildRolloutDecisionSnapshot, persistRolloutDecisionSnapshot } = require("./network-rollout-decision-snapshot");
 
 async function loadCockpitState(prisma) {
   const [agencies, directories, listings, pendingPropagation, actions] = await Promise.all([
@@ -21,32 +22,37 @@ async function loadCockpitState(prisma) {
   return { agencies, directories, listings, pendingPropagation, actions };
 }
 
+async function buildCockpitDecision(prisma) {
+  const state = await loadCockpitState(prisma);
+  const [recoveryTrust, rolloutGate] = await Promise.all([
+    buildRecoveryTrustOverview(prisma, 200),
+    evaluateNetworkRolloutGate(prisma, state.agencies.length)
+  ]);
+  return { state, recoveryTrust, rolloutGate, decisionSnapshot: buildRolloutDecisionSnapshot(rolloutGate, recoveryTrust) };
+}
+
 function networkCockpitRoutes({ prisma }) {
   const router = express.Router();
 
   router.get("/api/presence/network/cockpit", async (req, res) => {
     try {
-      const state = await loadCockpitState(prisma);
-      const [recoveryTrust, rolloutGate] = await Promise.all([
-        buildRecoveryTrustOverview(prisma, 200),
-        evaluateNetworkRolloutGate(prisma, state.agencies.length)
-      ]);
+      const { state, recoveryTrust, rolloutGate, decisionSnapshot } = await buildCockpitDecision(prisma);
       const cockpit = buildNetworkCockpit(state);
       const limit = Math.max(1, Math.min(Number(req.query.limit || 100), 500));
-      return res.json({
-        ok: true,
-        generatedAt: new Date().toISOString(),
-        ...cockpit,
-        recoveryTrust,
-        rolloutGate,
-        interventionQueue: cockpit.interventionQueue.slice(0, limit)
-      });
-    } catch (error) {
-      return res.status(500).json({ ok: false, error: error.message });
-    }
+      return res.json({ ok: true, generatedAt: new Date().toISOString(), ...cockpit, recoveryTrust, rolloutGate, decisionSnapshot, interventionQueue: cockpit.interventionQueue.slice(0, limit) });
+    } catch (error) { return res.status(500).json({ ok: false, error: error.message }); }
+  });
+
+  router.post("/api/presence/network/rollout-decision/freeze", async (req, res) => {
+    try {
+      if (req.body?.confirm !== true) return res.status(409).json({ ok: false, externalWrite: false, error: "confirm=true requis pour figer la décision rollout réseau" });
+      const { decisionSnapshot } = await buildCockpitDecision(prisma);
+      await persistRolloutDecisionSnapshot(prisma, decisionSnapshot);
+      return res.status(201).json({ ok: true, persisted: true, immutable: true, externalWrite: false, snapshot: decisionSnapshot });
+    } catch (error) { return res.status(500).json({ ok: false, externalWrite: false, error: error.message }); }
   });
 
   return router;
 }
 
-module.exports = { networkCockpitRoutes, loadCockpitState };
+module.exports = { networkCockpitRoutes, loadCockpitState, buildCockpitDecision };
