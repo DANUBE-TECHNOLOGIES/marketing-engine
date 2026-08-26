@@ -9,6 +9,7 @@ const {
   normalizedUrl,
   summarize,
 } = require("../src/modules/search-console-submission/indexation-coverage");
+const { coverageScope, normalizeCoveragePagePrefix } = require("../src/modules/search-console-submission/routes");
 
 const ORIGIN = "https://agences.mondescale.com";
 
@@ -19,6 +20,32 @@ function page(id, slug, extra = {}) {
 test("normalizedUrl removes query, fragment and trailing slash without changing root", () => {
   assert.equal(normalizedUrl("https://agences.mondescale.com/agence/gien/services/?utm=x#top"), "https://agences.mondescale.com/agence/gien/services");
   assert.equal(normalizedUrl("https://agences.mondescale.com/"), "https://agences.mondescale.com/");
+});
+
+test("coverage scope converts a preferred host into the strict HTTPS prefix", () => {
+  assert.equal(normalizeCoveragePagePrefix("agences.mondescale.com"), "https://agences.mondescale.com/");
+  const request = { query: {} };
+  const service = { structuredDataService: { publicOrigin: ORIGIN } };
+  const previousSite = process.env.SEARCH_CONSOLE_SITE_URL;
+  const previousProperty = process.env.SEARCH_CONSOLE_PROPERTY;
+  const previousPrefix = process.env.SEARCH_CONSOLE_PAGE_PREFIX;
+  const previousHost = process.env.SEARCH_CONSOLE_PREFERRED_HOST;
+  delete process.env.SEARCH_CONSOLE_SITE_URL;
+  delete process.env.SEARCH_CONSOLE_PROPERTY;
+  delete process.env.SEARCH_CONSOLE_PAGE_PREFIX;
+  process.env.SEARCH_CONSOLE_PREFERRED_HOST = "agences.mondescale.com";
+  try {
+    assert.deepEqual(coverageScope(request, service), {
+      siteUrl: "sc-domain:mondescale.com",
+      pagePrefix: "https://agences.mondescale.com/",
+      days: undefined,
+    });
+  } finally {
+    if (previousSite === undefined) delete process.env.SEARCH_CONSOLE_SITE_URL; else process.env.SEARCH_CONSOLE_SITE_URL = previousSite;
+    if (previousProperty === undefined) delete process.env.SEARCH_CONSOLE_PROPERTY; else process.env.SEARCH_CONSOLE_PROPERTY = previousProperty;
+    if (previousPrefix === undefined) delete process.env.SEARCH_CONSOLE_PAGE_PREFIX; else process.env.SEARCH_CONSOLE_PAGE_PREFIX = previousPrefix;
+    if (previousHost === undefined) delete process.env.SEARCH_CONSOLE_PREFERRED_HOST; else process.env.SEARCH_CONSOLE_PREFERRED_HOST = previousHost;
+  }
 });
 
 test("local actionable causes take precedence over missing Search Console analytics", () => {
@@ -111,4 +138,74 @@ test("service cross-checks published AgencySitePage rows, sitemap and Search Con
     publicationMutation: false,
     websiteDesignerMutation: false,
   });
+});
+
+test("network diagnostic reads sitemap and Search Console once then groups AgencySitePage coverage by mini-site", async () => {
+  const sites = [
+    { id: "site-gien", slug: "gien", status: "published", agency: { id: "a1", name: "Gien" }, pages: [page("g-home", "home"), page("g-services", "services")] },
+    { id: "site-dax", slug: "dax", status: "published", agency: { id: "a2", name: "Dax" }, pages: [page("d-home", "home"), page("d-contact", "contact")] },
+    { id: "draft", slug: "draft", status: "draft", pages: [page("draft-home", "home")] },
+  ];
+  let analyticsCalls = 0;
+  let sitemapCalls = 0;
+  const structuredDataService = {
+    publicOrigin: ORIGIN,
+    repository: { listSites: async () => sites },
+    previewSitemap: async () => {
+      sitemapCalls += 1;
+      return {
+        summary: { entryCount: 4, excludedCount: 0 },
+        entries: [
+          { url: "https://agences.mondescale.com/agence/gien" },
+          { url: "https://agences.mondescale.com/agence/gien/services" },
+          { url: "https://agences.mondescale.com/agence/dax" },
+          { url: "https://agences.mondescale.com/agence/dax/contact" },
+        ],
+      };
+    },
+  };
+  const performanceService = {
+    query: async () => {
+      analyticsCalls += 1;
+      return {
+        siteUrl: "sc-domain:mondescale.com",
+        pagePrefix: "https://agences.mondescale.com/",
+        rowCount: 1,
+        rows: [{ dimensions: { page: "https://agences.mondescale.com/agence/gien/services" } }],
+      };
+    },
+  };
+
+  const result = await new IndexationCoverageService({ structuredDataService, performanceService }).diagnoseNetwork({
+    tenantId: "tenant-1",
+    siteUrl: "sc-domain:mondescale.com",
+    pagePrefix: "https://agences.mondescale.com/",
+  });
+
+  assert.equal(sitemapCalls, 1);
+  assert.equal(analyticsCalls, 1);
+  assert.equal(result.scope, "NETWORK");
+  assert.equal(result.publishedSiteCount, 2);
+  assert.equal(result.summary.publishedPageCount, 4);
+  assert.equal(result.summary.observedBySearchConsoleAnalyticsCount, 1);
+  assert.equal(result.sites.length, 2);
+  assert.equal(result.sites.find((item) => item.siteSlug === "gien").summary.observedBySearchConsoleAnalyticsCount, 1);
+});
+
+test("Search Console failure is isolated from local coverage", async () => {
+  const structuredDataService = {
+    publicOrigin: ORIGIN,
+    repository: { listSites: async () => [{ id: "site-gien", slug: "gien", status: "published", pages: [page("g-home", "home")] }] },
+    previewSitemap: async () => ({ summary: { entryCount: 1 }, entries: [{ url: "https://agences.mondescale.com/agence/gien" }] }),
+  };
+  const performanceService = { query: async () => { throw Object.assign(new Error("token expired"), { code: "TOKEN_EXPIRED" }); } };
+  const result = await new IndexationCoverageService({ structuredDataService, performanceService }).diagnoseNetwork({
+    tenantId: "tenant-1",
+    siteUrl: "sc-domain:mondescale.com",
+    pagePrefix: "https://agences.mondescale.com/",
+  });
+  assert.equal(result.searchConsole.analyticsState, "UNAVAILABLE");
+  assert.equal(result.searchConsole.error.code, "TOKEN_EXPIRED");
+  assert.equal(result.summary.waitingForGoogleCount, 1);
+  assert.equal(result.summary.localIssueCount, 0);
 });
