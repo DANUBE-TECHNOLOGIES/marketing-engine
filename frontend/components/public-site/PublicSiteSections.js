@@ -73,7 +73,15 @@ function ImageTextSection({ section }) {
         <div className="public-site-image-text-media">
           {content.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={content.imageUrl} alt={content.imageAlt || ""} loading="lazy" decoding="async" />
+            <img
+              src={content.imageUrl}
+              alt={content.imageAlt || ""}
+              loading="lazy"
+              decoding="async"
+              fetchPriority="low"
+              width="960"
+              height="640"
+            />
           ) : (
             <div className="public-site-image-placeholder" aria-hidden="true" />
           )}
@@ -130,7 +138,15 @@ function GallerySection({ section }) {
             <figure className="public-site-gallery-item" key={image.id || image.url || index}>
               {image.url ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={image.url} alt={image.alt || ""} loading="lazy" decoding="async" />
+                <img
+                  src={image.url}
+                  alt={image.alt || ""}
+                  loading="lazy"
+                  decoding="async"
+                  fetchPriority="low"
+                  width="720"
+                  height="480"
+                />
               ) : (
                 <div className="public-site-image-placeholder" aria-hidden="true" />
               )}
