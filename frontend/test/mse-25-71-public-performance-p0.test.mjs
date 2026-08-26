@@ -18,10 +18,20 @@ test("public site data is revalidated instead of forced no-store", () => {
   assert.match(api, /PUBLIC_SITE_REVALIDATE_SECONDS/);
 });
 
-test("brand legal runtime participates in the public cache", () => {
+test("public site RSC reads are memoized within a request", () => {
+  const api = source("lib/public-site-api.js");
+  assert.match(api, /import\s*\{\s*cache\s*\}\s*from\s*["']react["']/);
+  assert.match(api, /const\s+getSite\s*=\s*cache\(/);
+  assert.match(api, /const\s+getHome\s*=\s*cache\(/);
+  assert.match(api, /const\s+getPage\s*=\s*cache\(/);
+});
+
+test("brand legal runtime participates in both persistent and request caches", () => {
   const runtime = source("lib/public-brand-legal-runtime.js");
   assert.doesNotMatch(runtime, /cache:\s*["']no-store["']/);
   assert.match(runtime, /revalidate:\s*PUBLIC_RUNTIME_REVALIDATE_SECONDS/);
+  assert.match(runtime, /import\s*\{\s*cache\s*\}\s*from\s*["']react["']/);
+  assert.match(runtime, /fetchPublicBrandLegalRuntime\s*=\s*cache\(/);
 });
 
 test("agency route enables ISR and public rendering guardrails", () => {
@@ -42,5 +52,7 @@ test("hero LCP image is proactively preloaded and kept high priority", () => {
   assert.match(hero, /as:\s*["']image["']/);
   assert.match(hero, /fetchPriority:\s*["']high["']/);
   assert.match(hero, /loading=["']eager["']/);
+  assert.match(hero, /width=["']1920["']/);
+  assert.match(hero, /height=["']1080["']/);
   assert.doesNotMatch(hero, /decoding=["']async["']/);
 });
