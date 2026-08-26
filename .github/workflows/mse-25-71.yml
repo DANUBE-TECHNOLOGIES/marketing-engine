@@ -9,6 +9,7 @@ on:
       - 'frontend/components/public-site/**'
       - 'frontend/lib/public-site-api.js'
       - 'frontend/lib/public-brand-legal-runtime.js'
+      - 'frontend/scripts/public-performance-probe.mjs'
       - 'frontend/test/mse-25-71-*.test.mjs'
       - 'frontend/package.json'
       - 'frontend/package-lock.json'
@@ -19,7 +20,10 @@ on:
       - 'frontend/components/public-site/**'
       - 'frontend/lib/public-site-api.js'
       - 'frontend/lib/public-brand-legal-runtime.js'
+      - 'frontend/scripts/public-performance-probe.mjs'
       - 'frontend/test/mse-25-71-*.test.mjs'
+      - 'frontend/package.json'
+      - 'frontend/package-lock.json'
       - '.github/workflows/mse-25-71.yml'
   workflow_dispatch:
 
@@ -44,9 +48,9 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      - name: MSE-25.71 performance contract
+      - name: MSE-25.71 performance contracts
         working-directory: frontend
-        run: node --test test/mse-25-71-public-performance-p0.test.mjs
+        run: node --test test/mse-25-71-*.test.mjs
 
       - name: Build public frontend
         working-directory: frontend
