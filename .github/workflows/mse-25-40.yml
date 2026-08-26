@@ -4,11 +4,13 @@ on:
   push:
     branches:
       - 'feature/mse-25-40-*'
+      - 'feature/mse-25-69-*'
       - 'feature/runtime-cockpit-*'
       - 'integration/mse-25-operational-cockpit-*'
   pull_request:
     paths:
       - 'backend/src/modules/minisite-semantic-engine/**'
+      - 'backend/src/modules/search-console-submission/**'
       - 'backend/scripts/mse-25-*.js'
       - 'backend/test/mse-25-*.test.js'
       - 'backend/test/post-rollback-runtime-status.test.js'
@@ -56,6 +58,10 @@ jobs:
       - name: Search Console contract tests
         working-directory: backend
         run: node --test test/mse-25-48-search-console-analytics.test.js test/mse-25-48-search-console-property-resolver.test.js
+
+      - name: Indexation coverage diagnostics
+        working-directory: backend
+        run: node --test test/mse-25-69-indexation-coverage.test.js
 
       - name: Operational orchestrator tests
         working-directory: backend
