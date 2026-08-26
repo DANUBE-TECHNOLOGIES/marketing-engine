@@ -46,6 +46,7 @@ require("../src/modules/presence/recovery-trust-chain.test");
 require("../src/modules/presence/recovery-trust-overview.test");
 require("../src/modules/presence/campaign-evidence-compatibility.test");
 require("../src/modules/presence/campaign-regeneration-routes.test");
+require("../src/modules/presence/campaign-regeneration-lineage.test");
 require("../src/modules/presence/presence-storage-audit.test");
 require("../src/modules/presence/operation-audit.test");
 require("../src/modules/presence/operation-snapshots.test");
