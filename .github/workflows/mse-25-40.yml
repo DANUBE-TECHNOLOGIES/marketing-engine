@@ -9,6 +9,7 @@ on:
       - 'feature/mse-25-72-*'
       - 'feature/mse-25-73-*'
       - 'feature/mse-25-74-*'
+      - 'feature/mse-25-75-*'
       - 'feature/runtime-cockpit-*'
       - 'integration/mse-25-operational-cockpit-*'
   pull_request:
@@ -82,6 +83,10 @@ jobs:
       - name: Runtime indexability readiness
         working-directory: backend
         run: node --test test/mse-25-74-runtime-indexability-audit.test.js
+
+      - name: Production indexability handoff
+        working-directory: backend
+        run: node --test test/mse-25-75-production-indexability-handoff.test.js
 
       - name: Operational orchestrator tests
         working-directory: backend
