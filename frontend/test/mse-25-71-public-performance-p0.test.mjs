@@ -66,3 +66,20 @@ test("hero LCP image preconnects, preloads and stays high priority", () => {
   assert.match(hero, /height=["']1080["']/);
   assert.doesNotMatch(hero, /decoding=["']async["']/);
 });
+
+test("non critical public media cannot compete with the hero LCP", () => {
+  const logo = source("components/public-site/PublicBrandLogo.js");
+  const destinations = source("components/public-site/renderers/DestinationsRenderer.js");
+  const gallery = source("components/public-site/renderers/GalleryV2Renderer.js");
+  const imageText = source("components/public-site/renderers/ImageTextV2Renderer.js");
+  const team = source("components/public-site/renderers/TeamRenderer.js");
+
+  assert.match(logo, /fetchPriority=["']auto["']/);
+  for (const renderer of [destinations, gallery, imageText, team]) {
+    assert.match(renderer, /loading=["']lazy["']/);
+    assert.match(renderer, /decoding=["']async["']/);
+    assert.match(renderer, /fetchPriority=["']low["']/);
+    assert.match(renderer, /width=["'][0-9]+["']/);
+    assert.match(renderer, /height=["'][0-9]+["']/);
+  }
+});
