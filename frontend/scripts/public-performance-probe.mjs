@@ -21,26 +21,41 @@ function absoluteUrl(base, value) {
   }
 }
 
+function tagAttribute(tag, name) {
+  const match = tag.match(new RegExp(`\\b${name}=["']([^"']+)["']`, "i"));
+  return match?.[1] || null;
+}
+
 function imageUrls(html, baseUrl) {
   const found = new Set();
-  for (const match of html.matchAll(/<img\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/gi)) {
-    const resolved = absoluteUrl(baseUrl, match[1]);
+  for (const match of html.matchAll(/<img\b[^>]*>/gi)) {
+    const src = tagAttribute(match[0], "src");
+    const resolved = src ? absoluteUrl(baseUrl, src) : null;
     if (resolved) found.add(resolved);
   }
   return [...found];
 }
 
-function heroContract(html) {
-  const hero = html.match(/<img\b[^>]*fetchpriority=["']high["'][^>]*>/i)?.[0]
+function heroContract(html, baseUrl) {
+  const tag = html.match(/<img\b[^>]*fetchpriority=["']high["'][^>]*>/i)?.[0]
     || html.match(/<img\b[^>]*loading=["']eager["'][^>]*>/i)?.[0]
     || "";
+  const src = tagAttribute(tag, "src");
   return {
-    present: Boolean(hero),
-    highPriority: /fetchpriority=["']high["']/i.test(hero),
-    eager: /loading=["']eager["']/i.test(hero),
-    width: /\bwidth=["'][1-9][0-9]*["']/i.test(hero),
-    height: /\bheight=["'][1-9][0-9]*["']/i.test(hero),
+    present: Boolean(tag),
+    url: src ? absoluteUrl(baseUrl, src) : null,
+    highPriority: /fetchpriority=["']high["']/i.test(tag),
+    eager: /loading=["']eager["']/i.test(tag),
+    width: /\bwidth=["'][1-9][0-9]*["']/i.test(tag),
+    height: /\bheight=["'][1-9][0-9]*["']/i.test(tag),
   };
+}
+
+function median(values) {
+  const sorted = values.filter(Number.isFinite).sort((a, b) => a - b);
+  if (!sorted.length) return null;
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[middle] : Math.round((sorted[middle - 1] + sorted[middle]) / 2);
 }
 
 async function timedFetch(url, options = {}) {
@@ -81,45 +96,62 @@ async function inspectImage(url) {
 
 const target = arg("url", process.env.PUBLIC_PERFORMANCE_URL);
 const maxImages = Math.max(1, Math.min(20, numberArg("max-images", 8)));
+const samples = Math.max(1, Math.min(7, numberArg("samples", 3)));
 const json = arg("json", "false") === "true";
 const gate = arg("gate", "false") === "true";
 const maxTtfbMs = Math.max(100, numberArg("max-ttfb-ms", 1200));
 const maxSingleImageBytes = Math.max(50_000, numberArg("max-single-image-bytes", 1_500_000));
 
 if (!target) {
-  console.error("Usage: npm run perf:probe -- --url=https://… [--max-images=8] [--gate=true] [--json=true]");
+  console.error("Usage: npm run perf:probe -- --url=https://… [--samples=3] [--max-images=8] [--gate=true] [--json=true]");
   process.exit(2);
 }
 
-const page = await timedFetch(target, {
-  headers: {
-    accept: "text/html,application/xhtml+xml",
-    "user-agent": "Mondescale-MSE-25.71-Performance-Probe/1.0",
-  },
-});
+const requestHeaders = {
+  accept: "text/html,application/xhtml+xml",
+  "user-agent": "Mondescale-MSE-25.71-Performance-Probe/1.1",
+};
 
+const pageSamples = [];
+for (let index = 0; index < samples; index += 1) {
+  pageSamples.push(await timedFetch(target, { headers: requestHeaders }));
+}
+const page = pageSamples[0];
 const html = Buffer.from(page.body).toString("utf8");
+const hero = heroContract(html, page.response.url);
 const allImages = imageUrls(html, page.response.url);
-const images = allImages.slice(0, maxImages);
-const media = await Promise.all(images.map(inspectImage));
+const inspectionUrls = [hero.url, ...allImages]
+  .filter(Boolean)
+  .filter((url, index, entries) => entries.indexOf(url) === index)
+  .slice(0, maxImages);
+const media = await Promise.all(inspectionUrls.map(inspectImage));
+const heroMedia = hero.url ? media.find((item) => item.url === hero.url) || null : null;
 const largestImages = [...media]
   .filter((item) => item.bytes)
   .sort((a, b) => b.bytes - a.bytes)
   .slice(0, 5);
+const sampleTtfbMs = pageSamples.map((item) => item.ttfbMs);
+const sampleTotalMs = pageSamples.map((item) => item.totalMs);
 
 const report = {
   target,
   finalUrl: page.response.url,
   status: page.response.status,
   page: {
-    ttfbMs: page.ttfbMs,
-    totalMs: page.totalMs,
+    samples,
+    coldTtfbMs: page.ttfbMs,
+    medianTtfbMs: median(sampleTtfbMs),
+    maxTtfbMs: Math.max(...sampleTtfbMs),
+    medianTotalMs: median(sampleTotalMs),
     transferBytes: page.transferBytes,
     cacheControl: page.response.headers.get("cache-control"),
     contentEncoding: page.response.headers.get("content-encoding"),
     serverTiming: page.response.headers.get("server-timing"),
   },
-  hero: heroContract(html),
+  hero: {
+    ...hero,
+    media: heroMedia,
+  },
   images: {
     discovered: allImages.length,
     inspected: media.length,
@@ -130,10 +162,12 @@ const report = {
 
 const failures = [];
 if (!page.response.ok) failures.push(`HTTP ${page.response.status}`);
-if (report.page.ttfbMs > maxTtfbMs) failures.push(`TTFB ${report.page.ttfbMs}ms > ${maxTtfbMs}ms`);
+if (report.page.medianTtfbMs > maxTtfbMs) failures.push(`median TTFB ${report.page.medianTtfbMs}ms > ${maxTtfbMs}ms`);
 if (!report.hero.present) failures.push("hero image not discoverable in initial HTML");
 if (report.hero.present && !report.hero.highPriority) failures.push("hero image is not fetchPriority=high");
 if (report.hero.present && (!report.hero.width || !report.hero.height)) failures.push("hero image has no intrinsic dimensions");
+if (report.hero.present && !report.hero.url) failures.push("hero image has no resolvable src");
+if (report.hero.media?.status && report.hero.media.status >= 400) failures.push(`hero image HTTP ${report.hero.media.status}`);
 if ((largestImages[0]?.bytes || 0) > maxSingleImageBytes) {
   failures.push(`largest inspected image ${largestImages[0].bytes}B > ${maxSingleImageBytes}B`);
 }
@@ -151,14 +185,20 @@ if (json) {
   console.log("=== MSE-25.71 PUBLIC PERFORMANCE PROBE ===");
   console.log(`URL=${report.finalUrl}`);
   console.log(`HTTP=${report.status}`);
-  console.log(`TTFB_MS=${report.page.ttfbMs}`);
-  console.log(`TOTAL_MS=${report.page.totalMs}`);
+  console.log(`SAMPLES=${report.page.samples}`);
+  console.log(`COLD_TTFB_MS=${report.page.coldTtfbMs}`);
+  console.log(`MEDIAN_TTFB_MS=${report.page.medianTtfbMs}`);
+  console.log(`MAX_TTFB_MS=${report.page.maxTtfbMs}`);
+  console.log(`MEDIAN_TOTAL_MS=${report.page.medianTotalMs}`);
   console.log(`HTML_BYTES=${report.page.transferBytes}`);
   console.log(`CACHE_CONTROL=${report.page.cacheControl || "none"}`);
   console.log(`HERO_PRESENT=${report.hero.present}`);
   console.log(`HERO_HIGH_PRIORITY=${report.hero.highPriority}`);
   console.log(`HERO_EAGER=${report.hero.eager}`);
   console.log(`HERO_DIMENSIONS=${report.hero.width && report.hero.height}`);
+  console.log(`HERO_URL=${report.hero.url || "none"}`);
+  console.log(`HERO_BYTES=${report.hero.media?.bytes || 0}`);
+  console.log(`HERO_TYPE=${report.hero.media?.type || "unknown"}`);
   console.log(`IMAGES_DISCOVERED=${report.images.discovered}`);
   console.log(`IMAGES_INSPECTED=${report.images.inspected}`);
   console.log(`IMAGE_BYTES_INSPECTED=${report.images.totalBytesInspected}`);
