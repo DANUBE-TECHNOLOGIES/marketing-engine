@@ -26,6 +26,15 @@ test("public site RSC reads are memoized within a request", () => {
   assert.match(api, /const\s+getPage\s*=\s*cache\(/);
 });
 
+test("public hours use the same persistent and request cache policy", () => {
+  const hours = source("lib/public-hours-api.js");
+  assert.match(hours, /import\s*\{\s*cache\s*\}\s*from\s*["']react["']/);
+  assert.match(hours, /PUBLIC_SITE_REVALIDATE_SECONDS/);
+  assert.match(hours, /revalidate:\s*PUBLIC_HOURS_REVALIDATE_SECONDS/);
+  assert.match(hours, /getPublicHours\s*=\s*cache\(/);
+  assert.doesNotMatch(hours, /cache:\s*["']no-store["']/);
+});
+
 test("brand legal runtime participates in both persistent and request caches", () => {
   const runtime = source("lib/public-brand-legal-runtime.js");
   assert.doesNotMatch(runtime, /cache:\s*["']no-store["']/);
@@ -45,9 +54,10 @@ test("agency route enables ISR and public rendering guardrails", () => {
   assert.match(css, /backdrop-filter:\s*none/);
 });
 
-test("hero LCP image is proactively preloaded and kept high priority", () => {
+test("hero LCP image preconnects, preloads and stays high priority", () => {
   const hero = source("components/public-site/renderers/HeroV2Renderer.js");
-  assert.match(hero, /import\s*\{\s*preload\s*\}\s*from\s*["']react-dom["']/);
+  assert.match(hero, /import\s*\{\s*preconnect,\s*preload\s*\}\s*from\s*["']react-dom["']/);
+  assert.match(hero, /preconnect\(origin\)/);
   assert.match(hero, /preload\(backgroundImage,\s*\{/);
   assert.match(hero, /as:\s*["']image["']/);
   assert.match(hero, /fetchPriority:\s*["']high["']/);
