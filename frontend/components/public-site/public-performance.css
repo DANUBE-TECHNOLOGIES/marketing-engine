@@ -1,0 +1,36 @@
+/*
+ * MSE-25.70 — Public performance guardrails.
+ *
+ * The public home can contain many editorial sections. Let the browser skip
+ * layout/paint work for content that is well below the viewport while keeping
+ * a stable intrinsic placeholder to avoid layout shifts.
+ */
+.public-site-section:not(.public-site-page-heading),
+.public-site-footer {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 720px;
+}
+
+/* The sticky translucent header is attractive but expensive on constrained
+ * mobile GPUs. On small screens the opaque variant keeps the same hierarchy
+ * without continuously repainting a large backdrop-filter region. */
+@media (max-width: 768px) {
+  .public-site-header {
+    background: #fff;
+    backdrop-filter: none;
+  }
+
+  .public-site-button-secondary,
+  .public-site-eyebrow {
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .public-site-navigation a::after,
+  .public-site-header-cta,
+  .public-site-button,
+  .public-site-card {
+    transition: none !important;
+  }
+}
