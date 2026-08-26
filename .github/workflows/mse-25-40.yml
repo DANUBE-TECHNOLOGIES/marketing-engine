@@ -5,6 +5,7 @@ on:
     branches:
       - 'feature/mse-25-40-*'
       - 'feature/mse-25-69-*'
+      - 'feature/mse-25-70-*'
       - 'feature/runtime-cockpit-*'
       - 'integration/mse-25-operational-cockpit-*'
   pull_request:
@@ -62,6 +63,10 @@ jobs:
       - name: Indexation coverage diagnostics
         working-directory: backend
         run: node --test test/mse-25-69-indexation-coverage.test.js
+
+      - name: Public indexability observability
+        working-directory: backend
+        run: node --test test/mse-25-70-public-indexability-observer.test.js
 
       - name: Operational orchestrator tests
         working-directory: backend
