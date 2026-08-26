@@ -15,8 +15,10 @@ async function run({ prisma, emitOutput = true } = {}) {
   try {
     const token = await getSearchConsoleAccessToken({ prisma: client });
     const property = await resolveSearchConsoleSiteUrl({ accessToken: token.accessToken });
+    const pagePrefix = process.env.SEARCH_CONSOLE_PAGE_PREFIX || process.env.SEARCH_CONSOLE_PREFERRED_HOST || "agences.mondescale.com";
     const analytics = await fetchSearchAnalytics({
       siteUrl: property.siteUrl,
+      pagePrefix,
       accessToken: token.accessToken,
       startDate: process.env.MSE_25_48_START_DATE,
       endDate: process.env.MSE_25_48_END_DATE,
@@ -36,6 +38,7 @@ async function run({ prisma, emitOutput = true } = {}) {
       reportPath,
       analyticsFingerprint: analytics.analyticsFingerprint,
       siteUrl: analytics.siteUrl,
+      pagePrefix: analytics.pagePrefix,
       startDate: analytics.startDate,
       endDate: analytics.endDate,
       rowCount: analytics.rowCount,
