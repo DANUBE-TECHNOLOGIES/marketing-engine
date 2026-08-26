@@ -6,6 +6,7 @@ on:
       - 'feature/mse-25-40-*'
       - 'feature/mse-25-69-*'
       - 'feature/mse-25-70-*'
+      - 'feature/mse-25-72-*'
       - 'feature/runtime-cockpit-*'
       - 'integration/mse-25-operational-cockpit-*'
   pull_request:
@@ -67,6 +68,10 @@ jobs:
       - name: Public indexability observability
         working-directory: backend
         run: node --test test/mse-25-70-public-indexability-observer.test.js
+
+      - name: Indexation incident queue
+        working-directory: backend
+        run: node --test test/mse-25-72-indexation-incident-queue.test.js
 
       - name: Operational orchestrator tests
         working-directory: backend
