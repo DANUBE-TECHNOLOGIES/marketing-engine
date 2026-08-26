@@ -29,13 +29,11 @@ export default async function PublicAgencySiteLayout({ children, params }) {
   const { siteSlug } = await params;
 
   let site;
-  let legacyBrandTheme = null;
   let publicBrandLegalRuntime = null;
 
   try {
-    [site, legacyBrandTheme, publicBrandLegalRuntime] = await Promise.all([
+    [site, publicBrandLegalRuntime] = await Promise.all([
       publicSiteApi.getSite(siteSlug),
-      getPublicBrandTheme(),
       fetchPublicBrandLegalRuntime(siteSlug),
     ]);
   } catch (error) {
@@ -48,6 +46,8 @@ export default async function PublicAgencySiteLayout({ children, params }) {
 
   const publicBrandAssets = runtimeBrandAssets(publicBrandLegalRuntime);
   const runtimeTheme = runtimeCssVariables(publicBrandLegalRuntime);
+  const hasRuntimeTheme = Object.keys(runtimeTheme).length > 0;
+  const legacyBrandTheme = hasRuntimeTheme ? null : await getPublicBrandTheme();
   const hours = site?.hours || null;
 
   const cssVariables = {
