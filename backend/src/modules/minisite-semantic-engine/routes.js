@@ -2,6 +2,7 @@
 
 const express = require("express");
 const { MiniSiteSemanticEngineService } = require("./service");
+const { buildPostRollbackRuntimeStatus } = require("./post-rollback-runtime-status");
 
 function errorPayload(error) {
   return {
@@ -22,6 +23,21 @@ function routes({ prisma, service } = {}) {
 
   router.get("/minisite-semantic-engine/health", (_req, res) => {
     res.json({ ok: true, ...semantic.health() });
+  });
+
+  router.get("/minisite-semantic-engine/post-rollback-status", (_req, res) => {
+    try {
+      const payload = buildPostRollbackRuntimeStatus();
+      res.status(payload.ok ? 200 : 503).json(payload);
+    } catch (error) {
+      res.status(500).json({
+        ...errorPayload(error),
+        type: "POST_ROLLBACK_RUNTIME_STATUS",
+        readOnly: true,
+        writes: false,
+        publicWrites: false,
+      });
+    }
   });
 
   router.post("/minisite-semantic-engine/agencies/:agencyId/preview", async (req, res) => {
