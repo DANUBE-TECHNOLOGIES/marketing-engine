@@ -76,7 +76,9 @@
     "mse-25.55:readiness": "node scripts/mse-25-55-readiness.js",
     "mse-25.55:editorial-mandate": "node scripts/mse-25-55-editorial-mandate.js",
     "mse-25.56:readiness": "node scripts/mse-25-56-readiness.js",
-    "mse-25.56:editorial-diff": "node scripts/mse-25-56-editorial-diff-preview.js"
+    "mse-25.56:editorial-diff": "node scripts/mse-25-56-editorial-diff-preview.js",
+    "mse-25.57:readiness": "node scripts/mse-25-57-readiness.js",
+    "mse-25.57:human-approval": "node scripts/mse-25-57-human-approval.js"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",
