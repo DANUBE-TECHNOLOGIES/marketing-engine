@@ -1,3 +1,5 @@
+import { cache } from "react";
+
 import {
   getPublicHours,
 } from "./public-hours-api";
@@ -107,35 +109,35 @@ function pageFromContract(payload) {
   return page;
 }
 
+const getSite = cache(async (siteSlug) => {
+  const [payload, hours] = await Promise.all([
+    request(`/${encodeURIComponent(siteSlug)}`),
+    getPublicHours(siteSlug).catch(() => null),
+  ]);
+
+  const site = siteFromContract(payload);
+  if (!site || typeof site !== "object") return site;
+
+  return {
+    ...site,
+    hours,
+  };
+});
+
+const getHome = cache(async (siteSlug) => pageFromContract(
+  await request(`/${encodeURIComponent(siteSlug)}/pages/home`)
+));
+
+const getPage = cache(async (siteSlug, pageSlug) => pageFromContract(
+  await request(
+    `/${encodeURIComponent(siteSlug)}/pages/${encodeURIComponent(pageSlug)}`
+  )
+));
+
 export const publicSiteApi = {
-  async getSite(siteSlug) {
-    const [payload, hours] = await Promise.all([
-      request(`/${encodeURIComponent(siteSlug)}`),
-      getPublicHours(siteSlug).catch(() => null),
-    ]);
-
-    const site = siteFromContract(payload);
-    if (!site || typeof site !== "object") return site;
-
-    return {
-      ...site,
-      hours,
-    };
-  },
-
-  async getHome(siteSlug) {
-    return pageFromContract(
-      await request(`/${encodeURIComponent(siteSlug)}/pages/home`)
-    );
-  },
-
-  async getPage(siteSlug, pageSlug) {
-    return pageFromContract(
-      await request(
-        `/${encodeURIComponent(siteSlug)}/pages/${encodeURIComponent(pageSlug)}`
-      )
-    );
-  },
+  getSite,
+  getHome,
+  getPage,
 
   async getInspirations({
     limit = 6,
@@ -179,6 +181,9 @@ export const publicSiteApi = {
 
 export {
   PUBLIC_DATA_REVALIDATE_SECONDS,
+  getHome,
+  getPage,
+  getSite,
   pageFromContract,
   siteFromContract,
 };
