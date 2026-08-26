@@ -19,11 +19,25 @@ function sendError(response, error) {
   });
 }
 
+function normalizeCoveragePagePrefix(value, fallback) {
+  const raw = String(value || fallback || "").trim();
+  if (!raw) return null;
+  const withProtocol = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  try {
+    const url = new URL(withProtocol);
+    const pathname = url.pathname === "/" ? "/" : `${url.pathname.replace(/\/+$/g, "")}/`;
+    return `${url.protocol}//${url.host}${pathname}`;
+  } catch (_error) {
+    return raw;
+  }
+}
+
 function coverageScope(request, submissionService) {
-  const defaultPrefix = `${String(submissionService.structuredDataService.publicOrigin || "https://agences.mondescale.com").replace(/\/+$/g, "")}/`;
+  const publicOrigin = String(submissionService.structuredDataService.publicOrigin || "https://agences.mondescale.com").replace(/\/+$/g, "");
+  const rawPrefix = request.query?.pagePrefix || process.env.SEARCH_CONSOLE_PAGE_PREFIX || process.env.SEARCH_CONSOLE_PREFERRED_HOST || `${publicOrigin}/`;
   return {
     siteUrl: request.query?.siteUrl || process.env.SEARCH_CONSOLE_SITE_URL || process.env.SEARCH_CONSOLE_PROPERTY || "sc-domain:mondescale.com",
-    pagePrefix: request.query?.pagePrefix || process.env.SEARCH_CONSOLE_PAGE_PREFIX || process.env.SEARCH_CONSOLE_PREFERRED_HOST || defaultPrefix,
+    pagePrefix: normalizeCoveragePagePrefix(rawPrefix, `${publicOrigin}/`),
     days: request.query?.days,
   };
 }
@@ -57,4 +71,4 @@ function routes({ prisma, service, provider } = {}) {
   return router;
 }
 
-module.exports = { coverageScope, routes, sendError };
+module.exports = { coverageScope, normalizeCoveragePagePrefix, routes, sendError };
