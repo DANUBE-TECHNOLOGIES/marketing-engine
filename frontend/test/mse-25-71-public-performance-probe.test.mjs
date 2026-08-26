@@ -28,8 +28,8 @@ test("MSE-25.71 exposes a dependency-free live public performance probe", () => 
 test("probe inspects hero discoverability and media transfer weight", () => {
   const probe = source("scripts/public-performance-probe.mjs");
 
-  assert.match(probe, /fetchpriority=["']high["']/i);
-  assert.match(probe, /loading=["']eager["']/i);
+  assert.match(probe, /fetchpriority=\["'\]high/iu);
+  assert.match(probe, /loading=\["'\]eager/iu);
   assert.match(probe, /content-type/);
   assert.match(probe, /cache-control/);
   assert.match(probe, /totalBytesInspected/);
