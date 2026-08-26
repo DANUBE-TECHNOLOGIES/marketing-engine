@@ -35,20 +35,31 @@ test("public hours use the same persistent and request cache policy", () => {
   assert.doesNotMatch(hours, /cache:\s*["']no-store["']/);
 });
 
-test("brand legal runtime participates in both persistent and request caches", () => {
+test("brand runtime and legacy theme are cached within a request", () => {
   const runtime = source("lib/public-brand-legal-runtime.js");
+  const legacy = source("lib/public-brand-api.js");
+
   assert.doesNotMatch(runtime, /cache:\s*["']no-store["']/);
   assert.match(runtime, /revalidate:\s*PUBLIC_RUNTIME_REVALIDATE_SECONDS/);
   assert.match(runtime, /import\s*\{\s*cache\s*\}\s*from\s*["']react["']/);
   assert.match(runtime, /fetchPublicBrandLegalRuntime\s*=\s*cache\(/);
+
+  assert.match(legacy, /import\s*\{\s*cache\s*\}\s*from\s*["']react["']/);
+  assert.match(legacy, /fetchPublicBrandTheme\s*=\s*cache\(/);
+  assert.match(legacy, /revalidate:\s*300/);
 });
 
-test("agency route enables ISR and public rendering guardrails", () => {
+test("agency route enables ISR and removes the public data waterfall", () => {
   const layout = source("app/agence/[siteSlug]/layout.js");
   const css = source("components/public-site/public-performance.css");
 
   assert.match(layout, /export const revalidate = 300/);
   assert.match(layout, /public-performance\.css/);
+  assert.match(layout, /\[site, legacyBrandTheme, publicBrandLegalRuntime\]\s*=\s*await Promise\.all\(\[/);
+  assert.match(layout, /publicSiteApi\.getSite\(siteSlug\)/);
+  assert.match(layout, /getPublicBrandTheme\(\)/);
+  assert.match(layout, /fetchPublicBrandLegalRuntime\(siteSlug\)/);
+  assert.doesNotMatch(layout, /const publicBrandLegalRuntime = await fetchPublicBrandLegalRuntime/);
   assert.match(css, /content-visibility:\s*auto/);
   assert.match(css, /contain-intrinsic-size:\s*auto 720px/);
   assert.match(css, /backdrop-filter:\s*none/);
