@@ -5,6 +5,7 @@ const { buildDeploymentReadiness } = require("./deployment-readiness");
 const { evaluatePilotActivationGate } = require("./pilot-activation-gate");
 const { normalizedScope, scopeMatchesPlan, approvedFingerprintMatches } = require("./pilot-campaign-approval");
 const { evaluateSourceEvidenceBinding } = require("./rollout-promotion-gate");
+const { getRecoveryStabilization } = require("./campaign-recovery-stabilization");
 
 function evaluateCampaignBinding(campaign) {
   const blockers = [];
@@ -21,10 +22,12 @@ async function evaluatePilotExecutionGate(prisma, campaign) {
   const binding = evaluateCampaignBinding(campaign);
   const activation = evaluatePilotActivationGate({ preflight, currentReadiness });
   const sourceEvidence = await evaluateSourceEvidenceBinding(prisma, campaign, currentReadiness?.network?.agencyCount || 0);
-  const blockers = [...new Set([...(binding.blockers || []), ...(activation.blockers || []), ...(sourceEvidence.blockers || [])])];
+  const recoverySourceCampaignId = campaign?.approvedScope?.recoveryOfCampaignId || null;
+  const recoveryStabilization = recoverySourceCampaignId ? await getRecoveryStabilization(prisma, recoverySourceCampaignId) : Object.freeze({ ready: true, decision: "go", blockers: Object.freeze([]), requiredCount: 0, resolvedCount: 0, unresolvedCount: 0, blockingCount: 0 });
+  const blockers = [...new Set([...(binding.blockers || []), ...(activation.blockers || []), ...(sourceEvidence.blockers || []), ...(recoveryStabilization.blockers || [])])];
   if (campaign.preflightId !== preflight?.preflightId) blockers.push("pilot_campaign_preflight_mismatch");
-  const ready = binding.ready === true && activation.ready === true && sourceEvidence.ready === true && campaign.preflightId === preflight?.preflightId;
-  return Object.freeze({ ready, decision: ready ? "go" : "no_go", pilot: true, preflightId: campaign.preflightId || null, latestPreflightId: preflight?.preflightId || null, binding, activation, sourceEvidence, blockers: Object.freeze([...new Set(blockers)]), warnings: Object.freeze([...(activation.warnings || [])]) });
+  const ready = binding.ready === true && activation.ready === true && sourceEvidence.ready === true && recoveryStabilization.ready === true && campaign.preflightId === preflight?.preflightId;
+  return Object.freeze({ ready, decision: ready ? "go" : "no_go", pilot: true, preflightId: campaign.preflightId || null, latestPreflightId: preflight?.preflightId || null, binding, activation, sourceEvidence, recoveryStabilization, blockers: Object.freeze([...new Set(blockers)]), warnings: Object.freeze([...(activation.warnings || [])]) });
 }
 
 async function assertPilotExecutionReady(prisma, campaign) {
