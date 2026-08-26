@@ -2,7 +2,7 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { stageTargetAgencyCount, campaignAgencyCount, recoveryEvidenceStillValid } = require("./network-rollout-gate");
+const { stageTargetAgencyCount, campaignAgencyCount, frozenNetworkTrustClean, recoveryEvidenceStillValid } = require("./network-rollout-gate");
 
 test("progressive rollout targets ceil of network percentage", () => {
   assert.equal(stageTargetAgencyCount(9, 25), 3);
@@ -12,6 +12,12 @@ test("progressive rollout targets ceil of network percentage", () => {
 
 test("campaign agency count deduplicates approved scope", () => {
   assert.equal(campaignAgencyCount({ approvedScope: { agencyIds: [1, 2, 2, 3] } }), 3);
+});
+
+test("frozen rollout proof requires zero critical recovery trust at freeze time",()=>{
+  assert.equal(frozenNetworkTrustClean({report:{pilotEvidence:{networkRecoveryTrust:{critical:0}}}}),true);
+  assert.equal(frozenNetworkTrustClean({report:{pilotEvidence:{networkRecoveryTrust:{critical:1}}}}),false);
+  assert.equal(frozenNetworkTrustClean({report:{pilotEvidence:{}}}),false);
 });
 
 test("ordinary rollout campaign has no recovery evidence constraint", async () => {
