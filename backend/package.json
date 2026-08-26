@@ -86,7 +86,9 @@
     "mse-25.60:readiness": "node scripts/mse-25-60-readiness.js",
     "mse-25.60:human-authorization": "node scripts/mse-25-60-human-execution-authorization.js",
     "mse-25.61:readiness": "node scripts/mse-25-61-readiness.js",
-    "mse-25.61:execution-plan": "node scripts/mse-25-61-execution-plan.js"
+    "mse-25.61:execution-plan": "node scripts/mse-25-61-execution-plan.js",
+    "mse-25.62:readiness": "node scripts/mse-25-62-readiness.js",
+    "mse-25.62:final-confirmation": "node scripts/mse-25-62-final-apply-confirmation.js"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",
