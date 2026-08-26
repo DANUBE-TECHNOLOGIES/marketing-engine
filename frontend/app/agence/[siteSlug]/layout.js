@@ -28,17 +28,15 @@ export const revalidate = 300;
 export default async function PublicAgencySiteLayout({ children, params }) {
   const { siteSlug } = await params;
 
-  const publicBrandLegalRuntime = await fetchPublicBrandLegalRuntime(siteSlug);
-  const publicBrandAssets = runtimeBrandAssets(publicBrandLegalRuntime);
-  const runtimeTheme = runtimeCssVariables(publicBrandLegalRuntime);
-
   let site;
   let legacyBrandTheme = null;
+  let publicBrandLegalRuntime = null;
 
   try {
-    [site, legacyBrandTheme] = await Promise.all([
+    [site, legacyBrandTheme, publicBrandLegalRuntime] = await Promise.all([
       publicSiteApi.getSite(siteSlug),
       getPublicBrandTheme(),
+      fetchPublicBrandLegalRuntime(siteSlug),
     ]);
   } catch (error) {
     if (error?.statusCode === 404) {
@@ -48,6 +46,8 @@ export default async function PublicAgencySiteLayout({ children, params }) {
     throw error;
   }
 
+  const publicBrandAssets = runtimeBrandAssets(publicBrandLegalRuntime);
+  const runtimeTheme = runtimeCssVariables(publicBrandLegalRuntime);
   const hours = site?.hours || null;
 
   const cssVariables = {
