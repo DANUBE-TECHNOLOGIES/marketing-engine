@@ -14,13 +14,7 @@ test("deployment migration gate requires every Presence migration", () => {
 });
 
 test("read-only preflight can be green while Google writes remain killed", () => {
-  const readiness = evaluatePilotReadiness({
-    operational: { readyForGoogleApi: true, readyForGoogleManagedWrites: false, readyForDiscovery: false },
-    catalog: { ready: true },
-    migrations: { ready: true },
-    agencyCount: 7,
-    googleListingCount: 7
-  });
+  const readiness = evaluatePilotReadiness({ operational: { readyForGoogleApi: true, readyForGoogleManagedWrites: false, readyForDiscovery: false }, catalog: { ready: true }, migrations: { ready: true }, agencyCount: 7, googleListingCount: 7, networkRecoveryTrust: { summary: { blocked: 0, critical: 0 } } });
   assert.equal(readiness.readyForReadOnlyPreflight, true);
   assert.equal(readiness.readyForGooglePilot, false);
   assert.deepEqual(readiness.readOnlyBlockers, []);
@@ -28,27 +22,22 @@ test("read-only preflight can be green while Google writes remain killed", () =>
   assert.deepEqual(readiness.warnings, ["dataforseo_discovery"]);
 });
 
-test("Google pilot is allowed only when API and managed writes are ready", () => {
-  const readiness = evaluatePilotReadiness({
-    operational: { readyForGoogleApi: true, readyForGoogleManagedWrites: true, readyForDiscovery: false },
-    catalog: { ready: true },
-    migrations: { ready: true },
-    agencyCount: 7,
-    googleListingCount: 7
-  });
+test("Google pilot is allowed only when API managed writes and recovery trust are ready", () => {
+  const readiness = evaluatePilotReadiness({ operational: { readyForGoogleApi: true, readyForGoogleManagedWrites: true, readyForDiscovery: false }, catalog: { ready: true }, migrations: { ready: true }, agencyCount: 7, googleListingCount: 7, networkRecoveryTrust: { summary: { blocked: 0, critical: 0 } } });
   assert.equal(readiness.readyForReadOnlyPreflight, true);
   assert.equal(readiness.readyForGooglePilot, true);
   assert.equal(readiness.readyForDiscoveryPilot, false);
 });
 
+test("critical recovery trust blocks Google pilot but not read-only preflight", () => {
+  const readiness = evaluatePilotReadiness({ operational: { readyForGoogleApi: true, readyForGoogleManagedWrites: true, readyForDiscovery: true }, catalog: { ready: true }, migrations: { ready: true }, agencyCount: 7, googleListingCount: 7, networkRecoveryTrust: { summary: { blocked: 1, critical: 1 } } });
+  assert.equal(readiness.readyForReadOnlyPreflight, true);
+  assert.equal(readiness.readyForGooglePilot, false);
+  assert.ok(readiness.blockers.includes("critical_recovery_trust"));
+});
+
 test("incomplete Google listing coverage is a warning, not a false pilot blocker", () => {
-  const readiness = evaluatePilotReadiness({
-    operational: { readyForGoogleApi: true, readyForGoogleManagedWrites: true, readyForDiscovery: true },
-    catalog: { ready: true },
-    migrations: { ready: true },
-    agencyCount: 7,
-    googleListingCount: 5
-  });
+  const readiness = evaluatePilotReadiness({ operational: { readyForGoogleApi: true, readyForGoogleManagedWrites: true, readyForDiscovery: true }, catalog: { ready: true }, migrations: { ready: true }, agencyCount: 7, googleListingCount: 5, networkRecoveryTrust: { summary: { blocked: 0, critical: 0 } } });
   assert.equal(readiness.readyForGooglePilot, true);
   assert.ok(readiness.warnings.includes("google_listing_coverage"));
 });
