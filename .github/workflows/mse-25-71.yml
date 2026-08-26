@@ -26,6 +26,21 @@ on:
       - 'frontend/package-lock.json'
       - '.github/workflows/mse-25-71.yml'
   workflow_dispatch:
+    inputs:
+      target_url:
+        description: 'Deployed public agency URL to probe'
+        required: false
+        type: string
+      max_ttfb_ms:
+        description: 'TTFB gate in milliseconds'
+        required: false
+        default: '1200'
+        type: string
+      max_single_image_bytes:
+        description: 'Largest inspected image budget in bytes'
+        required: false
+        default: '1500000'
+        type: string
 
 permissions:
   contents: read
@@ -55,3 +70,25 @@ jobs:
       - name: Build public frontend
         working-directory: frontend
         run: npm run build
+
+      - name: Probe deployed pilot
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.target_url != '' }}
+        working-directory: frontend
+        env:
+          TARGET_URL: ${{ inputs.target_url }}
+          MAX_TTFB_MS: ${{ inputs.max_ttfb_ms }}
+          MAX_SINGLE_IMAGE_BYTES: ${{ inputs.max_single_image_bytes }}
+        run: |
+          set -o pipefail
+          node scripts/public-performance-probe.mjs \
+            --url="$TARGET_URL" \
+            --gate=true \
+            --max-ttfb-ms="$MAX_TTFB_MS" \
+            --max-single-image-bytes="$MAX_SINGLE_IMAGE_BYTES" \
+            | tee /tmp/mse-25-71-live-probe.txt
+          {
+            echo '### MSE-25.71 live pilot probe'
+            echo '```text'
+            cat /tmp/mse-25-71-live-probe.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
