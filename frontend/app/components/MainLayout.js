@@ -32,6 +32,7 @@ items:[
 label:"SEO Local",
 items:[
 ["🧭 Cockpit SEO","/seo-cockpit"],
+["⚙ Opérations d'indexation","/seo-cockpit/operations"],
 ["🛡 Runtime rollback","/seo-cockpit/runtime"],
 ["📍 Rankings","/rankings"],
 ["🔎 Keywords","/seo-keywords-db"],
