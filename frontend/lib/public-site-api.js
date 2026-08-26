@@ -7,15 +7,26 @@ const INTERNAL_API_URL =
   process.env.NEXT_PUBLIC_APP_URL ||
   "http://localhost:3000";
 
+const PUBLIC_DATA_REVALIDATE_SECONDS = Math.max(
+  30,
+  Number(process.env.PUBLIC_SITE_REVALIDATE_SECONDS || 300) || 300
+);
+
+function publicFetchOptions() {
+  return {
+    headers: {
+      accept: "application/json",
+    },
+    next: {
+      revalidate: PUBLIC_DATA_REVALIDATE_SECONDS,
+    },
+  };
+}
+
 async function request(path) {
   const response = await fetch(
     `${INTERNAL_API_URL}/api/public-sites${path}`,
-    {
-      headers: {
-        accept: "application/json",
-      },
-      cache: "no-store",
-    }
+    publicFetchOptions()
   );
 
   const contentType = response.headers.get("content-type") || "";
@@ -40,12 +51,7 @@ async function request(path) {
 async function requestWebsiteBuilder(path) {
   const response = await fetch(
     `${INTERNAL_API_URL}/api/website-builder${path}`,
-    {
-      headers: {
-        accept: "application/json",
-      },
-      cache: "no-store",
-    }
+    publicFetchOptions()
   );
 
   const payload = await response.json().catch(() => null);
@@ -172,6 +178,7 @@ export const publicSiteApi = {
 };
 
 export {
+  PUBLIC_DATA_REVALIDATE_SECONDS,
   pageFromContract,
   siteFromContract,
 };
