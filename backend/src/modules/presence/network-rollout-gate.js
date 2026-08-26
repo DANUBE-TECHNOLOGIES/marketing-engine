@@ -4,44 +4,16 @@ const { listCampaigns } = require("./campaign-store");
 const { getFrozenCampaignReport } = require("./campaign-report-store");
 const { evaluatePilotOutcome } = require("./pilot-outcome");
 const { evaluateRecoveryTrustChain } = require("./recovery-trust-chain");
+const { buildRecoveryTrustOverview } = require("./recovery-trust-overview");
 
 const ROLLOUT_STAGES = Object.freeze([25, 50, 100]);
-function stageTargetAgencyCount(totalAgencies, stagePercent) { const total=Math.max(0,Number(totalAgencies||0)); const stage=ROLLOUT_STAGES.includes(Number(stagePercent))?Number(stagePercent):25; return total?Math.max(1,Math.ceil((total*stage)/100)):0; }
-function campaignAgencyCount(campaign) { const ids=campaign?.approvedScope?.agencyIds; return Array.isArray(ids)?new Set(ids.map(Number).filter(Number.isInteger)).size:0; }
-function campaignStage(campaign) { const explicit=Number(campaign?.approvedScope?.rolloutStage||0); return ROLLOUT_STAGES.includes(explicit)?explicit:null; }
-
-async function recoveryEvidenceStillValid(prisma, campaign, frozen) {
-  const scope=campaign?.approvedScope||{};
-  if(!scope.recoveryOfCampaignId) return Object.freeze({ready:true,decision:"go",blockers:Object.freeze([]),trustChain:Object.freeze({ready:true,depth:0,chain:Object.freeze([]),blockers:Object.freeze([])})});
-  const reportEvidence=frozen?.report?.pilotEvidence?.recoveryEvidence||{};
-  const blockers=[];
-  if(!scope.recoveryStabilizationSnapshotId||!scope.recoveryStabilizationEvidenceSignature) blockers.push("recovery_rollout_evidence_missing");
-  if(reportEvidence.sourceCampaignId&&reportEvidence.sourceCampaignId!==scope.recoveryOfCampaignId) blockers.push("recovery_rollout_source_changed");
-  if(reportEvidence.stabilizationSnapshotId&&reportEvidence.stabilizationSnapshotId!==scope.recoveryStabilizationSnapshotId) blockers.push("recovery_rollout_snapshot_changed");
-  if(reportEvidence.stabilizationEvidenceSignature&&reportEvidence.stabilizationEvidenceSignature!==scope.recoveryStabilizationEvidenceSignature) blockers.push("recovery_rollout_signature_changed");
-  const trustChain=await evaluateRecoveryTrustChain(prisma,campaign);
-  blockers.push(...(trustChain.blockers||[]));
-  return Object.freeze({ready:blockers.length===0,decision:blockers.length?"no_go":"go",trustChain,blockers:Object.freeze([...new Set(blockers)])});
-}
-
-async function evidenceForCampaign(prisma, campaign) {
-  if (!campaign || campaign.status !== "completed" || campaign.pilot !== true) return null;
-  const frozen = await getFrozenCampaignReport(prisma, campaign.campaignId);
-  if (!frozen?.report) return null;
-  const recoveryEvidence = await recoveryEvidenceStillValid(prisma, campaign, frozen);
-  if (!recoveryEvidence.ready) return null;
-  const criticalPropagationAlerts = Number(frozen.report?.pilotEvidence?.criticalPropagationAlerts ?? 0);
-  const rollout = evaluatePilotOutcome(frozen.report, { criticalPropagationAlerts });
-  if (!rollout.readyForNetworkRollout) return null;
-  if (frozen.report?.predecessorComparison?.required === true && frozen.report.predecessorComparison.ready !== true) return null;
-  return { campaign, frozen, rollout, recoveryEvidence };
-}
-
-async function findStageEvidence(prisma, totalAgencies, stagePercent) {
-  const campaigns=await listCampaigns(prisma,200); const target=stageTargetAgencyCount(totalAgencies,stagePercent);
-  for (const campaign of campaigns) { if(campaign.pilot!==true||campaign.status!=="completed") continue; const explicitStage=campaignStage(campaign); const count=campaignAgencyCount(campaign); const qualifies=explicitStage===stagePercent||(stagePercent===25&&explicitStage==null&&count>=target&&count<=3); if(!qualifies||count<target) continue; const evidence=await evidenceForCampaign(prisma,campaign); if(evidence) return {...evidence,stagePercent,targetAgencyCount:target,actualAgencyCount:count}; }
-  return null;
-}
+function stageTargetAgencyCount(totalAgencies, stagePercent){const total=Math.max(0,Number(totalAgencies||0));const stage=ROLLOUT_STAGES.includes(Number(stagePercent))?Number(stagePercent):25;return total?Math.max(1,Math.ceil((total*stage)/100)):0;}
+function campaignAgencyCount(campaign){const ids=campaign?.approvedScope?.agencyIds;return Array.isArray(ids)?new Set(ids.map(Number).filter(Number.isInteger)).size:0;}
+function campaignStage(campaign){const explicit=Number(campaign?.approvedScope?.rolloutStage||0);return ROLLOUT_STAGES.includes(explicit)?explicit:null;}
+async function recoveryEvidenceStillValid(prisma,campaign,frozen){const scope=campaign?.approvedScope||{};if(!scope.recoveryOfCampaignId)return Object.freeze({ready:true,decision:"go",blockers:Object.freeze([]),trustChain:Object.freeze({ready:true,depth:0,chain:Object.freeze([]),blockers:Object.freeze([])})});const reportEvidence=frozen?.report?.pilotEvidence?.recoveryEvidence||{};const blockers=[];if(!scope.recoveryStabilizationSnapshotId||!scope.recoveryStabilizationEvidenceSignature)blockers.push("recovery_rollout_evidence_missing");if(reportEvidence.sourceCampaignId&&reportEvidence.sourceCampaignId!==scope.recoveryOfCampaignId)blockers.push("recovery_rollout_source_changed");if(reportEvidence.stabilizationSnapshotId&&reportEvidence.stabilizationSnapshotId!==scope.recoveryStabilizationSnapshotId)blockers.push("recovery_rollout_snapshot_changed");if(reportEvidence.stabilizationEvidenceSignature&&reportEvidence.stabilizationEvidenceSignature!==scope.recoveryStabilizationEvidenceSignature)blockers.push("recovery_rollout_signature_changed");const trustChain=await evaluateRecoveryTrustChain(prisma,campaign);blockers.push(...(trustChain.blockers||[]));return Object.freeze({ready:blockers.length===0,decision:blockers.length?"no_go":"go",trustChain,blockers:Object.freeze([...new Set(blockers)])});}
+async function evidenceForCampaign(prisma,campaign){if(!campaign||campaign.status!=="completed"||campaign.pilot!==true)return null;const frozen=await getFrozenCampaignReport(prisma,campaign.campaignId);if(!frozen?.report)return null;const recoveryEvidence=await recoveryEvidenceStillValid(prisma,campaign,frozen);if(!recoveryEvidence.ready)return null;const criticalPropagationAlerts=Number(frozen.report?.pilotEvidence?.criticalPropagationAlerts??0);const rollout=evaluatePilotOutcome(frozen.report,{criticalPropagationAlerts});if(!rollout.readyForNetworkRollout)return null;if(frozen.report?.predecessorComparison?.required===true&&frozen.report.predecessorComparison.ready!==true)return null;return{campaign,frozen,rollout,recoveryEvidence};}
+async function findStageEvidence(prisma,totalAgencies,stagePercent){const campaigns=await listCampaigns(prisma,200);const target=stageTargetAgencyCount(totalAgencies,stagePercent);for(const campaign of campaigns){if(campaign.pilot!==true||campaign.status!=="completed")continue;const explicitStage=campaignStage(campaign),count=campaignAgencyCount(campaign);const qualifies=explicitStage===stagePercent||(stagePercent===25&&explicitStage==null&&count>=target&&count<=3);if(!qualifies||count<target)continue;const evidence=await evidenceForCampaign(prisma,campaign);if(evidence)return{...evidence,stagePercent,targetAgencyCount:target,actualAgencyCount:count};}return null;}
 function stageDescriptor(evidence){return Object.freeze({stagePercent:evidence.stagePercent,campaignId:evidence.campaign.campaignId,agencyCount:evidence.actualAgencyCount,reportId:evidence.frozen.id||null,reportCreatedAt:evidence.frozen.createdAt});}
-async function evaluateNetworkRolloutGate(prisma,totalAgencies){const total=Math.max(0,Number(totalAgencies||0));if(!total)return Object.freeze({ready:false,decision:"no_go",nextStagePercent:25,blockers:Object.freeze(["network_agencies_missing"]),stages:Object.freeze([])});const stage25=await findStageEvidence(prisma,total,25);if(!stage25)return Object.freeze({ready:false,decision:"no_go",nextStagePercent:25,blockers:Object.freeze(["rollout_25_evidence_missing"]),stages:Object.freeze([])});const stage50=await findStageEvidence(prisma,total,50);if(!stage50)return Object.freeze({ready:true,decision:"go",nextStagePercent:50,maxAgencies:stageTargetAgencyCount(total,50),blockers:Object.freeze([]),stages:Object.freeze([stageDescriptor(stage25)])});const stage100=await findStageEvidence(prisma,total,100);if(!stage100)return Object.freeze({ready:true,decision:"go",nextStagePercent:100,maxAgencies:stageTargetAgencyCount(total,100),blockers:Object.freeze([]),stages:Object.freeze([stageDescriptor(stage25),stageDescriptor(stage50)])});return Object.freeze({ready:true,decision:"complete",nextStagePercent:null,maxAgencies:total,blockers:Object.freeze([]),stages:Object.freeze([stageDescriptor(stage25),stageDescriptor(stage50),stageDescriptor(stage100)])});}
+function blockedByTrust(total,overview){return Object.freeze({ready:false,decision:"no_go",nextStagePercent:null,maxAgencies:0,blockers:overview.rolloutBlockers,stages:Object.freeze([]),recoveryTrust:overview,totalAgencies:total});}
+async function evaluateNetworkRolloutGate(prisma,totalAgencies){const total=Math.max(0,Number(totalAgencies||0));if(!total)return Object.freeze({ready:false,decision:"no_go",nextStagePercent:25,blockers:Object.freeze(["network_agencies_missing"]),stages:Object.freeze([])});const recoveryTrust=await buildRecoveryTrustOverview(prisma,200);if((recoveryTrust.rolloutBlockers||[]).length)return blockedByTrust(total,recoveryTrust);const stage25=await findStageEvidence(prisma,total,25);if(!stage25)return Object.freeze({ready:false,decision:"no_go",nextStagePercent:25,blockers:Object.freeze(["rollout_25_evidence_missing"]),stages:Object.freeze([]),recoveryTrust});const stage50=await findStageEvidence(prisma,total,50);if(!stage50)return Object.freeze({ready:true,decision:"go",nextStagePercent:50,maxAgencies:stageTargetAgencyCount(total,50),blockers:Object.freeze([]),stages:Object.freeze([stageDescriptor(stage25)]),recoveryTrust});const stage100=await findStageEvidence(prisma,total,100);if(!stage100)return Object.freeze({ready:true,decision:"go",nextStagePercent:100,maxAgencies:stageTargetAgencyCount(total,100),blockers:Object.freeze([]),stages:Object.freeze([stageDescriptor(stage25),stageDescriptor(stage50)]),recoveryTrust});return Object.freeze({ready:true,decision:"complete",nextStagePercent:null,maxAgencies:total,blockers:Object.freeze([]),stages:Object.freeze([stageDescriptor(stage25),stageDescriptor(stage50),stageDescriptor(stage100)]),recoveryTrust});}
 module.exports={ROLLOUT_STAGES,stageTargetAgencyCount,campaignAgencyCount,campaignStage,recoveryEvidenceStillValid,evidenceForCampaign,findStageEvidence,evaluateNetworkRolloutGate};
