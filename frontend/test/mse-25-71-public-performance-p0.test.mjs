@@ -49,17 +49,18 @@ test("brand runtime and legacy theme are cached within a request", () => {
   assert.match(legacy, /revalidate:\s*300/);
 });
 
-test("agency route enables ISR and removes the public data waterfall", () => {
+test("agency route keeps primary reads parallel and legacy brand is fallback-only", () => {
   const layout = source("app/agence/[siteSlug]/layout.js");
   const css = source("components/public-site/public-performance.css");
 
   assert.match(layout, /export const revalidate = 300/);
   assert.match(layout, /public-performance\.css/);
-  assert.match(layout, /\[site, legacyBrandTheme, publicBrandLegalRuntime\]\s*=\s*await Promise\.all\(\[/);
+  assert.match(layout, /\[site, publicBrandLegalRuntime\]\s*=\s*await Promise\.all\(\[/);
   assert.match(layout, /publicSiteApi\.getSite\(siteSlug\)/);
-  assert.match(layout, /getPublicBrandTheme\(\)/);
   assert.match(layout, /fetchPublicBrandLegalRuntime\(siteSlug\)/);
-  assert.doesNotMatch(layout, /const publicBrandLegalRuntime = await fetchPublicBrandLegalRuntime/);
+  assert.match(layout, /const hasRuntimeTheme = Object\.keys\(runtimeTheme\)\.length > 0/);
+  assert.match(layout, /const legacyBrandTheme = hasRuntimeTheme \? null : await getPublicBrandTheme\(\)/);
+  assert.doesNotMatch(layout, /\[site, legacyBrandTheme, publicBrandLegalRuntime\]/);
   assert.match(css, /content-visibility:\s*auto/);
   assert.match(css, /contain-intrinsic-size:\s*auto 720px/);
   assert.match(css, /backdrop-filter:\s*none/);
