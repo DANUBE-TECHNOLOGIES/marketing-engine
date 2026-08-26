@@ -17,9 +17,10 @@ test("MSE-25.71 exposes a dependency-free live public performance probe", () => 
 
   assert.equal(packageJson.scripts["perf:probe"], "node scripts/public-performance-probe.mjs");
   assert.match(probe, /PUBLIC_PERFORMANCE_URL/);
-  assert.match(probe, /TTFB_MS=/);
+  assert.match(probe, /MEDIAN_TTFB_MS=/);
   assert.match(probe, /CACHE_CONTROL=/);
   assert.match(probe, /HERO_HIGH_PRIORITY=/);
+  assert.match(probe, /HERO_BYTES=/);
   assert.match(probe, /IMAGE_BYTES_INSPECTED=/);
   assert.match(probe, /AbortSignal\.timeout\(15000\)/);
   assert.doesNotMatch(probe, /from\s+["'](?:lighthouse|playwright|puppeteer)["']/);
@@ -30,10 +31,22 @@ test("probe inspects hero discoverability and media transfer weight", () => {
 
   assert.match(probe, /fetchpriority=\["'\]high/iu);
   assert.match(probe, /loading=\["'\]eager/iu);
+  assert.match(probe, /tagAttribute\(tag, "src"\)/);
+  assert.match(probe, /heroMedia/);
   assert.match(probe, /content-type/);
   assert.match(probe, /cache-control/);
   assert.match(probe, /totalBytesInspected/);
   assert.match(probe, /largestImages/);
+});
+
+test("probe samples the deployed route and gates on median server performance", () => {
+  const probe = source("scripts/public-performance-probe.mjs");
+
+  assert.match(probe, /const samples = Math\.max\(1, Math\.min\(7,/);
+  assert.match(probe, /function median\(values\)/);
+  assert.match(probe, /medianTtfbMs/);
+  assert.match(probe, /coldTtfbMs/);
+  assert.match(probe, /median TTFB/);
 });
 
 test("probe can gate a deployed pilot on server and media budgets", () => {
@@ -45,5 +58,6 @@ test("probe can gate a deployed pilot on server and media budgets", () => {
   assert.match(probe, /PERFORMANCE_GATE=/);
   assert.match(probe, /hero image is not fetchPriority=high/);
   assert.match(probe, /hero image has no intrinsic dimensions/);
+  assert.match(probe, /hero image has no resolvable src/);
   assert.match(probe, /gate && failures\.length/);
 });
