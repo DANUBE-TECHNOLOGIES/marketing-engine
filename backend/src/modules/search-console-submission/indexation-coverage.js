@@ -3,6 +3,7 @@
 const {
   canonicalPageSlug,
   isPublishedPage,
+  isPublishedSite,
   NOINDEX_SLUGS,
 } = require("../minisite-structured-data/sitemap");
 const { pageUrl, siteUrl } = require("../minisite-structured-data/utils");
@@ -118,11 +119,118 @@ function summarize(items, analyticsHasData) {
   };
 }
 
+function searchConsoleSummary({ analytics, analyticsError, requestedSiteUrl, requestedPagePrefix }) {
+  const analyticsHasData = Number(analytics?.rowCount || 0) > 0;
+  return {
+    requested: Boolean(String(requestedSiteUrl || "").trim()),
+    siteUrl: analytics?.siteUrl || String(requestedSiteUrl || "").trim() || null,
+    pagePrefix: analytics?.pagePrefix || String(requestedPagePrefix || "").trim() || null,
+    analyticsState: analyticsError ? "UNAVAILABLE" : analyticsHasData ? "DATA_AVAILABLE" : "NO_DATA_YET",
+    rowCount: Number(analytics?.rowCount || 0),
+    error: analyticsError,
+    semantics: "Search Console Analytics prouve uniquement qu’une URL a généré des données de recherche dans la période interrogée. L’absence de ligne ne prouve pas que l’URL n’est pas indexée.",
+  };
+}
+
+function explanationFor(summary, analyticsHasData) {
+  if (summary.localIssueCount > 0) return "Des causes locales exploitables expliquent une couverture d’indexation incomplète avant toute attente de données Google.";
+  if (analyticsHasData) return "Le contrat local sitemap/indexabilité est cohérent et Search Console Analytics contient des observations pour le périmètre.";
+  return "Le contrat local sitemap/indexabilité est cohérent. Search Console Analytics ne contient pas encore de données finalisées pour ce périmètre ; cela ne permet pas de conclure à une absence d’indexation.";
+}
+
+const INVARIANTS = Object.freeze({
+  readOnlyGoogle: true,
+  googleSubmission: false,
+  pageCreation: false,
+  publicationMutation: false,
+  websiteDesignerMutation: false,
+});
+
 class IndexationCoverageService {
   constructor({ structuredDataService, performanceService, provider } = {}) {
     if (!structuredDataService) throw new Error("structuredDataService est requis");
     this.structuredDataService = structuredDataService;
     this.performanceService = performanceService || new SearchConsolePerformanceService({ provider });
+  }
+
+  async readAnalytics({ siteUrl, pagePrefix, days }) {
+    if (!String(siteUrl || "").trim()) return { analytics: null, analyticsError: null };
+    try {
+      return {
+        analytics: await this.performanceService.query({
+          siteUrl,
+          pagePrefix,
+          days,
+          dimensions: ["page"],
+          rowLimit: 1000,
+        }),
+        analyticsError: null,
+      };
+    } catch (error) {
+      return {
+        analytics: null,
+        analyticsError: {
+          code: error?.code || "SEARCH_CONSOLE_ANALYTICS_UNAVAILABLE",
+          message: error?.message || "Search Console Analytics indisponible.",
+        },
+      };
+    }
+  }
+
+  buildSiteDiagnostic({ site, sitemapUrls, observedUrls, analyticsHasData }) {
+    const pages = (site?.pages || []).filter(isPublishedPage).map((page) => diagnosticForPage({
+      page,
+      publicOrigin: this.structuredDataService.publicOrigin,
+      siteSlug: site.slug,
+      sitemapUrls,
+      observedUrls,
+      analyticsHasData,
+    }));
+    const summary = summarize(pages, analyticsHasData);
+    return {
+      siteId: site?.id || null,
+      siteSlug: site?.slug || null,
+      agencyId: site?.agency?.id || site?.agencyId || null,
+      agencyName: site?.agency?.name || null,
+      summary,
+      pages,
+    };
+  }
+
+  async diagnoseNetwork({ tenantId, siteUrl: searchConsoleSiteUrl, pagePrefix, days = 28 } = {}) {
+    const [sites, sitemap, analyticsResult] = await Promise.all([
+      this.structuredDataService.repository.listSites(tenantId),
+      this.structuredDataService.previewSitemap({ tenantId }),
+      this.readAnalytics({ siteUrl: searchConsoleSiteUrl, pagePrefix, days }),
+    ]);
+    const publishedSites = (sites || []).filter(isPublishedSite);
+    const sitemapUrls = new Set((sitemap?.entries || []).map((entry) => normalizedUrl(entry?.url)).filter(Boolean));
+    const observedUrls = new Set((analyticsResult.analytics?.rows || []).map((row) => normalizedUrl(row?.dimensions?.page)).filter(Boolean));
+    const analyticsHasData = Number(analyticsResult.analytics?.rowCount || 0) > 0;
+    const siteDiagnostics = publishedSites.map((site) => this.buildSiteDiagnostic({ site, sitemapUrls, observedUrls, analyticsHasData }));
+    const pages = siteDiagnostics.flatMap((site) => site.pages.map((page) => ({ ...page, siteSlug: site.siteSlug, siteId: site.siteId, agencyId: site.agencyId, agencyName: site.agencyName })));
+    const summary = summarize(pages, analyticsHasData);
+
+    return {
+      version: "mse-25.69",
+      scope: "NETWORK",
+      publicOrigin: this.structuredDataService.publicOrigin,
+      publishedSiteCount: publishedSites.length,
+      sitemapUrlCount: Number(sitemap?.summary?.entryCount || sitemap?.entries?.length || 0),
+      sitemapExcludedCount: Number(sitemap?.summary?.excludedCount || sitemap?.excluded?.length || 0),
+      summary,
+      searchConsole: searchConsoleSummary({
+        analytics: analyticsResult.analytics,
+        analyticsError: analyticsResult.analyticsError,
+        requestedSiteUrl: searchConsoleSiteUrl,
+        requestedPagePrefix: pagePrefix,
+      }),
+      explanation: explanationFor(summary, analyticsHasData),
+      robotsSemantics: "Le diagnostic ROBOTS_BLOCKED correspond aux directives noindex/robots portées par les données de page. Il ne prétend pas avoir audité à distance un fichier robots.txt public.",
+      invariants: INVARIANTS,
+      sites: siteDiagnostics,
+      observedAt: new Date().toISOString(),
+    };
   }
 
   async diagnose({ tenantId, siteSlug, siteUrl: searchConsoleSiteUrl, pagePrefix, days = 28 } = {}) {
@@ -134,9 +242,10 @@ class IndexationCoverageService {
       throw error;
     }
 
-    const [site, sitemapCandidate] = await Promise.all([
+    const [site, sitemapCandidate, analyticsResult] = await Promise.all([
       this.structuredDataService.repository.findSiteBySlug(slug, tenantId),
       this.structuredDataService.siteSitemapCandidate({ siteSlug: slug, tenantId }),
+      this.readAnalytics({ siteUrl: searchConsoleSiteUrl, pagePrefix, days }),
     ]);
     if (!site) {
       const error = new Error(`Mini-site introuvable : ${slug}`);
@@ -145,68 +254,29 @@ class IndexationCoverageService {
       throw error;
     }
 
-    let analytics = null;
-    let analyticsError = null;
-    if (String(searchConsoleSiteUrl || "").trim()) {
-      try {
-        analytics = await this.performanceService.query({
-          siteUrl: searchConsoleSiteUrl,
-          pagePrefix,
-          days,
-          dimensions: ["page"],
-          rowLimit: 1000,
-        });
-      } catch (error) {
-        analyticsError = {
-          code: error?.code || "SEARCH_CONSOLE_ANALYTICS_UNAVAILABLE",
-          message: error?.message || "Search Console Analytics indisponible.",
-        };
-      }
-    }
-
     const sitemapUrls = new Set((sitemapCandidate.entries || []).map((entry) => normalizedUrl(entry?.url)).filter(Boolean));
-    const observedUrls = new Set((analytics?.rows || []).map((row) => normalizedUrl(row?.dimensions?.page)).filter(Boolean));
-    const analyticsHasData = Number(analytics?.rowCount || 0) > 0;
-    const publishedPages = (site.pages || []).filter(isPublishedPage);
-    const pages = publishedPages.map((page) => diagnosticForPage({
-      page,
-      publicOrigin: this.structuredDataService.publicOrigin,
-      siteSlug: slug,
-      sitemapUrls,
-      observedUrls,
-      analyticsHasData,
-    }));
-    const summary = summarize(pages, analyticsHasData);
+    const observedUrls = new Set((analyticsResult.analytics?.rows || []).map((row) => normalizedUrl(row?.dimensions?.page)).filter(Boolean));
+    const analyticsHasData = Number(analyticsResult.analytics?.rowCount || 0) > 0;
+    const diagnostic = this.buildSiteDiagnostic({ site, sitemapUrls, observedUrls, analyticsHasData });
 
     return {
       version: "mse-25.69",
+      scope: "SITE",
       siteSlug: slug,
       publicOrigin: this.structuredDataService.publicOrigin,
       sitemapUrlCount: Number(sitemapCandidate.entryCount || 0),
       sitemapReadyToSubmit: sitemapCandidate.readyToSubmit === true,
-      summary,
-      searchConsole: {
-        requested: Boolean(String(searchConsoleSiteUrl || "").trim()),
-        siteUrl: analytics?.siteUrl || String(searchConsoleSiteUrl || "").trim() || null,
-        pagePrefix: analytics?.pagePrefix || String(pagePrefix || "").trim() || null,
-        analyticsState: analyticsError ? "UNAVAILABLE" : analyticsHasData ? "DATA_AVAILABLE" : "NO_DATA_YET",
-        rowCount: Number(analytics?.rowCount || 0),
-        error: analyticsError,
-        semantics: "Search Console Analytics prouve uniquement qu’une URL a généré des données de recherche dans la période interrogée. L’absence de ligne ne prouve pas que l’URL n’est pas indexée.",
-      },
-      explanation: summary.localIssueCount > 0
-        ? "Des causes locales exploitables expliquent une couverture d’indexation incomplète avant toute attente de données Google."
-        : analyticsHasData
-          ? "Le contrat local sitemap/indexabilité est cohérent et Search Console Analytics contient des observations pour le périmètre."
-          : "Le contrat local sitemap/indexabilité est cohérent. Search Console Analytics ne contient pas encore de données finalisées pour ce périmètre ; cela ne permet pas de conclure à une absence d’indexation.",
-      invariants: {
-        readOnlyGoogle: true,
-        googleSubmission: false,
-        pageCreation: false,
-        publicationMutation: false,
-        websiteDesignerMutation: false,
-      },
-      pages,
+      summary: diagnostic.summary,
+      searchConsole: searchConsoleSummary({
+        analytics: analyticsResult.analytics,
+        analyticsError: analyticsResult.analyticsError,
+        requestedSiteUrl: searchConsoleSiteUrl,
+        requestedPagePrefix: pagePrefix,
+      }),
+      explanation: explanationFor(diagnostic.summary, analyticsHasData),
+      robotsSemantics: "Le diagnostic ROBOTS_BLOCKED correspond aux directives noindex/robots portées par les données de page. Il ne prétend pas avoir audité à distance un fichier robots.txt public.",
+      invariants: INVARIANTS,
+      pages: diagnostic.pages,
       observedAt: new Date().toISOString(),
     };
   }
@@ -214,11 +284,14 @@ class IndexationCoverageService {
 
 module.exports = {
   COVERAGE_REASONS,
+  INVARIANTS,
   IndexationCoverageService,
   diagnosticForPage,
+  explanationFor,
   normalizedUrl,
   pageCanonical,
   pageRobots,
   publicPageUrl,
+  searchConsoleSummary,
   summarize,
 };
