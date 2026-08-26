@@ -3,7 +3,7 @@
 const { listCampaigns } = require("./campaign-store");
 const { getFrozenCampaignReport } = require("./campaign-report-store");
 const { evaluatePilotOutcome } = require("./pilot-outcome");
-const { evaluateRecoveryStabilizationSnapshotBinding } = require("./campaign-recovery-stabilization-snapshot");
+const { evaluateRecoveryTrustChain } = require("./recovery-trust-chain");
 
 function isCanaryCampaign(campaign) {
   const scope = campaign?.approvedScope || {};
@@ -12,11 +12,7 @@ function isCanaryCampaign(campaign) {
 }
 
 async function recoveredCanaryStillValid(prisma, campaign) {
-  const scope=campaign?.approvedScope||{};
-  if(!scope.recoveryOfCampaignId) return true;
-  if(!scope.recoveryStabilizationSnapshotId||!scope.recoveryStabilizationEvidenceSignature) return false;
-  const binding=await evaluateRecoveryStabilizationSnapshotBinding(prisma,scope.recoveryOfCampaignId,{snapshotId:scope.recoveryStabilizationSnapshotId,evidenceSignature:scope.recoveryStabilizationEvidenceSignature});
-  return binding.ready===true;
+  return (await evaluateRecoveryTrustChain(prisma, campaign)).ready === true;
 }
 
 async function findLatestCompletedCanary(prisma) {
