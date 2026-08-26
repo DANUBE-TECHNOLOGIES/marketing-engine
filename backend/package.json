@@ -97,7 +97,9 @@
     "mse-25.65:post-apply-verify": "node scripts/mse-25-65-post-apply-verify.js",
     "mse-25.65:rollback-intent": "node scripts/mse-25-65-rollback-intent.js",
     "mse-25.66:readiness": "node scripts/mse-25-66-readiness.js",
-    "mse-25.66:human-rollback-authorization": "node scripts/mse-25-66-human-rollback-authorization.js"
+    "mse-25.66:human-rollback-authorization": "node scripts/mse-25-66-human-rollback-authorization.js",
+    "mse-25.67:readiness": "node scripts/mse-25-67-readiness.js",
+    "mse-25.67:guarded-rollback": "node scripts/mse-25-67-guarded-rollback.js"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",
