@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 
 import { publicSiteApi } from "../../../lib/public-site-api";
 import { getPublicBrandTheme } from "../../../lib/public-brand-api";
+import { getPublicHours } from "../../../lib/public-hours-api";
 import PublicSiteHeader from "../../../components/public-site/PublicSiteHeader";
 import PublicSiteFooter from "../../../components/public-site/PublicSiteFooter";
 import PublicBrandLegalRuntime from "../../../components/public-site/PublicBrandLegalRuntime";
@@ -30,11 +31,13 @@ export default async function PublicAgencySiteLayout({ children, params }) {
 
   let site;
   let publicBrandLegalRuntime = null;
+  let hours = null;
 
   try {
-    [site, publicBrandLegalRuntime] = await Promise.all([
+    [site, publicBrandLegalRuntime, hours] = await Promise.all([
       publicSiteApi.getSite(siteSlug),
       fetchPublicBrandLegalRuntime(siteSlug),
+      getPublicHours(siteSlug).catch(() => null),
     ]);
   } catch (error) {
     if (error?.statusCode === 404) {
@@ -48,7 +51,6 @@ export default async function PublicAgencySiteLayout({ children, params }) {
   const runtimeTheme = runtimeCssVariables(publicBrandLegalRuntime);
   const hasRuntimeTheme = Object.keys(runtimeTheme).length > 0;
   const legacyBrandTheme = hasRuntimeTheme ? null : await getPublicBrandTheme();
-  const hours = site?.hours || null;
 
   const cssVariables = {
     ...(legacyBrandTheme?.cssVariables || {}),
