@@ -40,6 +40,7 @@ require("../src/modules/presence/pilot-outcome.test");
 require("../src/modules/presence/campaign-recovery.test");
 require("../src/modules/presence/campaign-recovery-qualification.test");
 require("../src/modules/presence/campaign-recovery-stabilization.test");
+require("../src/modules/presence/campaign-recovery-stabilization-snapshot.test");
 require("../src/modules/presence/presence-storage-audit.test");
 require("../src/modules/presence/operation-audit.test");
 require("../src/modules/presence/operation-snapshots.test");
