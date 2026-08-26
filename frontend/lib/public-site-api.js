@@ -1,9 +1,5 @@
 import { cache } from "react";
 
-import {
-  getPublicHours,
-} from "./public-hours-api";
-
 const INTERNAL_API_URL =
   process.env.INTERNAL_FRONTEND_URL ||
   process.env.NEXT_PUBLIC_APP_URL ||
@@ -109,20 +105,9 @@ function pageFromContract(payload) {
   return page;
 }
 
-const getSite = cache(async (siteSlug) => {
-  const [payload, hours] = await Promise.all([
-    request(`/${encodeURIComponent(siteSlug)}`),
-    getPublicHours(siteSlug).catch(() => null),
-  ]);
-
-  const site = siteFromContract(payload);
-  if (!site || typeof site !== "object") return site;
-
-  return {
-    ...site,
-    hours,
-  };
-});
+const getSite = cache(async (siteSlug) => siteFromContract(
+  await request(`/${encodeURIComponent(siteSlug)}`)
+));
 
 const getHome = cache(async (siteSlug) => pageFromContract(
   await request(`/${encodeURIComponent(siteSlug)}/pages/home`)
