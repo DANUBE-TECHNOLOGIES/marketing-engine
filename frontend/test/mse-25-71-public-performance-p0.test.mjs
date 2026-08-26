@@ -18,12 +18,14 @@ test("public site data is revalidated instead of forced no-store", () => {
   assert.match(api, /PUBLIC_SITE_REVALIDATE_SECONDS/);
 });
 
-test("public site RSC reads are memoized within a request", () => {
+test("public site RSC reads are memoized within a request and do not wait for hours", () => {
   const api = source("lib/public-site-api.js");
   assert.match(api, /import\s*\{\s*cache\s*\}\s*from\s*["']react["']/);
   assert.match(api, /const\s+getSite\s*=\s*cache\(/);
   assert.match(api, /const\s+getHome\s*=\s*cache\(/);
   assert.match(api, /const\s+getPage\s*=\s*cache\(/);
+  assert.doesNotMatch(api, /getPublicHours/);
+  assert.doesNotMatch(api, /hours,/);
 });
 
 test("public hours use the same persistent and request cache policy", () => {
@@ -49,18 +51,20 @@ test("brand runtime and legacy theme are cached within a request", () => {
   assert.match(legacy, /revalidate:\s*300/);
 });
 
-test("agency route keeps primary reads parallel and legacy brand is fallback-only", () => {
+test("agency route keeps critical reads parallel, hours isolated and legacy brand fallback-only", () => {
   const layout = source("app/agence/[siteSlug]/layout.js");
   const css = source("components/public-site/public-performance.css");
 
   assert.match(layout, /export const revalidate = 300/);
   assert.match(layout, /public-performance\.css/);
-  assert.match(layout, /\[site, publicBrandLegalRuntime\]\s*=\s*await Promise\.all\(\[/);
+  assert.match(layout, /import\s*\{\s*getPublicHours\s*\}\s*from\s*["']\.\.\/\.\.\/\.\.\/lib\/public-hours-api["']/);
+  assert.match(layout, /\[site, publicBrandLegalRuntime, hours\]\s*=\s*await Promise\.all\(\[/);
   assert.match(layout, /publicSiteApi\.getSite\(siteSlug\)/);
   assert.match(layout, /fetchPublicBrandLegalRuntime\(siteSlug\)/);
+  assert.match(layout, /getPublicHours\(siteSlug\)\.catch\(\(\) => null\)/);
   assert.match(layout, /const hasRuntimeTheme = Object\.keys\(runtimeTheme\)\.length > 0/);
   assert.match(layout, /const legacyBrandTheme = hasRuntimeTheme \? null : await getPublicBrandTheme\(\)/);
-  assert.doesNotMatch(layout, /\[site, legacyBrandTheme, publicBrandLegalRuntime\]/);
+  assert.doesNotMatch(layout, /const hours = site\?\.hours/);
   assert.match(css, /content-visibility:\s*auto/);
   assert.match(css, /contain-intrinsic-size:\s*auto 720px/);
   assert.match(css, /backdrop-filter:\s*none/);
