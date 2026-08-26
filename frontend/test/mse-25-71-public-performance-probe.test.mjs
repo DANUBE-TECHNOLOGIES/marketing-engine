@@ -33,5 +33,17 @@ test("probe inspects hero discoverability and media transfer weight", () => {
   assert.match(probe, /content-type/);
   assert.match(probe, /cache-control/);
   assert.match(probe, /totalBytesInspected/);
-  assert.match(probe, /largest:/);
+  assert.match(probe, /largestImages/);
+});
+
+test("probe can gate a deployed pilot on server and media budgets", () => {
+  const probe = source("scripts/public-performance-probe.mjs");
+
+  assert.match(probe, /const gate = arg\("gate", "false"\) === "true"/);
+  assert.match(probe, /max-ttfb-ms/);
+  assert.match(probe, /max-single-image-bytes/);
+  assert.match(probe, /PERFORMANCE_GATE=/);
+  assert.match(probe, /hero image is not fetchPriority=high/);
+  assert.match(probe, /hero image has no intrinsic dimensions/);
+  assert.match(probe, /gate && failures\.length/);
 });
