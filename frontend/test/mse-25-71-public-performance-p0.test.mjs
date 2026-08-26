@@ -51,20 +51,27 @@ test("brand runtime and legacy theme are cached within a request", () => {
   assert.match(legacy, /revalidate:\s*300/);
 });
 
-test("agency route keeps critical reads parallel, hours isolated and legacy brand fallback-only", () => {
+test("agency route keeps only site and brand runtime on the layout critical path", () => {
   const layout = source("app/agence/[siteSlug]/layout.js");
+  const header = source("components/public-site/PublicSiteHeader.js");
+  const openingStatus = source("components/public-site/PublicOpeningStatus.js");
   const css = source("components/public-site/public-performance.css");
 
   assert.match(layout, /export const revalidate = 300/);
   assert.match(layout, /public-performance\.css/);
-  assert.match(layout, /import\s*\{\s*getPublicHours\s*\}\s*from\s*["']\.\.\/\.\.\/\.\.\/lib\/public-hours-api["']/);
-  assert.match(layout, /\[site, publicBrandLegalRuntime, hours\]\s*=\s*await Promise\.all\(\[/);
+  assert.match(layout, /\[site, publicBrandLegalRuntime\]\s*=\s*await Promise\.all\(\[/);
   assert.match(layout, /publicSiteApi\.getSite\(siteSlug\)/);
   assert.match(layout, /fetchPublicBrandLegalRuntime\(siteSlug\)/);
-  assert.match(layout, /getPublicHours\(siteSlug\)\.catch\(\(\) => null\)/);
+  assert.doesNotMatch(layout, /getPublicHours/);
+  assert.doesNotMatch(layout, /hours=/);
   assert.match(layout, /const hasRuntimeTheme = Object\.keys\(runtimeTheme\)\.length > 0/);
   assert.match(layout, /const legacyBrandTheme = hasRuntimeTheme \? null : await getPublicBrandTheme\(\)/);
-  assert.doesNotMatch(layout, /const hours = site\?\.hours/);
+
+  assert.match(header, /import\s*\{\s*Suspense\s*\}\s*from\s*["']react["']/);
+  assert.match(header, /<Suspense\s+fallback=\{null\}>/);
+  assert.match(header, /<PublicOpeningStatus\s+siteSlug=\{site\.slug\}\s*\/>/);
+  assert.match(openingStatus, /getPublicHours\(siteSlug\)\.catch\(\(\) => null\)/);
+
   assert.match(css, /content-visibility:\s*auto/);
   assert.match(css, /contain-intrinsic-size:\s*auto 720px/);
   assert.match(css, /backdrop-filter:\s*none/);
