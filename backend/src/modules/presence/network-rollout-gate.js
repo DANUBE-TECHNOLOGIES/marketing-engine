@@ -3,7 +3,7 @@
 const { listCampaigns } = require("./campaign-store");
 const { getFrozenCampaignReport } = require("./campaign-report-store");
 const { evaluatePilotOutcome } = require("./pilot-outcome");
-const { evaluateRecoveryStabilizationSnapshotBinding } = require("./campaign-recovery-stabilization-snapshot");
+const { evaluateRecoveryTrustChain } = require("./recovery-trust-chain");
 
 const ROLLOUT_STAGES = Object.freeze([25, 50, 100]);
 function stageTargetAgencyCount(totalAgencies, stagePercent) { const total=Math.max(0,Number(totalAgencies||0)); const stage=ROLLOUT_STAGES.includes(Number(stagePercent))?Number(stagePercent):25; return total?Math.max(1,Math.ceil((total*stage)/100)):0; }
@@ -11,19 +11,17 @@ function campaignAgencyCount(campaign) { const ids=campaign?.approvedScope?.agen
 function campaignStage(campaign) { const explicit=Number(campaign?.approvedScope?.rolloutStage||0); return ROLLOUT_STAGES.includes(explicit)?explicit:null; }
 
 async function recoveryEvidenceStillValid(prisma, campaign, frozen) {
-  const scope = campaign?.approvedScope || {};
-  const sourceCampaignId = scope.recoveryOfCampaignId || null;
-  if (!sourceCampaignId) return Object.freeze({ ready:true, decision:"go", blockers:Object.freeze([]) });
-  const reportEvidence = frozen?.report?.pilotEvidence?.recoveryEvidence || {};
-  const expected = {
-    snapshotId: scope.recoveryStabilizationSnapshotId || reportEvidence.stabilizationSnapshotId || null,
-    evidenceSignature: scope.recoveryStabilizationEvidenceSignature || reportEvidence.stabilizationEvidenceSignature || null
-  };
-  const binding = await evaluateRecoveryStabilizationSnapshotBinding(prisma, sourceCampaignId, expected);
-  const blockers = [...(binding.blockers || [])];
-  if (!expected.snapshotId || !expected.evidenceSignature) blockers.push("recovery_rollout_evidence_missing");
-  if (reportEvidence.sourceCampaignId && reportEvidence.sourceCampaignId !== sourceCampaignId) blockers.push("recovery_rollout_source_changed");
-  return Object.freeze({ ready:blockers.length===0, decision:blockers.length?"no_go":"go", binding, blockers:Object.freeze([...new Set(blockers)]) });
+  const scope=campaign?.approvedScope||{};
+  if(!scope.recoveryOfCampaignId) return Object.freeze({ready:true,decision:"go",blockers:Object.freeze([]),trustChain:Object.freeze({ready:true,depth:0,chain:Object.freeze([]),blockers:Object.freeze([])})});
+  const reportEvidence=frozen?.report?.pilotEvidence?.recoveryEvidence||{};
+  const blockers=[];
+  if(!scope.recoveryStabilizationSnapshotId||!scope.recoveryStabilizationEvidenceSignature) blockers.push("recovery_rollout_evidence_missing");
+  if(reportEvidence.sourceCampaignId&&reportEvidence.sourceCampaignId!==scope.recoveryOfCampaignId) blockers.push("recovery_rollout_source_changed");
+  if(reportEvidence.stabilizationSnapshotId&&reportEvidence.stabilizationSnapshotId!==scope.recoveryStabilizationSnapshotId) blockers.push("recovery_rollout_snapshot_changed");
+  if(reportEvidence.stabilizationEvidenceSignature&&reportEvidence.stabilizationEvidenceSignature!==scope.recoveryStabilizationEvidenceSignature) blockers.push("recovery_rollout_signature_changed");
+  const trustChain=await evaluateRecoveryTrustChain(prisma,campaign);
+  blockers.push(...(trustChain.blockers||[]));
+  return Object.freeze({ready:blockers.length===0,decision:blockers.length?"no_go":"go",trustChain,blockers:Object.freeze([...new Set(blockers)])});
 }
 
 async function evidenceForCampaign(prisma, campaign) {
