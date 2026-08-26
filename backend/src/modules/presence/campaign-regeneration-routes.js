@@ -7,8 +7,7 @@ const { evaluateCampaignEvidenceCompatibility } = require("./campaign-evidence-c
 const { buildPilotContext } = require("./pilot-routes");
 const { preflightRecoveryTrustFingerprint } = require("./preflight-recovery-trust-binding");
 const { stableId } = require("./campaign-planner");
-
-const ACTIVE_REGENERATION_STATUSES = Object.freeze(["draft", "approved", "running", "verifying"]);
+const { findActiveRegeneration, listRegenerationChildren } = require("./campaign-regeneration-lineage");
 
 function regenerationMode(source) {
   const scope = source?.approvedScope || {};
@@ -21,26 +20,6 @@ function regenerationReason(compatibility) {
   return compatibility?.legacy ? "legacy_evidence_incompatible" : "evidence_inconsistent";
 }
 
-async function findActiveRegeneration(prisma, sourceCampaignId) {
-  const rows = await prisma.$queryRaw`
-    SELECT * FROM "PresenceCampaign"
-    WHERE "approvedScope"->>'regenerationOfCampaignId' = ${sourceCampaignId}
-      AND "status" IN ('draft','approved','running','verifying')
-    ORDER BY "createdAt" DESC
-    LIMIT 1
-  `;
-  return rows[0] || null;
-}
-
-async function listRegenerationChildren(prisma, sourceCampaignId) {
-  return prisma.$queryRaw`
-    SELECT "campaignId", "name", "status", "preflightId", "approvedScope", "createdAt", "updatedAt"
-    FROM "PresenceCampaign"
-    WHERE "approvedScope"->>'regenerationOfCampaignId' = ${sourceCampaignId}
-    ORDER BY "createdAt" ASC, "campaignId" ASC
-  `;
-}
-
 function campaignRegenerationRoutes({ prisma }) {
   const router = express.Router();
 
@@ -49,9 +28,7 @@ function campaignRegenerationRoutes({ prisma }) {
       const source = await getCampaign(prisma, req.params.campaignId);
       if (!source) return res.status(404).json({ ok: false, error: "Campagne Presence introuvable" });
       const [frozen, activeRegeneration, regenerationChildren] = await Promise.all([
-        getFrozenCampaignReport(prisma, source.campaignId),
-        findActiveRegeneration(prisma, source.campaignId),
-        listRegenerationChildren(prisma, source.campaignId)
+        getFrozenCampaignReport(prisma, source.campaignId), findActiveRegeneration(prisma, source.campaignId), listRegenerationChildren(prisma, source.campaignId)
       ]);
       const compatibility = evaluateCampaignEvidenceCompatibility(source, frozen?.report || null);
       const mode = regenerationMode(source);
@@ -91,10 +68,7 @@ function campaignRegenerationRoutes({ prisma }) {
       const campaign = await prisma.$transaction(async (tx) => {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`presence-regeneration:${source.campaignId}`}))`;
         const existing = await findActiveRegeneration(tx, source.campaignId);
-        if (existing) {
-          const error = new Error(`Une régénération active existe déjà: ${existing.campaignId}`);
-          error.status = 409; error.code = "ACTIVE_REGENERATION_EXISTS"; error.activeRegeneration = existing; throw error;
-        }
+        if (existing) { const error = new Error(`Une régénération active existe déjà: ${existing.campaignId}`); error.status = 409; error.code = "ACTIVE_REGENERATION_EXISTS"; error.activeRegeneration = existing; throw error; }
         return createCampaign(tx, context.plan, name, { pilot: true, preflightId: preflight.preflightId, approvedScope, approvedPlanFingerprint });
       });
 
@@ -105,4 +79,4 @@ function campaignRegenerationRoutes({ prisma }) {
   return router;
 }
 
-module.exports = { ACTIVE_REGENERATION_STATUSES, campaignRegenerationRoutes, regenerationMode, regenerationReason, findActiveRegeneration, listRegenerationChildren };
+module.exports = { campaignRegenerationRoutes, regenerationMode, regenerationReason };
