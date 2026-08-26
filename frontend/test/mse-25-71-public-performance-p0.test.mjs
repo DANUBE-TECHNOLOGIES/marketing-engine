@@ -121,5 +121,11 @@ test("non critical public media cannot compete with the hero LCP", () => {
     assert.match(renderer, /width=["'][0-9]+["']/);
     assert.match(renderer, /height=["'][0-9]+["']/);
   }
-  assert.match(legacySections, /loading=["']lazy["'] decoding=["']async["']/);
+  assert.match(legacySections, /loading=["']lazy["']/);
+  assert.match(legacySections, /decoding=["']async["']/);
+  assert.match(legacySections, /fetchPriority=["']low["']/);
+  assert.match(legacySections, /width=["']960["']/);
+  assert.match(legacySections, /height=["']640["']/);
+  assert.match(legacySections, /width=["']720["']/);
+  assert.match(legacySections, /height=["']480["']/);
 });
