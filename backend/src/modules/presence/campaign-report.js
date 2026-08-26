@@ -8,11 +8,7 @@ function delta(after, before) { return number(after) - number(before); }
 
 function summarizeExecutions(executions = []) {
   const summary = { total: executions.length, submitted: 0, verified: 0, skipped: 0, failed: 0, blocked_sensitive: 0, other: 0 };
-  for (const row of executions) {
-    const status = String(row.status || "other");
-    if (Object.prototype.hasOwnProperty.call(summary, status)) summary[status] += 1;
-    else summary.other += 1;
-  }
+  for (const row of executions) { const status = String(row.status || "other"); if (Object.prototype.hasOwnProperty.call(summary, status)) summary[status] += 1; else summary.other += 1; }
   const processed = summary.submitted + summary.verified + summary.skipped + summary.failed + summary.blocked_sensitive + summary.other;
   return Object.freeze({ ...summary, processed, successRate: summary.total ? Math.round((summary.verified / summary.total) * 100) : 0 });
 }
@@ -24,6 +20,13 @@ function buildCampaignReport(campaign, currentState, executions = [], options = 
   const beforeSummary = baseline.summary || {};
   const execution = summarizeExecutions(executions);
   const criticalPropagationAlerts = number(options.criticalPropagationAlerts);
+  const recoveryScope = campaign?.approvedScope || {};
+  const recoveryEvidence = recoveryScope.recoveryOfCampaignId ? Object.freeze({
+    recovery: true,
+    sourceCampaignId: recoveryScope.recoveryOfCampaignId,
+    stabilizationSnapshotId: recoveryScope.recoveryStabilizationSnapshotId || null,
+    stabilizationEvidenceSignature: recoveryScope.recoveryStabilizationEvidenceSignature || null
+  }) : Object.freeze({ recovery: false, sourceCampaignId: null, stabilizationSnapshotId: null, stabilizationEvidenceSignature: null });
 
   const comparison = Object.freeze({
     healthScore: Object.freeze({ before: number(beforeHealth.score), after: number(current.health.score), delta: delta(current.health.score, beforeHealth.score) }),
@@ -32,37 +35,14 @@ function buildCampaignReport(campaign, currentState, executions = [], options = 
     propagationAlerts: Object.freeze({ before: number(beforeSummary.propagationAlerts), after: number(current.summary.propagationAlerts), delta: delta(current.summary.propagationAlerts, beforeSummary.propagationAlerts) }),
     openActions: Object.freeze({ before: number(beforeSummary.openActions), after: number(current.summary.openActions), delta: delta(current.summary.openActions, beforeSummary.openActions) })
   });
-
   const improved = comparison.healthScore.delta > 0 || comparison.coveragePercent.delta > 0 || comparison.anomalies.delta < 0;
   const regressed = comparison.healthScore.delta < 0 || comparison.coveragePercent.delta < 0 || comparison.anomalies.delta > 0;
   const outcome = regressed ? "regressed" : improved ? "improved" : "stable";
-  const provisional = {
-    campaignId: campaign.campaignId,
-    status: campaign.status,
-    generatedAt: new Date().toISOString(),
-    outcome,
-    pilotEvidence: {
-      pilot: campaign?.pilot === true,
-      preflightId: campaign?.preflightId || null,
-      approvedScope: campaign?.approvedScope || null,
-      criticalPropagationAlerts
-    },
-    baseline: { health: beforeHealth, summary: beforeSummary },
-    current: { health: current.health, summary: current.summary },
-    comparison,
-    execution,
-    remainingPriorityItems: current.interventionQueue.slice(0, 25)
-  };
+  const provisional = { campaignId: campaign.campaignId, status: campaign.status, generatedAt: new Date().toISOString(), outcome,
+    pilotEvidence: { pilot: campaign?.pilot === true, preflightId: campaign?.preflightId || null, approvedScope: campaign?.approvedScope || null, criticalPropagationAlerts, recoveryEvidence },
+    baseline: { health: beforeHealth, summary: beforeSummary }, current: { health: current.health, summary: current.summary }, comparison, execution, remainingPriorityItems: current.interventionQueue.slice(0, 25) };
   const predecessorComparison = evaluatePredecessorNonRegression(provisional, options.predecessorReport || null);
-
-  return Object.freeze({
-    ...provisional,
-    pilotEvidence: Object.freeze(provisional.pilotEvidence),
-    baseline: Object.freeze(provisional.baseline),
-    current: Object.freeze(provisional.current),
-    predecessorComparison,
-    remainingPriorityItems: Object.freeze(provisional.remainingPriorityItems)
-  });
+  return Object.freeze({ ...provisional, pilotEvidence: Object.freeze(provisional.pilotEvidence), baseline: Object.freeze(provisional.baseline), current: Object.freeze(provisional.current), predecessorComparison, remainingPriorityItems: Object.freeze(provisional.remainingPriorityItems) });
 }
 
 module.exports = { buildCampaignReport, summarizeExecutions, delta };
