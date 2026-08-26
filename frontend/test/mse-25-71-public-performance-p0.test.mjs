@@ -83,12 +83,28 @@ test("hero LCP image preconnects, preloads and stays high priority", () => {
   assert.doesNotMatch(hero, /decoding=["']async["']/);
 });
 
+test("legacy hero follows the same discoverable LCP strategy", () => {
+  const sections = source("components/public-site/PublicSiteSections.js");
+  assert.match(sections, /import\s*\{\s*preconnect,\s*preload\s*\}\s*from\s*["']react-dom["']/);
+  assert.match(sections, /function\s+imageOrigin\(/);
+  assert.match(sections, /preconnect\(origin\)/);
+  assert.match(sections, /preload\(backgroundImage,\s*\{/);
+  assert.match(sections, /data-has-hero-image=\{backgroundImage \? ["']true["'] : ["']false["']\}/);
+  assert.match(sections, /className=["']public-site-hero-media["']/);
+  assert.match(sections, /loading=["']eager["']/);
+  assert.match(sections, /fetchPriority=["']high["']/);
+  assert.match(sections, /width=["']1920["']/);
+  assert.match(sections, /height=["']1080["']/);
+  assert.doesNotMatch(sections, /backgroundImage:\s*`linear-gradient/);
+});
+
 test("non critical public media cannot compete with the hero LCP", () => {
   const logo = source("components/public-site/PublicBrandLogo.js");
   const destinations = source("components/public-site/renderers/DestinationsRenderer.js");
   const gallery = source("components/public-site/renderers/GalleryV2Renderer.js");
   const imageText = source("components/public-site/renderers/ImageTextV2Renderer.js");
   const team = source("components/public-site/renderers/TeamRenderer.js");
+  const legacySections = source("components/public-site/PublicSiteSections.js");
 
   assert.match(logo, /fetchPriority=["']auto["']/);
   for (const renderer of [destinations, gallery, imageText, team]) {
@@ -98,4 +114,5 @@ test("non critical public media cannot compete with the hero LCP", () => {
     assert.match(renderer, /width=["'][0-9]+["']/);
     assert.match(renderer, /height=["'][0-9]+["']/);
   }
+  assert.match(legacySections, /loading=["']lazy["'] decoding=["']async["']/);
 });
