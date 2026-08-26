@@ -40,26 +40,40 @@ function normalizeRows(rows = []) {
     position: Number(row?.position || 0),
   })).filter((row) => row.query || row.page);
 }
+function normalizePagePrefix(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+  if (/^https?:\/\//i.test(raw)) return raw.replace(/\/$/, "") + "/";
+  return `https://${raw.replace(/^sc-domain:/i, "").replace(/\/$/, "")}/`;
+}
 
-async function fetchSearchAnalytics({ siteUrl, accessToken, startDate, endDate, rowLimit = DEFAULT_ROW_LIMIT, fetchImpl = fetch } = {}) {
+async function fetchSearchAnalytics({ siteUrl, accessToken, startDate, endDate, rowLimit = DEFAULT_ROW_LIMIT, pagePrefix = process.env.SEARCH_CONSOLE_PAGE_PREFIX || process.env.SEARCH_CONSOLE_PREFERRED_HOST || null, fetchImpl = fetch } = {}) {
   const property = required("SEARCH_CONSOLE_SITE_URL", siteUrl);
   const token = required("SEARCH_CONSOLE_ACCESS_TOKEN", accessToken);
   const range = startDate && endDate ? { startDate, endDate } : defaultDateRange();
   const limit = Math.min(Math.max(Number(rowLimit) || DEFAULT_ROW_LIMIT, 1), DEFAULT_ROW_LIMIT);
+  const normalizedPrefix = normalizePagePrefix(pagePrefix);
   const url = `${SEARCH_ANALYTICS_ENDPOINT}/${encodeURIComponent(property)}/searchAnalytics/query`;
+  const body = {
+    startDate: range.startDate,
+    endDate: range.endDate,
+    dimensions: ["query", "page"],
+    type: "web",
+    aggregationType: "auto",
+    dataState: "final",
+    rowLimit: limit,
+    startRow: 0,
+  };
+  if (normalizedPrefix) {
+    body.dimensionFilterGroups = [{
+      groupType: "and",
+      filters: [{ dimension: "page", operator: "contains", expression: normalizedPrefix }],
+    }];
+  }
   const response = await fetchImpl(url, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}`, Accept: "application/json", "Content-Type": "application/json" },
-    body: JSON.stringify({
-      startDate: range.startDate,
-      endDate: range.endDate,
-      dimensions: ["query", "page"],
-      type: "web",
-      aggregationType: "auto",
-      dataState: "final",
-      rowLimit: limit,
-      startRow: 0,
-    }),
+    body: JSON.stringify(body),
   });
   let payload = null;
   try { payload = await response.json(); } catch (_) { payload = null; }
@@ -75,6 +89,7 @@ async function fetchSearchAnalytics({ siteUrl, accessToken, startDate, endDate, 
     type: "mse-25.48-search-console-analytics",
     source: "google-search-console",
     siteUrl: property,
+    pagePrefix: normalizedPrefix,
     startDate: range.startDate,
     endDate: range.endDate,
     dimensions: ["query", "page"],
@@ -89,4 +104,4 @@ async function fetchSearchAnalytics({ siteUrl, accessToken, startDate, endDate, 
   return { ...result, analyticsFingerprint: fingerprint(result) };
 }
 
-module.exports = { DEFAULT_DAYS, DEFAULT_ROW_LIMIT, defaultDateRange, normalizeRows, fetchSearchAnalytics, fingerprint };
+module.exports = { DEFAULT_DAYS, DEFAULT_ROW_LIMIT, defaultDateRange, normalizeRows, normalizePagePrefix, fetchSearchAnalytics, fingerprint };
