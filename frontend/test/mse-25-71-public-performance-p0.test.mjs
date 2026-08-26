@@ -111,10 +111,12 @@ test("non critical public media cannot compete with the hero LCP", () => {
   const gallery = source("components/public-site/renderers/GalleryV2Renderer.js");
   const imageText = source("components/public-site/renderers/ImageTextV2Renderer.js");
   const team = source("components/public-site/renderers/TeamRenderer.js");
+  const offers = source("components/public-site/renderers/OffersRenderer.js");
+  const inspirations = source("components/public-site/renderers/InspirationsRenderer.js");
   const legacySections = source("components/public-site/PublicSiteSections.js");
 
   assert.match(logo, /fetchPriority=["']auto["']/);
-  for (const renderer of [destinations, gallery, imageText, team]) {
+  for (const renderer of [destinations, gallery, imageText, team, offers, inspirations]) {
     assert.match(renderer, /loading=["']lazy["']/);
     assert.match(renderer, /decoding=["']async["']/);
     assert.match(renderer, /fetchPriority=["']low["']/);
