@@ -3,51 +3,9 @@
 const { stableId } = require("./campaign-planner");
 
 function compactStage(stage = {}) {
-  return Object.freeze({
-    stagePercent: Number(stage.stagePercent || 0),
-    campaignId: stage.campaignId || null,
-    agencyCount: Number(stage.agencyCount || 0),
-    reportId: stage.reportId || null,
-    reportCreatedAt: stage.reportCreatedAt || null,
-    provenance: stage.provenance || "native",
-    regenerationOfCampaignId: stage.regenerationOfCampaignId || null,
-    recoveryOfCampaignId: stage.recoveryOfCampaignId || null,
-    regenerationReason: stage.regenerationReason || null
-  });
+  return Object.freeze({ stagePercent:Number(stage.stagePercent||0), campaignId:stage.campaignId||null, agencyCount:Number(stage.agencyCount||0), reportId:stage.reportId||null, reportCreatedAt:stage.reportCreatedAt||null, provenance:stage.provenance||"native", regenerationOfCampaignId:stage.regenerationOfCampaignId||null, recoveryOfCampaignId:stage.recoveryOfCampaignId||null, regenerationReason:stage.regenerationReason||null });
 }
-
-function buildRolloutDecisionSnapshot(rolloutGate, recoveryTrust) {
-  const generatedAt = new Date().toISOString();
-  const stages = Object.freeze((rolloutGate?.stages || []).map(compactStage));
-  const payload = Object.freeze({
-    decision: rolloutGate?.decision || "no_go",
-    ready: rolloutGate?.ready === true,
-    nextStagePercent: rolloutGate?.nextStagePercent ?? null,
-    maxAgencies: rolloutGate?.maxAgencies ?? null,
-    blockers: Object.freeze([...(rolloutGate?.blockers || [])]),
-    stages,
-    recoveryTrust: Object.freeze({
-      decision: recoveryTrust?.decision || null,
-      ready: recoveryTrust?.ready === true,
-      total: Number(recoveryTrust?.summary?.total || 0),
-      healthy: Number(recoveryTrust?.summary?.healthy || 0),
-      blocked: Number(recoveryTrust?.summary?.blocked || 0),
-      critical: Number(recoveryTrust?.summary?.critical || 0)
-    })
-  });
-  return Object.freeze({
-    snapshotId: `rollout-decision-${stableId(payload)}`,
-    generatedAt,
-    ...payload
-  });
-}
-
-async function persistRolloutDecisionSnapshot(prisma, snapshot) {
-  await prisma.$executeRaw`
-    INSERT INTO "PresenceOperationAudit" ("providerKey", "scope", "eventType", "status", "payload", "result")
-    VALUES ('network', 'network_rollout', 'rollout_decision_snapshot', ${snapshot.decision}, CAST(${JSON.stringify({ snapshotId: snapshot.snapshotId })} AS JSONB), CAST(${JSON.stringify(snapshot)} AS JSONB))
-  `;
-  return snapshot;
-}
-
-module.exports = { compactStage, buildRolloutDecisionSnapshot, persistRolloutDecisionSnapshot };
+function buildRolloutDecisionSnapshot(rolloutGate,recoveryTrust){const generatedAt=new Date().toISOString();const stages=Object.freeze((rolloutGate?.stages||[]).map(compactStage));const payload=Object.freeze({decision:rolloutGate?.decision||"no_go",ready:rolloutGate?.ready===true,nextStagePercent:rolloutGate?.nextStagePercent??null,maxAgencies:rolloutGate?.maxAgencies??null,blockers:Object.freeze([...(rolloutGate?.blockers||[])]),stages,recoveryTrust:Object.freeze({decision:recoveryTrust?.decision||null,ready:recoveryTrust?.ready===true,total:Number(recoveryTrust?.summary?.total||0),healthy:Number(recoveryTrust?.summary?.healthy||0),blocked:Number(recoveryTrust?.summary?.blocked||0),critical:Number(recoveryTrust?.summary?.critical||0)})});return Object.freeze({snapshotId:`rollout-decision-${stableId(payload)}`,generatedAt,...payload});}
+async function persistRolloutDecisionSnapshot(prisma,snapshot){await prisma.$executeRaw`INSERT INTO "PresenceOperationAudit" ("providerKey","scope","eventType","status","payload","result") VALUES ('network','network_rollout','rollout_decision_snapshot',${snapshot.decision},CAST(${JSON.stringify({snapshotId:snapshot.snapshotId})} AS JSONB),CAST(${JSON.stringify(snapshot)} AS JSONB))`;return snapshot;}
+async function listRolloutDecisionSnapshots(prisma,limit=20){const safeLimit=Math.max(1,Math.min(Number(limit||20),100));const rows=await prisma.$queryRaw`SELECT "id","status","result","createdAt" FROM "PresenceOperationAudit" WHERE "scope"='network_rollout' AND "eventType"='rollout_decision_snapshot' ORDER BY "createdAt" DESC,"id" DESC LIMIT ${safeLimit}`;return rows.map(row=>Object.freeze({auditId:String(row.id),frozenAt:row.createdAt,snapshotId:row.result?.snapshotId||null,decision:row.result?.decision||row.status||"no_go",ready:row.result?.ready===true,nextStagePercent:row.result?.nextStagePercent??null,maxAgencies:row.result?.maxAgencies??null,blockers:row.result?.blockers||[],stages:row.result?.stages||[],recoveryTrust:row.result?.recoveryTrust||null}));}
+module.exports={compactStage,buildRolloutDecisionSnapshot,persistRolloutDecisionSnapshot,listRolloutDecisionSnapshots};
