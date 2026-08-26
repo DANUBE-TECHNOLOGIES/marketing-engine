@@ -1,0 +1,19 @@
+#!/usr/bin/env node
+"use strict";
+const fs = require("node:fs");
+const path = require("node:path");
+const crypto = require("node:crypto");
+function fp(v){return crypto.createHash("sha256").update(JSON.stringify(v)).digest("hex")}
+function latest(dir, prefix){if(!fs.existsSync(dir))return null;return fs.readdirSync(dir).filter(n=>n.startsWith(prefix)&&n.endsWith(".json")).map(n=>({p:path.join(dir,n),t:fs.statSync(path.join(dir,n)).mtimeMs})).sort((a,b)=>b.t-a.t)[0]?.p||null}
+function read(file){return file?JSON.parse(fs.readFileSync(file,"utf8")):null}
+async function run({emitOutput=true}={}){
+ const dir=process.env.MSE_25_55_REPORT_DIR||"/home/admin1/mse-25-55-reports";
+ const source=process.env.MSE_25_56_SOURCE_REPORT||latest(dir,"mse-25-55-editorial-mandate-");
+ let state="WAITING_FOR_EDITORIAL_MANDATE",reason="NO_MSE_25_55_EDITORIAL_MANDATE_AVAILABLE",ready=false;
+ if(source){const r=read(source);if(r?.type!=="MSE_25_55_EDITORIAL_MANDATE_REPORT"||r?.certified!==true||r?.writes!==false||r?.publicWrites!==false||Number(r?.summary?.executableCount||0)!==0)throw new Error("MSE_25_56_UNSAFE_SOURCE_MANDATE");ready=true;state="READY_FOR_HUMAN_REVIEWABLE_DIFF";reason="CERTIFIED_MSE_25_55_MANDATE_AVAILABLE"}
+ const result={ok:true,type:"MSE_25_56_EDITORIAL_DIFF_READINESS",ready,state,reason,readOnly:true,writes:false,publicWrites:false,executableCount:0,automaticWriteCount:0,sourceMandateReportPath:source,policy:{noSyntheticMandate:true,noSyntheticHumanDecision:true,websiteDesignerReadOnly:true,automaticDiffExecution:false,humanReviewRequired:true}};
+ result.readinessFingerprint=fp(result);
+ if(emitOutput)console.log(JSON.stringify(result,null,2));return result;
+}
+if(require.main===module)run().catch(e=>{console.error(JSON.stringify({ok:false,readOnly:true,writes:false,publicWrites:false,error:"MSE_25_56_READINESS_FAILED",message:e.message},null,2));process.exitCode=1});
+module.exports={run,latest};
