@@ -8,6 +8,7 @@ on:
       - 'feature/mse-25-70-*'
       - 'feature/mse-25-72-*'
       - 'feature/mse-25-73-*'
+      - 'feature/mse-25-74-*'
       - 'feature/runtime-cockpit-*'
       - 'integration/mse-25-operational-cockpit-*'
   pull_request:
@@ -77,6 +78,10 @@ jobs:
       - name: Indexation incident lifecycle
         working-directory: backend
         run: node --test test/mse-25-73-indexation-incident-lifecycle.test.js
+
+      - name: Runtime indexability readiness
+        working-directory: backend
+        run: node --test test/mse-25-74-runtime-indexability-audit.test.js
 
       - name: Operational orchestrator tests
         working-directory: backend
