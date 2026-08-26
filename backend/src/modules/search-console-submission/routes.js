@@ -9,6 +9,7 @@ const { SearchConsoleObservabilityService } = require("./observability");
 const { SearchConsolePerformanceService } = require("./performance");
 const { IndexationCoverageService } = require("./indexation-coverage");
 const { PublicIndexabilityObserver } = require("./public-indexability-observer");
+const { buildIndexationIncidentQueue } = require("./indexation-incident-queue");
 const { SeoOpportunityWorkQueueService } = require("./opportunity-work-queue");
 const { resolveLocalSeoContext } = require("./local-seo-intent");
 
@@ -49,6 +50,15 @@ function publicAuditLimit(value) {
   return Math.max(1, Math.min(500, parsed));
 }
 
+async function readPublicAudit({ tenantId, request, submissionService, observer }) {
+  const sitemap = await submissionService.structuredDataService.previewSitemap({ tenantId });
+  const allUrls = (sitemap?.entries || []).map((entry) => entry?.url).filter(Boolean);
+  const limit = publicAuditLimit(request.query?.limit);
+  const selectedUrls = allUrls.slice(0, limit);
+  const audit = await observer.audit({ urls: selectedUrls, publicOrigin: submissionService.structuredDataService.publicOrigin });
+  return { audit, sitemapUrlCount: allUrls.length, auditedUrlCount: selectedUrls.length, truncated: allUrls.length > selectedUrls.length };
+}
+
 function routes({ prisma, service, provider } = {}) {
   const router = express.Router();
   const submissionService = service || new SearchConsoleSubmissionService({ prisma, provider });
@@ -58,19 +68,32 @@ function routes({ prisma, service, provider } = {}) {
   const publicIndexabilityObserver = new PublicIndexabilityObserver({ timeoutMs: Number(process.env.PUBLIC_INDEXABILITY_TIMEOUT_MS || 5000), concurrency: Number(process.env.PUBLIC_INDEXABILITY_CONCURRENCY || 6) });
   const opportunityQueue = new SeoOpportunityWorkQueueService({ prisma });
 
-  router.get("/search-console-submissions/health", (_request, response) => { const activeProvider = submissionService.provider; response.json({ ok: true, capability: "search-console-submission-journal", provider: activeProvider?.name || "unknown", providerConfigured: activeProvider?.isConfigured?.() === true, requestedEnabled: activeProvider?.requestedEnabled === true, disabledReason: activeProvider?.disabledReason || null, credentialMode: activeProvider?.credentialMode || null, requiredPermissionLevel: SEARCH_CONSOLE_OWNER_PERMISSION, explicitApprovalRequired: true, autoSubmit: false, readOnlySitemapObservability: true, readOnlySearchPerformance: true, readOnlyIndexationCoverage: true, readOnlyPublicHttpIndexability: true }); });
+  router.get("/search-console-submissions/health", (_request, response) => { const activeProvider = submissionService.provider; response.json({ ok: true, capability: "search-console-submission-journal", provider: activeProvider?.name || "unknown", providerConfigured: activeProvider?.isConfigured?.() === true, requestedEnabled: activeProvider?.requestedEnabled === true, disabledReason: activeProvider?.disabledReason || null, credentialMode: activeProvider?.credentialMode || null, requiredPermissionLevel: SEARCH_CONSOLE_OWNER_PERMISSION, explicitApprovalRequired: true, autoSubmit: false, readOnlySitemapObservability: true, readOnlySearchPerformance: true, readOnlyIndexationCoverage: true, readOnlyPublicHttpIndexability: true, readOnlyIndexationIncidentQueue: true }); });
   router.get("/search-console-submissions/properties", async (request, response) => { try { await tenantIdForRequest(prisma, request); const properties = await submissionService.provider.listSites(); response.json({ provider: submissionService.provider?.name || "unknown", count: properties.length, requiredPermissionLevel: SEARCH_CONSOLE_OWNER_PERMISSION, properties: properties.map((property) => ({ siteUrl: property?.siteUrl || null, permissionLevel: property?.permissionLevel || null, eligibleForSitemapSubmission: property?.permissionLevel === SEARCH_CONSOLE_OWNER_PERMISSION })) }); } catch (error) { sendError(response, error); } });
   router.get("/search-console-submissions/candidates", async (request, response) => { try { const tenantId = await tenantIdForRequest(prisma, request); response.json(await submissionService.candidates({ tenantId })); } catch (error) { sendError(response, error); } });
   router.get("/search-console-submissions/indexation-coverage", async (request, response) => { try { const tenantId = await tenantIdForRequest(prisma, request); response.json(await indexationCoverageService.diagnoseNetwork({ tenantId, ...coverageScope(request, submissionService) })); } catch (error) { sendError(response, error); } });
   router.get("/search-console-submissions/public-indexability", async (request, response) => {
     try {
       const tenantId = await tenantIdForRequest(prisma, request);
-      const sitemap = await submissionService.structuredDataService.previewSitemap({ tenantId });
-      const allUrls = (sitemap?.entries || []).map((entry) => entry?.url).filter(Boolean);
-      const limit = publicAuditLimit(request.query?.limit);
-      const selectedUrls = allUrls.slice(0, limit);
-      const audit = await publicIndexabilityObserver.audit({ urls: selectedUrls, publicOrigin: submissionService.structuredDataService.publicOrigin });
-      response.json({ ...audit, sitemapUrlCount: allUrls.length, auditedUrlCount: selectedUrls.length, truncated: allUrls.length > selectedUrls.length, invariants: { readOnlyHttp: true, googleSubmission: false, pageCreation: false, publicationMutation: false, websiteDesignerMutation: false } });
+      const result = await readPublicAudit({ tenantId, request, submissionService, observer: publicIndexabilityObserver });
+      response.json({ ...result.audit, sitemapUrlCount: result.sitemapUrlCount, auditedUrlCount: result.auditedUrlCount, truncated: result.truncated, invariants: { readOnlyHttp: true, googleSubmission: false, pageCreation: false, publicationMutation: false, websiteDesignerMutation: false } });
+    } catch (error) { sendError(response, error); }
+  });
+  router.get("/search-console-submissions/indexation-incidents", async (request, response) => {
+    try {
+      const tenantId = await tenantIdForRequest(prisma, request);
+      const scope = coverageScope(request, submissionService);
+      const [coverage, publicResult] = await Promise.all([
+        indexationCoverageService.diagnoseNetwork({ tenantId, ...scope }),
+        readPublicAudit({ tenantId, request, submissionService, observer: publicIndexabilityObserver }),
+      ]);
+      response.json({
+        ...buildIndexationIncidentQueue({ coverage, publicAudit: publicResult.audit }),
+        scope,
+        sitemapUrlCount: publicResult.sitemapUrlCount,
+        auditedUrlCount: publicResult.auditedUrlCount,
+        truncated: publicResult.truncated,
+      });
     } catch (error) { sendError(response, error); }
   });
   router.get("/search-console-submissions/sites/:siteSlug/status", async (request, response) => { try { const tenantId = await tenantIdForRequest(prisma, request); response.json(await observabilityService.sitemapStatus({ tenantId, siteSlug: request.params.siteSlug, siteUrl: request.query?.siteUrl })); } catch (error) { sendError(response, error); } });
@@ -90,4 +113,4 @@ function routes({ prisma, service, provider } = {}) {
   return router;
 }
 
-module.exports = { coverageScope, normalizeCoveragePagePrefix, publicAuditLimit, routes, sendError };
+module.exports = { coverageScope, normalizeCoveragePagePrefix, publicAuditLimit, readPublicAudit, routes, sendError };
