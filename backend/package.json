@@ -71,7 +71,10 @@
     "mse-25.52:observe": "node scripts/mse-25-52-observe.js",
     "mse-25.53:decision-packets": "node scripts/mse-25-53-decision-packets.js",
     "mse-25.53:certify": "node scripts/mse-25-53-certify.js",
-    "mse-25.53:observe": "node scripts/mse-25-53-observe.js"
+    "mse-25.53:observe": "node scripts/mse-25-53-observe.js",
+    "mse-25.54:human-decision": "node scripts/mse-25-54-human-decision.js",
+    "mse-25.55:readiness": "node scripts/mse-25-55-readiness.js",
+    "mse-25.55:editorial-mandate": "node scripts/mse-25-55-editorial-mandate.js"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",
