@@ -4,6 +4,7 @@ const express = require("express");
 const { listPendingPropagation } = require("./propagation-watch");
 const { buildNetworkCockpit } = require("./network-cockpit");
 const { buildRecoveryTrustOverview } = require("./recovery-trust-overview");
+const { evaluateNetworkRolloutGate } = require("./network-rollout-gate");
 
 async function loadCockpitState(prisma) {
   const [agencies, directories, listings, pendingPropagation, actions] = await Promise.all([
@@ -25,9 +26,10 @@ function networkCockpitRoutes({ prisma }) {
 
   router.get("/api/presence/network/cockpit", async (req, res) => {
     try {
-      const [state, recoveryTrust] = await Promise.all([
-        loadCockpitState(prisma),
-        buildRecoveryTrustOverview(prisma, 200)
+      const state = await loadCockpitState(prisma);
+      const [recoveryTrust, rolloutGate] = await Promise.all([
+        buildRecoveryTrustOverview(prisma, 200),
+        evaluateNetworkRolloutGate(prisma, state.agencies.length)
       ]);
       const cockpit = buildNetworkCockpit(state);
       const limit = Math.max(1, Math.min(Number(req.query.limit || 100), 500));
@@ -36,6 +38,7 @@ function networkCockpitRoutes({ prisma }) {
         generatedAt: new Date().toISOString(),
         ...cockpit,
         recoveryTrust,
+        rolloutGate,
         interventionQueue: cockpit.interventionQueue.slice(0, limit)
       });
     } catch (error) {
