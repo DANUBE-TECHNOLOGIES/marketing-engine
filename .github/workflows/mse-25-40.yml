@@ -1,15 +1,20 @@
-name: MSE-25.40 Local SEO Semantic Engine
+name: MSE-25 Operational SEO Engine
 
 on:
   push:
     branches:
       - 'feature/mse-25-40-*'
+      - 'feature/runtime-cockpit-*'
+      - 'integration/mse-25-operational-cockpit-*'
   pull_request:
     paths:
       - 'backend/src/modules/minisite-semantic-engine/**'
-      - 'backend/scripts/mse-25-40-*.js'
-      - 'backend/test/mse-25-40-*.test.js'
+      - 'backend/scripts/mse-25-*.js'
+      - 'backend/test/mse-25-*.test.js'
+      - 'backend/test/post-rollback-runtime-status.test.js'
       - 'backend/src/modules/register-modules.js'
+      - 'frontend/app/seo-cockpit/**'
+      - 'frontend/app/components/MainLayout.js'
       - '.github/workflows/mse-25-40.yml'
   workflow_dispatch:
 
@@ -19,9 +24,6 @@ permissions:
 jobs:
   semantic-engine:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,16 +33,38 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-          cache-dependency-path: backend/package-lock.json
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
 
-      - name: Install
+      - name: Install backend
+        working-directory: backend
         run: npm ci
 
       - name: Prisma client
+        working-directory: backend
         run: npm run prisma:generate
 
       - name: Load semantic module
+        working-directory: backend
         run: node -e "require('./src/modules/minisite-semantic-engine')"
 
       - name: MSE-25.40 tests
+        working-directory: backend
         run: node --test test/mse-25-40-*.test.js
+
+      - name: Operational orchestrator tests
+        working-directory: backend
+        run: node --test test/mse-25-operational-*.test.js
+
+      - name: Post-rollback runtime tests
+        working-directory: backend
+        run: node --test test/post-rollback-runtime-status.test.js
+
+      - name: Install frontend
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build SEO cockpit frontend
+        working-directory: frontend
+        run: npm run build
