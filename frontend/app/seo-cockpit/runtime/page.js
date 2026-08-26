@@ -25,11 +25,8 @@ async function loadRuntimeStatus() {
   );
   const text = await response.text();
   let payload;
-  try {
-    payload = text ? JSON.parse(text) : null;
-  } catch {
-    payload = { message: text || `HTTP ${response.status}` };
-  }
+  try { payload = text ? JSON.parse(text) : null; }
+  catch { payload = { message: text || `HTTP ${response.status}` }; }
   if (!response.ok && response.status !== 503) {
     throw new Error(payload?.message || `Runtime verification HTTP ${response.status}`);
   }
@@ -57,11 +54,8 @@ function YesNo({ value }) {
 export default async function RuntimeVerificationPage() {
   let payload;
   let error;
-  try {
-    payload = await loadRuntimeStatus();
-  } catch (caught) {
-    error = caught;
-  }
+  try { payload = await loadRuntimeStatus(); }
+  catch (caught) { error = caught; }
 
   return (
     <MainLayout
@@ -95,6 +89,15 @@ export default async function RuntimeVerificationPage() {
             </div>
           </section>
 
+          {payload?.state === "POST_ROLLBACK_VERIFICATION_PROVENANCE_MISMATCH" ? (
+            <section className="mt-6 rounded-2xl border border-amber-300 bg-amber-100 p-5 text-amber-950 shadow-sm">
+              <h2 className="font-black">Vérification obsolète détectée</h2>
+              <p className="mt-2 text-sm leading-6">
+                Le dernier rapport MSE-25.68 trouvé ne correspond pas exactement au dernier rollback MSE-25.67. Le cockpit refuse donc de déclarer le runtime sain tant qu'une nouvelle vérification liée à ce rollback précis n'a pas été produite.
+              </p>
+            </section>
+          ) : null}
+
           <div className="mt-6 grid gap-5 lg:grid-cols-2">
             <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
               <h2 className="text-xl font-black">Rollback gardé</h2>
@@ -105,6 +108,7 @@ export default async function RuntimeVerificationPage() {
                 <div><dt className="text-slate-500">Page</dt><dd className="font-semibold">{payload?.rollback?.page || "—"}</dd></div>
               </dl>
               {payload?.rollback?.pageIdentity ? <div className="mt-4 break-all text-xs text-slate-500">Page identity : {payload.rollback.pageIdentity}</div> : null}
+              {payload?.rollback?.auditFingerprint ? <div className="mt-2 break-all text-xs text-slate-500">Audit fingerprint : {payload.rollback.auditFingerprint}</div> : null}
             </section>
 
             <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -112,11 +116,13 @@ export default async function RuntimeVerificationPage() {
               <dl className="mt-5 grid grid-cols-2 gap-4 text-sm">
                 <div><dt className="text-slate-500">Rapport disponible</dt><dd><YesNo value={payload?.verification?.available} /></dd></div>
                 <div><dt className="text-slate-500">Certification valide</dt><dd><YesNo value={payload?.verification?.certified} /></dd></div>
+                <div><dt className="text-slate-500">Provenance exacte</dt><dd>{payload?.verification?.available ? <YesNo value={payload?.verification?.provenanceMatches} /> : "—"}</dd></div>
                 <div><dt className="text-slate-500">Incident récupéré</dt><dd>{payload?.verification?.incidentRecovered == null ? "—" : <YesNo value={payload.verification.incidentRecovered} />}</dd></div>
                 <div><dt className="text-slate-500">Intervention manuelle</dt><dd>{payload?.verification?.manualInterventionRequired == null ? "—" : <YesNo value={payload.verification.manualInterventionRequired} />}</dd></div>
               </dl>
               {payload?.verification?.generatedAt ? <div className="mt-4 text-xs text-slate-500">Rapport : {new Date(payload.verification.generatedAt).toLocaleString("fr-FR")}</div> : null}
               {payload?.verification?.fingerprint ? <div className="mt-2 break-all text-xs text-slate-500">Fingerprint : {payload.verification.fingerprint}</div> : null}
+              {payload?.verification?.sourceRollbackAuditFingerprint ? <div className="mt-2 break-all text-xs text-slate-500">Rollback source : {payload.verification.sourceRollbackAuditFingerprint}</div> : null}
             </section>
           </div>
 
