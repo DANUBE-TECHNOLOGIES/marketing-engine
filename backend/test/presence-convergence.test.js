@@ -31,6 +31,7 @@ require("../src/modules/presence/pilot-activation-gate.test");
 require("../src/modules/presence/pilot-selector.test");
 require("../src/modules/presence/pilot-routes.test");
 require("../src/modules/presence/pilot-campaign-approval.test");
+require("../src/modules/presence/preflight-recovery-trust-binding.test");
 require("../src/modules/presence/pilot-execution-gate.test");
 require("../src/modules/presence/pilot-extension-gate.test");
 require("../src/modules/presence/network-rollout-gate.test");
