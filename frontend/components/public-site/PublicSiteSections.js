@@ -1,3 +1,5 @@
+import { preconnect, preload } from "react-dom";
+
 import {
   getSectionContent,
   getSectionType,
@@ -71,7 +73,7 @@ function ImageTextSection({ section }) {
         <div className="public-site-image-text-media">
           {content.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={content.imageUrl} alt={content.imageAlt || ""} loading="lazy" />
+            <img src={content.imageUrl} alt={content.imageAlt || ""} loading="lazy" decoding="async" />
           ) : (
             <div className="public-site-image-placeholder" aria-hidden="true" />
           )}
@@ -128,7 +130,7 @@ function GallerySection({ section }) {
             <figure className="public-site-gallery-item" key={image.id || image.url || index}>
               {image.url ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={image.url} alt={image.alt || ""} loading="lazy" />
+                <img src={image.url} alt={image.alt || ""} loading="lazy" decoding="async" />
               ) : (
                 <div className="public-site-image-placeholder" aria-hidden="true" />
               )}
@@ -178,6 +180,15 @@ function AgencySection({ section, site }) {
   );
 }
 
+function imageOrigin(value) {
+  try {
+    const url = new URL(String(value || ""));
+    return ["http:", "https:"].includes(url.protocol) ? url.origin : null;
+  } catch {
+    return null;
+  }
+}
+
 function HeroSection({ section, site }) {
   const content = getSectionContent(section);
   const title = content.title || content.heading || section.title || site.name;
@@ -193,25 +204,44 @@ function HeroSection({ section, site }) {
   const overlayOpacity =
     Math.min(Math.max(Number(content.overlayOpacity ?? 68), 20), 90) / 100;
 
-  const heroStyle = backgroundImage
-    ? {
-        backgroundImage: `linear-gradient(90deg, rgba(8,31,52,${overlayOpacity}) 0%, rgba(8,31,52,${Math.max(
-          overlayOpacity - 0.12,
-          0.2
-        )}) 48%, rgba(8,31,52,${Math.max(
-          overlayOpacity - 0.35,
-          0.08
-        )}) 100%), url("${backgroundImage}")`,
-        backgroundPosition,
-      }
-    : undefined;
+  if (backgroundImage) {
+    const origin = imageOrigin(backgroundImage);
+    if (origin) preconnect(origin);
+    preload(backgroundImage, {
+      as: "image",
+      fetchPriority: "high",
+    });
+  }
 
   return (
-    <section
-      className="public-site-hero"
-      style={heroStyle}
-      aria-label={content.imageAlt || undefined}
-    >
+    <section className="public-site-hero" data-has-hero-image={backgroundImage ? "true" : "false"}>
+      {backgroundImage ? (
+        <div className="public-site-hero-media" aria-hidden="true">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={backgroundImage}
+            alt=""
+            loading="eager"
+            fetchPriority="high"
+            width="1920"
+            height="1080"
+            style={{ objectPosition: backgroundPosition }}
+          />
+          <span
+            className="public-site-hero-overlay"
+            style={{
+              background: `linear-gradient(90deg, rgba(8,31,52,${overlayOpacity}) 0%, rgba(8,31,52,${Math.max(
+                overlayOpacity - 0.12,
+                0.2
+              )}) 48%, rgba(8,31,52,${Math.max(
+                overlayOpacity - 0.35,
+                0.08
+              )}) 100%)`,
+            }}
+          />
+        </div>
+      ) : null}
+
       <div className="public-site-container">
         <p className="public-site-eyebrow">{content.eyebrow || "Agence de voyages"}</p>
         <h1>{title}</h1>
