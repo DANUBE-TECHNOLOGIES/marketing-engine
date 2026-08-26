@@ -8,6 +8,11 @@ function arg(name, fallback = null) {
   return match ? match.slice(prefix.length) : fallback;
 }
 
+function numberArg(name, fallback) {
+  const parsed = Number(arg(name, String(fallback)));
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
 function absoluteUrl(base, value) {
   try {
     return new URL(value, base).toString();
@@ -75,11 +80,14 @@ async function inspectImage(url) {
 }
 
 const target = arg("url", process.env.PUBLIC_PERFORMANCE_URL);
-const maxImages = Math.max(1, Math.min(20, Number(arg("max-images", "8")) || 8));
+const maxImages = Math.max(1, Math.min(20, numberArg("max-images", 8)));
 const json = arg("json", "false") === "true";
+const gate = arg("gate", "false") === "true";
+const maxTtfbMs = Math.max(100, numberArg("max-ttfb-ms", 1200));
+const maxSingleImageBytes = Math.max(50_000, numberArg("max-single-image-bytes", 1_500_000));
 
 if (!target) {
-  console.error("Usage: npm run perf:probe -- --url=https://… [--max-images=8] [--json=true]");
+  console.error("Usage: npm run perf:probe -- --url=https://… [--max-images=8] [--gate=true] [--json=true]");
   process.exit(2);
 }
 
@@ -91,8 +99,14 @@ const page = await timedFetch(target, {
 });
 
 const html = Buffer.from(page.body).toString("utf8");
-const images = imageUrls(html, page.response.url).slice(0, maxImages);
+const allImages = imageUrls(html, page.response.url);
+const images = allImages.slice(0, maxImages);
 const media = await Promise.all(images.map(inspectImage));
+const largestImages = [...media]
+  .filter((item) => item.bytes)
+  .sort((a, b) => b.bytes - a.bytes)
+  .slice(0, 5);
+
 const report = {
   target,
   finalUrl: page.response.url,
@@ -107,14 +121,28 @@ const report = {
   },
   hero: heroContract(html),
   images: {
-    discovered: imageUrls(html, page.response.url).length,
+    discovered: allImages.length,
     inspected: media.length,
     totalBytesInspected: media.reduce((sum, item) => sum + (item.bytes || 0), 0),
-    largest: [...media]
-      .filter((item) => item.bytes)
-      .sort((a, b) => b.bytes - a.bytes)
-      .slice(0, 5),
+    largest: largestImages,
   },
+};
+
+const failures = [];
+if (!page.response.ok) failures.push(`HTTP ${page.response.status}`);
+if (report.page.ttfbMs > maxTtfbMs) failures.push(`TTFB ${report.page.ttfbMs}ms > ${maxTtfbMs}ms`);
+if (!report.hero.present) failures.push("hero image not discoverable in initial HTML");
+if (report.hero.present && !report.hero.highPriority) failures.push("hero image is not fetchPriority=high");
+if (report.hero.present && (!report.hero.width || !report.hero.height)) failures.push("hero image has no intrinsic dimensions");
+if ((largestImages[0]?.bytes || 0) > maxSingleImageBytes) {
+  failures.push(`largest inspected image ${largestImages[0].bytes}B > ${maxSingleImageBytes}B`);
+}
+report.gate = {
+  enabled: gate,
+  maxTtfbMs,
+  maxSingleImageBytes,
+  passed: failures.length === 0,
+  failures,
 };
 
 if (json) {
@@ -137,6 +165,11 @@ if (json) {
   for (const [index, item] of report.images.largest.entries()) {
     console.log(`IMAGE_${index + 1}_BYTES=${item.bytes} TYPE=${item.type || "unknown"} CACHE=${item.cacheControl || "none"} URL=${item.url}`);
   }
+  if (gate) {
+    console.log(`PERFORMANCE_GATE=${report.gate.passed ? "PASS" : "FAIL"}`);
+    for (const failure of failures) console.log(`GATE_FAILURE=${failure}`);
+  }
 }
 
-if (!page.response.ok) process.exitCode = 1;
+if (gate && failures.length) process.exitCode = 1;
+else if (!page.response.ok) process.exitCode = 1;
