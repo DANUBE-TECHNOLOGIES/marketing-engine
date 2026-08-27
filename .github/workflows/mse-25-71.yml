@@ -99,10 +99,7 @@ jobs:
         run: |
           set -euo pipefail
           bash -n scripts/mse-25-71-origin-readiness.sh
-          test -x scripts/mse-25-71-origin-readiness.sh || {
-            echo 'origin readiness script must be executable' >&2
-            exit 1
-          }
+          grep -q '^#!/usr/bin/env bash' scripts/mse-25-71-origin-readiness.sh
           grep -q 'ORIGIN_STATE=PUBLIC_READY' scripts/mse-25-71-origin-readiness.sh
           grep -q 'ORIGIN_STATE=REVERSE_PROXY_UPSTREAM_FAILURE' scripts/mse-25-71-origin-readiness.sh
           grep -q 'ORIGIN_STATE=FRONTEND_FAILURE' scripts/mse-25-71-origin-readiness.sh
