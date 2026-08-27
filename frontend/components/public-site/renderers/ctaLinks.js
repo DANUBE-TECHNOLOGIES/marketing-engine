@@ -1,6 +1,9 @@
 "use strict";
 
 function siteRoot(site) {
+  const explicitBasePath = String(site?.basePath || "").trim();
+  if (explicitBasePath) return explicitBasePath.replace(/\/$/, "");
+
   const slug = String(site?.slug || "").trim();
   return slug
     ? `/agence/${encodeURIComponent(slug)}`
@@ -26,6 +29,10 @@ function isAllowedAbsoluteHref(value) {
   return /^(https?:|mailto:|tel:)/i.test(value);
 }
 
+function isAgencyScopedPublicPath(value) {
+  return /^\/(?:contact|services|equipe|team|destinations|partenaires|partners|inspiration|inspirations)(?:\/|$)/i.test(value);
+}
+
 export function resolvePublicCtaHref(
   site,
   href,
@@ -44,12 +51,14 @@ export function resolvePublicCtaHref(
     return value;
   }
 
-  if (value.startsWith("/")) {
+  if (isAllowedAbsoluteHref(value)) {
     return value;
   }
 
-  if (isAllowedAbsoluteHref(value)) {
-    return value;
+  if (value.startsWith("/")) {
+    return isAgencyScopedPublicPath(value)
+      ? sitePageHref(site, value)
+      : value;
   }
 
   return sitePageHref(site, value);
@@ -62,4 +71,4 @@ export function phoneHref(phone) {
   return normalized ? `tel:${normalized}` : null;
 }
 
-export { sitePageHref };
+export { sitePageHref, siteRoot };
