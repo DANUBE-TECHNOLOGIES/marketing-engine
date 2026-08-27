@@ -3,6 +3,7 @@ set -u
 
 PUBLIC_URL="${1:-https://agences.mondescale.com/agence/gien}"
 FRONTEND_URL="${FRONTEND_URL:-http://127.0.0.1:3000/agence/gien}"
+FRONTEND_LIVENESS_URL="${FRONTEND_LIVENESS_URL:-http://127.0.0.1:3000/healthz}"
 BACKEND_URL="${BACKEND_URL:-http://127.0.0.1:4000/health}"
 PUBLIC_SCHEME="${PUBLIC_URL%%://*}"
 PUBLIC_AUTHORITY="${PUBLIC_URL#*://}"
@@ -13,6 +14,7 @@ if [[ "$PUBLIC_SCHEME" == "https" ]]; then
 else
   PUBLIC_PORT="80"
 fi
+PUBLIC_LIVENESS_URL="${PUBLIC_LIVENESS_URL:-${PUBLIC_SCHEME}://${PUBLIC_HOSTPORT}/healthz}"
 
 section() {
   printf '\n=== %s ===\n' "$1"
@@ -21,8 +23,9 @@ section() {
 http_probe() {
   local label="$1"
   local url="$2"
+  shift 2
   local output
-  output="$(curl -sS -L -o /dev/null -w 'HTTP=%{http_code} TTFB=%{time_starttransfer}s TOTAL=%{time_total}s REMOTE=%{remote_ip}\n' --max-time 15 "$url" 2>&1)"
+  output="$(curl -sS -L -o /dev/null -w 'HTTP=%{http_code} TTFB=%{time_starttransfer}s TOTAL=%{time_total}s REMOTE=%{remote_ip}\n' --max-time 15 "$@" "$url" 2>&1)"
   local status=$?
   printf '%s URL=%s\n%s\n' "$label" "$url" "$output"
   return "$status"
@@ -31,9 +34,10 @@ http_probe() {
 header_probe() {
   local label="$1"
   local url="$2"
+  shift 2
   printf '%s_HEADERS URL=%s\n' "$label" "$url"
-  curl -sS -L -D - -o /dev/null --max-time 15 "$url" 2>/dev/null \
-    | grep -Ei '^(HTTP/|server:|via:|x-powered-by:|x-cache:|cf-ray:|date:|content-type:|content-length:|location:)' \
+  curl -sS -L -D - -o /dev/null --max-time 15 "$@" "$url" 2>/dev/null \
+    | grep -Ei '^(HTTP/|server:|via:|x-powered-by:|x-cache:|cf-ray:|date:|content-type:|content-length:|location:|cache-control:)' \
     | tail -n 30 || true
 }
 
@@ -50,21 +54,25 @@ http_code() {
 }
 
 local_proxy_probe() {
+  local label="$1"
+  local url="$2"
   local output
   output="$(curl -k -sS -L -o /dev/null \
     --resolve "${PUBLIC_HOST}:${PUBLIC_PORT}:127.0.0.1" \
     -w 'HTTP=%{http_code} TTFB=%{time_starttransfer}s TOTAL=%{time_total}s REMOTE=%{remote_ip}\n' \
-    --max-time 15 "$PUBLIC_URL" 2>&1)"
+    --max-time 15 "$url" 2>&1)"
   local status=$?
-  printf 'LOCAL_PROXY URL=%s RESOLVE=%s:%s:127.0.0.1\n%s\n' "$PUBLIC_URL" "$PUBLIC_HOST" "$PUBLIC_PORT" "$output"
+  printf '%s URL=%s RESOLVE=%s:%s:127.0.0.1\n%s\n' "$label" "$url" "$PUBLIC_HOST" "$PUBLIC_PORT" "$output"
   return "$status"
 }
 
 section "MSE-25.71 ORIGIN READINESS"
 printf 'PUBLIC_URL=%s\n' "$PUBLIC_URL"
+printf 'PUBLIC_LIVENESS_URL=%s\n' "$PUBLIC_LIVENESS_URL"
 printf 'PUBLIC_HOST=%s\n' "$PUBLIC_HOST"
 printf 'PUBLIC_PORT=%s\n' "$PUBLIC_PORT"
 printf 'FRONTEND_URL=%s\n' "$FRONTEND_URL"
+printf 'FRONTEND_LIVENESS_URL=%s\n' "$FRONTEND_LIVENESS_URL"
 printf 'BACKEND_URL=%s\n' "$BACKEND_URL"
 
 section "DNS"
@@ -101,14 +109,25 @@ section "LOCAL BACKEND"
 http_probe BACKEND "$BACKEND_URL" || true
 header_probe BACKEND "$BACKEND_URL"
 
-section "LOCAL FRONTEND"
+section "LOCAL FRONTEND LIVENESS"
+http_probe FRONTEND_LIVENESS "$FRONTEND_LIVENESS_URL" || true
+header_probe FRONTEND_LIVENESS "$FRONTEND_LIVENESS_URL"
+
+section "LOCAL FRONTEND AGENCY ROUTE"
 http_probe FRONTEND "$FRONTEND_URL" || true
 header_probe FRONTEND "$FRONTEND_URL"
 
-section "LOCAL REVERSE PROXY"
-local_proxy_probe || true
+section "LOCAL REVERSE PROXY LIVENESS"
+local_proxy_probe LOCAL_PROXY_LIVENESS "$PUBLIC_LIVENESS_URL" || true
 
-section "PUBLIC ROUTE"
+section "LOCAL REVERSE PROXY AGENCY ROUTE"
+local_proxy_probe LOCAL_PROXY "$PUBLIC_URL" || true
+
+section "PUBLIC LIVENESS"
+http_probe PUBLIC_LIVENESS "$PUBLIC_LIVENESS_URL" || true
+header_probe PUBLIC_LIVENESS "$PUBLIC_LIVENESS_URL"
+
+section "PUBLIC AGENCY ROUTE"
 http_probe PUBLIC "$PUBLIC_URL" || true
 header_probe PUBLIC "$PUBLIC_URL"
 
@@ -149,23 +168,32 @@ fi
 
 section "VERDICT"
 public_code="$(http_code "$PUBLIC_URL")"
+public_liveness_code="$(http_code "$PUBLIC_LIVENESS_URL")"
 frontend_code="$(http_code "$FRONTEND_URL")"
+frontend_liveness_code="$(http_code "$FRONTEND_LIVENESS_URL")"
 backend_code="$(http_code "$BACKEND_URL")"
 local_proxy_code="$(http_code "$PUBLIC_URL" -k --resolve "${PUBLIC_HOST}:${PUBLIC_PORT}:127.0.0.1")"
+local_proxy_liveness_code="$(http_code "$PUBLIC_LIVENESS_URL" -k --resolve "${PUBLIC_HOST}:${PUBLIC_PORT}:127.0.0.1")"
 public_server="$(curl -sS -L -D - -o /dev/null --max-time 15 "$PUBLIC_URL" 2>/dev/null | awk 'BEGIN{IGNORECASE=1} /^server:/{sub(/^[^:]+:[[:space:]]*/,""); gsub(/\r/,""); value=$0} END{print value}')"
 
-printf 'PUBLIC_HTTP=%s\nLOCAL_PROXY_HTTP=%s\nFRONTEND_HTTP=%s\nBACKEND_HTTP=%s\nPUBLIC_SERVER=%s\n' \
-  "$public_code" "$local_proxy_code" "$frontend_code" "$backend_code" "${public_server:-unknown}"
+printf 'PUBLIC_HTTP=%s\nPUBLIC_LIVENESS_HTTP=%s\nLOCAL_PROXY_HTTP=%s\nLOCAL_PROXY_LIVENESS_HTTP=%s\nFRONTEND_HTTP=%s\nFRONTEND_LIVENESS_HTTP=%s\nBACKEND_HTTP=%s\nPUBLIC_SERVER=%s\n' \
+  "$public_code" "$public_liveness_code" "$local_proxy_code" "$local_proxy_liveness_code" "$frontend_code" "$frontend_liveness_code" "$backend_code" "${public_server:-unknown}"
 
 if [[ "$public_code" =~ ^[23] ]]; then
   echo 'ORIGIN_STATE=PUBLIC_READY'
-elif [[ "$local_proxy_code" =~ ^[23] ]] && [[ "$public_code" =~ ^50[234]$ ]]; then
+elif [[ "$public_liveness_code" =~ ^[23] ]] && [[ "$public_code" =~ ^50[234]$ ]]; then
+  echo 'ORIGIN_STATE=PUBLIC_PROXY_READY_ROUTE_FAILURE'
+elif [[ "$local_proxy_code" =~ ^[23] ]] && [[ ! "$public_code" =~ ^[23] ]]; then
   echo 'ORIGIN_STATE=PUBLIC_EDGE_OR_DNS_PATH_FAILURE'
 elif [[ "$frontend_code" =~ ^[23] ]] && [[ "$local_proxy_code" =~ ^50[234]$ ]]; then
   echo 'ORIGIN_STATE=REVERSE_PROXY_UPSTREAM_FAILURE'
-elif [[ "$frontend_code" =~ ^[23] ]] && [[ "$local_proxy_code" == "000" ]] && [[ "$public_code" =~ ^50[234]$ ]]; then
+elif [[ "$frontend_liveness_code" =~ ^[23] ]] && [[ ! "$frontend_code" =~ ^[23] ]]; then
+  echo 'ORIGIN_STATE=FRONTEND_ROUTE_FAILURE'
+elif [[ "$frontend_liveness_code" =~ ^[23] ]] && [[ "$local_proxy_liveness_code" == "000" ]] && [[ "$public_code" =~ ^50[234]$ ]]; then
   echo 'ORIGIN_STATE=REVERSE_PROXY_UNREACHABLE_LOCALLY'
-elif [[ "$backend_code" =~ ^2 ]] && [[ ! "$frontend_code" =~ ^[23] ]]; then
+elif [[ "$frontend_liveness_code" =~ ^[23] ]] && [[ "$local_proxy_liveness_code" =~ ^50[234]$ ]]; then
+  echo 'ORIGIN_STATE=REVERSE_PROXY_UPSTREAM_FAILURE'
+elif [[ "$backend_code" =~ ^2 ]] && [[ ! "$frontend_liveness_code" =~ ^[23] ]]; then
   echo 'ORIGIN_STATE=FRONTEND_FAILURE'
 elif [[ ! "$backend_code" =~ ^2 ]]; then
   echo 'ORIGIN_STATE=BACKEND_OR_STACK_FAILURE'
