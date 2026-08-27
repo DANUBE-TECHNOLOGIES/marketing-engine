@@ -3,13 +3,14 @@ import test from "node:test";
 
 import {
   classifyOriginChain,
+  isReverseProxyServer,
   normalizeBaseUrl,
   remediationFor,
   siteSlugFromUrl,
 } from "../scripts/public-origin-chain-probe.mjs";
 
-function sample(status) {
-  return { status };
+function sample(status, server = "") {
+  return { status, server };
 }
 
 test("origin chain derives the deployed agency origin and slug", () => {
@@ -21,7 +22,17 @@ test("origin chain derives the deployed agency origin and slug", () => {
   assert.equal(siteSlugFromUrl("https://example.test/agence/bois-colombes?x=1"), "bois-colombes");
 });
 
-test("origin chain distinguishes frontend, public API and render failures", () => {
+test("origin chain recognizes common reverse proxy server headers", () => {
+  assert.equal(isReverseProxyServer("openresty"), true);
+  assert.equal(isReverseProxyServer("nginx/1.27"), true);
+  assert.equal(isReverseProxyServer("Next.js"), false);
+});
+
+test("origin chain distinguishes proxy, public API and render failures", () => {
+  assert.equal(
+    classifyOriginChain({ liveness: sample(502, "openresty"), publicApi: sample(502), agency: sample(502) }),
+    "PUBLIC_REVERSE_PROXY_UPSTREAM_FAILURE"
+  );
   assert.equal(
     classifyOriginChain({ liveness: sample(502), publicApi: sample(502), agency: sample(502) }),
     "FRONTEND_OR_PROXY_UNAVAILABLE"
@@ -37,6 +48,13 @@ test("origin chain distinguishes frontend, public API and render failures", () =
   assert.equal(
     classifyOriginChain({ liveness: sample(200), publicApi: sample(200), agency: sample(200) }),
     "PUBLIC_CHAIN_READY"
+  );
+});
+
+test("reverse proxy 502 directs remediation to the frontend upstream", () => {
+  assert.equal(
+    remediationFor("PUBLIC_REVERSE_PROXY_UPSTREAM_FAILURE"),
+    "CHECK_REVERSE_PROXY_UPSTREAM_AND_FRONTEND_PORT_3000"
   );
 });
 
