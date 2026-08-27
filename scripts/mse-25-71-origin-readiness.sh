@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+set -u
+
+PILOT_SLUG="${PILOT_SLUG:-ambassade-fram-mondescale-gien}"
+PUBLIC_URL="${1:-https://agences.mondescale.com/agence/${PILOT_SLUG}}"
+FRONTEND_URL="${FRONTEND_URL:-http://127.0.0.1:3000/agence/${PILOT_SLUG}}"
+FRONTEND_LIVENESS_URL="${FRONTEND_LIVENESS_URL:-http://127.0.0.1:3000/healthz}"
+FRONTEND_PUBLIC_API_URL="${FRONTEND_PUBLIC_API_URL:-http://127.0.0.1:3000/api/public-sites/${PILOT_SLUG}}"
+BACKEND_URL="${BACKEND_URL:-http://127.0.0.1:4000/health}"
+BACKEND_SITE_URL="${BACKEND_SITE_URL:-http://127.0.0.1:4000/api/public-site-read/sites/${PILOT_SLUG}}"
+BACKEND_BRAND_URL="${BACKEND_BRAND_URL:-http://127.0.0.1:4000/api/public-brand-legal/sites/${PILOT_SLUG}}"
+PUBLIC_SCHEME="${PUBLIC_URL%%://*}"
+PUBLIC_AUTHORITY="${PUBLIC_URL#*://}"
+PUBLIC_HOSTPORT="${PUBLIC_AUTHORITY%%/*}"
+PUBLIC_HOST="${PUBLIC_HOSTPORT%%:*}"
+if [[ "$PUBLIC_SCHEME" == "https" ]]; then PUBLIC_PORT="443"; else PUBLIC_PORT="80"; fi
+PUBLIC_LIVENESS_URL="${PUBLIC_LIVENESS_URL:-${PUBLIC_SCHEME}://${PUBLIC_HOSTPORT}/healthz}"
+
+section(){ printf '\n=== %s ===\n' "$1"; }
+http_probe(){ local label="$1" url="$2"; shift 2; local output; output="$(curl -sS -L -o /dev/null -w 'HTTP=%{http_code} TTFB=%{time_starttransfer}s TOTAL=%{time_total}s REMOTE=%{remote_ip}\n' --max-time 15 "$@" "$url" 2>&1)"; local status=$?; printf '%s URL=%s\n%s\n' "$label" "$url" "$output"; return "$status"; }
+header_probe(){ local label="$1" url="$2"; shift 2; printf '%s_HEADERS URL=%s\n' "$label" "$url"; curl -sS -L -D - -o /dev/null --max-time 15 "$@" "$url" 2>/dev/null | grep -Ei '^(HTTP/|server:|via:|x-powered-by:|x-cache:|cf-ray:|date:|content-type:|content-length:|location:|cache-control:|x-public-site-)' | tail -n 30 || true; }
+http_code(){ local url="$1"; shift; local code; code="$(curl -sS -L -o /dev/null -w '%{http_code}' --max-time 15 "$@" "$url" 2>/dev/null || true)"; [[ "$code" =~ ^[0-9]{3}$ ]] && printf '%s' "$code" || printf '000'; }
+local_proxy_probe(){ local label="$1" url="$2" output; output="$(curl -k -sS -L -o /dev/null --resolve "${PUBLIC_HOST}:${PUBLIC_PORT}:127.0.0.1" -w 'HTTP=%{http_code} TTFB=%{time_starttransfer}s TOTAL=%{time_total}s REMOTE=%{remote_ip}\n' --max-time 15 "$url" 2>&1)"; local status=$?; printf '%s URL=%s RESOLVE=%s:%s:127.0.0.1\n%s\n' "$label" "$url" "$PUBLIC_HOST" "$PUBLIC_PORT" "$output"; return "$status"; }
+
+section "MSE-25.71 ORIGIN READINESS"
+printf 'PILOT_SLUG=%s\nPUBLIC_URL=%s\nPUBLIC_LIVENESS_URL=%s\nPUBLIC_HOST=%s\nPUBLIC_PORT=%s\nFRONTEND_URL=%s\nFRONTEND_LIVENESS_URL=%s\nFRONTEND_PUBLIC_API_URL=%s\nBACKEND_URL=%s\nBACKEND_SITE_URL=%s\nBACKEND_BRAND_URL=%s\n' "$PILOT_SLUG" "$PUBLIC_URL" "$PUBLIC_LIVENESS_URL" "$PUBLIC_HOST" "$PUBLIC_PORT" "$FRONTEND_URL" "$FRONTEND_LIVENESS_URL" "$FRONTEND_PUBLIC_API_URL" "$BACKEND_URL" "$BACKEND_SITE_URL" "$BACKEND_BRAND_URL"
+section "DNS"; command -v getent >/dev/null && getent ahosts "$PUBLIC_HOST" 2>/dev/null | head -n 12 || true; printf 'HOST_ADDRESSES='; hostname -I 2>/dev/null || true
+section "DOCKER COMPOSE SERVICES"; command -v docker >/dev/null && docker compose ps 2>&1 || echo 'DOCKER=not-found'
+section "CONTAINER HEALTH"
+if command -v docker >/dev/null; then for name in mle_postgres mle_backend mle_frontend; do if docker inspect "$name" >/dev/null 2>&1; then printf '%s ' "$name"; docker inspect --format 'STATUS={{.State.Status}} HEALTH={{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}} RESTARTS={{.RestartCount}} STARTED={{.State.StartedAt}}' "$name" || true; docker inspect --format 'PORTS={{json .NetworkSettings.Ports}} NETWORKS={{range $k,$v := .NetworkSettings.Networks}}{{$k}}={{$v.IPAddress}} {{end}}' "$name" || true; else printf '%s STATUS=missing\n' "$name"; fi; done; fi
+section "LOCAL BACKEND"; http_probe BACKEND "$BACKEND_URL" || true; header_probe BACKEND "$BACKEND_URL"
+section "PUBLIC-SITE BACKEND UPSTREAMS"; http_probe BACKEND_SITE "$BACKEND_SITE_URL" || true; header_probe BACKEND_SITE "$BACKEND_SITE_URL"; http_probe BACKEND_BRAND "$BACKEND_BRAND_URL" || true; header_probe BACKEND_BRAND "$BACKEND_BRAND_URL"
+section "LOCAL FRONTEND LIVENESS"; http_probe FRONTEND_LIVENESS "$FRONTEND_LIVENESS_URL" || true; header_probe FRONTEND_LIVENESS "$FRONTEND_LIVENESS_URL"
+section "LOCAL FRONTEND PUBLIC API"; http_probe FRONTEND_PUBLIC_API "$FRONTEND_PUBLIC_API_URL" || true; header_probe FRONTEND_PUBLIC_API "$FRONTEND_PUBLIC_API_URL"
+section "LOCAL FRONTEND AGENCY ROUTE"; http_probe FRONTEND "$FRONTEND_URL" || true; header_probe FRONTEND "$FRONTEND_URL"
+section "LOCAL REVERSE PROXY LIVENESS"; local_proxy_probe LOCAL_PROXY_LIVENESS "$PUBLIC_LIVENESS_URL" || true
+section "LOCAL REVERSE PROXY AGENCY ROUTE"; local_proxy_probe LOCAL_PROXY "$PUBLIC_URL" || true
+section "PUBLIC LIVENESS"; http_probe PUBLIC_LIVENESS "$PUBLIC_LIVENESS_URL" || true; header_probe PUBLIC_LIVENESS "$PUBLIC_LIVENESS_URL"
+section "PUBLIC AGENCY ROUTE"; http_probe PUBLIC "$PUBLIC_URL" || true; header_probe PUBLIC "$PUBLIC_URL"
+section "LISTENERS"; command -v ss >/dev/null && ss -ltnp 2>/dev/null | grep -E '(:80|:443|:3000|:4000)([[:space:]]|$)' || true
+section "REVERSE PROXY DISCOVERY"
+for service in nginx apache2 caddy; do if command -v systemctl >/dev/null 2>&1 && systemctl list-unit-files "${service}.service" >/dev/null 2>&1; then printf '%s=' "$service"; systemctl is-active "$service" 2>/dev/null || true; fi; done
+if command -v nginx >/dev/null 2>&1; then echo 'NGINX_CONFIG_TEST:'; nginx -t 2>&1 || true; echo 'NGINX_UPSTREAM_REFERENCES:'; nginx -T 2>/dev/null | grep -nE 'server_name[[:space:]].*agences\.mondescale\.com|proxy_pass|upstream' | head -n 100 || true; echo 'NGINX_RECENT_ERRORS:'; for log in /var/log/nginx/error.log /var/log/nginx/*error*.log; do [ -r "$log" ] || continue; tail -n 40 "$log" 2>/dev/null | grep -Ei 'agences\.mondescale\.com|upstream|connect\(\).*failed|502|503|504' || true; done; fi
+section "RECENT FRONTEND LOGS"; command -v docker >/dev/null && docker inspect mle_frontend >/dev/null 2>&1 && docker logs --tail 100 mle_frontend 2>&1 || true
+section "RECENT BACKEND LOGS"; command -v docker >/dev/null && docker inspect mle_backend >/dev/null 2>&1 && docker logs --tail 100 mle_backend 2>&1 || true
+section "VERDICT"
+public_code="$(http_code "$PUBLIC_URL")"; public_liveness_code="$(http_code "$PUBLIC_LIVENESS_URL")"; frontend_code="$(http_code "$FRONTEND_URL")"; frontend_liveness_code="$(http_code "$FRONTEND_LIVENESS_URL")"; frontend_public_api_code="$(http_code "$FRONTEND_PUBLIC_API_URL")"; backend_code="$(http_code "$BACKEND_URL")"; backend_site_code="$(http_code "$BACKEND_SITE_URL")"; backend_brand_code="$(http_code "$BACKEND_BRAND_URL")"; local_proxy_code="$(http_code "$PUBLIC_URL" -k --resolve "${PUBLIC_HOST}:${PUBLIC_PORT}:127.0.0.1")"; local_proxy_liveness_code="$(http_code "$PUBLIC_LIVENESS_URL" -k --resolve "${PUBLIC_HOST}:${PUBLIC_PORT}:127.0.0.1")"; public_server="$(curl -sS -L -D - -o /dev/null --max-time 15 "$PUBLIC_URL" 2>/dev/null | awk 'BEGIN{IGNORECASE=1} /^server:/{sub(/^[^:]+:[[:space:]]*/,""); gsub(/\r/,""); value=$0} END{print value}')"
+printf 'PUBLIC_HTTP=%s\nPUBLIC_LIVENESS_HTTP=%s\nLOCAL_PROXY_HTTP=%s\nLOCAL_PROXY_LIVENESS_HTTP=%s\nFRONTEND_HTTP=%s\nFRONTEND_LIVENESS_HTTP=%s\nFRONTEND_PUBLIC_API_HTTP=%s\nBACKEND_HTTP=%s\nBACKEND_SITE_HTTP=%s\nBACKEND_BRAND_HTTP=%s\nPUBLIC_SERVER=%s\n' "$public_code" "$public_liveness_code" "$local_proxy_code" "$local_proxy_liveness_code" "$frontend_code" "$frontend_liveness_code" "$frontend_public_api_code" "$backend_code" "$backend_site_code" "$backend_brand_code" "${public_server:-unknown}"
+if [[ "$public_code" =~ ^[23] ]]; then echo 'ORIGIN_STATE=PUBLIC_READY'; elif [[ "$frontend_liveness_code" =~ ^[23] ]] && [[ "$frontend_public_api_code" =~ ^50[234]$ ]] && [[ ! "$backend_site_code" =~ ^[23] ]]; then echo 'ORIGIN_STATE=SITE_READ_UPSTREAM_FAILURE'; elif [[ "$frontend_liveness_code" =~ ^[23] ]] && [[ "$frontend_public_api_code" =~ ^50[234]$ ]] && [[ "$backend_site_code" =~ ^[23] ]] && [[ ! "$backend_brand_code" =~ ^[23] ]]; then echo 'ORIGIN_STATE=BRAND_LEGAL_UPSTREAM_FAILURE'; elif [[ "$public_liveness_code" =~ ^[23] ]] && [[ "$public_code" =~ ^50[234]$ ]]; then echo 'ORIGIN_STATE=PUBLIC_PROXY_READY_ROUTE_FAILURE'; elif [[ "$local_proxy_code" =~ ^[23] ]] && [[ ! "$public_code" =~ ^[23] ]]; then echo 'ORIGIN_STATE=PUBLIC_EDGE_OR_DNS_PATH_FAILURE'; elif [[ "$frontend_code" =~ ^[23] ]] && [[ "$local_proxy_code" =~ ^50[234]$ ]]; then echo 'ORIGIN_STATE=REVERSE_PROXY_UPSTREAM_FAILURE'; elif [[ "$frontend_liveness_code" =~ ^[23] ]] && [[ "$frontend_public_api_code" =~ ^[23] ]] && [[ ! "$frontend_code" =~ ^[23] ]]; then echo 'ORIGIN_STATE=FRONTEND_ROUTE_FAILURE'; elif [[ "$frontend_liveness_code" =~ ^[23] ]] && [[ "$local_proxy_liveness_code" == "000" ]] && [[ "$public_code" =~ ^50[234]$ ]]; then echo 'ORIGIN_STATE=REVERSE_PROXY_UNREACHABLE_LOCALLY'; elif [[ "$frontend_liveness_code" =~ ^[23] ]] && [[ "$local_proxy_liveness_code" =~ ^50[234]$ ]]; then echo 'ORIGIN_STATE=REVERSE_PROXY_UPSTREAM_FAILURE'; elif [[ "$backend_code" =~ ^2 ]] && [[ ! "$frontend_liveness_code" =~ ^[23] ]]; then echo 'ORIGIN_STATE=FRONTEND_FAILURE'; elif [[ ! "$backend_code" =~ ^2 ]]; then echo 'ORIGIN_STATE=BACKEND_OR_STACK_FAILURE'; else echo 'ORIGIN_STATE=UNRESOLVED'; fi

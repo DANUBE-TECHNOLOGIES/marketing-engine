@@ -21,21 +21,20 @@ import "../../../components/public-site/legal-experience.css";
 import "../../../components/public-site/logo-emphasis.css";
 import "../../../components/public-site/public-readability-fixes.css";
 import "../../../components/public-site/seo-crawlability.css";
+import "../../../components/public-site/public-performance.css";
+
+export const revalidate = 300;
 
 export default async function PublicAgencySiteLayout({ children, params }) {
   const { siteSlug } = await params;
 
-  const publicBrandLegalRuntime = await fetchPublicBrandLegalRuntime(siteSlug);
-  const publicBrandAssets = runtimeBrandAssets(publicBrandLegalRuntime);
-  const runtimeTheme = runtimeCssVariables(publicBrandLegalRuntime);
-
   let site;
-  let legacyBrandTheme = null;
+  let publicBrandLegalRuntime = null;
 
   try {
-    [site, legacyBrandTheme] = await Promise.all([
+    [site, publicBrandLegalRuntime] = await Promise.all([
       publicSiteApi.getSite(siteSlug),
-      getPublicBrandTheme(),
+      fetchPublicBrandLegalRuntime(siteSlug),
     ]);
   } catch (error) {
     if (error?.statusCode === 404) {
@@ -45,7 +44,10 @@ export default async function PublicAgencySiteLayout({ children, params }) {
     throw error;
   }
 
-  const hours = site?.hours || null;
+  const publicBrandAssets = runtimeBrandAssets(publicBrandLegalRuntime);
+  const runtimeTheme = runtimeCssVariables(publicBrandLegalRuntime);
+  const hasRuntimeTheme = Object.keys(runtimeTheme).length > 0;
+  const legacyBrandTheme = hasRuntimeTheme ? null : await getPublicBrandTheme();
 
   const cssVariables = {
     ...(legacyBrandTheme?.cssVariables || {}),
@@ -65,7 +67,6 @@ export default async function PublicAgencySiteLayout({ children, params }) {
           brandRuntime={publicBrandLegalRuntime}
           brandAssets={publicBrandAssets}
           site={site}
-          hours={hours}
         />
 
         <main>{children}</main>
