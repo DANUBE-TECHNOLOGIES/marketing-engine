@@ -28,6 +28,18 @@ function acknowledgementReplacementChainValid(acknowledgements = []) {
   return latest.previousAcknowledgementSnapshotId === previous.snapshotId;
 }
 
+function acknowledgementChainForks(acknowledgements = []) {
+  const successors = new Map();
+  for (const ack of acknowledgements) {
+    if (Number(ack?.chainVersion || 0) < 1) continue;
+    const previous = ack?.previousAcknowledgementSnapshotId || null;
+    if (!previous) continue;
+    if (!successors.has(previous)) successors.set(previous, []);
+    successors.get(previous).push(ack.snapshotId);
+  }
+  return Object.freeze([...successors.entries()].filter(([, children]) => new Set(children).size > 1).map(([previousSnapshotId, children]) => Object.freeze({ previousSnapshotId, successors: Object.freeze([...new Set(children)]) })));
+}
+
 async function evaluateRolloutDecisionAcknowledgement(prisma, rolloutGate) {
   const [history, acknowledgements] = await Promise.all([
     listRolloutDecisionSnapshots(prisma, 10),
@@ -39,10 +51,12 @@ async function evaluateRolloutDecisionAcknowledgement(prisma, rolloutGate) {
   const acknowledgementLifecycle = evaluateAcknowledgementLifecycle(current, acknowledgements);
   const latestAcknowledgement = acknowledgementLifecycle[0] || null;
   const replacementChainValid = acknowledgementReplacementChainValid(acknowledgements);
+  const chainForks = acknowledgementChainForks(acknowledgements);
   const blockers = [];
   if (latest && drift.severity === "critical") blockers.push("critical_rollout_decision_drift_unacknowledged");
   if (latest && prior && !criticalAcknowledgementEvidenceValid(latest, prior)) blockers.push("critical_rollout_decision_acknowledgement_evidence_invalid");
   if (!replacementChainValid) blockers.push("critical_rollout_acknowledgement_replacement_chain_invalid");
+  if (chainForks.length) blockers.push("critical_rollout_acknowledgement_chain_fork_detected");
   if (latestAcknowledgement?.lifecycle?.status === "obsolete") blockers.push("obsolete_rollout_decision_acknowledgement");
   const ready = blockers.length === 0;
   return Object.freeze({
@@ -54,10 +68,11 @@ async function evaluateRolloutDecisionAcknowledgement(prisma, rolloutGate) {
     previousSnapshotId: latest?.snapshotId || null,
     acknowledgementEvidenceValid: latest && prior ? criticalAcknowledgementEvidenceValid(latest, prior) : true,
     acknowledgementReplacementChainValid: replacementChainValid,
+    acknowledgementChainForks: chainForks,
     latestAcknowledgement,
     acknowledgementLifecycle: Object.freeze(acknowledgementLifecycle),
     drift
   });
 }
 
-module.exports = { evaluateRolloutDecisionAcknowledgement, criticalAcknowledgementEvidenceValid, latestDistinctPair, acknowledgementReplacementChainValid };
+module.exports = { evaluateRolloutDecisionAcknowledgement, criticalAcknowledgementEvidenceValid, latestDistinctPair, acknowledgementReplacementChainValid, acknowledgementChainForks };
