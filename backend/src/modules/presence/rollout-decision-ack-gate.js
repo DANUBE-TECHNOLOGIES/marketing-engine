@@ -32,6 +32,7 @@ function acknowledgementReplacementChainValid(acknowledgements = []) {
 }
 
 function acknowledgementChainForks(acknowledgements = []) { return auditAcknowledgementChain(acknowledgements).forks; }
+function hasGovernancePolicyDrift(drift = {}) { return (drift.changes || []).some(change => change?.type === "governance_policy"); }
 
 async function evaluateRolloutDecisionAcknowledgement(prisma, rolloutGate) {
   const [history, acknowledgements] = await Promise.all([listRolloutDecisionSnapshots(prisma, 10), listCriticalRolloutAcknowledgements(prisma, 50)]);
@@ -46,6 +47,7 @@ async function evaluateRolloutDecisionAcknowledgement(prisma, rolloutGate) {
   const sealingPolicy = evaluateAcknowledgementSealingPolicy(sealingMaturity);
   const blockers = [];
   if (latest && drift.severity === "critical") blockers.push("critical_rollout_decision_drift_unacknowledged");
+  if (latest && drift.severity === "critical" && hasGovernancePolicyDrift(drift)) blockers.push("critical_rollout_governance_policy_drift_unacknowledged");
   if (latest && prior && !criticalAcknowledgementEvidenceValid(latest, prior)) blockers.push("critical_rollout_decision_acknowledgement_evidence_invalid");
   if (!replacementChainValid) blockers.push("critical_rollout_acknowledgement_replacement_chain_invalid");
   if (chainAudit.forks.length) blockers.push("critical_rollout_acknowledgement_chain_fork_detected");
@@ -57,7 +59,7 @@ async function evaluateRolloutDecisionAcknowledgement(prisma, rolloutGate) {
   if (latestAcknowledgement?.lifecycle?.status === "obsolete") blockers.push("obsolete_rollout_decision_acknowledgement");
   for (const blocker of sealingPolicy.blockers) blockers.push(blocker);
   const ready = blockers.length === 0;
-  return Object.freeze({ready,decision:ready?"go":"no_go",required:Boolean(latest),blockers:Object.freeze([...new Set(blockers)]),currentSnapshotId:current.snapshotId,previousSnapshotId:latest?.snapshotId||null,acknowledgementEvidenceValid:latest&&prior?criticalAcknowledgementEvidenceValid(latest,prior):true,acknowledgementReplacementChainValid:replacementChainValid,acknowledgementChainForks:chainAudit.forks,acknowledgementChainAudit:chainAudit,acknowledgementSealingMaturity:sealingMaturity,acknowledgementSealingPolicy:sealingPolicy,latestAcknowledgement,acknowledgementLifecycle:Object.freeze(acknowledgementLifecycle),drift});
+  return Object.freeze({ready,decision:ready?"go":"no_go",required:Boolean(latest),blockers:Object.freeze([...new Set(blockers)]),currentSnapshotId:current.snapshotId,previousSnapshotId:latest?.snapshotId||null,acknowledgementEvidenceValid:latest&&prior?criticalAcknowledgementEvidenceValid(latest,prior):true,acknowledgementReplacementChainValid:replacementChainValid,acknowledgementChainForks:chainAudit.forks,acknowledgementChainAudit:chainAudit,acknowledgementSealingMaturity:sealingMaturity,acknowledgementSealingPolicy:sealingPolicy,governancePolicyDrift:hasGovernancePolicyDrift(drift),latestAcknowledgement,acknowledgementLifecycle:Object.freeze(acknowledgementLifecycle),drift});
 }
 
-module.exports = { evaluateRolloutDecisionAcknowledgement, criticalAcknowledgementEvidenceValid, latestDistinctPair, acknowledgementReplacementChainValid, acknowledgementChainForks };
+module.exports = { evaluateRolloutDecisionAcknowledgement, criticalAcknowledgementEvidenceValid, latestDistinctPair, acknowledgementReplacementChainValid, acknowledgementChainForks, hasGovernancePolicyDrift };
