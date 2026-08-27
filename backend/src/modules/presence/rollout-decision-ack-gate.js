@@ -4,6 +4,8 @@ const { buildRolloutDecisionSnapshot, listRolloutDecisionSnapshots, listCritical
 const { compareRolloutDecision } = require("./network-rollout-decision-drift");
 const { evaluateAcknowledgementLifecycle } = require("./rollout-acknowledgement-lifecycle");
 const { auditAcknowledgementChain } = require("./rollout-acknowledgement-chain-audit");
+const { evaluateAcknowledgementSealingMaturity } = require("./rollout-acknowledgement-sealing-maturity");
+const { evaluateAcknowledgementSealingPolicy } = require("./rollout-acknowledgement-sealing-policy");
 
 function criticalAcknowledgementEvidenceValid(latest, prior) {
   if (!latest || !prior) return true;
@@ -40,6 +42,8 @@ async function evaluateRolloutDecisionAcknowledgement(prisma, rolloutGate) {
   const latestAcknowledgement = acknowledgementLifecycle[0] || null;
   const replacementChainValid = acknowledgementReplacementChainValid(acknowledgements);
   const chainAudit = auditAcknowledgementChain(acknowledgements);
+  const sealingMaturity = evaluateAcknowledgementSealingMaturity(chainAudit);
+  const sealingPolicy = evaluateAcknowledgementSealingPolicy(sealingMaturity);
   const blockers = [];
   if (latest && drift.severity === "critical") blockers.push("critical_rollout_decision_drift_unacknowledged");
   if (latest && prior && !criticalAcknowledgementEvidenceValid(latest, prior)) blockers.push("critical_rollout_decision_acknowledgement_evidence_invalid");
@@ -51,8 +55,9 @@ async function evaluateRolloutDecisionAcknowledgement(prisma, rolloutGate) {
   if (chainAudit.rootMismatches?.length) blockers.push("critical_rollout_acknowledgement_chain_root_mismatch");
   if (chainAudit.versioned && !chainAudit.ready && !chainAudit.forks.length && !chainAudit.missingParents.length && !chainAudit.cycles.length && chainAudit.roots.length === 1 && !chainAudit.rootMismatches?.length) blockers.push("critical_rollout_acknowledgement_chain_disconnected");
   if (latestAcknowledgement?.lifecycle?.status === "obsolete") blockers.push("obsolete_rollout_decision_acknowledgement");
+  for (const blocker of sealingPolicy.blockers) blockers.push(blocker);
   const ready = blockers.length === 0;
-  return Object.freeze({ready,decision:ready?"go":"no_go",required:Boolean(latest),blockers:Object.freeze([...new Set(blockers)]),currentSnapshotId:current.snapshotId,previousSnapshotId:latest?.snapshotId||null,acknowledgementEvidenceValid:latest&&prior?criticalAcknowledgementEvidenceValid(latest,prior):true,acknowledgementReplacementChainValid:replacementChainValid,acknowledgementChainForks:chainAudit.forks,acknowledgementChainAudit:chainAudit,latestAcknowledgement,acknowledgementLifecycle:Object.freeze(acknowledgementLifecycle),drift});
+  return Object.freeze({ready,decision:ready?"go":"no_go",required:Boolean(latest),blockers:Object.freeze([...new Set(blockers)]),currentSnapshotId:current.snapshotId,previousSnapshotId:latest?.snapshotId||null,acknowledgementEvidenceValid:latest&&prior?criticalAcknowledgementEvidenceValid(latest,prior):true,acknowledgementReplacementChainValid:replacementChainValid,acknowledgementChainForks:chainAudit.forks,acknowledgementChainAudit:chainAudit,acknowledgementSealingMaturity:sealingMaturity,acknowledgementSealingPolicy:sealingPolicy,latestAcknowledgement,acknowledgementLifecycle:Object.freeze(acknowledgementLifecycle),drift});
 }
 
 module.exports = { evaluateRolloutDecisionAcknowledgement, criticalAcknowledgementEvidenceValid, latestDistinctPair, acknowledgementReplacementChainValid, acknowledgementChainForks };
