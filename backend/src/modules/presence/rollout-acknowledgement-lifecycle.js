@@ -7,7 +7,9 @@ function evaluateAcknowledgementLifecycle(currentSnapshot, acknowledgements = []
     const acknowledgedSnapshot = {
       snapshotId: ack.snapshotId,
       decision: ack.decision,
-      ready: ack.decision === "go" || ack.decision === "complete",
+      ready: ack.ready === true,
+      nextStagePercent: ack.nextStagePercent ?? null,
+      maxAgencies: ack.maxAgencies ?? null,
       blockers: ack.blockers || [],
       stages: ack.stages || [],
       recoveryTrust: ack.recoveryTrust || null
