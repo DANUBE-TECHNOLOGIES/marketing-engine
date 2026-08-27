@@ -5,35 +5,39 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const apiSourcePath = path.resolve(
+const routeSourcePath = path.resolve(
   __dirname,
   "../app/api/public-render-sites/[[...path]]/route.js"
 );
 const clientSourcePath = path.resolve(__dirname, "../lib/public-site-api.js");
+const contractSourcePath = path.resolve(__dirname, "../lib/public-render-contract.js");
 
-test("MSE-25.71 SSR uses the compact render contract", () => {
+test("MSE-25.71 SSR uses the shared direct compact render contract", () => {
   const source = fs.readFileSync(clientSourcePath, "utf8");
 
-  assert.match(source, /requestFrom\("\/api\/public-render-sites", path\)/);
-  assert.match(source, /const getContract = cache\(async \(siteSlug\) =>\s*requestRender/s);
-  assert.match(source, /await requestRender\(\s*`\/\$\{encodeURIComponent\(siteSlug\)\}\/pages\//s);
+  assert.match(source, /loadPublicRenderContract\(siteSlug\)/);
+  assert.match(source, /const getContract = cache\(async \(siteSlug\) =>\s*loadPublicRenderContract/s);
+  assert.match(source, /await loadPublicRenderContract\(siteSlug, pageSlug\)/);
+  assert.doesNotMatch(source, /requestFrom\("\/api\/public-render-sites"/);
+  assert.doesNotMatch(source, /requestRender\(/);
 });
 
-test("MSE-25.71 compact contract strips repeated page aliases", () => {
-  const source = fs.readFileSync(apiSourcePath, "utf8");
+test("MSE-25.71 compact contract strips repeated page aliases before SSR", () => {
+  const source = fs.readFileSync(contractSourcePath, "utf8");
 
-  assert.match(source, /sections: _sections/);
-  assert.match(source, /contentBlocks: _contentBlocks/);
-  assert.match(source, /pages: _pages/);
-  assert.match(source, /homePage: _homePage/);
-  assert.match(source, /pages: selectedPage \? \[selectedPage\] : \[\]/);
+  assert.match(source, /content\?\.__builderType/);
+  assert.match(source, /hasJsonContent \? \{ jsonContent: content \} : \{\}/);
+  assert.match(source, /block\?\.sectionType/);
+  assert.match(source, /pages/);
+  assert.match(source, /home/);
+});
+
+test("MSE-25.71 compact API delegates to the shared backend-direct loader", () => {
+  const source = fs.readFileSync(routeSourcePath, "utf8");
+
+  assert.match(source, /loadPublicRenderContract\(siteSlug, pageSlug, request\)/);
   assert.match(source, /x-public-render-contract-version/);
-});
-
-test("MSE-25.71 legacy public contract remains the source of truth", () => {
-  const source = fs.readFileSync(apiSourcePath, "utf8");
-
-  assert.match(source, /\/api\/public-sites\$\{targetPath\}/);
-  assert.match(source, /next: \{ revalidate: REVALIDATE_SECONDS \}/);
-  assert.doesNotMatch(source, /cache:\s*"no-store"/);
+  assert.match(source, /x-public-render-source/);
+  assert.match(source, /backend-direct-shared/);
+  assert.doesNotMatch(source, /\/api\/public-sites/);
 });
