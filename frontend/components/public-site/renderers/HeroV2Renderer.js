@@ -8,6 +8,9 @@ import {
   sitePageHref,
 } from "./ctaLinks";
 
+const NETWORK_HOME_HERO_IMAGE =
+  "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=2400&q=85";
+
 function ctaLabel(cta, legacyLabel, fallback) {
   return cta?.label || legacyLabel || fallback;
 }
@@ -77,6 +80,12 @@ function resolvedHeroAlt({ content, site, title }) {
   return title;
 }
 
+function resolvedHeroImage({ content, page }) {
+  const configured = content.backgroundImage || content.imageUrl || null;
+  if (configured) return configured;
+  return isHomePage(page) ? NETWORK_HOME_HERO_IMAGE : null;
+}
+
 function imageOrigin(value) {
   try {
     const url = new URL(value);
@@ -91,10 +100,10 @@ export default function HeroV2Renderer({ section, site, page }) {
   const title = resolvedHeroTitle({ content, section, site, page });
   const subtitle = content.subtitle || content.text || content.description || site?.agency?.description || "Votre agence vous accompagne dans la création de vos plus beaux voyages.";
   const alignment = normalizeAlignment(content.alignment);
-  const backgroundImage = content.backgroundImage || content.imageUrl || null;
+  const backgroundImage = resolvedHeroImage({ content, page });
   const backgroundPosition = content.backgroundPosition || "center";
   const imageAlt = resolvedHeroAlt({ content, site, title });
-  const overlayOpacity = Math.min(Math.max(Number(content.overlayOpacity ?? 68), 20), 90) / 100;
+  const overlayOpacity = Math.min(Math.max(Number(content.overlayOpacity ?? 72), 20), 90) / 100;
   const homeHero = isHomePage(page);
 
   if (backgroundImage) {
@@ -110,12 +119,14 @@ export default function HeroV2Renderer({ section, site, page }) {
   const secondaryCta = content.secondaryCta || null;
   const primaryHref = primaryCta?.href
     ? resolvePublicCtaHref(site, primaryCta.href, "contact")
-    : phoneHref(site?.agency?.phone) || sitePageHref(site, "contact");
+    : sitePageHref(site, "contact");
   const secondaryHref = secondaryCta
-    ? resolvePublicCtaHref(site, secondaryCta.href, "contact")
-    : content.secondaryButton
-      ? sitePageHref(site, "contact")
-      : null;
+    ? resolvePublicCtaHref(site, secondaryCta.href, "destinations")
+    : homeHero
+      ? sitePageHref(site, "destinations")
+      : content.secondaryButton
+        ? sitePageHref(site, "contact")
+        : null;
 
   const contentStyle = { textAlign: alignment };
   const centered = alignment === "center";
@@ -143,7 +154,7 @@ export default function HeroV2Renderer({ section, site, page }) {
           <span
             className="public-site-hero-overlay"
             style={{
-              background: `linear-gradient(90deg, rgba(8,31,52,${Math.max(overlayOpacity - 0.52, 0.03)}) 0%, rgba(8,31,52,${Math.max(overlayOpacity - 0.6, 0.02)}) 48%, rgba(8,31,52,0) 100%)`,
+              background: `linear-gradient(90deg, rgba(7,29,48,${overlayOpacity}) 0%, rgba(7,29,48,${Math.max(overlayOpacity - 0.12, 0.42)}) 46%, rgba(7,29,48,0.12) 78%, rgba(7,29,48,0.04) 100%)`,
             }}
           />
           <span className="public-site-hero-fade" />
@@ -156,8 +167,8 @@ export default function HeroV2Renderer({ section, site, page }) {
           <h1 style={centered ? { marginInline: "auto" } : rightAligned ? { marginLeft: "auto" } : undefined}>{title}</h1>
           <p className="public-site-hero-text" style={centered ? { marginInline: "auto" } : rightAligned ? { marginLeft: "auto" } : undefined}>{subtitle}</p>
           <div className="public-site-hero-actions" style={{ justifyContent: centered ? "center" : rightAligned ? "flex-end" : "flex-start" }}>
-            {primaryHref ? <a className="public-site-button" href={primaryHref}>{ctaLabel(primaryCta, content.primaryButton, primaryCta?.href ? "En savoir plus" : "Appeler l’agence")}</a> : null}
-            {secondaryHref ? <a className="public-site-button public-site-button-secondary" href={secondaryHref}>{ctaLabel(secondaryCta, content.secondaryButton, "Nous contacter")}</a> : null}
+            {primaryHref ? <a className="public-site-button" href={primaryHref}>{ctaLabel(primaryCta, content.primaryButton, "Demander un devis")}</a> : null}
+            {secondaryHref ? <a className="public-site-button public-site-button-secondary" href={secondaryHref}>{ctaLabel(secondaryCta, content.secondaryButton, homeHero ? "Découvrir nos voyages" : "Nous contacter")}</a> : null}
           </div>
         </div>
       </div>
@@ -166,6 +177,7 @@ export default function HeroV2Renderer({ section, site, page }) {
 }
 
 export {
+  NETWORK_HOME_HERO_IMAGE,
   defaultHeroEyebrow,
   defaultHeroTitle,
   genericHeroTitle,
@@ -173,5 +185,6 @@ export {
   intentHeroTitle,
   isHomePage,
   resolvedHeroAlt,
+  resolvedHeroImage,
   resolvedHeroTitle,
 };
