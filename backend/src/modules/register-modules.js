@@ -40,6 +40,7 @@ const minisiteStructuredData = require("./minisite-structured-data");
 const searchConsoleSubmission = require("./search-console-submission");
 const flexiblePaymentExperience = require("./flexible-payment-experience");
 const publicConversionEngine = require("./public-conversion-engine");
+const presence = require("./presence");
 
 module.exports = function registerModules(app, { prisma }) {
   if (tenantCore.routes) {
@@ -205,5 +206,9 @@ module.exports = function registerModules(app, { prisma }) {
 
   if (publicConversionEngine.routes) {
     app.use(publicConversionEngine.routes({ prisma }));
+  }
+
+  if (presence.routes) {
+    app.use(presence.routes({ prisma }));
   }
 };

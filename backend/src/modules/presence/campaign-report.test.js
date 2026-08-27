@@ -1,0 +1,8 @@
+"use strict";
+const assert=require("node:assert/strict");
+const test=require("node:test");
+const {summarizeExecutions,delta,compactTrustChain,compactPreflightTrustBinding}=require("./campaign-report");
+test("campaign execution summary reports verified success rate",()=>{const summary=summarizeExecutions([{status:"verified"},{status:"verified"},{status:"submitted"},{status:"failed"}]);assert.equal(summary.total,4);assert.equal(summary.verified,2);assert.equal(summary.submitted,1);assert.equal(summary.failed,1);assert.equal(summary.successRate,50);});
+test("campaign report delta preserves direction",()=>{assert.equal(delta(82,70),12);assert.equal(delta(3,8),-5);});
+test("campaign report stores a compact immutable recovery trust chain",()=>{const trust=compactTrustChain({ready:false,decision:"no_go",depth:2,rootCampaignId:"root",blockers:["ancestor_stale"],chain:[{campaignId:"r2",sourceCampaignId:"r1",depth:0,ready:true,blockers:[],snapshotId:"s1"},{campaignId:"r1",sourceCampaignId:"root",depth:1,ready:false,blockers:["ancestor_stale"],snapshotId:"s0"}]});assert.equal(trust.depth,2);assert.equal(trust.rootCampaignId,"root");assert.equal(trust.chain[1].ready,false);assert.deepEqual(trust.blockers,["ancestor_stale"]);});
+test("campaign report stores preflight recovery trust binding proof",()=>{const proof=compactPreflightTrustBinding({ready:true,decision:"go",expected:"fp-1",current:"fp-1",preflightId:"pf-1",blockers:[],snapshot:{critical:0}});assert.equal(proof.ready,true);assert.equal(proof.expected,"fp-1");assert.equal(proof.current,"fp-1");assert.equal(proof.preflightId,"pf-1");assert.equal(proof.snapshot.critical,0);});
