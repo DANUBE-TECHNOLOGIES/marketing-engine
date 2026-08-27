@@ -56,6 +56,25 @@ test("probe diagnoses modern media delivery cacheability and origins", () => {
   assert.match(probe, /IMAGE_ORIGINS=/);
 });
 
+test("probe emits deterministic P0 remediation diagnosis", () => {
+  const probe = source("scripts/public-performance-probe.mjs");
+
+  assert.match(probe, /function buildDiagnosis\(/);
+  assert.match(probe, /SLOW_ORIGIN/);
+  assert.match(probe, /OPTIMIZE_HERO_PAYLOAD/);
+  assert.match(probe, /ENABLE_HERO_MODERN_FORMAT/);
+  assert.match(probe, /FIX_HERO_CACHE_HEADERS/);
+  assert.match(probe, /REDUCE_TOTAL_IMAGE_PAYLOAD/);
+  assert.match(probe, /FIX_MEDIA_CACHE_HEADERS/);
+  assert.match(probe, /ENABLE_MODERN_IMAGE_DELIVERY/);
+  assert.match(probe, /NO_P0_REMEDIATION/);
+  assert.match(probe, /SERVER_DIAGNOSIS=/);
+  assert.match(probe, /HERO_DIAGNOSIS=/);
+  assert.match(probe, /MEDIA_DIAGNOSIS=/);
+  assert.match(probe, /P0_READY=/);
+  assert.match(probe, /NEXT_ACTIONS=/);
+});
+
 test("probe samples the deployed route and gates on median server performance", () => {
   const probe = source("scripts/public-performance-probe.mjs");
 
