@@ -1,7 +1,8 @@
 /*
  * MSE-25.74 — Network home Hero.
- * Restores the full-bleed premium visual treatment and applies it consistently
- * to every public agency home while preserving the existing LCP img contract.
+ * Full-bleed premium visual treatment shared by every agency home.
+ * A configured local visual stays authoritative; otherwise the network fallback
+ * from HeroV2Renderer is used without changing the LCP image contract.
  */
 .public-site-hero--home.public-site-hero--immersive {
   position: relative;
@@ -53,8 +54,8 @@
   inset: 0;
   width: auto;
   background:
-    linear-gradient(90deg, rgba(5, 25, 43, .24) 0%, rgba(5, 25, 43, .08) 44%, rgba(5, 25, 43, .02) 72%, transparent 100%),
-    linear-gradient(180deg, rgba(5, 25, 43, .08) 0%, rgba(5, 25, 43, .05) 58%, rgba(5, 25, 43, .22) 100%);
+    radial-gradient(circle at 30% 48%, rgba(4,24,42,.18), transparent 42%),
+    linear-gradient(180deg, rgba(5,25,43,.04) 0%, rgba(5,25,43,.02) 58%, rgba(5,25,43,.18) 100%);
   pointer-events: none;
 }
 
@@ -69,22 +70,23 @@
 }
 
 .public-site-hero--home .public-site-hero-copy {
-  width: min(650px, 58%);
-  padding: clamp(28px, 4vw, 48px);
-  border: 1px solid rgba(255,255,255,.16);
-  border-radius: 30px;
-  background: linear-gradient(135deg, rgba(5,29,50,.76), rgba(5,29,50,.48));
-  box-shadow: 0 28px 80px rgba(0,0,0,.2);
+  width: min(760px, 64%);
+  padding: clamp(34px, 4.4vw, 56px);
+  border: 1px solid rgba(255,255,255,.17);
+  border-radius: 32px;
+  background:
+    linear-gradient(135deg, rgba(5,29,50,.74), rgba(5,29,50,.42));
+  box-shadow: 0 30px 86px rgba(0,0,0,.2);
   backdrop-filter: blur(8px);
 }
 
 .public-site-hero--home .public-site-eyebrow {
-  margin-bottom: 18px;
+  margin-bottom: 20px;
   color: #fff;
 }
 
 .public-site-hero--home h1 {
-  max-width: 620px;
+  max-width: 680px;
   color: #fff;
   font-family: var(--public-heading-font, "DM Serif Display", serif);
   font-size: clamp(3rem, 5.5vw, 5.65rem);
@@ -94,20 +96,20 @@
 }
 
 .public-site-hero--home .public-site-hero-text {
-  max-width: 590px;
-  margin-top: 24px;
-  color: rgba(255,255,255,.9);
+  max-width: 640px;
+  margin-top: 26px;
+  color: rgba(255,255,255,.92);
   font-size: clamp(1.02rem, 1.55vw, 1.22rem);
-  line-height: 1.65;
+  line-height: 1.68;
 }
 
 .public-site-hero--home .public-site-hero-actions {
-  margin-top: 28px;
+  margin-top: 30px;
 }
 
 .public-site-hero--home .public-site-button-secondary {
-  border-color: rgba(255,255,255,.72);
-  background: rgba(5,29,50,.28);
+  border-color: rgba(255,255,255,.74);
+  background: rgba(5,29,50,.24);
 }
 
 @media (max-width: 900px) {
@@ -116,7 +118,7 @@
   }
 
   .public-site-hero--home .public-site-hero-copy {
-    width: min(680px, 82%);
+    width: min(720px, 86%);
   }
 }
 
@@ -138,9 +140,9 @@
 
   .public-site-hero--home .public-site-hero-copy {
     width: 100%;
-    padding: 24px 22px;
+    padding: 26px 24px;
     border-radius: 24px;
-    background: linear-gradient(135deg, rgba(5,29,50,.82), rgba(5,29,50,.6));
+    background: linear-gradient(135deg, rgba(5,29,50,.82), rgba(5,29,50,.56));
     backdrop-filter: none;
   }
 
