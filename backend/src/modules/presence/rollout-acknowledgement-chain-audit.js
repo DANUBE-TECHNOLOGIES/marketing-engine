@@ -2,10 +2,11 @@
 
 function auditAcknowledgementChain(acknowledgements = []) {
   const rows = acknowledgements.filter((ack) => Number(ack?.chainVersion || 0) >= 1 && ack?.snapshotId);
-  if (!rows.length) return Object.freeze({ ready: true, versioned: false, rootSnapshotId: null, depth: 0, roots: Object.freeze([]), missingParents: Object.freeze([]), cycles: Object.freeze([]), forks: Object.freeze([]) });
+  if (!rows.length) return Object.freeze({ ready: true, versioned: false, rootSnapshotId: null, depth: 0, roots: Object.freeze([]), missingParents: Object.freeze([]), cycles: Object.freeze([]), forks: Object.freeze([]), rootMismatches: Object.freeze([]) });
 
   const byId = new Map(rows.map((ack) => [ack.snapshotId, ack]));
   const roots = rows.filter((ack) => !ack.previousAcknowledgementSnapshotId).map((ack) => ack.snapshotId);
+  const rootSnapshotId = roots.length === 1 ? roots[0] : null;
   const missingParents = rows.filter((ack) => ack.previousAcknowledgementSnapshotId && !byId.has(ack.previousAcknowledgementSnapshotId)).map((ack) => Object.freeze({ snapshotId: ack.snapshotId, missingParentSnapshotId: ack.previousAcknowledgementSnapshotId }));
 
   const successors = new Map();
@@ -47,8 +48,12 @@ function auditAcknowledgementChain(acknowledgements = []) {
     cursor = cursor.previousAcknowledgementSnapshotId ? byId.get(cursor.previousAcknowledgementSnapshotId) || null : null;
   }
 
-  const ready = roots.length === 1 && missingParents.length === 0 && uniqueCycles.length === 0 && forks.length === 0 && depth === rows.length;
-  return Object.freeze({ ready, versioned: true, rootSnapshotId: roots.length === 1 ? roots[0] : null, depth, roots: Object.freeze(roots), missingParents: Object.freeze(missingParents), cycles: Object.freeze(uniqueCycles), forks: Object.freeze(forks) });
+  const rootMismatches = rootSnapshotId ? rows.filter((ack) => ack.rootAcknowledgementSnapshotId && ack.rootAcknowledgementSnapshotId !== rootSnapshotId).map((ack) => Object.freeze({ snapshotId: ack.snapshotId, declaredRootSnapshotId: ack.rootAcknowledgementSnapshotId, expectedRootSnapshotId: rootSnapshotId })) : [];
+  const rootsWithMissingDeclaration = rootSnapshotId ? rows.filter((ack) => !ack.rootAcknowledgementSnapshotId).map((ack) => Object.freeze({ snapshotId: ack.snapshotId, declaredRootSnapshotId: null, expectedRootSnapshotId: rootSnapshotId })) : [];
+  const allRootMismatches = Object.freeze([...rootMismatches, ...rootsWithMissingDeclaration]);
+
+  const ready = roots.length === 1 && missingParents.length === 0 && uniqueCycles.length === 0 && forks.length === 0 && depth === rows.length && allRootMismatches.length === 0;
+  return Object.freeze({ ready, versioned: true, rootSnapshotId, depth, roots: Object.freeze(roots), missingParents: Object.freeze(missingParents), cycles: Object.freeze(uniqueCycles), forks: Object.freeze(forks), rootMismatches: allRootMismatches });
 }
 
 module.exports = { auditAcknowledgementChain };
