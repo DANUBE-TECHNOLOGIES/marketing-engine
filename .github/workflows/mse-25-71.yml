@@ -11,6 +11,7 @@ on:
       - 'frontend/lib/public-brand-legal-runtime.js'
       - 'frontend/scripts/public-performance-probe.mjs'
       - 'frontend/scripts/public-lcp-contract-probe.mjs'
+      - 'frontend/scripts/public-js-payload-probe.mjs'
       - 'frontend/test/mse-25-71-*.test.mjs'
       - 'frontend/package.json'
       - 'frontend/package-lock.json'
@@ -23,6 +24,7 @@ on:
       - 'frontend/lib/public-brand-legal-runtime.js'
       - 'frontend/scripts/public-performance-probe.mjs'
       - 'frontend/scripts/public-lcp-contract-probe.mjs'
+      - 'frontend/scripts/public-js-payload-probe.mjs'
       - 'frontend/test/mse-25-71-*.test.mjs'
       - 'frontend/package.json'
       - 'frontend/package-lock.json'
@@ -67,6 +69,16 @@ on:
         description: 'Total inspected image payload budget in bytes'
         required: false
         default: '5000000'
+        type: string
+      max_decoded_js_bytes:
+        description: 'Total decoded JavaScript budget in bytes'
+        required: false
+        default: '900000'
+        type: string
+      max_script_count:
+        description: 'Maximum external script count in initial HTML'
+        required: false
+        default: '20'
         type: string
 
 permissions:
@@ -132,6 +144,8 @@ jobs:
           MAX_HERO_BYTES: ${{ inputs.max_hero_bytes }}
           MAX_SINGLE_IMAGE_BYTES: ${{ inputs.max_single_image_bytes }}
           MAX_TOTAL_IMAGE_BYTES: ${{ inputs.max_total_image_bytes }}
+          MAX_DECODED_JS_BYTES: ${{ inputs.max_decoded_js_bytes }}
+          MAX_SCRIPT_COUNT: ${{ inputs.max_script_count }}
         run: |
           set -o pipefail
           node scripts/public-performance-probe.mjs \
@@ -147,6 +161,12 @@ jobs:
             --url="$TARGET_URL" \
             --gate=true \
             | tee /tmp/mse-25-71-lcp-probe.txt
+          node scripts/public-js-payload-probe.mjs \
+            --url="$TARGET_URL" \
+            --gate=true \
+            --max-decoded-js-bytes="$MAX_DECODED_JS_BYTES" \
+            --max-script-count="$MAX_SCRIPT_COUNT" \
+            | tee /tmp/mse-25-71-js-probe.txt
           {
             echo '### MSE-25.71 live pilot probe'
             echo
@@ -159,5 +179,10 @@ jobs:
             echo '### MSE-25.71 LCP contract probe'
             echo '```text'
             cat /tmp/mse-25-71-lcp-probe.txt
+            echo '```'
+            echo
+            echo '### MSE-25.71 JavaScript payload probe'
+            echo '```text'
+            cat /tmp/mse-25-71-js-probe.txt
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
