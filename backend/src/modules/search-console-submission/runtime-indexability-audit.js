@@ -64,6 +64,31 @@ async function fetchText(fetchImpl, url, { timeoutMs = 5000, accept = "*/*" } = 
   }
 }
 
+async function fetchStableSitemap(fetchImpl, url, { timeoutMs = 5000, expectedUrlCount = 0 } = {}) {
+  const options = { timeoutMs, accept: "application/xml,text/xml,*/*;q=0.1" };
+  const first = await fetchText(fetchImpl, url, options);
+  const firstUrls = first.ok ? parseSitemapUrls(first.text) : [];
+
+  if (!first.ok || firstUrls.length || expectedUrlCount <= 0) {
+    return { response: first, urls: firstUrls, retried: false, recovered: false };
+  }
+
+  const second = await fetchText(fetchImpl, url, options);
+  const secondUrls = second.ok ? parseSitemapUrls(second.text) : [];
+  return {
+    response: second,
+    urls: secondUrls,
+    retried: true,
+    recovered: second.ok && secondUrls.length > 0,
+    firstObservation: {
+      status: first.status,
+      ok: first.ok,
+      contentType: first.contentType,
+      parsedUrlCount: firstUrls.length,
+    },
+  };
+}
+
 function isActionableCoveragePage(page) {
   const reason = String(page?.reason || "");
   const slug = String(page?.pageSlug || "");
@@ -105,13 +130,14 @@ class RuntimeIndexabilityAuditService {
     const expectedUrls = uniqueSorted((internal?.entries || []).map((entry) => entry?.url));
     const auditUrls = expectedUrls.slice(0, Math.max(1, Math.min(500, Number(limit || 500))));
 
-    const [publicSitemap, robots, pageAudit] = await Promise.all([
-      fetchText(this.fetchImpl, sitemapUrl, { timeoutMs: this.timeoutMs, accept: "application/xml,text/xml,*/*;q=0.1" }),
+    const [stableSitemap, robots, pageAudit] = await Promise.all([
+      fetchStableSitemap(this.fetchImpl, sitemapUrl, { timeoutMs: this.timeoutMs, expectedUrlCount: expectedUrls.length }),
       fetchText(this.fetchImpl, robotsUrl, { timeoutMs: this.timeoutMs, accept: "text/plain,*/*;q=0.1" }),
       this.observer.audit({ urls: auditUrls, publicOrigin }),
     ]);
 
-    const publicUrls = publicSitemap.ok ? parseSitemapUrls(publicSitemap.text) : [];
+    const publicSitemap = stableSitemap.response;
+    const publicUrls = stableSitemap.urls;
     const publicSet = new Set(publicUrls);
     const expectedSet = new Set(expectedUrls);
     const missingFromPublicSitemap = expectedUrls.filter((url) => !publicSet.has(url));
@@ -131,6 +157,7 @@ class RuntimeIndexabilityAuditService {
     if (robots.ok && !robotsDeclaresSitemap) warnings.push("ROBOTS_SITEMAP_DIRECTIVE_MISSING");
     if (extraInPublicSitemap.length) warnings.push("PUBLIC_SITEMAP_HAS_EXTRA_URLS");
     if (pageAudit.summary?.fetchUnavailableCount) warnings.push("PARTIAL_PAGE_OBSERVATION");
+    if (stableSitemap.recovered) warnings.push("TRANSIENT_EMPTY_SITEMAP_OBSERVATION_RECOVERED");
     if (local.expectedNoindexPageCount) warnings.push("EXPECTED_NOINDEX_PAGES_EXCLUDED");
     if (local.managedRoutePageCount) warnings.push("MANAGED_SITEMAP_ROUTES_NORMALIZED");
 
@@ -139,7 +166,7 @@ class RuntimeIndexabilityAuditService {
     else if (local.googleDataState === "NO_DATA_YET" || local.googleDataState === "UNAVAILABLE" || local.analyticsRowCount === 0) verdict = "READY_WAITING_FOR_SEARCH_CONSOLE_DATA";
 
     return {
-      version: "mse-25.76",
+      version: "mse-25.84",
       verdict,
       readyForGoogleDiscovery: blockers.length === 0,
       publicOrigin,
@@ -163,6 +190,9 @@ class RuntimeIndexabilityAuditService {
         ok: publicSitemap.ok,
         contentType: publicSitemap.contentType,
         error: publicSitemap.error,
+        observationRetried: stableSitemap.retried,
+        transientEmptyObservationRecovered: stableSitemap.recovered,
+        firstObservation: stableSitemap.firstObservation || null,
         missingUrls: missingFromPublicSitemap,
         extraUrls: extraInPublicSitemap,
       },
@@ -196,6 +226,7 @@ class RuntimeIndexabilityAuditService {
 module.exports = {
   RuntimeIndexabilityAuditService,
   coverageSummary,
+  fetchStableSitemap,
   fetchText,
   isActionableCoveragePage,
   parseSitemapUrls,
