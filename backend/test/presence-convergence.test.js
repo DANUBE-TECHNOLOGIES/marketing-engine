@@ -36,6 +36,7 @@ require("../src/modules/presence/pilot-execution-gate.test");
 require("../src/modules/presence/pilot-extension-gate.test");
 require("../src/modules/presence/network-rollout-gate.test");
 require("../src/modules/presence/network-rollout-decision-snapshot.test");
+require("../src/modules/presence/network-rollout-decision-drift.test");
 require("../src/modules/presence/rollout-evidence-comparison.test");
 require("../src/modules/presence/rollout-promotion-gate.test");
 require("../src/modules/presence/pilot-outcome.test");
