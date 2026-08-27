@@ -7,6 +7,7 @@ on:
     paths:
       - 'docker-compose.yml'
       - 'scripts/mse-25-71-origin-readiness.sh'
+      - 'frontend/app/healthz/**'
       - 'frontend/app/agence/**'
       - 'frontend/components/public-site/**'
       - 'frontend/lib/public-site-api.js'
@@ -22,6 +23,7 @@ on:
     paths:
       - 'docker-compose.yml'
       - 'scripts/mse-25-71-origin-readiness.sh'
+      - 'frontend/app/healthz/**'
       - 'frontend/app/agence/**'
       - 'frontend/components/public-site/**'
       - 'frontend/lib/public-site-api.js'
@@ -100,16 +102,22 @@ jobs:
           set -euo pipefail
           bash -n scripts/mse-25-71-origin-readiness.sh
           grep -q '^#!/usr/bin/env bash' scripts/mse-25-71-origin-readiness.sh
-          grep -q 'LOCAL_PROXY_HTTP=' scripts/mse-25-71-origin-readiness.sh
+          grep -q 'FRONTEND_LIVENESS_HTTP=' scripts/mse-25-71-origin-readiness.sh
+          grep -q 'PUBLIC_LIVENESS_HTTP=' scripts/mse-25-71-origin-readiness.sh
+          grep -q 'LOCAL_PROXY_LIVENESS_HTTP=' scripts/mse-25-71-origin-readiness.sh
           grep -q -- '--resolve "${PUBLIC_HOST}:${PUBLIC_PORT}:127.0.0.1"' scripts/mse-25-71-origin-readiness.sh
           grep -q 'ORIGIN_STATE=PUBLIC_READY' scripts/mse-25-71-origin-readiness.sh
+          grep -q 'ORIGIN_STATE=PUBLIC_PROXY_READY_ROUTE_FAILURE' scripts/mse-25-71-origin-readiness.sh
           grep -q 'ORIGIN_STATE=PUBLIC_EDGE_OR_DNS_PATH_FAILURE' scripts/mse-25-71-origin-readiness.sh
           grep -q 'ORIGIN_STATE=REVERSE_PROXY_UPSTREAM_FAILURE' scripts/mse-25-71-origin-readiness.sh
           grep -q 'ORIGIN_STATE=REVERSE_PROXY_UNREACHABLE_LOCALLY' scripts/mse-25-71-origin-readiness.sh
+          grep -q 'ORIGIN_STATE=FRONTEND_ROUTE_FAILURE' scripts/mse-25-71-origin-readiness.sh
           grep -q 'ORIGIN_STATE=FRONTEND_FAILURE' scripts/mse-25-71-origin-readiness.sh
           grep -q 'ORIGIN_STATE=BACKEND_OR_STACK_FAILURE' scripts/mse-25-71-origin-readiness.sh
           grep -q "http://127.0.0.1:4000/health" docker-compose.yml
-          grep -q "http://127.0.0.1:3000/" docker-compose.yml
+          grep -q "http://127.0.0.1:3000/healthz" docker-compose.yml
+          grep -q 'service: "marketing-engine-frontend"' frontend/app/healthz/route.js
+          grep -q '"cache-control": "no-store, max-age=0"' frontend/app/healthz/route.js
           docker compose config --quiet
 
       - name: Setup Node
@@ -137,6 +145,7 @@ jobs:
         working-directory: frontend
         env:
           TARGET_URL: 'https://agences.mondescale.com/agence/gien'
+          LIVENESS_URL: 'https://agences.mondescale.com/healthz'
         run: |
           set +e
           node scripts/public-performance-probe.mjs \
@@ -155,12 +164,24 @@ jobs:
             --gate=false \
             > /tmp/mse-25-71-baseline-js.txt 2>&1
           js_status=$?
+          curl -sS -L -D /tmp/mse-25-71-liveness-headers.txt -o /tmp/mse-25-71-liveness-body.txt \
+            -w 'HTTP=%{http_code} TTFB=%{time_starttransfer}s TOTAL=%{time_total}s REMOTE=%{remote_ip}\n' \
+            --max-time 15 "$LIVENESS_URL" > /tmp/mse-25-71-liveness.txt 2>&1
+          liveness_status=$?
           {
             echo '### MSE-25.71 current production baseline (pre-deployment)'
             echo
             echo "Target: \`$TARGET_URL\`"
+            echo "Liveness: \`$LIVENESS_URL\`"
             echo
-            echo "Probe exit codes: performance=$perf_status lcp=$lcp_status js=$js_status"
+            echo "Probe exit codes: performance=$perf_status lcp=$lcp_status js=$js_status liveness=$liveness_status"
+            echo
+            echo '#### Frontend liveness'
+            echo '```text'
+            cat /tmp/mse-25-71-liveness.txt
+            grep -Ei '^(HTTP/|server:|content-type:|cache-control:)' /tmp/mse-25-71-liveness-headers.txt || true
+            cat /tmp/mse-25-71-liveness-body.txt || true
+            echo '```'
             echo
             echo '#### Performance / media'
             echo '```text'
@@ -177,6 +198,7 @@ jobs:
             cat /tmp/mse-25-71-baseline-js.txt
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+          cat /tmp/mse-25-71-liveness.txt
           cat /tmp/mse-25-71-baseline-performance.txt
           cat /tmp/mse-25-71-baseline-lcp.txt
           cat /tmp/mse-25-71-baseline-js.txt
@@ -203,8 +225,23 @@ jobs:
             http://*|https://*) ;;
             *) echo "Resolved pilot URL must be absolute: $target" >&2; exit 2 ;;
           esac
+          origin="$(printf '%s' "$target" | sed -E 's#^(https?://[^/]+).*#\1#')"
           echo "target_url=$target" >> "$GITHUB_OUTPUT"
+          echo "liveness_url=$origin/healthz" >> "$GITHUB_OUTPUT"
           echo "Resolved MSE-25.71 pilot: $target"
+
+      - name: Probe deployed pilot liveness
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        env:
+          LIVENESS_URL: ${{ steps.pilot.outputs.liveness_url }}
+        run: |
+          set -euo pipefail
+          body="$(mktemp)"
+          code="$(curl -sS -L -o "$body" -w '%{http_code}' --max-time 15 "$LIVENESS_URL")"
+          echo "MSE-25.71 liveness HTTP=$code URL=$LIVENESS_URL"
+          cat "$body"
+          test "$code" = "200"
+          grep -q 'marketing-engine-frontend' "$body"
 
       - name: Probe deployed pilot
         if: ${{ github.event_name == 'workflow_dispatch' }}
