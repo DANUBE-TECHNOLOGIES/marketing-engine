@@ -51,7 +51,7 @@ test("MSE-25.72 keeps manual partner logos in the public build", () => {
   );
 });
 
-test("MSE-25.72 hidden heroes cannot suppress the canonical page H1", () => {
+test("MSE-25.72 hidden or suppressed heroes cannot suppress the canonical page H1", () => {
   const source = fs.readFileSync(
     path.join(
       root,
@@ -62,11 +62,44 @@ test("MSE-25.72 hidden heroes cannot suppress the canonical page H1", () => {
 
   assert.match(
     source,
-    /import\s*\{\s*isSectionVisible\s*\}\s*from\s*"[^"]*blockUtils"/
+    /renderablePublicSections\(page\)\.some/
+  );
+
+  assert.doesNotMatch(
+    source,
+    /pageSections\(page\)\.some/
+  );
+});
+
+test("MSE-25.72 H1 detection uses the same sections as public rendering", () => {
+  const pageSource = fs.readFileSync(
+    path.join(
+      root,
+      "app/agence/[siteSlug]/[[...pageSlug]]/page.js"
+    ),
+    "utf8"
+  );
+
+  const sectionsSource = fs.readFileSync(
+    path.join(
+      root,
+      "components/public-site/PublicSiteSections.js"
+    ),
+    "utf8"
   );
 
   assert.match(
-    source,
-    /pageSections\(page\)\.filter\(isSectionVisible\)\.some/
+    pageSource,
+    /renderablePublicSections\(page\)\.some/
+  );
+
+  assert.match(
+    sectionsSource,
+    /const sections = renderablePublicSections\(page\)/
+  );
+
+  assert.match(
+    sectionsSource,
+    /function renderablePublicSections\(page\)/
   );
 });

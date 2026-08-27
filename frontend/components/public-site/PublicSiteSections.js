@@ -90,6 +90,13 @@ function compactSecondarySections(page, sections) {
     .map(({ section }) => section);
 }
 
+function renderablePublicSections(page) {
+  return compactSecondarySections(
+    page,
+    sortSections(page?.sections || page?.blocks).filter(isSectionVisible)
+  );
+}
+
 function htmlToSafeParagraphs(value) {
   const normalized = String(value || "")
     .replace(/<\s*br\s*\/?\s*>/gi, "\n")
@@ -201,10 +208,7 @@ function CtaSection({ section, site }) {
 }
 
 export default function PublicSiteSections({ page, site }) {
-  const sections = compactSecondarySections(
-    page,
-    sortSections(page?.sections || page?.blocks).filter(isSectionVisible)
-  );
+  const sections = renderablePublicSections(page);
 
   return sections.map((section, index) => {
     const type = getSectionType(section);
@@ -228,6 +232,7 @@ export default function PublicSiteSections({ page, site }) {
 }
 
 export {
+  renderablePublicSections,
   compactSecondarySections,
   isPartnersPage,
   isTeamPage,
