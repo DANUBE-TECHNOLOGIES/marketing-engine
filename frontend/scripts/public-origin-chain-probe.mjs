@@ -50,7 +50,17 @@ async function probe(url, { timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
   }
 }
 
+function isReverseProxyServer(value) {
+  return /(?:openresty|nginx|caddy|apache)/i.test(String(value || ""));
+}
+
 function classifyOriginChain({ liveness, publicApi, agency }) {
+  if (liveness.status >= 500 && isReverseProxyServer(liveness.server)) {
+    return "PUBLIC_REVERSE_PROXY_UPSTREAM_FAILURE";
+  }
+  if (liveness.status === 0) {
+    return "PUBLIC_EDGE_UNREACHABLE";
+  }
   if (liveness.status !== 200) {
     return "FRONTEND_OR_PROXY_UNAVAILABLE";
   }
@@ -77,6 +87,10 @@ function classifyOriginChain({ liveness, publicApi, agency }) {
 
 function remediationFor(state) {
   switch (state) {
+    case "PUBLIC_REVERSE_PROXY_UPSTREAM_FAILURE":
+      return "CHECK_REVERSE_PROXY_UPSTREAM_AND_FRONTEND_PORT_3000";
+    case "PUBLIC_EDGE_UNREACHABLE":
+      return "CHECK_PUBLIC_DNS_TLS_AND_EDGE_REACHABILITY";
     case "FRONTEND_OR_PROXY_UNAVAILABLE":
       return "RESTORE_FRONTEND_OR_REVERSE_PROXY";
     case "PUBLIC_API_UPSTREAM_FAILURE":
@@ -155,6 +169,7 @@ if (isMain) {
 
 export {
   classifyOriginChain,
+  isReverseProxyServer,
   normalizeBaseUrl,
   probe,
   remediationFor,
