@@ -1,0 +1,10 @@
+"use strict";
+const test=require("node:test");
+const assert=require("node:assert/strict");
+const {normalizeRequiredCoverage,evaluateAcknowledgementSealingPolicy}=require("./rollout-acknowledgement-sealing-policy");
+
+test("sealing threshold defaults to zero and clamps configured values",()=>{assert.equal(normalizeRequiredCoverage(undefined),0);assert.equal(normalizeRequiredCoverage("80"),80);assert.equal(normalizeRequiredCoverage("140"),100);assert.equal(normalizeRequiredCoverage("-5"),0);assert.equal(normalizeRequiredCoverage("bad"),0);});
+test("default policy never blocks a valid legacy chain",()=>{const policy=evaluateAcknowledgementSealingPolicy({versioned:true,integrityReady:true,fullyExplicit:false,explicitCoveragePercent:0},{requiredCoveragePercent:0});assert.equal(policy.ready,true);assert.equal(policy.enforced,false);assert.deepEqual(policy.blockers,[]);assert.ok(policy.warnings.includes("acknowledgement_chain_sealing_policy_not_enforced"));});
+test("configured threshold blocks only a versioned chain below coverage",()=>{const policy=evaluateAcknowledgementSealingPolicy({versioned:true,integrityReady:true,explicitCoveragePercent:60},{requiredCoveragePercent:80});assert.equal(policy.ready,false);assert.equal(policy.applicable,true);assert.equal(policy.thresholdMet,false);assert.ok(policy.blockers.includes("acknowledgement_chain_sealing_below_required_threshold"));});
+test("configured threshold accepts sufficient explicit coverage",()=>{const policy=evaluateAcknowledgementSealingPolicy({versioned:true,integrityReady:true,explicitCoveragePercent:80},{requiredCoveragePercent:80});assert.equal(policy.ready,true);assert.equal(policy.thresholdMet,true);});
+test("configured threshold does not invent debt before acknowledgement history exists",()=>{const policy=evaluateAcknowledgementSealingPolicy({versioned:false,integrityReady:true,explicitCoveragePercent:0},{requiredCoveragePercent:100});assert.equal(policy.ready,true);assert.equal(policy.applicable,false);assert.deepEqual(policy.blockers,[]);});
