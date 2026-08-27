@@ -1,5 +1,6 @@
 "use strict";
 
+const { MANAGED_PAGE_SLUGS } = require("../minisite-structured-data/sitemap");
 const { normalizeUrl } = require("./public-indexability-observer");
 
 function uniqueSorted(values) {
@@ -63,16 +64,28 @@ async function fetchText(fetchImpl, url, { timeoutMs = 5000, accept = "*/*" } = 
   }
 }
 
+function isActionableCoveragePage(page) {
+  const reason = String(page?.reason || "");
+  const slug = String(page?.pageSlug || "");
+  if (reason === "ROBOTS_BLOCKED" || reason === "CANONICAL_MISMATCH") return true;
+  if (reason === "MISSING_FROM_SITEMAP") return !MANAGED_PAGE_SLUGS.has(slug);
+  return false;
+}
+
 function coverageSummary(coverage) {
   const sites = coverage?.sites || [];
   const pages = sites.flatMap((site) => site?.pages || []);
-  const localIssuePages = pages.filter((page) => page?.reason && page.reason !== "SITEMAP_EXPOSED_WAITING_FOR_GOOGLE");
+  const actionablePages = pages.filter(isActionableCoveragePage);
+  const expectedNoindexPages = pages.filter((page) => page?.reason === "NOT_INDEXABLE");
+  const managedRoutePages = pages.filter((page) => page?.reason === "MISSING_FROM_SITEMAP" && MANAGED_PAGE_SLUGS.has(String(page?.pageSlug || "")));
   return {
     siteCount: sites.length,
     publishedPageCount: pages.length,
-    localIssuePageCount: localIssuePages.length,
-    analyticsRowCount: Number(coverage?.analytics?.rowCount ?? coverage?.analyticsRowCount ?? 0),
-    googleDataState: coverage?.analytics?.dataState || coverage?.dataState || coverage?.lifecycle || null,
+    localIssuePageCount: actionablePages.length,
+    expectedNoindexPageCount: expectedNoindexPages.length,
+    managedRoutePageCount: managedRoutePages.length,
+    analyticsRowCount: Number(coverage?.searchConsole?.rowCount ?? coverage?.analytics?.rowCount ?? coverage?.analyticsRowCount ?? 0),
+    googleDataState: coverage?.searchConsole?.analyticsState || coverage?.analytics?.dataState || coverage?.dataState || coverage?.lifecycle || null,
   };
 }
 
@@ -118,13 +131,15 @@ class RuntimeIndexabilityAuditService {
     if (robots.ok && !robotsDeclaresSitemap) warnings.push("ROBOTS_SITEMAP_DIRECTIVE_MISSING");
     if (extraInPublicSitemap.length) warnings.push("PUBLIC_SITEMAP_HAS_EXTRA_URLS");
     if (pageAudit.summary?.fetchUnavailableCount) warnings.push("PARTIAL_PAGE_OBSERVATION");
+    if (local.expectedNoindexPageCount) warnings.push("EXPECTED_NOINDEX_PAGES_EXCLUDED");
+    if (local.managedRoutePageCount) warnings.push("MANAGED_SITEMAP_ROUTES_NORMALIZED");
 
     let verdict = "READY_FOR_GOOGLE_DISCOVERY";
     if (blockers.length) verdict = "BLOCKED_INDEXABILITY";
-    else if (local.googleDataState === "NO_DATA_YET" || local.analyticsRowCount === 0) verdict = "READY_WAITING_FOR_SEARCH_CONSOLE_DATA";
+    else if (local.googleDataState === "NO_DATA_YET" || local.googleDataState === "UNAVAILABLE" || local.analyticsRowCount === 0) verdict = "READY_WAITING_FOR_SEARCH_CONSOLE_DATA";
 
     return {
-      version: "mse-25.74",
+      version: "mse-25.76",
       verdict,
       readyForGoogleDiscovery: blockers.length === 0,
       publicOrigin,
@@ -180,7 +195,9 @@ class RuntimeIndexabilityAuditService {
 
 module.exports = {
   RuntimeIndexabilityAuditService,
+  coverageSummary,
   fetchText,
+  isActionableCoveragePage,
   parseSitemapUrls,
   sitemapDirective,
 };
