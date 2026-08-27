@@ -2,7 +2,8 @@
 
 const crypto = require("node:crypto");
 const {
-  hasFlexiblePaymentBlock,
+  findFlexiblePaymentBlock,
+  isOwnedFlexiblePaymentBlock,
   normalizePaymentPolicy,
   planPaymentPlacements,
 } = require("./payment-experience");
@@ -122,9 +123,36 @@ async function applyPaymentPlacementPreview(repository, {
         continue;
       }
 
-      if (hasFlexiblePaymentBlock(page)) {
-        skipped.push({ slug: proposal.slug, reason: "flexible-payment-block-already-present-at-apply" });
+      const existingPaymentBlock =
+        findFlexiblePaymentBlock(page);
+
+      if (proposal.operation === "create" && existingPaymentBlock) {
+        skipped.push({
+          slug: proposal.slug,
+          reason: "flexible-payment-block-already-present-at-apply",
+        });
         continue;
+      }
+
+      if (proposal.operation === "update") {
+        if (
+          !existingPaymentBlock ||
+          existingPaymentBlock.id !== proposal.blockId
+        ) {
+          skipped.push({
+            slug: proposal.slug,
+            reason: "flexible-payment-block-changed-at-apply",
+          });
+          continue;
+        }
+
+        if (!isOwnedFlexiblePaymentBlock(existingPaymentBlock)) {
+          skipped.push({
+            slug: proposal.slug,
+            reason: "flexible-payment-block-not-owned-at-apply",
+          });
+          continue;
+        }
       }
 
       const currentVersion = Number(page.versions?.[0]?.version || 0);
@@ -146,29 +174,53 @@ async function applyPaymentPlacementPreview(repository, {
         0
       );
 
-      const block = await client.pageBlock.create({
-        data: {
-          pageId: page.id,
-          blockType: "flexible_payment",
-          name: proposal.placement === "compact" ? "Paiement en plusieurs fois" : "Paiement flexible",
-          content: proposal.block.content,
-          settings: { variant: proposal.placement },
-          seo: {
-            purpose: PURPOSE,
-            source: SOURCE,
-            previewFingerprint: preview.fingerprint,
+      let block;
+
+      if (proposal.operation === "update") {
+        block = await client.pageBlock.update({
+          where: { id: proposal.blockId },
+          data: {
+            content: proposal.block.content,
+            settings: { variant: proposal.placement },
+            seo: {
+              purpose: PURPOSE,
+              source: SOURCE,
+              previewFingerprint: preview.fingerprint,
+            },
+            status: "published",
+            visibleDesktop: true,
+            visibleMobile: true,
           },
-          displayOrder: highestOrder + 10,
-          status: "published",
-          visibleDesktop: true,
-          visibleMobile: true,
-        },
-      });
+        });
+      } else {
+        block = await client.pageBlock.create({
+          data: {
+            pageId: page.id,
+            blockType: "flexible_payment",
+            name:
+              proposal.placement === "compact"
+                ? "Paiement en plusieurs fois"
+                : "Paiement flexible",
+            content: proposal.block.content,
+            settings: { variant: proposal.placement },
+            seo: {
+              purpose: PURPOSE,
+              source: SOURCE,
+              previewFingerprint: preview.fingerprint,
+            },
+            displayOrder: highestOrder + 10,
+            status: "published",
+            visibleDesktop: true,
+            visibleMobile: true,
+          },
+        });
+      }
 
       applied.push({
         pageId: page.id,
         slug: proposal.slug,
         placement: proposal.placement,
+        operation: proposal.operation || "create",
         blockId: block.id,
         rollbackVersion: version,
       });

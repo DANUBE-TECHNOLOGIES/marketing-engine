@@ -36,3 +36,87 @@ test("planner carries a conversion CTA into the public block", () => {
 test("disabled policy produces no public proposals", () => {
   const plan = planPaymentPlacements({ policy: { enabled: false, products: ["flight"] }, site: { pages: [{ slug: "home", status: "published", blocks: [] }] } }); assert.equal(plan.enabled, false); assert.deepEqual(plan.proposals, []);
 });
+
+test("planner reconciles an owned stale payment block and becomes idempotent once synchronized", () => {
+  const policy = {
+    enabled: true,
+    products: ["flight", "travel"],
+    installmentCounts: [3, 4, 10],
+    feeMode: "unspecified",
+    ctaMode: "contact",
+    ctaLabel: "Étudier mes possibilités de paiement",
+  };
+
+  const staleBlock = {
+    id: "payment-home",
+    blockType: "flexible_payment",
+    content: {
+      variant: "compact",
+      title: "Vos billets d’avion et vos voyages, payables en plusieurs fois",
+      body: "Ancien contenu",
+      disclaimer:
+        "Selon votre réservation et sous réserve des conditions applicables. Renseignez-vous auprès de votre agence.",
+      ctaLabel: "Étudier mes possibilités de paiement",
+      products: ["flight", "travel"],
+      installmentCounts: [],
+      feeMode: "unspecified",
+    },
+    seo: {
+      source: "mse-25.32",
+      purpose: "flexible-payment-experience",
+    },
+  };
+
+  const first = planPaymentPlacements({
+    policy,
+    site: {
+      pages: [
+        {
+          slug: "home",
+          status: "published",
+          blocks: [staleBlock],
+        },
+      ],
+    },
+  });
+
+  assert.equal(first.proposals.length, 1);
+  assert.equal(first.proposals[0].operation, "update");
+  assert.equal(first.proposals[0].blockId, "payment-home");
+  assert.deepEqual(
+    first.proposals[0].block.content.installmentCounts,
+    [3, 4, 10]
+  );
+  assert.match(
+    first.proposals[0].block.content.body,
+    /3x, 4x ou 10x/
+  );
+
+  const synchronizedBlock = {
+    ...staleBlock,
+    content: first.proposals[0].block.content,
+  };
+
+  const second = planPaymentPlacements({
+    policy,
+    site: {
+      pages: [
+        {
+          slug: "home",
+          status: "published",
+          blocks: [synchronizedBlock],
+        },
+      ],
+    },
+  });
+
+  assert.equal(second.proposals.length, 0);
+  assert.ok(
+    second.skipped.some(
+      (item) =>
+        item.slug === "home" &&
+        item.reason ===
+          "flexible-payment-block-already-synchronized"
+    )
+  );
+});

@@ -7,11 +7,47 @@ const {
   siteOperationalRow,
 } = require("../src/modules/flexible-payment-experience/operational-status");
 
-function block() {
+const {
+  planPaymentPlacements,
+} = require("../src/modules/flexible-payment-experience/payment-experience");
+
+function block(overrides = {}) {
+  const plan = planPaymentPlacements({
+    policy: {
+      enabled: true,
+      products: ["flight"],
+    },
+    site: {
+      pages: [{
+        id: "page-canonical",
+        slug: "home",
+        published: true,
+        blocks: [],
+      }],
+    },
+  });
+
+  if (plan.proposals.length !== 1) {
+    throw new Error(
+      `Expected one canonical payment proposal, got ${plan.proposals.length}`
+    );
+  }
+
+  const canonicalContent =
+    plan.proposals[0].block.content;
+
   return {
     id: "block-1",
     blockType: "flexible_payment",
-    seo: { purpose: "flexible-payment-experience", source: "mse-25.32" },
+    content: canonicalContent,
+    settings: {
+      variant: canonicalContent.variant,
+    },
+    seo: {
+      purpose: "flexible-payment-experience",
+      source: "mse-25.32",
+    },
+    ...overrides,
   };
 }
 
@@ -40,6 +76,32 @@ test("reports a deployed site as healthy", () => {
   assert.equal(row.readinessStatus, "deployed");
   assert.equal(row.health, "healthy");
   assert.equal(row.deployedBlocks, 1);
+});
+
+test("reports an owned stale deployed block as ready for reconciliation", () => {
+  const row = siteOperationalRow(site({
+    pages: [{
+      id: "page-1",
+      slug: "home",
+      published: true,
+      blocks: [
+        block({
+          content: {
+            title: "Ancien contenu",
+            products: ["flight"],
+            installmentCounts: [],
+            feeMode: "unspecified",
+          },
+        }),
+      ],
+    }],
+  }));
+
+  assert.equal(row.readinessStatus, "ready");
+  assert.equal(row.deployedBlocks, 1);
+  assert.ok(row.proposals > 0);
+  assert.equal(row.health, "attention");
+  assert.ok(row.anomalies.includes("ready-with-existing-blocks"));
 });
 
 test("flags blocks left behind when the policy is disabled", () => {

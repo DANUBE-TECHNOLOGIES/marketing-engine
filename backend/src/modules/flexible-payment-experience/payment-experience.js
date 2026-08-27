@@ -81,7 +81,75 @@ function buildPublicPaymentCopy(input = {}) {
 }
 
 function isPublishedPage(page) { return page && (page.published === true || page.status === "published"); }
-function hasFlexiblePaymentBlock(page) { return Array.isArray(page?.blocks) && page.blocks.some((block) => ["flexible_payment", "flexible-payment"].includes(normalizeText(block?.blockType || block?.type).toLowerCase())); }
+function isFlexiblePaymentBlock(block = {}) {
+  return ["flexible_payment", "flexible-payment"].includes(
+    normalizeText(block?.blockType || block?.type).toLowerCase()
+  );
+}
+
+function findFlexiblePaymentBlock(page = {}) {
+  return Array.isArray(page?.blocks)
+    ? page.blocks.find(isFlexiblePaymentBlock) || null
+    : null;
+}
+
+function hasFlexiblePaymentBlock(page) {
+  return Boolean(findFlexiblePaymentBlock(page));
+}
+
+function isOwnedFlexiblePaymentBlock(block = {}) {
+  if (!isFlexiblePaymentBlock(block)) return false;
+
+  const seo = block.seo || {};
+
+  return (
+    seo.source === "mse-25.32" &&
+    seo.purpose === "flexible-payment-experience"
+  );
+}
+
+function buildPaymentBlockContent(copy, placement) {
+  return {
+    variant: placement,
+    eyebrow: copy.eyebrow,
+    title: copy.title,
+    body: copy.body,
+    disclaimer: copy.disclaimer,
+    ctaLabel: copy.ctaLabel,
+    primaryCta: {
+      href: "contact",
+      label: copy.ctaLabel,
+    },
+    products: copy.products,
+    installmentCounts: copy.installmentCounts,
+    feeMode: copy.feeMode,
+  };
+}
+
+function paymentBlockContentMatches(block = {}, expected = {}) {
+  const current = block.content || {};
+
+  const normalizeArray = (value) =>
+    Array.isArray(value) ? value.map(String) : [];
+
+  return (
+    normalizeText(current.variant) === normalizeText(expected.variant) &&
+    normalizeText(current.eyebrow) === normalizeText(expected.eyebrow) &&
+    normalizeText(current.title) === normalizeText(expected.title) &&
+    normalizeText(current.body) === normalizeText(expected.body) &&
+    normalizeText(current.disclaimer) === normalizeText(expected.disclaimer) &&
+    normalizeText(current.ctaLabel) === normalizeText(expected.ctaLabel) &&
+    normalizeText(current?.primaryCta?.href) ===
+      normalizeText(expected?.primaryCta?.href) &&
+    normalizeText(current?.primaryCta?.label) ===
+      normalizeText(expected?.primaryCta?.label) &&
+    JSON.stringify(normalizeArray(current.products)) ===
+      JSON.stringify(normalizeArray(expected.products)) &&
+    JSON.stringify(normalizeArray(current.installmentCounts)) ===
+      JSON.stringify(normalizeArray(expected.installmentCounts)) &&
+    normalizeText(current.feeMode) === normalizeText(expected.feeMode)
+  );
+}
 function classifyPlacement(page = {}) {
   const slug = normalizeText(page.slug).toLowerCase();
   if (slug === "home" || slug === "accueil") return "compact";
@@ -92,19 +160,100 @@ function classifyPlacement(page = {}) {
 function planPaymentPlacements({ site = {}, policy: inputPolicy = {} } = {}) {
   const policy = normalizePaymentPolicy(inputPolicy);
   const copy = buildPublicPaymentCopy(policy);
-  if (!copy) return { version: "mse-25.32", enabled: false, proposals: [], skipped: [] };
-  const proposals = [], skipped = [];
-  for (const page of Array.isArray(site.pages) ? site.pages : []) {
-    if (!isPublishedPage(page)) { skipped.push({ slug: page?.slug || null, reason: "page-not-published" }); continue; }
-    const placement = classifyPlacement(page); if (!placement) continue;
-    if (hasFlexiblePaymentBlock(page)) { skipped.push({ slug: page.slug, reason: "flexible-payment-block-already-present" }); continue; }
-    proposals.push({ slug: page.slug, placement, block: { blockType: "flexible_payment", content: {
-      variant: placement, eyebrow: copy.eyebrow, title: copy.title, body: copy.body, disclaimer: copy.disclaimer,
-      ctaLabel: copy.ctaLabel, primaryCta: { href: "contact", label: copy.ctaLabel }, products: copy.products,
-      installmentCounts: copy.installmentCounts, feeMode: copy.feeMode,
-    } } });
+
+  if (!copy) {
+    return {
+      version: "mse-25.32",
+      enabled: false,
+      proposals: [],
+      skipped: [],
+    };
   }
-  return { version: "mse-25.32", productVersion: "mse-25.41", enabled: true, readOnly: true, writes: false, proposals, skipped };
+
+  const proposals = [];
+  const skipped = [];
+
+  for (const page of Array.isArray(site.pages) ? site.pages : []) {
+    if (!isPublishedPage(page)) {
+      skipped.push({
+        slug: page?.slug || null,
+        reason: "page-not-published",
+      });
+      continue;
+    }
+
+    const placement = classifyPlacement(page);
+    if (!placement) continue;
+
+    const expectedContent =
+      buildPaymentBlockContent(copy, placement);
+
+    const existing =
+      findFlexiblePaymentBlock(page);
+
+    if (!existing) {
+      proposals.push({
+        slug: page.slug,
+        placement,
+        operation: "create",
+        block: {
+          blockType: "flexible_payment",
+          content: expectedContent,
+        },
+      });
+      continue;
+    }
+
+    if (!isOwnedFlexiblePaymentBlock(existing)) {
+      skipped.push({
+        slug: page.slug,
+        reason: "flexible-payment-block-already-present",
+      });
+      continue;
+    }
+
+    if (paymentBlockContentMatches(existing, expectedContent)) {
+      skipped.push({
+        slug: page.slug,
+        reason: "flexible-payment-block-already-synchronized",
+      });
+      continue;
+    }
+
+    proposals.push({
+      slug: page.slug,
+      placement,
+      operation: "update",
+      blockId: existing.id,
+      block: {
+        blockType: "flexible_payment",
+        content: expectedContent,
+      },
+    });
+  }
+
+  return {
+    version: "mse-25.32",
+    productVersion: "mse-25.41",
+    enabled: true,
+    readOnly: true,
+    writes: false,
+    proposals,
+    skipped,
+  };
 }
 
-module.exports = { ALLOWED_FEE_MODES, ALLOWED_PRODUCTS, buildPublicPaymentCopy, classifyPlacement, formatInstallmentClaim, hasFlexiblePaymentBlock, normalizePaymentPolicy, planPaymentPlacements, validatePaymentPolicyInput };
+module.exports = {
+  ALLOWED_FEE_MODES,
+  ALLOWED_PRODUCTS,
+  buildPublicPaymentCopy,
+  classifyPlacement,
+  findFlexiblePaymentBlock,
+  formatInstallmentClaim,
+  hasFlexiblePaymentBlock,
+  isOwnedFlexiblePaymentBlock,
+  normalizePaymentPolicy,
+  paymentBlockContentMatches,
+  planPaymentPlacements,
+  validatePaymentPolicyInput,
+};
