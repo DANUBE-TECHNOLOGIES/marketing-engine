@@ -12,10 +12,16 @@ function criticalAcknowledgementEvidenceValid(latest, prior) {
   return ack.required === true && ack.severity === "critical" && reason.length >= 12 && ack.actor?.type === "operator" && Boolean(String(ack.actor?.id || "").trim()) && ack.previousSnapshotId === prior.snapshotId;
 }
 
-async function evaluateRolloutDecisionAcknowledgement(prisma, rolloutGate) {
-  const history = await listRolloutDecisionSnapshots(prisma, 2);
+function latestDistinctPair(history = []) {
   const latest = history[0] || null;
-  const prior = history[1] || null;
+  if (!latest) return Object.freeze({ latest: null, prior: null });
+  const prior = history.find((row, index) => index > 0 && row?.snapshotId && row.snapshotId !== latest.snapshotId) || null;
+  return Object.freeze({ latest, prior });
+}
+
+async function evaluateRolloutDecisionAcknowledgement(prisma, rolloutGate) {
+  const history = await listRolloutDecisionSnapshots(prisma, 10);
+  const { latest, prior } = latestDistinctPair(history);
   const current = buildRolloutDecisionSnapshot(rolloutGate, rolloutGate?.recoveryTrust || null);
   const drift = compareRolloutDecision(current, latest);
   const blockers = [];
@@ -25,4 +31,4 @@ async function evaluateRolloutDecisionAcknowledgement(prisma, rolloutGate) {
   return Object.freeze({ ready, decision: ready ? "go" : "no_go", required: Boolean(latest), blockers: Object.freeze([...new Set(blockers)]), currentSnapshotId: current.snapshotId, previousSnapshotId: latest?.snapshotId || null, acknowledgementEvidenceValid: latest && prior ? criticalAcknowledgementEvidenceValid(latest, prior) : true, drift });
 }
 
-module.exports = { evaluateRolloutDecisionAcknowledgement, criticalAcknowledgementEvidenceValid };
+module.exports = { evaluateRolloutDecisionAcknowledgement, criticalAcknowledgementEvidenceValid, latestDistinctPair };
