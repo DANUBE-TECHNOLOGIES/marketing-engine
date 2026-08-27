@@ -100,8 +100,12 @@ jobs:
           set -euo pipefail
           bash -n scripts/mse-25-71-origin-readiness.sh
           grep -q '^#!/usr/bin/env bash' scripts/mse-25-71-origin-readiness.sh
+          grep -q 'LOCAL_PROXY_HTTP=' scripts/mse-25-71-origin-readiness.sh
+          grep -q -- '--resolve "${PUBLIC_HOST}:${PUBLIC_PORT}:127.0.0.1"' scripts/mse-25-71-origin-readiness.sh
           grep -q 'ORIGIN_STATE=PUBLIC_READY' scripts/mse-25-71-origin-readiness.sh
+          grep -q 'ORIGIN_STATE=PUBLIC_EDGE_OR_DNS_PATH_FAILURE' scripts/mse-25-71-origin-readiness.sh
           grep -q 'ORIGIN_STATE=REVERSE_PROXY_UPSTREAM_FAILURE' scripts/mse-25-71-origin-readiness.sh
+          grep -q 'ORIGIN_STATE=REVERSE_PROXY_UNREACHABLE_LOCALLY' scripts/mse-25-71-origin-readiness.sh
           grep -q 'ORIGIN_STATE=FRONTEND_FAILURE' scripts/mse-25-71-origin-readiness.sh
           grep -q 'ORIGIN_STATE=BACKEND_OR_STACK_FAILURE' scripts/mse-25-71-origin-readiness.sh
           grep -q "http://127.0.0.1:4000/health" docker-compose.yml
