@@ -4,7 +4,10 @@ set -u
 PUBLIC_URL="${1:-https://agences.mondescale.com/agence/gien}"
 FRONTEND_URL="${FRONTEND_URL:-http://127.0.0.1:3000/agence/gien}"
 FRONTEND_LIVENESS_URL="${FRONTEND_LIVENESS_URL:-http://127.0.0.1:3000/healthz}"
+FRONTEND_PUBLIC_API_URL="${FRONTEND_PUBLIC_API_URL:-http://127.0.0.1:3000/api/public-sites/gien}"
 BACKEND_URL="${BACKEND_URL:-http://127.0.0.1:4000/health}"
+BACKEND_SITE_URL="${BACKEND_SITE_URL:-http://127.0.0.1:4000/api/public-site-read/sites/gien}"
+BACKEND_BRAND_URL="${BACKEND_BRAND_URL:-http://127.0.0.1:4000/api/public-brand-legal/sites/gien}"
 PUBLIC_SCHEME="${PUBLIC_URL%%://*}"
 PUBLIC_AUTHORITY="${PUBLIC_URL#*://}"
 PUBLIC_HOSTPORT="${PUBLIC_AUTHORITY%%/*}"
@@ -37,7 +40,7 @@ header_probe() {
   shift 2
   printf '%s_HEADERS URL=%s\n' "$label" "$url"
   curl -sS -L -D - -o /dev/null --max-time 15 "$@" "$url" 2>/dev/null \
-    | grep -Ei '^(HTTP/|server:|via:|x-powered-by:|x-cache:|cf-ray:|date:|content-type:|content-length:|location:|cache-control:)' \
+    | grep -Ei '^(HTTP/|server:|via:|x-powered-by:|x-cache:|cf-ray:|date:|content-type:|content-length:|location:|cache-control:|x-public-site-)' \
     | tail -n 30 || true
 }
 
@@ -73,7 +76,10 @@ printf 'PUBLIC_HOST=%s\n' "$PUBLIC_HOST"
 printf 'PUBLIC_PORT=%s\n' "$PUBLIC_PORT"
 printf 'FRONTEND_URL=%s\n' "$FRONTEND_URL"
 printf 'FRONTEND_LIVENESS_URL=%s\n' "$FRONTEND_LIVENESS_URL"
+printf 'FRONTEND_PUBLIC_API_URL=%s\n' "$FRONTEND_PUBLIC_API_URL"
 printf 'BACKEND_URL=%s\n' "$BACKEND_URL"
+printf 'BACKEND_SITE_URL=%s\n' "$BACKEND_SITE_URL"
+printf 'BACKEND_BRAND_URL=%s\n' "$BACKEND_BRAND_URL"
 
 section "DNS"
 if command -v getent >/dev/null 2>&1; then
@@ -109,9 +115,19 @@ section "LOCAL BACKEND"
 http_probe BACKEND "$BACKEND_URL" || true
 header_probe BACKEND "$BACKEND_URL"
 
+section "PUBLIC-SITE BACKEND UPSTREAMS"
+http_probe BACKEND_SITE "$BACKEND_SITE_URL" || true
+header_probe BACKEND_SITE "$BACKEND_SITE_URL"
+http_probe BACKEND_BRAND "$BACKEND_BRAND_URL" || true
+header_probe BACKEND_BRAND "$BACKEND_BRAND_URL"
+
 section "LOCAL FRONTEND LIVENESS"
 http_probe FRONTEND_LIVENESS "$FRONTEND_LIVENESS_URL" || true
 header_probe FRONTEND_LIVENESS "$FRONTEND_LIVENESS_URL"
+
+section "LOCAL FRONTEND PUBLIC API"
+http_probe FRONTEND_PUBLIC_API "$FRONTEND_PUBLIC_API_URL" || true
+header_probe FRONTEND_PUBLIC_API "$FRONTEND_PUBLIC_API_URL"
 
 section "LOCAL FRONTEND AGENCY ROUTE"
 http_probe FRONTEND "$FRONTEND_URL" || true
@@ -171,23 +187,30 @@ public_code="$(http_code "$PUBLIC_URL")"
 public_liveness_code="$(http_code "$PUBLIC_LIVENESS_URL")"
 frontend_code="$(http_code "$FRONTEND_URL")"
 frontend_liveness_code="$(http_code "$FRONTEND_LIVENESS_URL")"
+frontend_public_api_code="$(http_code "$FRONTEND_PUBLIC_API_URL")"
 backend_code="$(http_code "$BACKEND_URL")"
+backend_site_code="$(http_code "$BACKEND_SITE_URL")"
+backend_brand_code="$(http_code "$BACKEND_BRAND_URL")"
 local_proxy_code="$(http_code "$PUBLIC_URL" -k --resolve "${PUBLIC_HOST}:${PUBLIC_PORT}:127.0.0.1")"
 local_proxy_liveness_code="$(http_code "$PUBLIC_LIVENESS_URL" -k --resolve "${PUBLIC_HOST}:${PUBLIC_PORT}:127.0.0.1")"
 public_server="$(curl -sS -L -D - -o /dev/null --max-time 15 "$PUBLIC_URL" 2>/dev/null | awk 'BEGIN{IGNORECASE=1} /^server:/{sub(/^[^:]+:[[:space:]]*/,""); gsub(/\r/,""); value=$0} END{print value}')"
 
-printf 'PUBLIC_HTTP=%s\nPUBLIC_LIVENESS_HTTP=%s\nLOCAL_PROXY_HTTP=%s\nLOCAL_PROXY_LIVENESS_HTTP=%s\nFRONTEND_HTTP=%s\nFRONTEND_LIVENESS_HTTP=%s\nBACKEND_HTTP=%s\nPUBLIC_SERVER=%s\n' \
-  "$public_code" "$public_liveness_code" "$local_proxy_code" "$local_proxy_liveness_code" "$frontend_code" "$frontend_liveness_code" "$backend_code" "${public_server:-unknown}"
+printf 'PUBLIC_HTTP=%s\nPUBLIC_LIVENESS_HTTP=%s\nLOCAL_PROXY_HTTP=%s\nLOCAL_PROXY_LIVENESS_HTTP=%s\nFRONTEND_HTTP=%s\nFRONTEND_LIVENESS_HTTP=%s\nFRONTEND_PUBLIC_API_HTTP=%s\nBACKEND_HTTP=%s\nBACKEND_SITE_HTTP=%s\nBACKEND_BRAND_HTTP=%s\nPUBLIC_SERVER=%s\n' \
+  "$public_code" "$public_liveness_code" "$local_proxy_code" "$local_proxy_liveness_code" "$frontend_code" "$frontend_liveness_code" "$frontend_public_api_code" "$backend_code" "$backend_site_code" "$backend_brand_code" "${public_server:-unknown}"
 
 if [[ "$public_code" =~ ^[23] ]]; then
   echo 'ORIGIN_STATE=PUBLIC_READY'
+elif [[ "$frontend_liveness_code" =~ ^[23] ]] && [[ "$frontend_public_api_code" =~ ^50[234]$ ]] && [[ ! "$backend_site_code" =~ ^[23] ]]; then
+  echo 'ORIGIN_STATE=SITE_READ_UPSTREAM_FAILURE'
+elif [[ "$frontend_liveness_code" =~ ^[23] ]] && [[ "$frontend_public_api_code" =~ ^50[234]$ ]] && [[ "$backend_site_code" =~ ^[23] ]] && [[ ! "$backend_brand_code" =~ ^[23] ]]; then
+  echo 'ORIGIN_STATE=BRAND_LEGAL_UPSTREAM_FAILURE'
 elif [[ "$public_liveness_code" =~ ^[23] ]] && [[ "$public_code" =~ ^50[234]$ ]]; then
   echo 'ORIGIN_STATE=PUBLIC_PROXY_READY_ROUTE_FAILURE'
 elif [[ "$local_proxy_code" =~ ^[23] ]] && [[ ! "$public_code" =~ ^[23] ]]; then
   echo 'ORIGIN_STATE=PUBLIC_EDGE_OR_DNS_PATH_FAILURE'
 elif [[ "$frontend_code" =~ ^[23] ]] && [[ "$local_proxy_code" =~ ^50[234]$ ]]; then
   echo 'ORIGIN_STATE=REVERSE_PROXY_UPSTREAM_FAILURE'
-elif [[ "$frontend_liveness_code" =~ ^[23] ]] && [[ ! "$frontend_code" =~ ^[23] ]]; then
+elif [[ "$frontend_liveness_code" =~ ^[23] ]] && [[ "$frontend_public_api_code" =~ ^[23] ]] && [[ ! "$frontend_code" =~ ^[23] ]]; then
   echo 'ORIGIN_STATE=FRONTEND_ROUTE_FAILURE'
 elif [[ "$frontend_liveness_code" =~ ^[23] ]] && [[ "$local_proxy_liveness_code" == "000" ]] && [[ "$public_code" =~ ^50[234]$ ]]; then
   echo 'ORIGIN_STATE=REVERSE_PROXY_UNREACHABLE_LOCALLY'
