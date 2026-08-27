@@ -21,6 +21,14 @@ function absoluteUrl(base, value) {
   }
 }
 
+function urlOrigin(value) {
+  try {
+    return new URL(value).origin;
+  } catch {
+    return null;
+  }
+}
+
 function tagAttribute(tag, name) {
   const match = tag.match(new RegExp(`\\b${name}=["']([^"']+)["']`, "i"));
   return match?.[1] || null;
@@ -58,6 +66,25 @@ function median(values) {
   return sorted.length % 2 ? sorted[middle] : Math.round((sorted[middle - 1] + sorted[middle]) / 2);
 }
 
+function isModernImageType(type) {
+  const normalized = String(type || "").toLowerCase();
+  return normalized.includes("image/avif") || normalized.includes("image/webp");
+}
+
+function cacheLifetimeSeconds(cacheControl) {
+  const value = String(cacheControl || "");
+  const shared = value.match(/(?:^|,)\s*s-maxage=(\d+)/i);
+  if (shared) return Number(shared[1]);
+  const browser = value.match(/(?:^|,)\s*max-age=(\d+)/i);
+  return browser ? Number(browser[1]) : 0;
+}
+
+function isCacheable(cacheControl) {
+  const value = String(cacheControl || "").toLowerCase();
+  if (!value || value.includes("no-store")) return false;
+  return value.includes("immutable") || cacheLifetimeSeconds(value) > 0;
+}
+
 async function timedFetch(url, options = {}) {
   const start = performance.now();
   const response = await fetch(url, {
@@ -79,18 +106,27 @@ async function timedFetch(url, options = {}) {
 
 async function inspectImage(url) {
   try {
-    const result = await timedFetch(url, { headers: { accept: "image/avif,image/webp,image/*,*/*;q=0.8" } });
+    const result = await timedFetch(url, {
+      headers: { accept: "image/avif,image/webp,image/*,*/*;q=0.8" },
+    });
+    const type = result.response.headers.get("content-type");
+    const cacheControl = result.response.headers.get("cache-control");
     return {
       url,
+      origin: urlOrigin(result.response.url || url),
+      finalUrl: result.response.url,
       status: result.response.status,
       bytes: result.transferBytes,
-      type: result.response.headers.get("content-type"),
-      cacheControl: result.response.headers.get("cache-control"),
+      type,
+      modernFormat: isModernImageType(type),
+      cacheControl,
+      cacheable: isCacheable(cacheControl),
+      cacheLifetimeSeconds: cacheLifetimeSeconds(cacheControl),
       ttfbMs: result.ttfbMs,
       totalMs: result.totalMs,
     };
   } catch (error) {
-    return { url, error: error.message };
+    return { url, origin: urlOrigin(url), error: error.message };
   }
 }
 
@@ -100,16 +136,20 @@ const samples = Math.max(1, Math.min(7, numberArg("samples", 3)));
 const json = arg("json", "false") === "true";
 const gate = arg("gate", "false") === "true";
 const maxTtfbMs = Math.max(100, numberArg("max-ttfb-ms", 1200));
+const maxHeroBytes = Math.max(50_000, numberArg("max-hero-bytes", 1_000_000));
 const maxSingleImageBytes = Math.max(50_000, numberArg("max-single-image-bytes", 1_500_000));
+const maxTotalImageBytes = Math.max(100_000, numberArg("max-total-image-bytes", 5_000_000));
 
 if (!target) {
-  console.error("Usage: npm run perf:probe -- --url=https://… [--samples=3] [--max-images=8] [--gate=true] [--json=true]");
+  console.error(
+    "Usage: npm run perf:probe -- --url=https://… [--samples=3] [--max-images=8] [--gate=true] [--max-hero-bytes=1000000] [--max-total-image-bytes=5000000] [--json=true]"
+  );
   process.exit(2);
 }
 
 const requestHeaders = {
   accept: "text/html,application/xhtml+xml",
-  "user-agent": "Mondescale-MSE-25.71-Performance-Probe/1.1",
+  "user-agent": "Mondescale-MSE-25.71-Performance-Probe/1.2",
 };
 
 const pageSamples = [];
@@ -130,6 +170,11 @@ const largestImages = [...media]
   .filter((item) => item.bytes)
   .sort((a, b) => b.bytes - a.bytes)
   .slice(0, 5);
+const totalBytesInspected = media.reduce((sum, item) => sum + (item.bytes || 0), 0);
+const modernImages = media.filter((item) => item.modernFormat).length;
+const cacheableImages = media.filter((item) => item.cacheable).length;
+const uncacheableImages = media.filter((item) => item.status && !item.cacheable).length;
+const origins = [...new Set(media.map((item) => item.origin).filter(Boolean))];
 const sampleTtfbMs = pageSamples.map((item) => item.ttfbMs);
 const sampleTotalMs = pageSamples.map((item) => item.totalMs);
 
@@ -155,7 +200,11 @@ const report = {
   images: {
     discovered: allImages.length,
     inspected: media.length,
-    totalBytesInspected: media.reduce((sum, item) => sum + (item.bytes || 0), 0),
+    totalBytesInspected,
+    modernFormats: modernImages,
+    cacheable: cacheableImages,
+    uncacheable: uncacheableImages,
+    origins,
     largest: largestImages,
   },
 };
@@ -168,13 +217,21 @@ if (report.hero.present && !report.hero.highPriority) failures.push("hero image 
 if (report.hero.present && (!report.hero.width || !report.hero.height)) failures.push("hero image has no intrinsic dimensions");
 if (report.hero.present && !report.hero.url) failures.push("hero image has no resolvable src");
 if (report.hero.media?.status && report.hero.media.status >= 400) failures.push(`hero image HTTP ${report.hero.media.status}`);
+if ((report.hero.media?.bytes || 0) > maxHeroBytes) {
+  failures.push(`hero image ${report.hero.media.bytes}B > ${maxHeroBytes}B`);
+}
 if ((largestImages[0]?.bytes || 0) > maxSingleImageBytes) {
   failures.push(`largest inspected image ${largestImages[0].bytes}B > ${maxSingleImageBytes}B`);
+}
+if (totalBytesInspected > maxTotalImageBytes) {
+  failures.push(`inspected image payload ${totalBytesInspected}B > ${maxTotalImageBytes}B`);
 }
 report.gate = {
   enabled: gate,
   maxTtfbMs,
+  maxHeroBytes,
   maxSingleImageBytes,
+  maxTotalImageBytes,
   passed: failures.length === 0,
   failures,
 };
@@ -199,11 +256,20 @@ if (json) {
   console.log(`HERO_URL=${report.hero.url || "none"}`);
   console.log(`HERO_BYTES=${report.hero.media?.bytes || 0}`);
   console.log(`HERO_TYPE=${report.hero.media?.type || "unknown"}`);
+  console.log(`HERO_MODERN_FORMAT=${Boolean(report.hero.media?.modernFormat)}`);
+  console.log(`HERO_CACHEABLE=${Boolean(report.hero.media?.cacheable)}`);
+  console.log(`HERO_ORIGIN=${report.hero.media?.origin || "unknown"}`);
   console.log(`IMAGES_DISCOVERED=${report.images.discovered}`);
   console.log(`IMAGES_INSPECTED=${report.images.inspected}`);
   console.log(`IMAGE_BYTES_INSPECTED=${report.images.totalBytesInspected}`);
+  console.log(`MODERN_IMAGES=${report.images.modernFormats}`);
+  console.log(`CACHEABLE_IMAGES=${report.images.cacheable}`);
+  console.log(`UNCACHEABLE_IMAGES=${report.images.uncacheable}`);
+  console.log(`IMAGE_ORIGINS=${report.images.origins.join(",") || "none"}`);
   for (const [index, item] of report.images.largest.entries()) {
-    console.log(`IMAGE_${index + 1}_BYTES=${item.bytes} TYPE=${item.type || "unknown"} CACHE=${item.cacheControl || "none"} URL=${item.url}`);
+    console.log(
+      `IMAGE_${index + 1}_BYTES=${item.bytes} TYPE=${item.type || "unknown"} MODERN=${Boolean(item.modernFormat)} CACHEABLE=${Boolean(item.cacheable)} CACHE=${item.cacheControl || "none"} ORIGIN=${item.origin || "unknown"} URL=${item.url}`
+    );
   }
   if (gate) {
     console.log(`PERFORMANCE_GATE=${report.gate.passed ? "PASS" : "FAIL"}`);
