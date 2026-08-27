@@ -24,7 +24,8 @@ function evaluateAcknowledgementLifecycle(currentSnapshot, acknowledgements = []
       maxAgencies: ack.maxAgencies ?? null,
       blockers: ack.blockers || [],
       stages: ack.stages || [],
-      recoveryTrust: ack.recoveryTrust || null
+      recoveryTrust: ack.recoveryTrust || null,
+      governancePolicy: ack.governancePolicy || null
     };
     const drift = compareRolloutDecision(currentSnapshot, acknowledgedSnapshot);
     const status = drift.severity === "critical" ? "obsolete" : drift.changed ? "superseded" : "active";
