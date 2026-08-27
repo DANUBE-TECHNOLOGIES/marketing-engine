@@ -69,8 +69,13 @@ async function fetchJson(url, headers) {
 
 function legalHtmlForSlug(pageSlug, legalPages = {}) {
   const slug = normalizePart(pageSlug);
-  if (slug === "mentions-legales") return legalPages.legalNotice || null;
-  if (slug === "confidentialite") return legalPages.privacyPolicy || null;
+
+  if (["mentions-legales", "mentions_legales"].includes(slug)) {
+    return legalPages.legalNotice || null;
+  }
+  if (["confidentialite", "politique-de-confidentialite", "privacy"].includes(slug)) {
+    return legalPages.privacyPolicy || null;
+  }
   if (["cookies", "politique-de-cookies"].includes(slug)) {
     return legalPages.cookiePolicy || null;
   }
@@ -81,16 +86,28 @@ function legalHtmlForSlug(pageSlug, legalPages = {}) {
 }
 
 function normalizeBlock(block, heroAsset) {
-  const type = block?.blockType || block?.type || null;
-  const content =
-    block?.content && typeof block.content === "object"
-      ? { ...block.content }
-      : block?.jsonContent && typeof block.jsonContent === "object"
-        ? { ...block.jsonContent }
-        : {};
+  const hasJsonContent = Boolean(
+    block?.jsonContent && typeof block.jsonContent === "object"
+  );
+  const sourceContent = hasJsonContent
+    ? block.jsonContent
+    : block?.content && typeof block.content === "object"
+      ? block.content
+      : {};
+  const content = { ...sourceContent };
+  const type = String(
+    content?.__builderType ||
+      block?.blockType ||
+      block?.sectionType ||
+      block?.type ||
+      block?.key ||
+      ""
+  ).trim().toLowerCase() || null;
 
   if (type === "hero" && heroAsset?.publicUrl) {
-    if (!content.imageUrl) content.imageUrl = heroAsset.publicUrl;
+    if (!content.imageUrl && !content.backgroundImage) {
+      content.imageUrl = heroAsset.publicUrl;
+    }
     if (!content.imageAlt) {
       content.imageAlt = heroAsset.altText || heroAsset.title || "";
     }
@@ -101,6 +118,7 @@ function normalizeBlock(block, heroAsset) {
     type,
     blockType: type,
     content,
+    ...(hasJsonContent ? { jsonContent: content } : {}),
     settings:
       block?.settings && typeof block.settings === "object"
         ? { ...block.settings }
@@ -170,7 +188,10 @@ function findRequestedPage(pages, homePage, pageSlug) {
 function buildNavigation(pages, site, homePage) {
   return pages.map((page) => {
     const home = page?.id === homePage?.id || isHomeSlug(page?.slug);
-    const path = home ? `/sites/${site.slug}` : `/sites/${site.slug}/${page.slug}`;
+    const path = home
+      ? `/agence/${site.slug}`
+      : `/agence/${site.slug}/${page.slug}`;
+
     return {
       id: page.id,
       slug: page.slug,
