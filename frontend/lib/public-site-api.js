@@ -67,6 +67,14 @@ async function requestWebsiteBuilder(path) {
   return payload;
 }
 
+function normalizePageSlug(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function isHomeSlug(value) {
+  return ["", "home", "accueil", "index"].includes(normalizePageSlug(value));
+}
+
 function siteFromContract(payload) {
   const site = payload?.site && typeof payload.site === "object"
     ? payload.site
@@ -105,19 +113,73 @@ function pageFromContract(payload) {
   return page;
 }
 
+function pagesFromContract(payload) {
+  if (Array.isArray(payload?.pages)) return payload.pages;
+  if (Array.isArray(payload?.site?.pages)) return payload.site.pages;
+  return [];
+}
+
+function homeFromContract(payload) {
+  const explicitHome = payload?.homePage || payload?.home || null;
+  if (explicitHome) return pageFromContract(explicitHome);
+
+  const pages = pagesFromContract(payload);
+  const home = pages.find((page) => isHomeSlug(page?.slug)) || pages[0] || null;
+  return home ? pageFromContract(home) : pageFromContract(payload);
+}
+
+function pageBySlugFromContract(payload, pageSlug) {
+  if (isHomeSlug(pageSlug)) return homeFromContract(payload);
+
+  const normalizedSlug = normalizePageSlug(pageSlug);
+  const page = pagesFromContract(payload).find(
+    (candidate) => normalizePageSlug(candidate?.slug) === normalizedSlug
+  );
+
+  return page ? pageFromContract(page) : null;
+}
+
+/*
+ * MSE-25.71 P0 performance contract
+ * ----------------------------------
+ * The root public-site response already contains the site, navigation and all
+ * published pages. Previously getSite(), getHome() and getPage() each fetched
+ * a multi-megabyte compatibility contract independently. During SSR the
+ * layout, generateMetadata() and page renderer therefore caused redundant
+ * transfers and JSON parsing.
+ *
+ * Keep one React request-cache entry per site and derive site/page views from
+ * that same payload. The underlying fetch still uses Next revalidation, so
+ * this changes neither publication freshness nor the external API contract.
+ */
+const getContract = cache(async (siteSlug) =>
+  request(`/${encodeURIComponent(siteSlug)}`)
+);
+
 const getSite = cache(async (siteSlug) => siteFromContract(
-  await request(`/${encodeURIComponent(siteSlug)}`)
+  await getContract(siteSlug)
 ));
 
-const getHome = cache(async (siteSlug) => pageFromContract(
-  await request(`/${encodeURIComponent(siteSlug)}/pages/home`)
+const getHome = cache(async (siteSlug) => homeFromContract(
+  await getContract(siteSlug)
 ));
 
-const getPage = cache(async (siteSlug, pageSlug) => pageFromContract(
-  await request(
-    `/${encodeURIComponent(siteSlug)}/pages/${encodeURIComponent(pageSlug)}`
-  )
-));
+const getPage = cache(async (siteSlug, pageSlug) => {
+  const contract = await getContract(siteSlug);
+  const page = pageBySlugFromContract(contract, pageSlug);
+
+  if (page) return page;
+
+  /*
+   * Compatibility fallback for an exceptional backend contract that does not
+   * expose its complete page catalogue at the root endpoint.
+   */
+  return pageFromContract(
+    await request(
+      `/${encodeURIComponent(siteSlug)}/pages/${encodeURIComponent(pageSlug)}`
+    )
+  );
+});
 
 export const publicSiteApi = {
   getSite,
@@ -148,9 +210,7 @@ export const publicSiteApi = {
   },
 
   async getInspiration(siteSlug, contentSlug) {
-    const site = siteFromContract(
-      await request(`/${encodeURIComponent(siteSlug)}`)
-    );
+    const site = siteFromContract(await getContract(siteSlug));
     const agencyId = site?.agencyId || site?.agency?.id || null;
     const params = new URLSearchParams();
     if (agencyId !== null && agencyId !== undefined && String(agencyId).trim()) {
@@ -166,9 +226,13 @@ export const publicSiteApi = {
 
 export {
   PUBLIC_DATA_REVALIDATE_SECONDS,
+  getContract,
   getHome,
   getPage,
   getSite,
+  homeFromContract,
+  pageBySlugFromContract,
   pageFromContract,
+  pagesFromContract,
   siteFromContract,
 };
