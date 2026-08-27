@@ -60,7 +60,13 @@ test("probe emits deterministic P0 remediation diagnosis", () => {
   const probe = source("scripts/public-performance-probe.mjs");
 
   assert.match(probe, /function buildDiagnosis\(/);
+  assert.match(probe, /GATEWAY_FAILURE_/);
+  assert.match(probe, /HTTP_FAILURE_/);
+  assert.match(probe, /RESTORE_PUBLIC_ORIGIN/);
+  assert.match(probe, /RESTORE_PUBLIC_ROUTE/);
+  assert.match(probe, /NOT_EVALUABLE/);
   assert.match(probe, /SLOW_ORIGIN/);
+  assert.match(probe, /RESTORE_HERO_DISCOVERABILITY/);
   assert.match(probe, /OPTIMIZE_HERO_PAYLOAD/);
   assert.match(probe, /ENABLE_HERO_MODERN_FORMAT/);
   assert.match(probe, /FIX_HERO_CACHE_HEADERS/);
