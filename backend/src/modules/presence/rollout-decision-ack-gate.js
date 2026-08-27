@@ -3,6 +3,7 @@
 const { buildRolloutDecisionSnapshot, listRolloutDecisionSnapshots, listCriticalRolloutAcknowledgements } = require("./network-rollout-decision-snapshot");
 const { compareRolloutDecision } = require("./network-rollout-decision-drift");
 const { evaluateAcknowledgementLifecycle } = require("./rollout-acknowledgement-lifecycle");
+const { auditAcknowledgementChain } = require("./rollout-acknowledgement-chain-audit");
 
 function criticalAcknowledgementEvidenceValid(latest, prior) {
   if (!latest || !prior) return true;
@@ -29,15 +30,7 @@ function acknowledgementReplacementChainValid(acknowledgements = []) {
 }
 
 function acknowledgementChainForks(acknowledgements = []) {
-  const successors = new Map();
-  for (const ack of acknowledgements) {
-    if (Number(ack?.chainVersion || 0) < 1) continue;
-    const previous = ack?.previousAcknowledgementSnapshotId || null;
-    if (!previous) continue;
-    if (!successors.has(previous)) successors.set(previous, []);
-    successors.get(previous).push(ack.snapshotId);
-  }
-  return Object.freeze([...successors.entries()].filter(([, children]) => new Set(children).size > 1).map(([previousSnapshotId, children]) => Object.freeze({ previousSnapshotId, successors: Object.freeze([...new Set(children)]) })));
+  return auditAcknowledgementChain(acknowledgements).forks;
 }
 
 async function evaluateRolloutDecisionAcknowledgement(prisma, rolloutGate) {
@@ -51,12 +44,16 @@ async function evaluateRolloutDecisionAcknowledgement(prisma, rolloutGate) {
   const acknowledgementLifecycle = evaluateAcknowledgementLifecycle(current, acknowledgements);
   const latestAcknowledgement = acknowledgementLifecycle[0] || null;
   const replacementChainValid = acknowledgementReplacementChainValid(acknowledgements);
-  const chainForks = acknowledgementChainForks(acknowledgements);
+  const chainAudit = auditAcknowledgementChain(acknowledgements);
   const blockers = [];
   if (latest && drift.severity === "critical") blockers.push("critical_rollout_decision_drift_unacknowledged");
   if (latest && prior && !criticalAcknowledgementEvidenceValid(latest, prior)) blockers.push("critical_rollout_decision_acknowledgement_evidence_invalid");
   if (!replacementChainValid) blockers.push("critical_rollout_acknowledgement_replacement_chain_invalid");
-  if (chainForks.length) blockers.push("critical_rollout_acknowledgement_chain_fork_detected");
+  if (chainAudit.forks.length) blockers.push("critical_rollout_acknowledgement_chain_fork_detected");
+  if (chainAudit.missingParents.length) blockers.push("critical_rollout_acknowledgement_chain_parent_missing");
+  if (chainAudit.cycles.length) blockers.push("critical_rollout_acknowledgement_chain_cycle_detected");
+  if (chainAudit.versioned && chainAudit.roots.length !== 1) blockers.push("critical_rollout_acknowledgement_chain_root_invalid");
+  if (chainAudit.versioned && !chainAudit.ready && !chainAudit.forks.length && !chainAudit.missingParents.length && !chainAudit.cycles.length && chainAudit.roots.length === 1) blockers.push("critical_rollout_acknowledgement_chain_disconnected");
   if (latestAcknowledgement?.lifecycle?.status === "obsolete") blockers.push("obsolete_rollout_decision_acknowledgement");
   const ready = blockers.length === 0;
   return Object.freeze({
@@ -68,7 +65,8 @@ async function evaluateRolloutDecisionAcknowledgement(prisma, rolloutGate) {
     previousSnapshotId: latest?.snapshotId || null,
     acknowledgementEvidenceValid: latest && prior ? criticalAcknowledgementEvidenceValid(latest, prior) : true,
     acknowledgementReplacementChainValid: replacementChainValid,
-    acknowledgementChainForks: chainForks,
+    acknowledgementChainForks: chainAudit.forks,
+    acknowledgementChainAudit: chainAudit,
     latestAcknowledgement,
     acknowledgementLifecycle: Object.freeze(acknowledgementLifecycle),
     drift
