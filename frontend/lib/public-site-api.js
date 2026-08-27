@@ -21,9 +21,9 @@ function publicFetchOptions() {
   };
 }
 
-async function request(path) {
+async function requestFrom(basePath, path) {
   const response = await fetch(
-    `${INTERNAL_API_URL}/api/public-sites${path}`,
+    `${INTERNAL_API_URL}${basePath}${path}`,
     publicFetchOptions()
   );
 
@@ -44,6 +44,14 @@ async function request(path) {
   }
 
   return payload;
+}
+
+async function request(path) {
+  return requestFrom("/api/public-sites", path);
+}
+
+async function requestRender(path) {
+  return requestFrom("/api/public-render-sites", path);
 }
 
 async function requestWebsiteBuilder(path) {
@@ -142,18 +150,18 @@ function pageBySlugFromContract(payload, pageSlug) {
 /*
  * MSE-25.71 P0 performance contract
  * ----------------------------------
- * The root public-site response already contains the site, navigation and all
- * published pages. Previously getSite(), getHome() and getPage() each fetched
- * a multi-megabyte compatibility contract independently. During SSR the
- * layout, generateMetadata() and page renderer therefore caused redundant
- * transfers and JSON parsing.
+ * SSR consumers do not need the multi-megabyte backwards-compatible public
+ * API payload. `/api/public-render-sites` projects the existing contract into
+ * the minimal site/navigation/selected-page shape required by the renderer.
+ * The legacy `/api/public-sites` contract remains unchanged for external
+ * consumers.
  *
- * Keep one React request-cache entry per site and derive site/page views from
- * that same payload. The underlying fetch still uses Next revalidation, so
- * this changes neither publication freshness nor the external API contract.
+ * Keep one React request-cache entry per site and derive site/home from that
+ * compact payload. Non-home pages use the equally compact page projection.
+ * Both layers keep the same publication revalidation window.
  */
 const getContract = cache(async (siteSlug) =>
-  request(`/${encodeURIComponent(siteSlug)}`)
+  requestRender(`/${encodeURIComponent(siteSlug)}`)
 );
 
 const getSite = cache(async (siteSlug) => siteFromContract(
@@ -170,12 +178,8 @@ const getPage = cache(async (siteSlug, pageSlug) => {
 
   if (page) return page;
 
-  /*
-   * Compatibility fallback for an exceptional backend contract that does not
-   * expose its complete page catalogue at the root endpoint.
-   */
   return pageFromContract(
-    await request(
+    await requestRender(
       `/${encodeURIComponent(siteSlug)}/pages/${encodeURIComponent(pageSlug)}`
     )
   );
