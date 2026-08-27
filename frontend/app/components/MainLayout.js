@@ -5,7 +5,7 @@ export default function MainLayout({title,subtitle,children}){
 const sections=[
 {label:"Direction",items:[["🏠 Cockpit","/direction"],["⚠ Alertes","/direction"],["🏆 Classement","/direction"]]},
 {label:"Réputation",items:[["⭐ Avis IA","/reviews-ai"],["💬 Avis réseau","/google-reviews-network"]]},
-{label:"SEO Local",items:[["📍 Rankings","/rankings"],["🔎 Keywords","/seo-keywords-db"],["📣 Google Posts","/google-posts"],["🧭 Presence réseau","/presence"],["🧾 Audit rollout","/presence/rollout-audit"]]},
+{label:"SEO Local",items:[["📍 Rankings","/rankings"],["🔎 Keywords","/seo-keywords-db"],["📣 Google Posts","/google-posts"],["🧭 Presence réseau","/presence"],["🧾 Audit rollout","/presence/rollout-audit"],["✅ Clôture Presence","/presence/closure"]]},
 {label:"Agences",items:[["🏢 Agences","/agencies"],["📊 Performance","/direction"]]},
 {label:"ERP",items:[["💼 Devis","/quotes"],["💰 CA potentiel","/dashboard"]]},
 {label:"Paramètres",items:[["⚙ Configuration","/settings"]]}
