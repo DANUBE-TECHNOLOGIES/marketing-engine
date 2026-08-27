@@ -70,6 +70,68 @@ function destinationCard(destination) {
   };
 }
 
+function destinationMediaKeys(item) {
+  if (!item || typeof item !== "object") return [];
+  return [
+    item.id,
+    item.slug,
+    item.title,
+    item.name,
+  ]
+    .map((value) => String(value || "").trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function destinationMediaIndex(content) {
+  const index = new Map();
+  for (const collection of [content?.destinations, content?.items]) {
+    if (!Array.isArray(collection)) continue;
+    for (const item of collection) {
+      for (const key of destinationMediaKeys(item)) {
+        if (!index.has(key)) index.set(key, item);
+      }
+    }
+  }
+  return index;
+}
+
+function preservedDestinationMedia(item, index) {
+  for (const key of destinationMediaKeys(item)) {
+    if (index.has(key)) return index.get(key);
+  }
+  return null;
+}
+
+function mergeDestinationMedia(item, previous) {
+  if (!previous || typeof previous !== "object") return item;
+
+  const previousImage =
+    (typeof previous.image === "string" ? previous.image : null) ||
+    previous.imageUrl ||
+    previous.heroImageUrl ||
+    previous.backgroundImage ||
+    previous.coverImage ||
+    previous.photoUrl ||
+    previous.media?.url ||
+    null;
+
+  const image = item.image || previousImage || null;
+
+  return {
+    ...previous,
+    ...item,
+    ...(image ? { image, imageUrl: item.imageUrl || previous.imageUrl || image } : {}),
+    imageAssetId:
+      item.imageAssetId ||
+      previous.imageAssetId ||
+      previous.heroImageAssetId ||
+      previous.mediaAssetId ||
+      previous.coverAssetId ||
+      undefined,
+    imageAlt: item.imageAlt || previous.imageAlt || previous.alt || undefined,
+  };
+}
+
 function reviewCard(review) {
   return {
     id: review.id,
@@ -381,6 +443,7 @@ function hydrateDestinationBlocks(pages, manualDestinations = [], automaticDesti
     blocks: (page.blocks || []).map((block) => {
       if (blockType(block) !== "destinations") return block;
       const config = destinationConfig(block);
+      const mediaIndex = destinationMediaIndex(config.content);
 
       const resolved = config.references.length && config.selectionMode !== "automatic"
         ? config.references
@@ -390,12 +453,16 @@ function hydrateDestinationBlocks(pages, manualDestinations = [], automaticDesti
             .map(destinationCard)
         : automaticCards.slice(0, config.limit);
 
+      const withPreservedMedia = resolved.map((item) =>
+        mergeDestinationMedia(item, preservedDestinationMedia(item, mediaIndex))
+      );
+
       return {
         ...block,
         content: {
           ...config.content,
-          destinations: resolved,
-          items: resolved,
+          destinations: withPreservedMedia,
+          items: withPreservedMedia,
         },
       };
     }),
@@ -581,6 +648,10 @@ module.exports = {
   isPublicBlock,
   filterPublicBlocks,
   destinationCard,
+  destinationMediaKeys,
+  destinationMediaIndex,
+  preservedDestinationMedia,
+  mergeDestinationMedia,
   reviewCard,
   inspirationCard,
   offerCard,

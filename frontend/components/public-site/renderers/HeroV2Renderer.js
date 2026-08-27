@@ -1,5 +1,3 @@
-import { preconnect, preload } from "react-dom";
-
 import {
   getSectionContent,
 } from "./helpers";
@@ -35,6 +33,11 @@ function pageSlug(page) {
   return String(page?.slug || "").trim().toLowerCase();
 }
 
+function isHomePage(page) {
+  const slug = pageSlug(page);
+  return !slug || ["home", "accueil", "index"].includes(slug);
+}
+
 function genericHeroTitle(value, site) {
   const title = String(value || "").replace(/\s+/g, " ").trim();
   if (!title) return true;
@@ -52,6 +55,7 @@ function intentHeroTitle({ page, site }) {
   if (["destinations", "destination"].includes(slug)) return `Destinations et voyages depuis ${city}`;
   if (["inspiration", "inspirations"].includes(slug)) return `Inspirations voyage depuis ${city}`;
   if (["equipe", "team", "notre-equipe"].includes(slug)) return `Votre équipe de conseillers voyage à ${city}`;
+  if (["partenaires", "partners", "nos-partenaires"].includes(slug)) return `Nos partenaires voyage à ${city}`;
   if (["contact", "nous-contacter"].includes(slug)) return `Contacter votre agence de voyages à ${city}`;
   if (["avis", "reviews", "avis-clients"].includes(slug)) return `Avis clients de votre agence de voyages à ${city}`;
   return null;
@@ -72,15 +76,6 @@ function resolvedHeroAlt({ content, site, title }) {
   return title;
 }
 
-function heroImageOrigin(value) {
-  try {
-    const url = new URL(String(value || ""));
-    return ["http:", "https:"].includes(url.protocol) ? url.origin : null;
-  } catch {
-    return null;
-  }
-}
-
 export default function HeroV2Renderer({ section, site, page }) {
   const content = getSectionContent(section);
   const title = resolvedHeroTitle({ content, section, site, page });
@@ -90,15 +85,7 @@ export default function HeroV2Renderer({ section, site, page }) {
   const backgroundPosition = content.backgroundPosition || "center";
   const imageAlt = resolvedHeroAlt({ content, site, title });
   const overlayOpacity = Math.min(Math.max(Number(content.overlayOpacity ?? 68), 20), 90) / 100;
-
-  if (backgroundImage) {
-    const origin = heroImageOrigin(backgroundImage);
-    if (origin) preconnect(origin);
-    preload(backgroundImage, {
-      as: "image",
-      fetchPriority: "high",
-    });
-  }
+  const homeHero = isHomePage(page);
 
   const primaryCta = content.primaryCta || null;
   const secondaryCta = content.secondaryCta || null;
@@ -114,46 +101,44 @@ export default function HeroV2Renderer({ section, site, page }) {
   const contentStyle = { textAlign: alignment };
   const centered = alignment === "center";
   const rightAligned = alignment === "right";
+  const heroClassName = [
+    "public-site-hero",
+    "public-site-hero--immersive",
+    homeHero ? "public-site-hero--home" : "public-site-hero--inner",
+  ].filter(Boolean).join(" ");
 
   return (
-    <section className="public-site-hero" data-has-hero-image={backgroundImage ? "true" : "false"}>
+    <section className={heroClassName} data-has-hero-image={backgroundImage ? "true" : "false"} data-page-slug={pageSlug(page) || "home"}>
       {backgroundImage ? (
         <div className="public-site-hero-media" aria-hidden="true">
-          {/* A real img keeps the primary visual discoverable by image crawlers; CSS handles presentation. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={backgroundImage}
             alt={imageAlt}
             loading="eager"
             fetchPriority="high"
-            width="1920"
-            height="1080"
+            decoding="async"
             style={{ objectPosition: backgroundPosition }}
           />
           <span
             className="public-site-hero-overlay"
             style={{
-              background: `linear-gradient(90deg, rgba(8,31,52,${overlayOpacity}) 0%, rgba(8,31,52,${Math.max(overlayOpacity - 0.12, 0.2)}) 48%, rgba(8,31,52,${Math.max(overlayOpacity - 0.35, 0.08)}) 100%)`,
+              background: `linear-gradient(90deg, rgba(8,31,52,${Math.max(overlayOpacity - 0.52, 0.03)}) 0%, rgba(8,31,52,${Math.max(overlayOpacity - 0.6, 0.02)}) 48%, rgba(8,31,52,0) 100%)`,
             }}
           />
+          <span className="public-site-hero-fade" />
         </div>
       ) : null}
 
-      <div className="public-site-container" style={contentStyle}>
-        <p className="public-site-eyebrow">{content.eyebrow || defaultHeroEyebrow(site)}</p>
-        <h1 style={centered ? { marginInline: "auto" } : rightAligned ? { marginLeft: "auto" } : undefined}>{title}</h1>
-        <p className="public-site-hero-text" style={centered ? { marginInline: "auto" } : rightAligned ? { marginLeft: "auto" } : undefined}>{subtitle}</p>
-        <div className="public-site-hero-actions" style={{ justifyContent: centered ? "center" : rightAligned ? "flex-end" : "flex-start" }}>
-          {primaryHref ? (
-            <a className="public-site-button" href={primaryHref}>
-              {ctaLabel(primaryCta, content.primaryButton, primaryCta?.href ? "En savoir plus" : "Appeler l’agence")}
-            </a>
-          ) : null}
-          {secondaryHref ? (
-            <a className="public-site-button public-site-button-secondary" href={secondaryHref}>
-              {ctaLabel(secondaryCta, content.secondaryButton, "Nous contacter")}
-            </a>
-          ) : null}
+      <div className="public-site-container">
+        <div className="public-site-hero-copy" style={contentStyle}>
+          <p className="public-site-eyebrow">{content.eyebrow || defaultHeroEyebrow(site)}</p>
+          <h1 style={centered ? { marginInline: "auto" } : rightAligned ? { marginLeft: "auto" } : undefined}>{title}</h1>
+          <p className="public-site-hero-text" style={centered ? { marginInline: "auto" } : rightAligned ? { marginLeft: "auto" } : undefined}>{subtitle}</p>
+          <div className="public-site-hero-actions" style={{ justifyContent: centered ? "center" : rightAligned ? "flex-end" : "flex-start" }}>
+            {primaryHref ? <a className="public-site-button" href={primaryHref}>{ctaLabel(primaryCta, content.primaryButton, primaryCta?.href ? "En savoir plus" : "Appeler l’agence")}</a> : null}
+            {secondaryHref ? <a className="public-site-button public-site-button-secondary" href={secondaryHref}>{ctaLabel(secondaryCta, content.secondaryButton, "Nous contacter")}</a> : null}
+          </div>
         </div>
       </div>
     </section>
@@ -164,8 +149,8 @@ export {
   defaultHeroEyebrow,
   defaultHeroTitle,
   genericHeroTitle,
-  heroImageOrigin,
   intentHeroTitle,
+  isHomePage,
   resolvedHeroAlt,
   resolvedHeroTitle,
 };

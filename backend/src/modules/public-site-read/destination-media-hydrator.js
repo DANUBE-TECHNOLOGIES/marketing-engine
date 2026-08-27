@@ -29,30 +29,49 @@ function isDestinationBlock(block) {
   ].includes(blockType(block));
 }
 
+function destinationAssetId(item) {
+  if (!item || typeof item !== "object") return "";
+
+  const image = asObject(item.image);
+  const media = asObject(item.media);
+  const cover = asObject(item.cover);
+
+  return String(
+    item.imageAssetId ||
+    item.heroImageAssetId ||
+    item.mediaAssetId ||
+    item.coverAssetId ||
+    image.assetId ||
+    image.id ||
+    media.assetId ||
+    media.id ||
+    cover.assetId ||
+    cover.id ||
+    ""
+  ).trim();
+}
+
+function destinationCollections(content) {
+  const keys = [];
+  for (const key of ["destinations", "items"]) {
+    if (Array.isArray(content?.[key])) keys.push(key);
+  }
+  return keys;
+}
+
 function destinationMediaReferences(pages = []) {
   const references = new Set();
 
   for (const page of pages) {
     for (const block of page?.blocks || []) {
-      if (!isDestinationBlock(block)) {
-        continue;
-      }
+      if (!isDestinationBlock(block)) continue;
 
-      const content =
-        asObject(block.content);
+      const content = asObject(block.content);
 
-      for (
-        const item of
-        Array.isArray(content.items)
-          ? content.items
-          : []
-      ) {
-        const id = String(
-          item?.imageAssetId || ""
-        ).trim();
-
-        if (id) {
-          references.add(id);
+      for (const key of destinationCollections(content)) {
+        for (const item of content[key]) {
+          const id = destinationAssetId(item);
+          if (id) references.add(id);
         }
       }
     }
@@ -77,16 +96,11 @@ async function loadDestinationMediaAssets({
   return prisma.asset.findMany({
     where: {
       tenantId: String(tenantId),
-
-      id: {
-        in: references,
-      },
-
+      id: { in: references },
       type: "MEDIA_IMAGE",
       status: "published",
       deletedAt: null,
     },
-
     select: {
       id: true,
       title: true,
@@ -96,104 +110,87 @@ async function loadDestinationMediaAssets({
   });
 }
 
+function hydrateDestinationItem(item, byId) {
+  if (!item || typeof item !== "object") return item;
+
+  // Une URL déjà publique est une preuve plus forte qu'une référence asset.
+  const existingUrl = String(
+    (typeof item.image === "string" ? item.image : "") ||
+    item.imageUrl ||
+    item.heroImageUrl ||
+    item.backgroundImage ||
+    item.coverImage ||
+    item.photoUrl ||
+    item.media?.url ||
+    ""
+  ).trim();
+
+  if (existingUrl) {
+    return {
+      ...item,
+      image: existingUrl,
+      imageUrl: existingUrl,
+    };
+  }
+
+  const imageAssetId = destinationAssetId(item);
+  if (!imageAssetId) return item;
+
+  const asset = byId.get(imageAssetId);
+  if (!asset) return item;
+
+  const payload = asObject(asset.payload);
+  const imageUrl = String(
+    payload.url ||
+    payload.publicUrl ||
+    payload.src ||
+    ""
+  ).trim();
+
+  if (!imageUrl) return item;
+
+  return {
+    ...item,
+    imageAssetId,
+    image: imageUrl,
+    imageUrl,
+    imageAlt:
+      String(item?.imageAlt || "").trim() ||
+      String(payload.altText || payload.alt || "").trim() ||
+      asset.title ||
+      "",
+    __mediaSource: "asset-engine",
+    __mediaVersion: asset.currentVersion ?? null,
+  };
+}
+
 function hydrateDestinationItems(
   pages = [],
   assets = []
 ) {
-  if (!assets.length) {
-    return pages;
-  }
-
   const byId = new Map(
-    assets.map((asset) => [
-      String(asset.id),
-      asset,
-    ])
+    assets.map((asset) => [String(asset.id), asset])
   );
 
   return pages.map((page) => ({
     ...page,
+    blocks: (page.blocks || []).map((block) => {
+      if (!isDestinationBlock(block)) return block;
 
-    blocks: (page.blocks || []).map(
-      (block) => {
-        if (!isDestinationBlock(block)) {
-          return block;
-        }
+      const content = asObject(block.content);
+      const nextContent = { ...content };
 
-        const content =
-          asObject(block.content);
-
-        const items =
-          Array.isArray(content.items)
-            ? content.items
-            : [];
-
-        return {
-          ...block,
-
-          content: {
-            ...content,
-
-            items: items.map((item) => {
-              const imageAssetId =
-                String(
-                  item?.imageAssetId || ""
-                ).trim();
-
-              if (!imageAssetId) {
-                return item;
-              }
-
-              const asset =
-                byId.get(imageAssetId);
-
-              if (!asset) {
-                return item;
-              }
-
-              const payload =
-                asObject(asset.payload);
-
-              const imageUrl =
-                String(
-                  payload.url || ""
-                ).trim();
-
-              if (!imageUrl) {
-                return item;
-              }
-
-              return {
-                ...item,
-
-                imageAssetId,
-
-                // Compatibilité renderer existant.
-                image: imageUrl,
-                imageUrl,
-
-                imageAlt:
-                  String(
-                    item?.imageAlt || ""
-                  ).trim() ||
-                  String(
-                    payload.altText || ""
-                  ).trim() ||
-                  asset.title ||
-                  "",
-
-                __mediaSource:
-                  "asset-engine",
-
-                __mediaVersion:
-                  asset.currentVersion ??
-                  null,
-              };
-            }),
-          },
-        };
+      for (const key of destinationCollections(content)) {
+        nextContent[key] = content[key].map((item) =>
+          hydrateDestinationItem(item, byId)
+        );
       }
-    ),
+
+      return {
+        ...block,
+        content: nextContent,
+      };
+    }),
   }));
 }
 
@@ -202,28 +199,27 @@ async function hydrateDestinationMediaAssets({
   tenantId,
   pages = [],
 }) {
-  const references =
-    destinationMediaReferences(pages);
+  const references = destinationMediaReferences(pages);
+  const assets = await loadDestinationMediaAssets({
+    prisma,
+    tenantId,
+    references,
+  });
 
-  const assets =
-    await loadDestinationMediaAssets({
-      prisma,
-      tenantId,
-      references,
-    });
-
-  return hydrateDestinationItems(
-    pages,
-    assets
-  );
+  // Même sans référence Asset, normaliser les URLs déjà présentes dans les
+  // collections dynamiques afin que le renderer lise la même forme partout.
+  return hydrateDestinationItems(pages, assets);
 }
 
 module.exports = {
   asObject,
   blockType,
   isDestinationBlock,
+  destinationAssetId,
+  destinationCollections,
   destinationMediaReferences,
   loadDestinationMediaAssets,
+  hydrateDestinationItem,
   hydrateDestinationItems,
   hydrateDestinationMediaAssets,
 };

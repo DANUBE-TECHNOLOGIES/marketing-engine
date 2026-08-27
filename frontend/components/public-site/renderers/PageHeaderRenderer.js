@@ -14,7 +14,9 @@ export default function PageHeaderRenderer({ section, site, page }) {
   return (
     <section className={`public-site-section ${styles.section}`}>
       <div className={`public-site-container ${styles.inner}`}>
-        <p className={styles.eyebrow}>{content.eyebrow || (city ? `Agence de voyages à ${city}` : "Agence de voyages")}</p>
+        <p className={styles.eyebrow}>
+          {content.eyebrow || (city ? `Agence de voyages à ${city}` : "Agence de voyages")}
+        </p>
         <h1>{title}</h1>
         {introduction ? <p className={styles.introduction}>{introduction}</p> : null}
       </div>

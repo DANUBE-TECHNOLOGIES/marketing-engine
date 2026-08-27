@@ -35,6 +35,13 @@ function AgencyPartnerGrid({ items }) {
 }
 
 export default function PartnersRenderer({ section, site, page }) {
+  /*
+   * The compact partner strip belongs on the Home only. Existing Designer V2
+   * partner pages may still contain that legacy `partners` block instead of a
+   * `partner-directory` block. On a secondary page, promote it in memory to
+   * the complete catalogue experience. If an explicit directory already
+   * exists, suppress the compact block to avoid rendering the catalogue twice.
+   */
   if (!pageIsHome(page)) {
     if (pageHasExplicitDirectory(page)) return null;
     return <PartnerDirectoryRenderer section={section} site={site} page={page} />;
