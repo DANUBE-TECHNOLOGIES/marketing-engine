@@ -90,7 +90,7 @@ services:
       NEXT_PUBLIC_SHOWCASE_URL: "${NEXT_PUBLIC_SHOWCASE_URL:-https://mondescale.com}"
       INTERNAL_FRONTEND_URL: "http://localhost:3000"
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>{if(r.status>=500)process.exit(1)}).catch(()=>process.exit(1))"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/healthz').then(r=>{if(!r.ok)process.exit(1);return r.json()}).then(v=>{if(v?.service!=='marketing-engine-frontend')process.exit(1)}).catch(()=>process.exit(1))"]
       interval: 15s
       timeout: 5s
       retries: 5
