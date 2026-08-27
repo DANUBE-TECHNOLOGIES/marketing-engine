@@ -10,6 +10,7 @@ on:
       - 'frontend/lib/public-site-api.js'
       - 'frontend/lib/public-brand-legal-runtime.js'
       - 'frontend/scripts/public-performance-probe.mjs'
+      - 'frontend/scripts/public-lcp-contract-probe.mjs'
       - 'frontend/test/mse-25-71-*.test.mjs'
       - 'frontend/package.json'
       - 'frontend/package-lock.json'
@@ -21,6 +22,7 @@ on:
       - 'frontend/lib/public-site-api.js'
       - 'frontend/lib/public-brand-legal-runtime.js'
       - 'frontend/scripts/public-performance-probe.mjs'
+      - 'frontend/scripts/public-lcp-contract-probe.mjs'
       - 'frontend/test/mse-25-71-*.test.mjs'
       - 'frontend/package.json'
       - 'frontend/package-lock.json'
@@ -107,9 +109,18 @@ jobs:
             --max-single-image-bytes="$MAX_SINGLE_IMAGE_BYTES" \
             --max-total-image-bytes="$MAX_TOTAL_IMAGE_BYTES" \
             | tee /tmp/mse-25-71-live-probe.txt
+          node scripts/public-lcp-contract-probe.mjs \
+            --url="$TARGET_URL" \
+            --gate=true \
+            | tee /tmp/mse-25-71-lcp-probe.txt
           {
             echo '### MSE-25.71 live pilot probe'
             echo '```text'
             cat /tmp/mse-25-71-live-probe.txt
+            echo '```'
+            echo
+            echo '### MSE-25.71 LCP contract probe'
+            echo '```text'
+            cat /tmp/mse-25-71-lcp-probe.txt
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
