@@ -12,6 +12,7 @@ on:
       - 'feature/mse-25-75-*'
       - 'feature/mse-25-81-*'
       - 'feature/mse-25-82-*'
+      - 'feature/mse-25-83-*'
       - 'feature/runtime-cockpit-*'
       - 'integration/mse-25-operational-cockpit-*'
   pull_request:
@@ -23,6 +24,7 @@ on:
       - 'backend/test/mse-25-*.test.js'
       - 'backend/test/post-rollback-runtime-status.test.js'
       - 'backend/src/modules/register-modules.js'
+      - 'scripts/mse-25-*.js'
       - 'docker-compose.yml'
       - 'frontend/app/seo-cockpit/**'
       - 'frontend/app/components/MainLayout.js'
@@ -99,6 +101,10 @@ jobs:
       - name: Convergence guard
         working-directory: backend
         run: node --test test/mse-25-82-convergence-guard.test.js
+
+      - name: Post-convergence acceptance contract
+        working-directory: backend
+        run: node --test test/mse-25-83-post-convergence-acceptance.test.js
 
       - name: Operational orchestrator tests
         working-directory: backend
