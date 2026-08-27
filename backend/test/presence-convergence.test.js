@@ -40,6 +40,7 @@ require("../src/modules/presence/network-rollout-decision-drift.test");
 require("../src/modules/presence/rollout-decision-freeze-policy.test");
 require("../src/modules/presence/rollout-decision-ack-gate.test");
 require("../src/modules/presence/rollout-acknowledgement-lifecycle.test");
+require("../src/modules/presence/rollout-acknowledgement-chain-audit.test");
 require("../src/modules/presence/rollout-evidence-comparison.test");
 require("../src/modules/presence/rollout-promotion-gate.test");
 require("../src/modules/presence/pilot-outcome.test");
