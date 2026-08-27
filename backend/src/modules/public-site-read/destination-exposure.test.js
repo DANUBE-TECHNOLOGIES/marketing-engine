@@ -30,6 +30,40 @@ test("collects only slugs actually resolved in destination blocks", () => {
   assert.deepEqual(result, ["sicile", "maldives"]);
 });
 
+test("aligns exposure with all destination block types accepted by sitemap", () => {
+  const result = collectExposedDestinationSlugs([
+    {
+      blocks: [
+        { blockType: "destination-grid", content: { items: [{ slug: "canaries" }] } },
+        { blockType: "destinations-highlight", content: { items: [{ slug: "ile-maurice" }] } },
+        { blockType: "destination-recommendations", content: { destinations: [{ slug: "seychelles" }] } },
+      ],
+    },
+  ]);
+
+  assert.deepEqual(result, ["canaries", "ile-maurice", "seychelles"]);
+});
+
+test("extracts destination slug from destination links", () => {
+  const result = collectExposedDestinationSlugs([
+    {
+      blocks: [
+        {
+          blockType: "destination-grid",
+          content: {
+            items: [
+              { href: "/destinations/republique-dominicaine" },
+              { url: "https://example.test/destination/thailande?from=home" },
+            ],
+          },
+        },
+      ],
+    },
+  ]);
+
+  assert.deepEqual(result, ["republique-dominicaine", "thailande"]);
+});
+
 test("deduplicates destinations across published pages", () => {
   const result = collectExposedDestinationSlugs([
     {
@@ -43,7 +77,7 @@ test("deduplicates destinations across published pages", () => {
     {
       blocks: [
         {
-          blockType: "destinations",
+          blockType: "destination-grid",
           content: {
             destinations: [{ slug: "sicile" }, { slug: "crete" }],
           },

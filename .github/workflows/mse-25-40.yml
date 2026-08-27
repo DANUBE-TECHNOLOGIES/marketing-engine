@@ -10,12 +10,14 @@ on:
       - 'feature/mse-25-73-*'
       - 'feature/mse-25-74-*'
       - 'feature/mse-25-75-*'
+      - 'feature/mse-25-81-*'
       - 'feature/runtime-cockpit-*'
       - 'integration/mse-25-operational-cockpit-*'
   pull_request:
     paths:
       - 'backend/src/modules/minisite-semantic-engine/**'
       - 'backend/src/modules/search-console-submission/**'
+      - 'backend/src/modules/public-site-read/destination-exposure.js'
       - 'backend/scripts/mse-25-*.js'
       - 'backend/test/mse-25-*.test.js'
       - 'backend/test/post-rollback-runtime-status.test.js'
@@ -87,6 +89,10 @@ jobs:
       - name: Production indexability handoff
         working-directory: backend
         run: node --test test/mse-25-75-production-indexability-handoff.test.js
+
+      - name: Destination exposure contract
+        working-directory: backend
+        run: node --test test/mse-25-81-destination-exposure-contract.test.js src/modules/public-site-read/destination-exposure.test.js
 
       - name: Operational orchestrator tests
         working-directory: backend

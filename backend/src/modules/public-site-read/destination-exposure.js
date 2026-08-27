@@ -6,14 +6,40 @@ const {
   hydratePublicDynamicBlocks,
 } = require("./dynamic-block-hydrator");
 
+const DESTINATION_BLOCK_TYPES = new Set([
+  "destination-grid",
+  "destinations",
+  "destinations-highlight",
+  "destination-recommendations",
+]);
+
 function destinationItems(block) {
   const content = block?.content && typeof block.content === "object"
     ? block.content
     : {};
 
-  if (Array.isArray(content.destinations)) return content.destinations;
-  if (Array.isArray(content.items)) return content.items;
-  return [];
+  const items = [];
+  for (const collection of [content.destinations, content.items]) {
+    if (Array.isArray(collection)) items.push(...collection);
+  }
+  return items;
+}
+
+function destinationSlugFromItem(item) {
+  if (!item || typeof item !== "object") return null;
+  const direct = String(item.slug || "").trim();
+  if (direct) return direct;
+
+  const href = String(item.href || item.url || "").trim();
+  if (!href) return null;
+  const match = href.match(/(?:^|\/)destinations?\/([^/?#]+)/i);
+  if (!match?.[1]) return null;
+
+  try {
+    return decodeURIComponent(match[1]).trim();
+  } catch (_error) {
+    return match[1].trim();
+  }
 }
 
 function collectExposedDestinationSlugs(pages = []) {
@@ -22,10 +48,10 @@ function collectExposedDestinationSlugs(pages = []) {
 
   for (const page of pages || []) {
     for (const block of page?.blocks || []) {
-      if (blockType(block) !== "destinations") continue;
+      if (!DESTINATION_BLOCK_TYPES.has(blockType(block))) continue;
 
       for (const item of destinationItems(block)) {
-        const slug = String(item?.slug || "").trim();
+        const slug = destinationSlugFromItem(item);
         if (!slug || seen.has(slug)) continue;
         seen.add(slug);
         slugs.push(slug);
@@ -67,7 +93,9 @@ class PublicDestinationExposureResolver {
 }
 
 module.exports = {
+  DESTINATION_BLOCK_TYPES,
   PublicDestinationExposureResolver,
   collectExposedDestinationSlugs,
   destinationItems,
+  destinationSlugFromItem,
 };
