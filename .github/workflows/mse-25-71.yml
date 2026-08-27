@@ -110,6 +110,57 @@ jobs:
         working-directory: frontend
         run: npm run build
 
+      - name: Capture current Gien production baseline
+        if: ${{ github.event_name == 'push' }}
+        continue-on-error: true
+        working-directory: frontend
+        env:
+          TARGET_URL: 'https://agences.mondescale.com/agence/gien'
+        run: |
+          set +e
+          node scripts/public-performance-probe.mjs \
+            --url="$TARGET_URL" \
+            --samples=3 \
+            --gate=false \
+            > /tmp/mse-25-71-baseline-performance.txt 2>&1
+          perf_status=$?
+          node scripts/public-lcp-contract-probe.mjs \
+            --url="$TARGET_URL" \
+            --gate=false \
+            > /tmp/mse-25-71-baseline-lcp.txt 2>&1
+          lcp_status=$?
+          node scripts/public-js-payload-probe.mjs \
+            --url="$TARGET_URL" \
+            --gate=false \
+            > /tmp/mse-25-71-baseline-js.txt 2>&1
+          js_status=$?
+          {
+            echo '### MSE-25.71 current production baseline (pre-deployment)'
+            echo
+            echo "Target: \`$TARGET_URL\`"
+            echo
+            echo "Probe exit codes: performance=$perf_status lcp=$lcp_status js=$js_status"
+            echo
+            echo '#### Performance / media'
+            echo '```text'
+            cat /tmp/mse-25-71-baseline-performance.txt
+            echo '```'
+            echo
+            echo '#### LCP contract'
+            echo '```text'
+            cat /tmp/mse-25-71-baseline-lcp.txt
+            echo '```'
+            echo
+            echo '#### JavaScript payload'
+            echo '```text'
+            cat /tmp/mse-25-71-baseline-js.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat /tmp/mse-25-71-baseline-performance.txt
+          cat /tmp/mse-25-71-baseline-lcp.txt
+          cat /tmp/mse-25-71-baseline-js.txt
+          exit 0
+
       - name: Resolve deployed pilot URL
         if: ${{ github.event_name == 'workflow_dispatch' }}
         id: pilot
