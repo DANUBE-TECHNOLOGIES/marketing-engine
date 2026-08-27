@@ -9,9 +9,11 @@ on:
       - 'scripts/mse-25-71-origin-readiness.sh'
       - 'frontend/app/healthz/**'
       - 'frontend/app/agence/**'
+      - 'frontend/app/api/public-sites/**'
       - 'frontend/components/public-site/**'
       - 'frontend/lib/public-site-api.js'
       - 'frontend/lib/public-brand-legal-runtime.js'
+      - 'frontend/scripts/public-origin-chain-probe.mjs'
       - 'frontend/scripts/public-performance-probe.mjs'
       - 'frontend/scripts/public-lcp-contract-probe.mjs'
       - 'frontend/scripts/public-js-payload-probe.mjs'
@@ -25,9 +27,11 @@ on:
       - 'scripts/mse-25-71-origin-readiness.sh'
       - 'frontend/app/healthz/**'
       - 'frontend/app/agence/**'
+      - 'frontend/app/api/public-sites/**'
       - 'frontend/components/public-site/**'
       - 'frontend/lib/public-site-api.js'
       - 'frontend/lib/public-brand-legal-runtime.js'
+      - 'frontend/scripts/public-origin-chain-probe.mjs'
       - 'frontend/scripts/public-performance-probe.mjs'
       - 'frontend/scripts/public-lcp-contract-probe.mjs'
       - 'frontend/scripts/public-js-payload-probe.mjs'
@@ -118,6 +122,8 @@ jobs:
           grep -q "http://127.0.0.1:3000/healthz" docker-compose.yml
           grep -q 'service: "marketing-engine-frontend"' frontend/app/healthz/route.js
           grep -q '"cache-control": "no-store, max-age=0"' frontend/app/healthz/route.js
+          grep -q 'PUBLIC_API_UPSTREAM_FAILURE' frontend/scripts/public-origin-chain-probe.mjs
+          grep -q 'P0_ORIGIN_READY=' frontend/scripts/public-origin-chain-probe.mjs
           docker compose config --quiet
 
       - name: Setup Node
@@ -145,9 +151,12 @@ jobs:
         working-directory: frontend
         env:
           TARGET_URL: 'https://agences.mondescale.com/agence/gien'
-          LIVENESS_URL: 'https://agences.mondescale.com/healthz'
         run: |
           set +e
+          node scripts/public-origin-chain-probe.mjs \
+            --url="$TARGET_URL" \
+            > /tmp/mse-25-71-baseline-origin-chain.txt 2>&1
+          origin_status=$?
           node scripts/public-performance-probe.mjs \
             --url="$TARGET_URL" \
             --samples=3 \
@@ -164,23 +173,16 @@ jobs:
             --gate=false \
             > /tmp/mse-25-71-baseline-js.txt 2>&1
           js_status=$?
-          curl -sS -L -D /tmp/mse-25-71-liveness-headers.txt -o /tmp/mse-25-71-liveness-body.txt \
-            -w 'HTTP=%{http_code} TTFB=%{time_starttransfer}s TOTAL=%{time_total}s REMOTE=%{remote_ip}\n' \
-            --max-time 15 "$LIVENESS_URL" > /tmp/mse-25-71-liveness.txt 2>&1
-          liveness_status=$?
           {
             echo '### MSE-25.71 current production baseline (pre-deployment)'
             echo
             echo "Target: \`$TARGET_URL\`"
-            echo "Liveness: \`$LIVENESS_URL\`"
             echo
-            echo "Probe exit codes: performance=$perf_status lcp=$lcp_status js=$js_status liveness=$liveness_status"
+            echo "Probe exit codes: origin-chain=$origin_status performance=$perf_status lcp=$lcp_status js=$js_status"
             echo
-            echo '#### Frontend liveness'
+            echo '#### Public origin chain'
             echo '```text'
-            cat /tmp/mse-25-71-liveness.txt
-            grep -Ei '^(HTTP/|server:|content-type:|cache-control:)' /tmp/mse-25-71-liveness-headers.txt || true
-            cat /tmp/mse-25-71-liveness-body.txt || true
+            cat /tmp/mse-25-71-baseline-origin-chain.txt
             echo '```'
             echo
             echo '#### Performance / media'
@@ -198,7 +200,7 @@ jobs:
             cat /tmp/mse-25-71-baseline-js.txt
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-          cat /tmp/mse-25-71-liveness.txt
+          cat /tmp/mse-25-71-baseline-origin-chain.txt
           cat /tmp/mse-25-71-baseline-performance.txt
           cat /tmp/mse-25-71-baseline-lcp.txt
           cat /tmp/mse-25-71-baseline-js.txt
@@ -225,25 +227,28 @@ jobs:
             http://*|https://*) ;;
             *) echo "Resolved pilot URL must be absolute: $target" >&2; exit 2 ;;
           esac
-          origin="$(printf '%s' "$target" | sed -E 's#^(https?://[^/]+).*#\1#')"
           echo "target_url=$target" >> "$GITHUB_OUTPUT"
-          echo "liveness_url=$origin/healthz" >> "$GITHUB_OUTPUT"
           echo "Resolved MSE-25.71 pilot: $target"
 
-      - name: Probe deployed pilot liveness
+      - name: Gate deployed pilot origin chain
         if: ${{ github.event_name == 'workflow_dispatch' }}
+        working-directory: frontend
         env:
-          LIVENESS_URL: ${{ steps.pilot.outputs.liveness_url }}
+          TARGET_URL: ${{ steps.pilot.outputs.target_url }}
         run: |
-          set -euo pipefail
-          body="$(mktemp)"
-          code="$(curl -sS -L -o "$body" -w '%{http_code}' --max-time 15 "$LIVENESS_URL")"
-          echo "MSE-25.71 liveness HTTP=$code URL=$LIVENESS_URL"
-          cat "$body"
-          test "$code" = "200"
-          grep -q 'marketing-engine-frontend' "$body"
+          set -o pipefail
+          node scripts/public-origin-chain-probe.mjs \
+            --url="$TARGET_URL" \
+            --gate=true \
+            | tee /tmp/mse-25-71-origin-chain.txt
+          {
+            echo '### MSE-25.71 public origin chain'
+            echo '```text'
+            cat /tmp/mse-25-71-origin-chain.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Probe deployed pilot
+      - name: Probe deployed pilot performance
         if: ${{ github.event_name == 'workflow_dispatch' }}
         working-directory: frontend
         env:
@@ -277,20 +282,21 @@ jobs:
             --max-script-count="$MAX_SCRIPT_COUNT" \
             | tee /tmp/mse-25-71-js-probe.txt
           {
-            echo '### MSE-25.71 live pilot probe'
+            echo '### MSE-25.71 live pilot performance'
             echo
             echo "Target: \`$TARGET_URL\`"
             echo
+            echo '#### Performance / media'
             echo '```text'
             cat /tmp/mse-25-71-live-probe.txt
             echo '```'
             echo
-            echo '### MSE-25.71 LCP contract probe'
+            echo '#### LCP contract'
             echo '```text'
             cat /tmp/mse-25-71-lcp-probe.txt
             echo '```'
             echo
-            echo '### MSE-25.71 JavaScript payload probe'
+            echo '#### JavaScript payload'
             echo '```text'
             cat /tmp/mse-25-71-js-probe.txt
             echo '```'
