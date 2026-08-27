@@ -2,7 +2,7 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { evaluatePilotExecutionGate } = require("./pilot-execution-gate");
+const { evaluatePilotExecutionGate, compactGovernanceDiagnostic } = require("./pilot-execution-gate");
 
 function prismaFixture({ preflightId = "pf-1" } = {}) {
   const migrationNames = [
@@ -29,6 +29,7 @@ function prismaFixture({ preflightId = "pf-1" } = {}) {
 test("non pilot campaigns are not constrained by pilot execution gate", async () => {
   const gate = await evaluatePilotExecutionGate({}, { pilot: false });
   assert.equal(gate.ready, true);
+  assert.equal(gate.governanceDiagnostic, null);
 });
 
 test("pilot execution gate rejects mismatched preflight binding", async () => {
@@ -44,3 +45,7 @@ test("pilot execution gate rejects mismatched preflight binding", async () => {
     assert.ok(gate.blockers.includes("pilot_campaign_preflight_mismatch"));
   } finally { process.env = oldEnv; }
 });
+
+test("final execution governance diagnostic compacts critical policy drift",()=>{const diagnostic=compactGovernanceDiagnostic({decisionAcknowledgement:{governancePolicyDrift:true,currentSnapshotId:"current",previousSnapshotId:"previous",blockers:["critical_rollout_decision_drift_unacknowledged","critical_rollout_governance_policy_drift_unacknowledged"],drift:{severity:"critical",changes:[{type:"governance_policy",before:{acknowledgementSealingMinPercent:20,version:1},after:{acknowledgementSealingMinPercent:80,version:1}}]}}});assert.equal(diagnostic.policyDrift,true);assert.equal(diagnostic.severity,"critical");assert.equal(diagnostic.before.acknowledgementSealingMinPercent,20);assert.equal(diagnostic.after.acknowledgementSealingMinPercent,80);assert.deepEqual(diagnostic.blockers,["critical_rollout_governance_policy_drift_unacknowledged"]);});
+
+test("final execution governance diagnostic stays neutral without policy change",()=>{const diagnostic=compactGovernanceDiagnostic({decisionAcknowledgement:{governancePolicyDrift:false,currentSnapshotId:"current",previousSnapshotId:"previous",blockers:[],drift:{severity:"none",changes:[]}}});assert.equal(diagnostic.policyDrift,false);assert.equal(diagnostic.severity,"none");assert.equal(diagnostic.before,null);assert.equal(diagnostic.after,null);assert.deepEqual(diagnostic.blockers,[]);});
