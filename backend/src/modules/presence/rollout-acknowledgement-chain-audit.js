@@ -2,7 +2,7 @@
 
 function auditAcknowledgementChain(acknowledgements = []) {
   const rows = acknowledgements.filter((ack) => Number(ack?.chainVersion || 0) >= 1 && ack?.snapshotId);
-  if (!rows.length) return Object.freeze({ ready: true, versioned: false, rootSnapshotId: null, depth: 0, roots: Object.freeze([]), missingParents: Object.freeze([]), cycles: Object.freeze([]), forks: Object.freeze([]), rootMismatches: Object.freeze([]) });
+  if (!rows.length) return Object.freeze({ ready: true, versioned: false, rootSnapshotId: null, depth: 0, roots: Object.freeze([]), missingParents: Object.freeze([]), cycles: Object.freeze([]), forks: Object.freeze([]), rootMismatches: Object.freeze([]), missingRootDeclarations: Object.freeze([]), rootProofMode: "none" });
 
   const byId = new Map(rows.map((ack) => [ack.snapshotId, ack]));
   const roots = rows.filter((ack) => !ack.previousAcknowledgementSnapshotId).map((ack) => ack.snapshotId);
@@ -23,15 +23,11 @@ function auditAcknowledgementChain(acknowledgements = []) {
     const seen = new Set();
     let cursor = ack;
     while (cursor?.previousAcknowledgementSnapshotId) {
-      if (seen.has(cursor.snapshotId)) {
-        cycles.push(Object.freeze([...seen, cursor.snapshotId]));
-        break;
-      }
+      if (seen.has(cursor.snapshotId)) { cycles.push(Object.freeze([...seen, cursor.snapshotId])); break; }
       seen.add(cursor.snapshotId);
       cursor = byId.get(cursor.previousAcknowledgementSnapshotId) || null;
     }
   }
-
   const uniqueCycles = [];
   const cycleKeys = new Set();
   for (const cycle of cycles) {
@@ -48,12 +44,13 @@ function auditAcknowledgementChain(acknowledgements = []) {
     cursor = cursor.previousAcknowledgementSnapshotId ? byId.get(cursor.previousAcknowledgementSnapshotId) || null : null;
   }
 
-  const rootMismatches = rootSnapshotId ? rows.filter((ack) => ack.rootAcknowledgementSnapshotId && ack.rootAcknowledgementSnapshotId !== rootSnapshotId).map((ack) => Object.freeze({ snapshotId: ack.snapshotId, declaredRootSnapshotId: ack.rootAcknowledgementSnapshotId, expectedRootSnapshotId: rootSnapshotId })) : [];
-  const rootsWithMissingDeclaration = rootSnapshotId ? rows.filter((ack) => !ack.rootAcknowledgementSnapshotId).map((ack) => Object.freeze({ snapshotId: ack.snapshotId, declaredRootSnapshotId: null, expectedRootSnapshotId: rootSnapshotId })) : [];
-  const allRootMismatches = Object.freeze([...rootMismatches, ...rootsWithMissingDeclaration]);
+  const declaredRoots = rows.filter((ack) => ack.rootAcknowledgementSnapshotId);
+  const rootMismatches = rootSnapshotId ? declaredRoots.filter((ack) => ack.rootAcknowledgementSnapshotId !== rootSnapshotId).map((ack) => Object.freeze({ snapshotId: ack.snapshotId, declaredRootSnapshotId: ack.rootAcknowledgementSnapshotId, expectedRootSnapshotId: rootSnapshotId })) : [];
+  const missingRootDeclarations = rootSnapshotId ? rows.filter((ack) => !ack.rootAcknowledgementSnapshotId).map((ack) => ack.snapshotId) : [];
+  const rootProofMode = declaredRoots.length ? (missingRootDeclarations.length ? "mixed_legacy_explicit" : "explicit") : "legacy_inferred";
 
-  const ready = roots.length === 1 && missingParents.length === 0 && uniqueCycles.length === 0 && forks.length === 0 && depth === rows.length && allRootMismatches.length === 0;
-  return Object.freeze({ ready, versioned: true, rootSnapshotId, depth, roots: Object.freeze(roots), missingParents: Object.freeze(missingParents), cycles: Object.freeze(uniqueCycles), forks: Object.freeze(forks), rootMismatches: allRootMismatches });
+  const ready = roots.length === 1 && missingParents.length === 0 && uniqueCycles.length === 0 && forks.length === 0 && depth === rows.length && rootMismatches.length === 0;
+  return Object.freeze({ ready, versioned: true, rootSnapshotId, depth, roots: Object.freeze(roots), missingParents: Object.freeze(missingParents), cycles: Object.freeze(uniqueCycles), forks: Object.freeze(forks), rootMismatches: Object.freeze(rootMismatches), missingRootDeclarations: Object.freeze(missingRootDeclarations), rootProofMode });
 }
 
 module.exports = { auditAcknowledgementChain };
