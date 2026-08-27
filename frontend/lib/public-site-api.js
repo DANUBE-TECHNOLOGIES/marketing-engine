@@ -2,6 +2,9 @@ import { cache } from "react";
 import {
   getPublicHours,
 } from "./public-hours-api.js";
+import {
+  loadPublicRenderContract,
+} from "./public-render-contract.js";
 
 const INTERNAL_API_URL =
   process.env.INTERNAL_FRONTEND_URL ||
@@ -99,44 +102,8 @@ const GENERIC_TEAM_IDENTITIES = Object.freeze(new Set([
   "experte voyages",
 ]));
 
-async function requestFrom(basePath, path) {
-  const response = await fetch(
-    `${INTERNAL_API_URL}${basePath}${path}`,
-    {
-      headers: { accept: "application/json" },
-      cache: "no-store",
-    }
-  );
-
-  const contentType = response.headers.get("content-type") || "";
-  const payload = contentType.includes("application/json")
-    ? await response.json()
-    : await response.text();
-
-  if (!response.ok) {
-    const error = new Error(
-      payload?.error?.debug?.message ||
-        payload?.error?.message ||
-        payload?.message ||
-        "Mini-site introuvable"
-    );
-    error.statusCode = response.status;
-    throw error;
-  }
-
-  return payload;
-}
-
-async function request(path) {
-  return requestFrom("/api/public-sites", path);
-}
-
-async function requestRender(path) {
-  return requestFrom("/api/public-render-sites", path);
-}
-
 const getContract = cache(async (siteSlug) =>
-  requestRender(`/${encodeURIComponent(siteSlug)}`)
+  loadPublicRenderContract(siteSlug)
 );
 
 async function requestWebsiteBuilder(path) {
@@ -325,13 +292,6 @@ function teamMemberIsMeaningful(member) {
 
   const identity = normalizeTeamIdentity(member.name || member.title);
 
-  /*
-   * Generated Team placeholders often carry descriptive copy. That copy must
-   * never make a generic identity authoritative, otherwise a secondary page
-   * containing "Conseiller voyage" blocks inheritance from the populated Home.
-   * A named advisor is authoritative. When no identity exists at all, retain
-   * support for media/contact-only legacy records.
-   */
   if (identity) {
     return !GENERIC_TEAM_IDENTITIES.has(identity);
   }
@@ -404,13 +364,6 @@ function mergeInheritedTeamBlock(targetBlock, sourceBlock) {
   const sourceContent = publicBlockContent(sourceBlock);
   const merged = { ...sourceContent, ...targetContent };
 
-  /*
-   * A generated secondary Team page may contain a non-empty placeholder such
-   * as "Conseiller voyage". Those rows are presentation scaffolding, not
-   * agency data. When the target has no meaningful advisor, the Home remains
-   * the canonical populated source and all member collections come from it.
-   * Explicit named advisors on the secondary page never reach this branch.
-   */
   for (const key of ["members", "items", "team"]) {
     delete merged[key];
   }
@@ -453,13 +406,12 @@ function inheritedDisplayOrder(blocks) {
 
 function cloneInheritedBlock(sourceBlock, blocks, family) {
   const displayOrder = inheritedDisplayOrder(blocks);
-  const clone = {
+  return {
     ...sourceBlock,
     id: `${sourceBlock?.id || family}-inherited-home`,
     displayOrder,
     presentationOrder: undefined,
   };
-  return clone;
 }
 
 function inheritSecondaryPageFromHome(page, homePage, pageSlug) {
@@ -519,9 +471,7 @@ const getPage = cache(async (siteSlug, pageSlug) => {
   if (page) return page;
 
   return pageFromContract(
-    await requestRender(
-      `/${encodeURIComponent(siteSlug)}/pages/${encodeURIComponent(pageSlug)}`
-    )
+    await loadPublicRenderContract(siteSlug, pageSlug)
   );
 });
 
@@ -584,7 +534,7 @@ export const publicSiteApi = {
 
   async getInspiration(siteSlug, contentSlug) {
     const site = siteFromContract(
-      await requestRender(`/${encodeURIComponent(siteSlug)}`)
+      await loadPublicRenderContract(siteSlug)
     );
     const agencyId = site?.agencyId || site?.agency?.id || null;
     const params = new URLSearchParams();
