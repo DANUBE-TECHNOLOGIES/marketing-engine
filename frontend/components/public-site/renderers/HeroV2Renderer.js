@@ -137,6 +137,10 @@ export default function HeroV2Renderer({ section, site, page }) {
     homeHero ? "public-site-hero--home" : "public-site-hero--inner",
   ].filter(Boolean).join(" ");
 
+  const overlayStyle = homeHero
+    ? `linear-gradient(90deg, rgba(7,29,48,${overlayOpacity}) 0%, rgba(7,29,48,${Math.max(overlayOpacity - 0.16, 0.38)}) 34%, rgba(7,29,48,0.18) 58%, rgba(7,29,48,0.04) 76%, rgba(7,29,48,0) 100%)`
+    : `linear-gradient(90deg, rgba(7,29,48,${overlayOpacity}) 0%, rgba(7,29,48,${Math.max(overlayOpacity - 0.12, 0.42)}) 46%, rgba(7,29,48,0.12) 78%, rgba(7,29,48,0.04) 100%)`;
+
   return (
     <section className={heroClassName} data-has-hero-image={backgroundImage ? "true" : "false"} data-page-slug={pageSlug(page) || "home"}>
       {backgroundImage ? (
@@ -153,9 +157,7 @@ export default function HeroV2Renderer({ section, site, page }) {
           />
           <span
             className="public-site-hero-overlay"
-            style={{
-              background: `linear-gradient(90deg, rgba(7,29,48,${overlayOpacity}) 0%, rgba(7,29,48,${Math.max(overlayOpacity - 0.12, 0.42)}) 46%, rgba(7,29,48,0.12) 78%, rgba(7,29,48,0.04) 100%)`,
-            }}
+            style={{ background: overlayStyle }}
           />
           <span className="public-site-hero-fade" />
         </div>
