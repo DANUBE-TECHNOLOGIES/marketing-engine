@@ -4,6 +4,8 @@ const express = require("express");
 const { executeFrozenCampaign } = require("./campaign-executor");
 const { verifyCampaign } = require("./campaign-verifier");
 
+function executionErrorPayload(error){return {ok:false,error:error.message,readiness:error.readiness||undefined,governanceDiagnostic:error.readiness?.governanceDiagnostic||undefined};}
+
 function campaignExecutionRoutes({ prisma }) {
   const router = express.Router();
 
@@ -18,7 +20,7 @@ function campaignExecutionRoutes({ prisma }) {
       });
       return res.status(result.summary.failed ? 207 : 200).json({ ok: result.summary.failed === 0, externalWrite: result.summary.submitted > 0, ...result });
     } catch (error) {
-      return res.status(error.status || 500).json({ ok: false, error: error.message, readiness: error.readiness || undefined });
+      return res.status(error.status || 500).json(executionErrorPayload(error));
     }
   });
 
@@ -33,11 +35,11 @@ function campaignExecutionRoutes({ prisma }) {
       });
       return res.status(result.failed ? 207 : result.pending ? 202 : 200).json({ ok: result.failed === 0, externalWrite: false, ...result });
     } catch (error) {
-      return res.status(error.status || 500).json({ ok: false, error: error.message, readiness: error.readiness || undefined });
+      return res.status(error.status || 500).json(executionErrorPayload(error));
     }
   });
 
   return router;
 }
 
-module.exports = { campaignExecutionRoutes };
+module.exports = { campaignExecutionRoutes, executionErrorPayload };
