@@ -85,6 +85,51 @@ function isCacheable(cacheControl) {
   return value.includes("immutable") || cacheLifetimeSeconds(value) > 0;
 }
 
+function buildDiagnosis({ report, media, maxTtfbMs, maxHeroBytes, maxTotalImageBytes }) {
+  const actions = [];
+  const heroMedia = report.hero.media;
+  const serverState = report.page.medianTtfbMs > maxTtfbMs ? "SLOW_ORIGIN" : "HEALTHY";
+  if (serverState !== "HEALTHY") actions.push("REDUCE_SERVER_TTFB");
+
+  const heroIssues = [];
+  if ((heroMedia?.bytes || 0) > maxHeroBytes) {
+    heroIssues.push("OVERSIZED");
+    actions.push("OPTIMIZE_HERO_PAYLOAD");
+  }
+  if (heroMedia?.status && !heroMedia.modernFormat) {
+    heroIssues.push("LEGACY_FORMAT");
+    actions.push("ENABLE_HERO_MODERN_FORMAT");
+  }
+  if (heroMedia?.status && !heroMedia.cacheable) {
+    heroIssues.push("UNCACHEABLE");
+    actions.push("FIX_HERO_CACHE_HEADERS");
+  }
+
+  const mediaIssues = [];
+  if (report.images.totalBytesInspected > maxTotalImageBytes) {
+    mediaIssues.push("PAYLOAD_HEAVY");
+    actions.push("REDUCE_TOTAL_IMAGE_PAYLOAD");
+  }
+  if (report.images.uncacheable > 0) {
+    mediaIssues.push("UNCACHEABLE_MEDIA");
+    actions.push("FIX_MEDIA_CACHE_HEADERS");
+  }
+  const successfulMedia = media.filter((item) => item.status && item.status < 400).length;
+  if (successfulMedia > 0 && report.images.modernFormats < successfulMedia) {
+    mediaIssues.push("LEGACY_FORMATS_PRESENT");
+    actions.push("ENABLE_MODERN_IMAGE_DELIVERY");
+  }
+
+  const uniqueActions = [...new Set(actions)];
+  return {
+    server: serverState,
+    hero: heroIssues.length ? heroIssues.join("+") : "HEALTHY",
+    media: mediaIssues.length ? mediaIssues.join("+") : "HEALTHY",
+    p0Ready: serverState === "HEALTHY" && heroIssues.length === 0 && mediaIssues.length === 0,
+    actions: uniqueActions.length ? uniqueActions : ["NO_P0_REMEDIATION"],
+  };
+}
+
 async function timedFetch(url, options = {}) {
   const start = performance.now();
   const response = await fetch(url, {
@@ -149,7 +194,7 @@ if (!target) {
 
 const requestHeaders = {
   accept: "text/html,application/xhtml+xml",
-  "user-agent": "Mondescale-MSE-25.71-Performance-Probe/1.2",
+  "user-agent": "Mondescale-MSE-25.71-Performance-Probe/1.3",
 };
 
 const pageSamples = [];
@@ -209,6 +254,8 @@ const report = {
   },
 };
 
+report.diagnosis = buildDiagnosis({ report, media, maxTtfbMs, maxHeroBytes, maxTotalImageBytes });
+
 const failures = [];
 if (!page.response.ok) failures.push(`HTTP ${page.response.status}`);
 if (report.page.medianTtfbMs > maxTtfbMs) failures.push(`median TTFB ${report.page.medianTtfbMs}ms > ${maxTtfbMs}ms`);
@@ -266,6 +313,11 @@ if (json) {
   console.log(`CACHEABLE_IMAGES=${report.images.cacheable}`);
   console.log(`UNCACHEABLE_IMAGES=${report.images.uncacheable}`);
   console.log(`IMAGE_ORIGINS=${report.images.origins.join(",") || "none"}`);
+  console.log(`SERVER_DIAGNOSIS=${report.diagnosis.server}`);
+  console.log(`HERO_DIAGNOSIS=${report.diagnosis.hero}`);
+  console.log(`MEDIA_DIAGNOSIS=${report.diagnosis.media}`);
+  console.log(`P0_READY=${report.diagnosis.p0Ready}`);
+  console.log(`NEXT_ACTIONS=${report.diagnosis.actions.join(",")}`);
   for (const [index, item] of report.images.largest.entries()) {
     console.log(
       `IMAGE_${index + 1}_BYTES=${item.bytes} TYPE=${item.type || "unknown"} MODERN=${Boolean(item.modernFormat)} CACHEABLE=${Boolean(item.cacheable)} CACHE=${item.cacheControl || "none"} ORIGIN=${item.origin || "unknown"} URL=${item.url}`
