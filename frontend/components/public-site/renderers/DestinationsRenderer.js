@@ -38,7 +38,7 @@ function defaultDestinationsIntro(site) {
 function DestinationCard({ item, site }) {
   const href = destinationHref(site, item); const image = destinationImage(item); const title = item.title || item.name || "Destination"; const city = localCity(site);
   const card = <article className="public-site-destination-card" data-has-image={image ? "true" : "false"}>
-    {image ? <img className="public-site-destination-card-image" src={image} alt={destinationImageAlt(item)} loading="lazy" decoding="async" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",zIndex:0}}/> : null}
+    {image ? <img className="public-site-destination-card-image" src={image} alt={destinationImageAlt(item)} loading="lazy" decoding="async" fetchPriority="low" width="960" height="640" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",zIndex:0}}/> : null}
     {image ? <span aria-hidden="true" style={{position:"absolute",inset:0,background:"linear-gradient(rgba(8,31,52,.12),rgba(8,31,52,.78))",zIndex:1}}/> : null}
     <div style={{position:"relative",zIndex:2}}>{item.eyebrow ? <span>{item.eyebrow}</span> : null}<h3>{title}</h3>{item.description ? <p>{item.description}</p> : null}</div>
   </article>;
