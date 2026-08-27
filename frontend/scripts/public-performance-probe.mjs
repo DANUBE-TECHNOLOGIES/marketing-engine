@@ -88,10 +88,35 @@ function isCacheable(cacheControl) {
 function buildDiagnosis({ report, media, maxTtfbMs, maxHeroBytes, maxTotalImageBytes }) {
   const actions = [];
   const heroMedia = report.hero.media;
+
+  if (report.status >= 500) {
+    return {
+      server: `GATEWAY_FAILURE_${report.status}`,
+      hero: "NOT_EVALUABLE",
+      media: "NOT_EVALUABLE",
+      p0Ready: false,
+      actions: ["RESTORE_PUBLIC_ORIGIN"],
+    };
+  }
+
+  if (report.status >= 400 || report.status < 200) {
+    return {
+      server: `HTTP_FAILURE_${report.status}`,
+      hero: "NOT_EVALUABLE",
+      media: "NOT_EVALUABLE",
+      p0Ready: false,
+      actions: ["RESTORE_PUBLIC_ROUTE"],
+    };
+  }
+
   const serverState = report.page.medianTtfbMs > maxTtfbMs ? "SLOW_ORIGIN" : "HEALTHY";
   if (serverState !== "HEALTHY") actions.push("REDUCE_SERVER_TTFB");
 
   const heroIssues = [];
+  if (!report.hero.present) {
+    heroIssues.push("NOT_DISCOVERABLE");
+    actions.push("RESTORE_HERO_DISCOVERABILITY");
+  }
   if ((heroMedia?.bytes || 0) > maxHeroBytes) {
     heroIssues.push("OVERSIZED");
     actions.push("OPTIMIZE_HERO_PAYLOAD");
@@ -194,7 +219,7 @@ if (!target) {
 
 const requestHeaders = {
   accept: "text/html,application/xhtml+xml",
-  "user-agent": "Mondescale-MSE-25.71-Performance-Probe/1.3",
+  "user-agent": "Mondescale-MSE-25.71-Performance-Probe/1.4",
 };
 
 const pageSamples = [];
