@@ -24,6 +24,7 @@ require("../src/modules/presence/network-google-remediation.test");
 require("../src/modules/presence/runtime-listing-state.test");
 require("../src/modules/presence/operational-readiness.test");
 require("../src/modules/presence/deployment-readiness.test");
+require("../src/modules/presence/closure-readiness.test");
 require("../src/modules/presence/deployment-preflight-store.test");
 require("../src/modules/presence/vm-handoff-contract.test");
 require("../src/modules/presence/pilot-readiness.test");
