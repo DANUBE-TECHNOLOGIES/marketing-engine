@@ -1,0 +1,6 @@
+"use strict";
+const test=require("node:test");const assert=require("node:assert/strict");const{evaluateAcknowledgementLifecycle}=require("./rollout-acknowledgement-lifecycle");
+function ack(overrides={}){return{snapshotId:"s1",decision:"go",blockers:[],stages:[],recoveryTrust:{critical:0},...overrides};}
+test("matching acknowledgement remains active",()=>{const current={snapshotId:"s1",decision:"go",ready:true,blockers:[],stages:[],recoveryTrust:{critical:0}};const [row]=evaluateAcknowledgementLifecycle(current,[ack()]);assert.equal(row.lifecycle.status,"active");});
+test("non critical change supersedes prior acknowledgement",()=>{const current={snapshotId:"s2",decision:"go",ready:true,nextStagePercent:100,blockers:[],stages:[],recoveryTrust:{critical:0}};const [row]=evaluateAcknowledgementLifecycle(current,[ack({nextStagePercent:50})]);assert.equal(row.lifecycle.status,"superseded");});
+test("new critical degradation makes prior acknowledgement obsolete",()=>{const current={snapshotId:"s2",decision:"no_go",ready:false,blockers:["critical_recovery_trust_blocks_rollout"],stages:[],recoveryTrust:{critical:1}};const [row]=evaluateAcknowledgementLifecycle(current,[ack()]);assert.equal(row.lifecycle.status,"obsolete");assert.equal(row.lifecycle.obsolete,true);assert.equal(row.lifecycle.drift.severity,"critical");});
