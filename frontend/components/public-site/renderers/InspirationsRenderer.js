@@ -88,11 +88,15 @@ export default function InspirationsRenderer({ section, site }) {
                 <article className="public-site-editorial-card" key={item.id || item.slug || index}>
                   {image ? (
                     <div className="public-site-editorial-image">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={image}
                         alt={inspirationImageAlt(item)}
                         loading="lazy"
                         decoding="async"
+                        fetchPriority="low"
+                        width="720"
+                        height="480"
                       />
                     </div>
                   ) : null}
