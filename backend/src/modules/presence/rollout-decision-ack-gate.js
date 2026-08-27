@@ -20,6 +20,14 @@ function latestDistinctPair(history = []) {
   return Object.freeze({ latest, prior });
 }
 
+function acknowledgementReplacementChainValid(acknowledgements = []) {
+  const latest = acknowledgements[0] || null;
+  if (!latest || Number(latest.chainVersion || 0) < 1) return true;
+  const previous = acknowledgements[1] || null;
+  if (!previous) return latest.previousAcknowledgementSnapshotId == null;
+  return latest.previousAcknowledgementSnapshotId === previous.snapshotId;
+}
+
 async function evaluateRolloutDecisionAcknowledgement(prisma, rolloutGate) {
   const [history, acknowledgements] = await Promise.all([
     listRolloutDecisionSnapshots(prisma, 10),
@@ -30,9 +38,11 @@ async function evaluateRolloutDecisionAcknowledgement(prisma, rolloutGate) {
   const drift = compareRolloutDecision(current, latest);
   const acknowledgementLifecycle = evaluateAcknowledgementLifecycle(current, acknowledgements);
   const latestAcknowledgement = acknowledgementLifecycle[0] || null;
+  const replacementChainValid = acknowledgementReplacementChainValid(acknowledgements);
   const blockers = [];
   if (latest && drift.severity === "critical") blockers.push("critical_rollout_decision_drift_unacknowledged");
   if (latest && prior && !criticalAcknowledgementEvidenceValid(latest, prior)) blockers.push("critical_rollout_decision_acknowledgement_evidence_invalid");
+  if (!replacementChainValid) blockers.push("critical_rollout_acknowledgement_replacement_chain_invalid");
   if (latestAcknowledgement?.lifecycle?.status === "obsolete") blockers.push("obsolete_rollout_decision_acknowledgement");
   const ready = blockers.length === 0;
   return Object.freeze({
@@ -43,10 +53,11 @@ async function evaluateRolloutDecisionAcknowledgement(prisma, rolloutGate) {
     currentSnapshotId: current.snapshotId,
     previousSnapshotId: latest?.snapshotId || null,
     acknowledgementEvidenceValid: latest && prior ? criticalAcknowledgementEvidenceValid(latest, prior) : true,
+    acknowledgementReplacementChainValid: replacementChainValid,
     latestAcknowledgement,
     acknowledgementLifecycle: Object.freeze(acknowledgementLifecycle),
     drift
   });
 }
 
-module.exports = { evaluateRolloutDecisionAcknowledgement, criticalAcknowledgementEvidenceValid, latestDistinctPair };
+module.exports = { evaluateRolloutDecisionAcknowledgement, criticalAcknowledgementEvidenceValid, latestDistinctPair, acknowledgementReplacementChainValid };
