@@ -30,8 +30,18 @@ on:
   workflow_dispatch:
     inputs:
       target_url:
-        description: 'Deployed public agency URL to probe'
+        description: 'Explicit deployed public agency URL (overrides base URL + slug)'
         required: false
+        type: string
+      public_base_url:
+        description: 'Public mini-site origin used when target_url is empty'
+        required: false
+        default: 'https://agences.mondescale.com'
+        type: string
+      site_slug:
+        description: 'Agency slug used when target_url is empty'
+        required: false
+        default: 'gien'
         type: string
       samples:
         description: 'Number of route samples (1-7)'
@@ -88,11 +98,35 @@ jobs:
         working-directory: frontend
         run: npm run build
 
+      - name: Resolve deployed pilot URL
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        id: pilot
+        env:
+          EXPLICIT_TARGET_URL: ${{ inputs.target_url }}
+          PUBLIC_BASE_URL: ${{ inputs.public_base_url }}
+          SITE_SLUG: ${{ inputs.site_slug }}
+        run: |
+          set -eu
+          if [ -n "$EXPLICIT_TARGET_URL" ]; then
+            target="$EXPLICIT_TARGET_URL"
+          else
+            base="${PUBLIC_BASE_URL%/}"
+            slug="${SITE_SLUG#/}"
+            slug="${slug%/}"
+            target="$base/agence/$slug"
+          fi
+          case "$target" in
+            http://*|https://*) ;;
+            *) echo "Resolved pilot URL must be absolute: $target" >&2; exit 2 ;;
+          esac
+          echo "target_url=$target" >> "$GITHUB_OUTPUT"
+          echo "Resolved MSE-25.71 pilot: $target"
+
       - name: Probe deployed pilot
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.target_url != '' }}
+        if: ${{ github.event_name == 'workflow_dispatch' }}
         working-directory: frontend
         env:
-          TARGET_URL: ${{ inputs.target_url }}
+          TARGET_URL: ${{ steps.pilot.outputs.target_url }}
           SAMPLES: ${{ inputs.samples }}
           MAX_TTFB_MS: ${{ inputs.max_ttfb_ms }}
           MAX_HERO_BYTES: ${{ inputs.max_hero_bytes }}
@@ -115,6 +149,9 @@ jobs:
             | tee /tmp/mse-25-71-lcp-probe.txt
           {
             echo '### MSE-25.71 live pilot probe'
+            echo
+            echo "Target: \`$TARGET_URL\`"
+            echo
             echo '```text'
             cat /tmp/mse-25-71-live-probe.txt
             echo '```'
