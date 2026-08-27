@@ -3,6 +3,7 @@
 const express = require("express");
 const { tenantIdForRequest } = require("../minisite-structured-data/routes");
 const { SEARCH_CONSOLE_OWNER_PERMISSION } = require("./provider");
+const { createSearchConsoleProvider, searchConsoleProviderReadiness } = require("./provider-factory");
 const { runSearchConsolePreflight } = require("./preflight");
 const { SearchConsoleSubmissionService } = require("./service");
 const { SearchConsoleObservabilityService } = require("./observability");
@@ -25,7 +26,8 @@ async function readPublicAudit({tenantId,request,submissionService,observer}) { 
 
 function routes({ prisma, service, provider } = {}) {
   const router=express.Router();
-  const submissionService=service||new SearchConsoleSubmissionService({prisma,provider});
+  const activeProvider=provider||createSearchConsoleProvider({prisma});
+  const submissionService=service||new SearchConsoleSubmissionService({prisma,provider:activeProvider});
   const observabilityService=new SearchConsoleObservabilityService({prisma,structuredDataService:submissionService.structuredDataService,provider:submissionService.provider});
   const performanceService=new SearchConsolePerformanceService({provider:submissionService.provider});
   const indexationCoverageService=new IndexationCoverageService({structuredDataService:submissionService.structuredDataService,performanceService});
@@ -36,7 +38,7 @@ function routes({ prisma, service, provider } = {}) {
   const runtimeAuditService=new RuntimeIndexabilityAuditService({structuredDataService:submissionService.structuredDataService,publicIndexabilityObserver,fetchImpl:runtimeFetch,timeoutMs:Number(process.env.PUBLIC_INDEXABILITY_TIMEOUT_MS||5000)});
   const opportunityQueue=new SeoOpportunityWorkQueueService({prisma});
 
-  router.get("/search-console-submissions/health",(_request,response)=>{const activeProvider=submissionService.provider;response.json({ok:true,capability:"search-console-submission-journal",provider:activeProvider?.name||"unknown",providerConfigured:activeProvider?.isConfigured?.()===true,requestedEnabled:activeProvider?.requestedEnabled===true,disabledReason:activeProvider?.disabledReason||null,credentialMode:activeProvider?.credentialMode||null,requiredPermissionLevel:SEARCH_CONSOLE_OWNER_PERMISSION,explicitApprovalRequired:true,autoSubmit:false,readOnlySitemapObservability:true,readOnlySearchPerformance:true,readOnlyIndexationCoverage:true,readOnlyPublicHttpIndexability:true,readOnlyIndexationIncidentQueue:true,readOnlyRuntimeReadiness:true,publicAuditFetchOrigin:fetchOrigin||publicOrigin});});
+  router.get("/search-console-submissions/health",async(_request,response)=>{const active=submissionService.provider;const readiness=await searchConsoleProviderReadiness({prisma});response.json({ok:true,capability:"search-console-submission-journal",provider:active?.name||"unknown",providerConfigured:readiness.configured===true,providerTransportConfigured:active?.isConfigured?.()===true,tokenReadiness:readiness,requiredPermissionLevel:SEARCH_CONSOLE_OWNER_PERMISSION,explicitApprovalRequired:true,autoSubmit:false,readOnlySitemapObservability:true,readOnlySearchPerformance:true,readOnlyIndexationCoverage:true,readOnlyPublicHttpIndexability:true,readOnlyIndexationIncidentQueue:true,readOnlyRuntimeReadiness:true,publicAuditFetchOrigin:fetchOrigin||publicOrigin});});
   router.get("/search-console-submissions/properties",async(request,response)=>{try{await tenantIdForRequest(prisma,request);const properties=await submissionService.provider.listSites();response.json({provider:submissionService.provider?.name||"unknown",count:properties.length,requiredPermissionLevel:SEARCH_CONSOLE_OWNER_PERMISSION,properties:properties.map((property)=>({siteUrl:property?.siteUrl||null,permissionLevel:property?.permissionLevel||null,eligibleForSitemapSubmission:property?.permissionLevel===SEARCH_CONSOLE_OWNER_PERMISSION}))});}catch(error){sendError(response,error);}});
   router.get("/search-console-submissions/candidates",async(request,response)=>{try{const tenantId=await tenantIdForRequest(prisma,request);response.json(await submissionService.candidates({tenantId}));}catch(error){sendError(response,error);}});
   router.get("/search-console-submissions/indexation-coverage",async(request,response)=>{try{const tenantId=await tenantIdForRequest(prisma,request);response.json(await indexationCoverageService.diagnoseNetwork({tenantId,...coverageScope(request,submissionService)}));}catch(error){sendError(response,error);}});
