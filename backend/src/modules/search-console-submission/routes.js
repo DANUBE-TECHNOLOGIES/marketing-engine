@@ -26,7 +26,7 @@ async function readPublicAudit({tenantId,request,submissionService,observer}) { 
 
 function routes({ prisma, service, provider } = {}) {
   const router=express.Router();
-  const activeProvider=provider||createSearchConsoleProvider({prisma});
+  const activeProvider=(provider && provider.name !== "disabled") ? provider : createSearchConsoleProvider({prisma});
   const submissionService=service||new SearchConsoleSubmissionService({prisma,provider:activeProvider});
   const observabilityService=new SearchConsoleObservabilityService({prisma,structuredDataService:submissionService.structuredDataService,provider:submissionService.provider});
   const performanceService=new SearchConsolePerformanceService({provider:submissionService.provider});
