@@ -129,18 +129,21 @@ export async function fetchMiniSiteSitemap(
         {
           method: "GET",
           headers: publicHeaders(options),
-          next: {
-            revalidate: 300,
-          },
+          cache: "no-store",
           signal: AbortSignal.timeout(8000),
         }
       );
-  } catch {
+  } catch (error) {
     return {
       entries: [],
       summary: {
         entryCount: 0,
       },
+      error:
+        error?.name === "TimeoutError" ||
+        error?.name === "AbortError"
+          ? "BACKEND_TIMEOUT"
+          : "BACKEND_UNREACHABLE",
     };
   }
 
@@ -150,6 +153,8 @@ export async function fetchMiniSiteSitemap(
       summary: {
         entryCount: 0,
       },
+      error:
+        `BACKEND_HTTP_${response.status}`,
     };
   }
 
@@ -161,6 +166,7 @@ export async function fetchMiniSiteSitemap(
       entries: Array.isArray(payload.entries)
         ? payload.entries
         : [],
+      error: null,
     };
   } catch {
     return {
@@ -168,6 +174,7 @@ export async function fetchMiniSiteSitemap(
       summary: {
         entryCount: 0,
       },
+      error: "BACKEND_INVALID_JSON",
     };
   }
 }
