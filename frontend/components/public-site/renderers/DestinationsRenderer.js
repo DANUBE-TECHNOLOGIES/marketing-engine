@@ -12,10 +12,28 @@ function joinCities(values) {
 function siteRoot(site) { return String(site?.basePath || `/agence/${encodeURIComponent(site?.slug || "")}`).replace(/\/$/, ""); }
 function localCity(site) { return String(site?.agency?.city || site?.city || "").trim(); }
 function destinationHref(site, item) {
-  if (item?.href) return item.href;
-  if (item?.url) return item.url;
-  if (!site?.slug || !item?.slug) return null;
-  return `/agence/${encodeURIComponent(site.slug)}/destination/${encodeURIComponent(item.slug)}`;
+  const root = siteRoot(site);
+  const explicit = String(item?.href || item?.url || "").trim();
+
+  if (explicit) {
+    if (/^(https?:|mailto:|tel:|#)/i.test(explicit)) return explicit;
+
+    const legacyDestination = explicit.match(/^\/destinations\/([^/?#]+)\/?(?:[?#].*)?$/i);
+    if (legacyDestination) {
+      return `${root}/destination/${encodeURIComponent(decodeURIComponent(legacyDestination[1]))}`;
+    }
+
+    if (explicit.startsWith("/agence/")) return explicit;
+
+    if (explicit.startsWith("/")) {
+      return `${root}/${explicit.replace(/^\/+/, "")}`;
+    }
+
+    return `${root}/${explicit.replace(/^\/+|\/+$/g, "")}`;
+  }
+
+  if (!item?.slug) return null;
+  return `${root}/destination/${encodeURIComponent(item.slug)}`;
 }
 function destinationImage(item) {
   if (!item || typeof item !== "object") return null;
@@ -55,7 +73,7 @@ export default function DestinationsRenderer({ section, site }) {
     <p className="public-site-section-kicker">Inspirations</p><h2>{getSectionTitle(section, defaultDestinationsTitle(site))}</h2>{introduction ? <p className="public-site-section-intro">{introduction}</p> : null}
     {items.length ? <div className="public-site-destination-grid">{items.map((item,index)=><DestinationCard key={item.id||item.slug||item.title||index} item={item} site={site}/>)}</div> : null}
     <div className="public-site-related-links" aria-label={city ? `Conseils voyage de notre agence à ${city}` : "Conseils pour choisir votre voyage"}>
-      <Link href={`${root}/inspirations`}>{city ? `Conseils et inspirations voyage depuis ${city}` : "Conseils et idées pour préparer votre voyage"}</Link>
+      <Link href={`${root}/inspiration`}>{city ? `Conseils et inspirations voyage depuis ${city}` : "Conseils et idées pour préparer votre voyage"}</Link>
       <Link href={`${root}/services`}>{city ? `Services de notre agence de voyages à ${city}` : "Services de votre agence de voyages"}</Link>
       <Link href={`${root}/contact`}>{city ? `Demander conseil à notre agence de ${city}` : "Demander conseil à votre agence"}</Link>
     </div>
