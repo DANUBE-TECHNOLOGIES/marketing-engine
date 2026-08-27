@@ -39,6 +39,23 @@ test("probe inspects hero discoverability and media transfer weight", () => {
   assert.match(probe, /largestImages/);
 });
 
+test("probe diagnoses modern media delivery cacheability and origins", () => {
+  const probe = source("scripts/public-performance-probe.mjs");
+
+  assert.match(probe, /function isModernImageType\(type\)/);
+  assert.match(probe, /image\/avif/);
+  assert.match(probe, /image\/webp/);
+  assert.match(probe, /function isCacheable\(cacheControl\)/);
+  assert.match(probe, /cacheLifetimeSeconds/);
+  assert.match(probe, /urlOrigin/);
+  assert.match(probe, /HERO_MODERN_FORMAT=/);
+  assert.match(probe, /HERO_CACHEABLE=/);
+  assert.match(probe, /HERO_ORIGIN=/);
+  assert.match(probe, /MODERN_IMAGES=/);
+  assert.match(probe, /UNCACHEABLE_IMAGES=/);
+  assert.match(probe, /IMAGE_ORIGINS=/);
+});
+
 test("probe samples the deployed route and gates on median server performance", () => {
   const probe = source("scripts/public-performance-probe.mjs");
 
@@ -49,12 +66,16 @@ test("probe samples the deployed route and gates on median server performance", 
   assert.match(probe, /median TTFB/);
 });
 
-test("probe can gate a deployed pilot on server and media budgets", () => {
+test("probe can gate a deployed pilot on server hero and aggregate media budgets", () => {
   const probe = source("scripts/public-performance-probe.mjs");
 
   assert.match(probe, /const gate = arg\("gate", "false"\) === "true"/);
   assert.match(probe, /max-ttfb-ms/);
+  assert.match(probe, /max-hero-bytes/);
   assert.match(probe, /max-single-image-bytes/);
+  assert.match(probe, /max-total-image-bytes/);
+  assert.match(probe, /hero image \$\{report\.hero\.media\.bytes\}B/);
+  assert.match(probe, /inspected image payload \$\{totalBytesInspected\}B/);
   assert.match(probe, /PERFORMANCE_GATE=/);
   assert.match(probe, /hero image is not fetchPriority=high/);
   assert.match(probe, /hero image has no intrinsic dimensions/);
