@@ -1,6 +1,7 @@
+import { cache } from "react";
 import {
   getPublicHours,
-} from "./public-hours-api";
+} from "./public-hours-api.js";
 
 const INTERNAL_API_URL =
   process.env.INTERNAL_FRONTEND_URL ||
@@ -98,9 +99,9 @@ const GENERIC_TEAM_IDENTITIES = Object.freeze(new Set([
   "experte voyages",
 ]));
 
-async function request(path) {
+async function requestFrom(basePath, path) {
   const response = await fetch(
-    `${INTERNAL_API_URL}/api/public-sites${path}`,
+    `${INTERNAL_API_URL}${basePath}${path}`,
     {
       headers: { accept: "application/json" },
       cache: "no-store",
@@ -126,6 +127,18 @@ async function request(path) {
   return payload;
 }
 
+async function request(path) {
+  return requestFrom("/api/public-sites", path);
+}
+
+async function requestRender(path) {
+  return requestFrom("/api/public-render-sites", path);
+}
+
+const getContract = cache(async (siteSlug) =>
+  requestRender(`/${encodeURIComponent(siteSlug)}`)
+);
+
 async function requestWebsiteBuilder(path) {
   const response = await fetch(
     `${INTERNAL_API_URL}/api/website-builder${path}`,
@@ -148,6 +161,14 @@ async function requestWebsiteBuilder(path) {
   return payload;
 }
 
+function normalizePageSlug(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function isHomeSlug(value) {
+  return ["", "home", "accueil", "index"].includes(normalizePageSlug(value));
+}
+
 function siteFromContract(payload) {
   const site = payload?.site && typeof payload.site === "object"
     ? payload.site
@@ -159,6 +180,35 @@ function siteFromContract(payload) {
     ...site,
     navigation: payload?.navigation || site.navigation || [],
   };
+}
+
+function pagesFromContract(payload) {
+  if (Array.isArray(payload?.pages)) return payload.pages;
+  if (Array.isArray(payload?.site?.pages)) return payload.site.pages;
+  return [];
+}
+
+function homeFromContract(payload) {
+  const page =
+    payload?.home ||
+    payload?.homePage ||
+    payload?.page ||
+    payload?.currentPage ||
+    payload?.requestedPage ||
+    null;
+
+  return pageFromContract(page);
+}
+
+function pageBySlugFromContract(payload, pageSlug) {
+  if (isHomeSlug(pageSlug)) return homeFromContract(payload);
+
+  const normalizedSlug = normalizePageSlug(pageSlug);
+  const page = pagesFromContract(payload).find(
+    (candidate) => normalizePageSlug(candidate?.slug) === normalizedSlug
+  );
+
+  return page ? pageFromContract(page) : null;
 }
 
 function pageIsHome(page) {
@@ -454,14 +504,34 @@ function inheritSecondaryPageFromHome(page, homePage, pageSlug) {
   };
 }
 
+const getSite = cache(async (siteSlug) => siteFromContract(
+  await getContract(siteSlug)
+));
+
+const getHome = cache(async (siteSlug) => homeFromContract(
+  await getContract(siteSlug)
+));
+
+const getPage = cache(async (siteSlug, pageSlug) => {
+  const contract = await getContract(siteSlug);
+  const page = pageBySlugFromContract(contract, pageSlug);
+
+  if (page) return page;
+
+  return pageFromContract(
+    await requestRender(
+      `/${encodeURIComponent(siteSlug)}/pages/${encodeURIComponent(pageSlug)}`
+    )
+  );
+});
+
 export const publicSiteApi = {
   async getSite(siteSlug) {
-    const [payload, hours] = await Promise.all([
-      request(`/${encodeURIComponent(siteSlug)}`),
+    const [site, hours] = await Promise.all([
+      getSite(siteSlug),
       getPublicHours(siteSlug).catch(() => null),
     ]);
 
-    const site = siteFromContract(payload);
     if (!site || typeof site !== "object") return site;
 
     return {
@@ -470,31 +540,21 @@ export const publicSiteApi = {
     };
   },
 
-  async getHome(siteSlug) {
-    return pageFromContract(
-      await request(`/${encodeURIComponent(siteSlug)}/pages/home`)
-    );
-  },
+  getHome,
 
   async getPage(siteSlug, pageSlug) {
+    const page = await getPage(siteSlug, pageSlug);
     const contract = inheritanceContract(pageSlug);
 
     if (!contract) {
-      return pageFromContract(
-        await request(
-          `/${encodeURIComponent(siteSlug)}/pages/${encodeURIComponent(pageSlug)}`
-        )
-      );
+      return page;
     }
 
-    const [pagePayload, homePayload] = await Promise.all([
-      request(`/${encodeURIComponent(siteSlug)}/pages/${encodeURIComponent(pageSlug)}`),
-      request(`/${encodeURIComponent(siteSlug)}/pages/home`),
-    ]);
+    const homePage = await getHome(siteSlug);
 
     return inheritSecondaryPageFromHome(
-      pageFromContract(pagePayload),
-      pageFromContract(homePayload),
+      page,
+      homePage,
       pageSlug
     );
   },
@@ -524,7 +584,7 @@ export const publicSiteApi = {
 
   async getInspiration(siteSlug, contentSlug) {
     const site = siteFromContract(
-      await request(`/${encodeURIComponent(siteSlug)}`)
+      await requestRender(`/${encodeURIComponent(siteSlug)}`)
     );
     const agencyId = site?.agencyId || site?.agency?.id || null;
     const params = new URLSearchParams();
@@ -560,4 +620,7 @@ export {
   teamBlockMembers,
   teamMemberIsMeaningful,
   withHomePresentationOrder,
+  homeFromContract,
+  pageBySlugFromContract,
+  pagesFromContract,
 };

@@ -63,6 +63,8 @@ export function proxy(request) {
     pathname.startsWith("/agence/") ||
     pathname === "/sites" ||
     pathname.startsWith("/sites/") ||
+    pathname === "/api/public-render-sites" ||
+    pathname.startsWith("/api/public-render-sites/") ||
     pathname === "/api/public-sites" ||
     pathname.startsWith("/api/public-sites/") ||
     pathname === "/api/public-brand-legal" ||
