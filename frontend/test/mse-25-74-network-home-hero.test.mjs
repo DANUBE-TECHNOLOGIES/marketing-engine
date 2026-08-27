@@ -49,3 +49,16 @@ test("MSE-25.74 standardizes home conversion CTAs across agencies", () => {
   assert.match(hero, /"Demander un devis"/);
   assert.match(hero, /"Découvrir nos voyages"/);
 });
+
+test("MSE-25.74 final polish keeps the copy spacious and preserves the destination visual", () => {
+  const hero = source("components/public-site/renderers/HeroV2Renderer.js");
+  const css = source("components/public-site/network-home-hero.css");
+
+  assert.match(hero, /const overlayStyle = homeHero/);
+  assert.match(hero, /rgba\(7,29,48,0\.18\) 58%/);
+  assert.match(hero, /rgba\(7,29,48,0\) 100%/);
+  assert.match(css, /width:\s*min\(760px, 64%\)/);
+  assert.match(css, /padding:\s*clamp\(34px, 4\.4vw, 56px\)/);
+  assert.match(css, /max-width:\s*680px/);
+  assert.match(css, /radial-gradient\(circle at 30% 48%/);
+});
