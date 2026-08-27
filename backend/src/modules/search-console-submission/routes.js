@@ -10,6 +10,7 @@ const { SearchConsolePerformanceService } = require("./performance");
 const { IndexationCoverageService } = require("./indexation-coverage");
 const { PublicIndexabilityObserver } = require("./public-indexability-observer");
 const { RuntimeIndexabilityAuditService } = require("./runtime-indexability-audit");
+const { createRuntimeFetchTransport } = require("./runtime-fetch-transport");
 const { buildIndexationIncidentQueue } = require("./indexation-incident-queue");
 const { SeoOpportunityWorkQueueService } = require("./opportunity-work-queue");
 const { resolveLocalSeoContext } = require("./local-seo-intent");
@@ -28,11 +29,14 @@ function routes({ prisma, service, provider } = {}) {
   const observabilityService=new SearchConsoleObservabilityService({prisma,structuredDataService:submissionService.structuredDataService,provider:submissionService.provider});
   const performanceService=new SearchConsolePerformanceService({provider:submissionService.provider});
   const indexationCoverageService=new IndexationCoverageService({structuredDataService:submissionService.structuredDataService,performanceService});
-  const publicIndexabilityObserver=new PublicIndexabilityObserver({timeoutMs:Number(process.env.PUBLIC_INDEXABILITY_TIMEOUT_MS||5000),concurrency:Number(process.env.PUBLIC_INDEXABILITY_CONCURRENCY||6)});
-  const runtimeAuditService=new RuntimeIndexabilityAuditService({structuredDataService:submissionService.structuredDataService,publicIndexabilityObserver,timeoutMs:Number(process.env.PUBLIC_INDEXABILITY_TIMEOUT_MS||5000)});
+  const publicOrigin=submissionService.structuredDataService.publicOrigin;
+  const fetchOrigin=process.env.PUBLIC_INDEXABILITY_FETCH_ORIGIN||null;
+  const runtimeFetch=createRuntimeFetchTransport({publicOrigin,fetchOrigin});
+  const publicIndexabilityObserver=new PublicIndexabilityObserver({fetchImpl:runtimeFetch,timeoutMs:Number(process.env.PUBLIC_INDEXABILITY_TIMEOUT_MS||5000),concurrency:Number(process.env.PUBLIC_INDEXABILITY_CONCURRENCY||6)});
+  const runtimeAuditService=new RuntimeIndexabilityAuditService({structuredDataService:submissionService.structuredDataService,publicIndexabilityObserver,fetchImpl:runtimeFetch,timeoutMs:Number(process.env.PUBLIC_INDEXABILITY_TIMEOUT_MS||5000)});
   const opportunityQueue=new SeoOpportunityWorkQueueService({prisma});
 
-  router.get("/search-console-submissions/health",(_request,response)=>{const activeProvider=submissionService.provider;response.json({ok:true,capability:"search-console-submission-journal",provider:activeProvider?.name||"unknown",providerConfigured:activeProvider?.isConfigured?.()===true,requestedEnabled:activeProvider?.requestedEnabled===true,disabledReason:activeProvider?.disabledReason||null,credentialMode:activeProvider?.credentialMode||null,requiredPermissionLevel:SEARCH_CONSOLE_OWNER_PERMISSION,explicitApprovalRequired:true,autoSubmit:false,readOnlySitemapObservability:true,readOnlySearchPerformance:true,readOnlyIndexationCoverage:true,readOnlyPublicHttpIndexability:true,readOnlyIndexationIncidentQueue:true,readOnlyRuntimeReadiness:true});});
+  router.get("/search-console-submissions/health",(_request,response)=>{const activeProvider=submissionService.provider;response.json({ok:true,capability:"search-console-submission-journal",provider:activeProvider?.name||"unknown",providerConfigured:activeProvider?.isConfigured?.()===true,requestedEnabled:activeProvider?.requestedEnabled===true,disabledReason:activeProvider?.disabledReason||null,credentialMode:activeProvider?.credentialMode||null,requiredPermissionLevel:SEARCH_CONSOLE_OWNER_PERMISSION,explicitApprovalRequired:true,autoSubmit:false,readOnlySitemapObservability:true,readOnlySearchPerformance:true,readOnlyIndexationCoverage:true,readOnlyPublicHttpIndexability:true,readOnlyIndexationIncidentQueue:true,readOnlyRuntimeReadiness:true,publicAuditFetchOrigin:fetchOrigin||publicOrigin});});
   router.get("/search-console-submissions/properties",async(request,response)=>{try{await tenantIdForRequest(prisma,request);const properties=await submissionService.provider.listSites();response.json({provider:submissionService.provider?.name||"unknown",count:properties.length,requiredPermissionLevel:SEARCH_CONSOLE_OWNER_PERMISSION,properties:properties.map((property)=>({siteUrl:property?.siteUrl||null,permissionLevel:property?.permissionLevel||null,eligibleForSitemapSubmission:property?.permissionLevel===SEARCH_CONSOLE_OWNER_PERMISSION}))});}catch(error){sendError(response,error);}});
   router.get("/search-console-submissions/candidates",async(request,response)=>{try{const tenantId=await tenantIdForRequest(prisma,request);response.json(await submissionService.candidates({tenantId}));}catch(error){sendError(response,error);}});
   router.get("/search-console-submissions/indexation-coverage",async(request,response)=>{try{const tenantId=await tenantIdForRequest(prisma,request);response.json(await indexationCoverageService.diagnoseNetwork({tenantId,...coverageScope(request,submissionService)}));}catch(error){sendError(response,error);}});
