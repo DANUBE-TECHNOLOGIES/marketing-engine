@@ -41,10 +41,20 @@ on:
         required: false
         default: '1200'
         type: string
+      max_hero_bytes:
+        description: 'Hero image budget in bytes'
+        required: false
+        default: '1000000'
+        type: string
       max_single_image_bytes:
         description: 'Largest inspected image budget in bytes'
         required: false
         default: '1500000'
+        type: string
+      max_total_image_bytes:
+        description: 'Total inspected image payload budget in bytes'
+        required: false
+        default: '5000000'
         type: string
 
 permissions:
@@ -83,7 +93,9 @@ jobs:
           TARGET_URL: ${{ inputs.target_url }}
           SAMPLES: ${{ inputs.samples }}
           MAX_TTFB_MS: ${{ inputs.max_ttfb_ms }}
+          MAX_HERO_BYTES: ${{ inputs.max_hero_bytes }}
           MAX_SINGLE_IMAGE_BYTES: ${{ inputs.max_single_image_bytes }}
+          MAX_TOTAL_IMAGE_BYTES: ${{ inputs.max_total_image_bytes }}
         run: |
           set -o pipefail
           node scripts/public-performance-probe.mjs \
@@ -91,7 +103,9 @@ jobs:
             --samples="$SAMPLES" \
             --gate=true \
             --max-ttfb-ms="$MAX_TTFB_MS" \
+            --max-hero-bytes="$MAX_HERO_BYTES" \
             --max-single-image-bytes="$MAX_SINGLE_IMAGE_BYTES" \
+            --max-total-image-bytes="$MAX_TOTAL_IMAGE_BYTES" \
             | tee /tmp/mse-25-71-live-probe.txt
           {
             echo '### MSE-25.71 live pilot probe'
