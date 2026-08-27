@@ -4,6 +4,7 @@ set -u
 PUBLIC_URL="${1:-https://agences.mondescale.com/agence/gien}"
 FRONTEND_URL="${FRONTEND_URL:-http://127.0.0.1:3000/agence/gien}"
 BACKEND_URL="${BACKEND_URL:-http://127.0.0.1:4000/health}"
+PUBLIC_HOST="$(printf '%s' "$PUBLIC_URL" | sed -E 's#^[a-z]+://([^/]+).*#\1#')"
 
 section() {
   printf '\n=== %s ===\n' "$1"
@@ -19,10 +20,27 @@ http_probe() {
   return "$status"
 }
 
+header_probe() {
+  local label="$1"
+  local url="$2"
+  printf '%s_HEADERS URL=%s\n' "$label" "$url"
+  curl -sS -L -D - -o /dev/null --max-time 15 "$url" 2>/dev/null \
+    | grep -Ei '^(HTTP/|server:|via:|x-powered-by:|x-cache:|cf-ray:|date:|content-type:|content-length:|location:)' \
+    | tail -n 30 || true
+}
+
 section "MSE-25.71 ORIGIN READINESS"
 printf 'PUBLIC_URL=%s\n' "$PUBLIC_URL"
+printf 'PUBLIC_HOST=%s\n' "$PUBLIC_HOST"
 printf 'FRONTEND_URL=%s\n' "$FRONTEND_URL"
 printf 'BACKEND_URL=%s\n' "$BACKEND_URL"
+
+section "DNS"
+if command -v getent >/dev/null 2>&1; then
+  getent ahosts "$PUBLIC_HOST" 2>/dev/null | head -n 12 || true
+elif command -v dig >/dev/null 2>&1; then
+  dig +short "$PUBLIC_HOST" A "$PUBLIC_HOST" AAAA 2>/dev/null || true
+fi
 
 section "DOCKER COMPOSE SERVICES"
 if command -v docker >/dev/null 2>&1; then
@@ -37,6 +55,8 @@ if command -v docker >/dev/null 2>&1; then
     if docker inspect "$name" >/dev/null 2>&1; then
       printf '%s ' "$name"
       docker inspect --format 'STATUS={{.State.Status}} HEALTH={{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}} RESTARTS={{.RestartCount}} STARTED={{.State.StartedAt}}' "$name" 2>&1 || true
+      docker inspect --format 'PORTS={{json .NetworkSettings.Ports}} NETWORKS={{range $k,$v := .NetworkSettings.Networks}}{{$k}}={{$v.IPAddress}} {{end}}' "$name" 2>&1 || true
+      docker inspect --format '{{if .State.Health}}{{range .State.Health.Log}}{{.End}} EXIT={{.ExitCode}} {{printf "%q" .Output}}{{println}}{{end}}{{end}}' "$name" 2>/dev/null | tail -n 5 || true
     else
       printf '%s STATUS=missing\n' "$name"
     fi
@@ -45,12 +65,15 @@ fi
 
 section "LOCAL BACKEND"
 http_probe BACKEND "$BACKEND_URL" || true
+header_probe BACKEND "$BACKEND_URL"
 
 section "LOCAL FRONTEND"
 http_probe FRONTEND "$FRONTEND_URL" || true
+header_probe FRONTEND "$FRONTEND_URL"
 
 section "PUBLIC ROUTE"
 http_probe PUBLIC "$PUBLIC_URL" || true
+header_probe PUBLIC "$PUBLIC_URL"
 
 section "LISTENERS"
 if command -v ss >/dev/null 2>&1; then
@@ -66,26 +89,34 @@ for service in nginx apache2 caddy; do
 done
 
 if command -v nginx >/dev/null 2>&1; then
+  echo 'NGINX_CONFIG_TEST:'
+  nginx -t 2>&1 || true
   echo 'NGINX_UPSTREAM_REFERENCES:'
-  nginx -T 2>/dev/null | grep -nE 'server_name[[:space:]].*agences\.mondescale\.com|proxy_pass|upstream' | head -n 80 || true
+  nginx -T 2>/dev/null | grep -nE 'server_name[[:space:]].*agences\.mondescale\.com|proxy_pass|upstream' | head -n 100 || true
+  echo 'NGINX_RECENT_ERRORS:'
+  for log in /var/log/nginx/error.log /var/log/nginx/*error*.log; do
+    [ -r "$log" ] || continue
+    tail -n 40 "$log" 2>/dev/null | grep -Ei 'agences\.mondescale\.com|upstream|connect\(\).*failed|502|503|504' || true
+  done
 fi
 
 section "RECENT FRONTEND LOGS"
 if command -v docker >/dev/null 2>&1 && docker inspect mle_frontend >/dev/null 2>&1; then
-  docker logs --tail 80 mle_frontend 2>&1 || true
+  docker logs --tail 100 mle_frontend 2>&1 || true
 fi
 
 section "RECENT BACKEND LOGS"
 if command -v docker >/dev/null 2>&1 && docker inspect mle_backend >/dev/null 2>&1; then
-  docker logs --tail 80 mle_backend 2>&1 || true
+  docker logs --tail 100 mle_backend 2>&1 || true
 fi
 
 section "VERDICT"
 public_code="$(curl -sS -L -o /dev/null -w '%{http_code}' --max-time 15 "$PUBLIC_URL" 2>/dev/null || printf '000')"
 frontend_code="$(curl -sS -L -o /dev/null -w '%{http_code}' --max-time 15 "$FRONTEND_URL" 2>/dev/null || printf '000')"
 backend_code="$(curl -sS -L -o /dev/null -w '%{http_code}' --max-time 15 "$BACKEND_URL" 2>/dev/null || printf '000')"
+public_server="$(curl -sS -L -D - -o /dev/null --max-time 15 "$PUBLIC_URL" 2>/dev/null | awk 'BEGIN{IGNORECASE=1} /^server:/{sub(/^[^:]+:[[:space:]]*/,""); gsub(/\r/,""); value=$0} END{print value}')"
 
-printf 'PUBLIC_HTTP=%s\nFRONTEND_HTTP=%s\nBACKEND_HTTP=%s\n' "$public_code" "$frontend_code" "$backend_code"
+printf 'PUBLIC_HTTP=%s\nFRONTEND_HTTP=%s\nBACKEND_HTTP=%s\nPUBLIC_SERVER=%s\n' "$public_code" "$frontend_code" "$backend_code" "${public_server:-unknown}"
 
 if [[ "$public_code" =~ ^2|^3 ]]; then
   echo 'ORIGIN_STATE=PUBLIC_READY'
