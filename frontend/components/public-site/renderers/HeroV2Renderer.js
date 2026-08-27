@@ -1,3 +1,4 @@
+import { preconnect, preload } from "react-dom";
 import {
   getSectionContent,
 } from "./helpers";
@@ -76,6 +77,15 @@ function resolvedHeroAlt({ content, site, title }) {
   return title;
 }
 
+function imageOrigin(value) {
+  try {
+    const url = new URL(value);
+    return url.origin;
+  } catch {
+    return null;
+  }
+}
+
 export default function HeroV2Renderer({ section, site, page }) {
   const content = getSectionContent(section);
   const title = resolvedHeroTitle({ content, section, site, page });
@@ -86,6 +96,15 @@ export default function HeroV2Renderer({ section, site, page }) {
   const imageAlt = resolvedHeroAlt({ content, site, title });
   const overlayOpacity = Math.min(Math.max(Number(content.overlayOpacity ?? 68), 20), 90) / 100;
   const homeHero = isHomePage(page);
+
+  if (backgroundImage) {
+    const origin = imageOrigin(backgroundImage);
+    if (origin) preconnect(origin);
+    preload(backgroundImage, {
+      as: "image",
+      fetchPriority: "high",
+    });
+  }
 
   const primaryCta = content.primaryCta || null;
   const secondaryCta = content.secondaryCta || null;
@@ -117,7 +136,8 @@ export default function HeroV2Renderer({ section, site, page }) {
             alt={imageAlt}
             loading="eager"
             fetchPriority="high"
-            decoding="async"
+            width="1920"
+            height="1080"
             style={{ objectPosition: backgroundPosition }}
           />
           <span
@@ -149,6 +169,7 @@ export {
   defaultHeroEyebrow,
   defaultHeroTitle,
   genericHeroTitle,
+  imageOrigin,
   intentHeroTitle,
   isHomePage,
   resolvedHeroAlt,
