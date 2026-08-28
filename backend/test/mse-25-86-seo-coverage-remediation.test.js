@@ -15,6 +15,9 @@ const {
   descriptiveBlock,
 } = require("../scripts/mse-25-86-seo-coverage-remediation");
 const {
+  rollbackSnapshots,
+} = require("../scripts/mse-25-86-seo-coverage-rollback");
+const {
   INTENTS,
 } = require("../src/modules/minisite-structured-data/local-search-intent-coverage");
 const {
@@ -116,4 +119,30 @@ test("body enrichment refuses hero-only pages instead of changing presentation",
     ],
   };
   assert.equal(descriptiveBlock(page), null);
+});
+
+test("rollback restores snapshots in reverse order", async () => {
+  const calls = [];
+  const tx = {
+    pageBlock: {
+      update: async (payload) => calls.push({ model: "block", payload }),
+    },
+    agencySitePage: {
+      update: async (payload) => calls.push({ model: "page", payload }),
+    },
+  };
+
+  const snapshots = [
+    { type: "page", id: "page-1", slug: "home", seoTitle: "old title", metaDescription: "old meta" },
+    { type: "block", id: "block-1", pageId: "page-1", content: { text: "original" } },
+    { type: "block", id: "block-1", pageId: "page-1", content: { text: "after first change" } },
+  ];
+
+  const restored = await rollbackSnapshots(tx, snapshots, { dryRun: false });
+  assert.equal(restored.length, 3);
+  assert.equal(calls[0].model, "block");
+  assert.deepEqual(calls[0].payload.data.content, { text: "after first change" });
+  assert.deepEqual(calls[1].payload.data.content, { text: "original" });
+  assert.equal(calls[2].model, "page");
+  assert.equal(calls[2].payload.data.seoTitle, "old title");
 });
