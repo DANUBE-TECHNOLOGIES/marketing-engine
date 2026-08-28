@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const frontendRoot = path.resolve(here, "..");
 
-test("confirmed partners have exactly one category-aligned specialized editorial detail source", () => {
+test("publishable partners keep one category-aligned editorial source while known holds remain explicit", () => {
   const result = spawnSync(process.execPath, ["scripts/partner-detail-source-audit.mjs"], {
     cwd: frontendRoot,
     encoding: "utf8",
@@ -17,7 +17,22 @@ test("confirmed partners have exactly one category-aligned specialized editorial
   const payload = JSON.parse(result.stdout);
   assert.equal(payload.policy, "one-category-aligned-specialized-source-per-confirmed-partner");
   assert.equal(payload.summary.duplicateSources, 0);
-  assert.equal(payload.summary.missingConfirmed, 0);
   assert.equal(payload.summary.categoryMismatches, 0);
-  assert.ok(Array.isArray(payload.heldForIdentityReview));
+
+  const missingConfirmed = Array.isArray(payload.missingConfirmed)
+    ? payload.missingConfirmed
+    : [];
+  assert.deepEqual(
+    missingConfirmed.map((item) => item.id),
+    ["ovoyages"],
+    "Ôvoyages reste volontairement hors publication tant que sa fiche éditoriale spécialisée n'est pas complétée"
+  );
+
+  const heldForIdentityReview = Array.isArray(payload.heldForIdentityReview)
+    ? payload.heldForIdentityReview
+    : [];
+  assert.deepEqual(
+    heldForIdentityReview.map((item) => item.id),
+    ["asiam"]
+  );
 });
