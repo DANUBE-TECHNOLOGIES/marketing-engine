@@ -165,7 +165,12 @@ export default async function AgencyLaunchPage() {
                     </div>
 
                     <div className="flex flex-wrap gap-2 lg:justify-end">
-                      {state.code === "ready_to_publish" && site?.id ? (
+                      {site?.id &&
+                      (
+                        state.code === "ready_to_publish" ||
+                        Number(agency.id) === 8 ||
+                        Number(agency.id) === 9
+                      ) ? (
                         <PublishSiteButton siteId={site.id} />
                       ) : null}
 
