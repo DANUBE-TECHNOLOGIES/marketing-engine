@@ -310,7 +310,11 @@ export default async function AgencySitePage({ params }) {
                 </div>
               </section>
             ) : null}
-            <PublicSiteSections site={site} page={page} />
+            <PublicSiteSections
+              site={site}
+              page={page}
+              suppressHero={Boolean(sharedHero)}
+            />
           </>
         )}
 
