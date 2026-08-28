@@ -1,7 +1,7 @@
 "use strict";
 
-const { GoogleSearchConsoleProvider, DisabledSearchConsoleProvider } = require("./provider");
-const { getSearchConsoleAccessToken, getSearchConsoleTokenReadiness } = require("../minisite-semantic-engine/search-console-token-provider");
+const { createConfiguredSearchConsoleProvider } = require("./config");
+const { getSearchConsoleTokenReadiness } = require("../minisite-semantic-engine/search-console-token-provider");
 
 async function searchConsoleProviderReadiness({ prisma } = {}) {
   try {
@@ -23,15 +23,8 @@ async function searchConsoleProviderReadiness({ prisma } = {}) {
   }
 }
 
-function createSearchConsoleProvider({ prisma, fetchImpl = globalThis.fetch } = {}) {
-  if (!prisma) return new DisabledSearchConsoleProvider();
-  return new GoogleSearchConsoleProvider({
-    fetchImpl,
-    accessTokenProvider: async () => {
-      const token = await getSearchConsoleAccessToken({ prisma, fetchImpl });
-      return token.accessToken;
-    },
-  });
+function createSearchConsoleProvider({ prisma, fetchImpl = globalThis.fetch, env = process.env } = {}) {
+  return createConfiguredSearchConsoleProvider({ prisma, fetchImpl, env });
 }
 
 module.exports = {
