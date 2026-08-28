@@ -51,18 +51,27 @@ function sitemapUrls(xml) {
   return urls;
 }
 
-function attr(tag, name) {
+function exactAttrPattern(name, valuePattern) {
   const escaped = String(name || "").replace(/[^a-z0-9:_-]/gi, "");
   if (!escaped) return null;
-  const quoted = tag.match(new RegExp(`\\b${escaped}\\s*=\\s*(["'])([\\s\\S]*?)\\1`, "i"));
+  return new RegExp(`(?:\\s)${escaped}\\s*=\\s*${valuePattern}`, "i");
+}
+
+function attr(tag, name) {
+  const quotedPattern = exactAttrPattern(name, `(["'])([\\s\\S]*?)\\1`);
+  if (!quotedPattern) return null;
+  const quoted = String(tag || "").match(quotedPattern);
   if (quoted) return quoted[2];
-  const unquoted = tag.match(new RegExp(`\\b${escaped}\\s*=\\s*([^\\s>]+)`, "i"));
+
+  const unquotedPattern = exactAttrPattern(name, `([^\\s>]+)`);
+  const unquoted = unquotedPattern ? String(tag || "").match(unquotedPattern) : null;
   return unquoted ? unquoted[1] : null;
 }
 
 function hasAttr(tag, name) {
   const escaped = String(name || "").replace(/[^a-z0-9:_-]/gi, "");
-  return Boolean(escaped && new RegExp(`\\b${escaped}(?:\\s*=|\\s|/?>)`, "i").test(tag));
+  if (!escaped) return false;
+  return new RegExp(`(?:\\s)${escaped}(?:\\s*=|\\s|/?>)`, "i").test(String(tag || ""));
 }
 
 function imageTags(html) {
@@ -85,7 +94,7 @@ function hasReservedGeometry(tag) {
 
 function duplicateIds(html) {
   const counts = new Map();
-  const tags = String(html || "").match(/<[a-z][^>]*\bid\s*=\s*["'][^"']+["'][^>]*>/gi) || [];
+  const tags = String(html || "").match(/<[a-z][^>]*>/gi) || [];
   for (const tag of tags) {
     const id = attr(tag, "id");
     if (!id) continue;
