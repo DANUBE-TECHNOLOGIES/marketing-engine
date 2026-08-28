@@ -35,4 +35,12 @@ test("publishable partners keep one category-aligned editorial source while know
     heldForIdentityReview.map((item) => item.id),
     ["asiam"]
   );
+
+  assert.equal(
+    payload.summary.missingSources,
+    missingConfirmed.length + heldForIdentityReview.length,
+    "Les sources manquantes doivent être entièrement expliquées par les holds explicites"
+  );
+  assert.equal(payload.summary.missingConfirmed, missingConfirmed.length);
+  assert.equal(payload.summary.heldForIdentityReview, heldForIdentityReview.length);
 });
