@@ -142,3 +142,11 @@ test("MSE-25.80 isolated Search Console OAuth is mounted before provider routes 
     "isolated OAuth must be mounted before Search Console submission routes"
   );
 });
+
+test("MSE-25.80 health exposes the active credential mode without enabling auto-submit", () => {
+  const routes = read("src/modules/search-console-submission/routes.js");
+
+  assert.match(routes, /credentialMode:active\?\.credentialMode\|\|null/);
+  assert.match(routes, /explicitApprovalRequired:true/);
+  assert.match(routes, /autoSubmit:false/);
+});
