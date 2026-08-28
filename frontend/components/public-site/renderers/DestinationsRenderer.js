@@ -37,11 +37,28 @@ function destinationHref(site, item) {
 }
 function destinationImage(item) {
   if (!item || typeof item !== "object") return null;
-  const candidates = [item.image, item.imageUrl, item.backgroundImage, item.coverImage, item.heroImage, item.thumbnail, item.photo, item.media?.url, item.image?.url];
+  const candidates = [
+    item.image,
+    item.imageUrl,
+    item.heroImageUrl,
+    item.backgroundImage,
+    item.backgroundImageUrl,
+    item.coverImage,
+    item.coverImageUrl,
+    item.heroImage,
+    item.thumbnail,
+    item.thumbnailUrl,
+    item.photo,
+    item.photoUrl,
+    item.media?.url,
+    item.media?.src,
+    item.image?.url,
+    item.image?.src,
+  ];
   return candidates.find((value) => typeof value === "string" && value.trim()) || null;
 }
 function destinationImageAlt(item) {
-  const explicit = String(item?.imageAlt || item?.alt || item?.media?.altText || item?.media?.alt || "").trim();
+  const explicit = String(item?.imageAlt || item?.alt || item?.media?.altText || item?.media?.alt || item?.image?.alt || "").trim();
   if (explicit) return explicit;
   const name = String(item?.title || item?.name || "").trim();
   return name ? `Voyage ${name}` : "";
