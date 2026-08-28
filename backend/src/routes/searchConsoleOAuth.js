@@ -18,7 +18,11 @@ function stateSecret() {
 function createState(now = Date.now()) {
   const secret = stateSecret();
   if (!secret) throw new Error("GOOGLE_CLIENT_SECRET manquant pour signer le state OAuth Search Console");
-  const payload = Buffer.from(JSON.stringify({ provider: SEARCH_CONSOLE_PROVIDER, ts: now })).toString("base64url");
+  const payload = Buffer.from(JSON.stringify({
+    provider: SEARCH_CONSOLE_PROVIDER,
+    ts: now,
+    nonce: crypto.randomBytes(18).toString("base64url"),
+  })).toString("base64url");
   const sig = crypto.createHmac("sha256", secret).update(payload).digest("base64url");
   return `${payload}.${sig}`;
 }
@@ -33,7 +37,10 @@ function verifyState(state, now = Date.now()) {
   if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return false;
   try {
     const parsed = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
-    return parsed.provider === SEARCH_CONSOLE_PROVIDER && Number.isFinite(parsed.ts) && now - parsed.ts >= 0 && now - parsed.ts <= STATE_TTL_MS;
+    return parsed.provider === SEARCH_CONSOLE_PROVIDER &&
+      Number.isFinite(parsed.ts) &&
+      typeof parsed.nonce === "string" && parsed.nonce.length >= 16 &&
+      now - parsed.ts >= 0 && now - parsed.ts <= STATE_TTL_MS;
   } catch (_) {
     return false;
   }
