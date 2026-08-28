@@ -24,7 +24,11 @@ test("every declared partner logo resolves to an individual public asset", async
   assert.ok(declared.length > 0);
 
   for (const partner of declared) {
-    assert.match(partner.logoUrl, /^\/partners\/[a-z0-9][a-z0-9-]*\.(?:webp|svg)$/);
+    assert.match(
+      partner.logoUrl,
+      /^\/partners\/(?:[a-z0-9][a-z0-9-]*\/)*[a-z0-9][a-z0-9-]*\.(?:webp|svg)$/
+    );
+    assert.doesNotMatch(partner.logoUrl, /(?:^|\/)\.\.(?:\/|$)/);
     assert.doesNotMatch(partner.logoUrl, /sprite/i);
 
     const filePath = path.join(publicRoot, partner.logoUrl.slice(1));
