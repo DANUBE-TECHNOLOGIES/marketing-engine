@@ -12,6 +12,7 @@ import LegalRuntimeDocument from "../../../../components/public-site/LegalRuntim
 import LocalContentContext from "../../../../components/public-site/LocalContentContext";
 import LocalSeoAreaLinks from "../../../../components/public-site/LocalSeoAreaLinks";
 import PublicBreadcrumbs from "../../../../components/public-site/PublicBreadcrumbs";
+import PublicReassuranceBand from "../../../../components/public-site/PublicReassuranceBand";
 import PublicSiteSections, {
   renderablePublicSections,
 } from "../../../../components/public-site/PublicSiteSections";
@@ -278,6 +279,7 @@ export default async function AgencySitePage({ params }) {
               </section>
             ) : null}
             <PublicSiteSections site={site} page={page} />
+            {isHomePage(pageSlug) ? <PublicReassuranceBand /> : null}
           </>
         )}
 
