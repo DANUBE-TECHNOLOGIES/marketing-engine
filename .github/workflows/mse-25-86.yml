@@ -87,7 +87,11 @@ jobs:
           node - <<'NODE'
           const fs = require('node:fs');
           const source = fs.readFileSync('backend/scripts/mse-25-86-post-apply-verify.js', 'utf8');
-          const forbidden = [/\.create\s*\(/, /\.update\s*\(/, /\.delete\s*\(/, /\.upsert\s*\(/];
+          const forbidden = [
+            /(?:db|prisma)\.[A-Za-z0-9_]+\.(?:create|createMany|update|updateMany|delete|deleteMany|upsert)\s*\(/,
+            /\$executeRaw(?:Unsafe)?\s*\(/,
+            /\$queryRawUnsafe\s*\(/,
+          ];
           for (const pattern of forbidden) {
             if (pattern.test(source)) {
               console.error(`Post-apply verifier must remain read-only: ${pattern}`);
