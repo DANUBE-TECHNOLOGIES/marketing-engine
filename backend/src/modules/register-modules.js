@@ -49,9 +49,9 @@ module.exports = function registerModules(app, { prisma }) {
   const tenantService = new tenantCore.TenantService(new tenantCore.TenantRepository(prisma));
   app.use(tenantCore.createTenantMiddleware(tenantService));
 
-  // Le routeur OAuth Search Console est monté ici, avant le routeur Google Business
-  // monté plus tard par server.js. Les callbacks signés sont ainsi consommés par
-  // l'implémentation Search Console isolée et ne peuvent pas retomber sur le legacy.
+  // Search Console OAuth is mounted before the legacy Google Business callback
+  // mounted later by server.js, so signed Search Console callbacks are consumed
+  // by the isolated provider and cannot fall through to the legacy route.
   app.use(createSearchConsoleOAuthRoutes(prisma));
 
   if (brand.routes) {
@@ -102,6 +102,7 @@ module.exports = function registerModules(app, { prisma }) {
     app.use(assetEngine.routes({ prisma }));
   }
 
+  // agency-seo exporte une factory et non un objet { routes }.
   const agencySeo = createAgencySeoModule(prisma);
   if (agencySeo.routes) {
     app.use(agencySeo.routes);
@@ -123,6 +124,7 @@ module.exports = function registerModules(app, { prisma }) {
     app.use(contentFactory.routes({ prisma }));
   }
 
+  // Knowledge Graph — Sprint 006
   if (knowledgeGraph.routes) {
     app.use(knowledgeGraph.routes({ prisma }));
   }
@@ -140,11 +142,19 @@ module.exports = function registerModules(app, { prisma }) {
   }
 
   if (editorialAi.routes) {
-    app.use(editorialAi.routes({ prisma }));
+    app.use(
+      editorialAi.routes({
+        prisma,
+      })
+    );
   }
 
   if (networkSiteProvisioning.routes) {
-    app.use(networkSiteProvisioning.routes({ prisma }));
+    app.use(
+      networkSiteProvisioning.routes({
+        prisma,
+      })
+    );
   }
 
   if (publishers.googleBusiness?.routes) {
@@ -163,12 +173,18 @@ module.exports = function registerModules(app, { prisma }) {
     app.use(agencyProfile.routes({ prisma }));
   }
 
+  // Agency Launch et Site Publication sont montés une seule fois dans server.js
+  // sous /api/agency-launch et /api/site-publication. Ne pas les remonter ici
+  // à la racine : cela créerait deux contrats HTTP pour les mêmes mutations.
+
   if (googleBusinessPhotos.routes) {
     app.use(googleBusinessPhotos.routes({ prisma }));
   }
 
   if (pageBuilderPersistence.routes) {
-    app.use(pageBuilderPersistence.routes({ prisma }));
+    app.use(
+      pageBuilderPersistence.routes({ prisma })
+    );
   }
 
   if (agencySite.routes) {
@@ -176,23 +192,43 @@ module.exports = function registerModules(app, { prisma }) {
   }
 
   if (minisiteBlueprint.routes) {
-    app.use(minisiteBlueprint.routes({ prisma }));
+    app.use(
+      minisiteBlueprint.routes({
+        prisma,
+      })
+    );
   }
 
   if (minisiteBlueprintPersistence.routes) {
-    app.use(minisiteBlueprintPersistence.routes({ prisma }));
+    app.use(
+      minisiteBlueprintPersistence.routes({
+        prisma,
+      })
+    );
   }
 
   if (minisiteSeoEnrichment.routes) {
-    app.use(minisiteSeoEnrichment.routes({ prisma }));
+    app.use(
+      minisiteSeoEnrichment.routes({
+        prisma,
+      })
+    );
   }
 
   if (minisiteSemanticEngine.routes) {
-    app.use(minisiteSemanticEngine.routes({ prisma }));
+    app.use(
+      minisiteSemanticEngine.routes({
+        prisma,
+      })
+    );
   }
 
   if (minisiteStructuredData.routes) {
-    app.use(minisiteStructuredData.routes({ prisma }));
+    app.use(
+      minisiteStructuredData.routes({
+        prisma,
+      })
+    );
   }
 
   if (searchConsoleSubmission.routes) {
