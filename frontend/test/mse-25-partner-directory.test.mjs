@@ -87,12 +87,12 @@ test("full partner directory exposes categorized supplier inventory with complet
   assert.match(renderer, /getPartnerDirectoryCategories/);
   assert.match(renderer, /getPartnerProfile/);
   assert.match(renderer, /getPublishablePartnerProfiles/);
-  assert.match(renderer, /Découvrir ses spécialités/);
+  assert.match(renderer, /Voir les spécialités/);
   assert.match(renderer, /Destinations/);
   assert.match(renderer, /Types de voyages/);
   assert.match(renderer, /Site du partenaire/);
-  assert.match(rendererCss, /grid-template-columns: repeat\(3/);
-  assert.match(rendererCss, /@media \(max-width: 720px\)/);
+  assert.match(rendererCss, /grid-template-columns:\s*repeat\(3/);
+  assert.match(rendererCss, /@media\s*\(max-width:\s*720px\)/);
 
   assert.match(publicRegistry, /"partner-directory":\s*PartnerDirectoryRenderer/);
   assert.match(publicRegistry, /"partners-directory":\s*PartnerDirectoryRenderer/);
