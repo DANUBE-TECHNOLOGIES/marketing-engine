@@ -9,6 +9,7 @@ const { PrismaClient } = require("@prisma/client");
 const { run: runRemediation } = require("./mse-25-86-seo-coverage-remediation");
 
 const EXPECTED_BRANCH = "feature/mse-25-86-seo-coverage-remediation-on-85-20260828";
+const DEFAULT_REPORT_DIR = "/home/admin1/mse-25-86-reports";
 
 function git(args) {
   return execFileSync("git", args, { encoding: "utf8" }).trim();
@@ -40,6 +41,26 @@ function loadBackendEnvironment() {
   return { source: null, loaded: false };
 }
 
+function previewReports(reportDir) {
+  if (!fs.existsSync(reportDir)) return new Set();
+  return new Set(
+    fs.readdirSync(reportDir)
+      .filter((name) => /^mse-25-86-preview-.*\.json$/.test(name))
+      .map((name) => path.resolve(reportDir, name))
+  );
+}
+
+function findCreatedPreview(reportDir, before) {
+  if (!fs.existsSync(reportDir)) return null;
+  const candidates = fs.readdirSync(reportDir)
+    .filter((name) => /^mse-25-86-preview-.*\.json$/.test(name))
+    .map((name) => path.resolve(reportDir, name))
+    .filter((file) => !before.has(file))
+    .map((file) => ({ file, mtimeMs: fs.statSync(file).mtimeMs }))
+    .sort((a, b) => b.mtimeMs - a.mtimeMs);
+  return candidates[0]?.file || null;
+}
+
 async function databaseReadiness({ tenantSlug = process.env.TENANT_SLUG || "mondescale" } = {}) {
   const prisma = new PrismaClient();
   try {
@@ -52,9 +73,30 @@ async function databaseReadiness({ tenantSlug = process.env.TENANT_SLUG || "mond
   }
 }
 
+function readinessBlockers(checks) {
+  const messages = {
+    expectedBranch: `Branche attendue: ${EXPECTED_BRANCH}`,
+    cleanWorktree: "Worktree Git non propre",
+    databaseUrlAvailable: "DATABASE_URL indisponible",
+    databaseConnected: "Connexion Prisma non validée",
+    tenantFound: "Tenant mondescale non validé",
+    previewReadOnly: "Preview non certifié read-only",
+    nineSites: "Le preview ne couvre pas exactement 9 sites",
+    projectedCoverageGate: "Au moins une projection SEO requise n'atteint pas strong",
+    noFrontendSurface: "Surface frontend/hero détectée dans le plan",
+    noStructuralMutation: "Mutation structurelle détectée dans le plan",
+    previewReportPersisted: "Rapport JSON de preview non retrouvé",
+  };
+  return Object.entries(checks)
+    .filter(([, value]) => value !== true)
+    .map(([key]) => ({ check: key, message: messages[key] || `Contrôle ${key} non validé` }));
+}
+
 async function run({ emitOutput = true } = {}) {
   const environment = loadBackendEnvironment();
   const repository = repositoryState();
+  const tenantSlug = process.env.TENANT_SLUG || "mondescale";
+  const reportDir = process.env.MSE_25_86_REPORT_DIR || DEFAULT_REPORT_DIR;
   const checks = {
     expectedBranch: repository.branch === EXPECTED_BRANCH,
     cleanWorktree: repository.dirty === false,
@@ -63,23 +105,31 @@ async function run({ emitOutput = true } = {}) {
 
   let database = null;
   let preview = null;
+  let previewReportPath = null;
 
   if (checks.expectedBranch && checks.cleanWorktree && checks.databaseUrlAvailable) {
-    database = await databaseReadiness();
+    database = await databaseReadiness({ tenantSlug });
     checks.databaseConnected = database.connected === true;
-    checks.tenantFound = database.tenantSlug === (process.env.TENANT_SLUG || "mondescale");
-    preview = await runRemediation({ dryRun: true });
+    checks.tenantFound = database.tenantSlug === tenantSlug;
+
+    const beforeReports = previewReports(reportDir);
+    preview = await runRemediation({ dryRun: true, tenantSlug, reportDir });
+    previewReportPath = findCreatedPreview(reportDir, beforeReports);
+
     checks.previewReadOnly = preview?.dryRun === true && preview?.writes === false;
     checks.nineSites = Array.isArray(preview?.sites) && preview.sites.length === 9;
     checks.projectedCoverageGate = preview?.projectedCoverageGate === true && preview?.allProjectedRequiredIntentsStrong === true;
     checks.noFrontendSurface = preview?.frontendFilesTouched === 0 && preview?.heroBodyTextTouched === 0;
     checks.noStructuralMutation = preview?.structuralBlocksCreated === 0 && preview?.structuralBlocksDeleted === 0;
+    checks.previewReportPersisted = Boolean(previewReportPath && fs.existsSync(previewReportPath));
   }
 
-  const readyForApplyReview = Object.values(checks).every(Boolean);
+  const blockers = readinessBlockers(checks);
+  const readyForApplyReview = blockers.length === 0;
   const result = {
     version: "mse-25.86",
     ok: readyForApplyReview,
+    verdict: readyForApplyReview ? "READY_FOR_APPLY_REVIEW" : "BLOCKED",
     readyForApplyReview,
     writes: false,
     readOnly: true,
@@ -87,12 +137,15 @@ async function run({ emitOutput = true } = {}) {
     environment: { loaded: environment.loaded, source: environment.source },
     repository,
     database,
+    reportDir,
+    previewReportPath,
     checks,
+    blockers,
     preview: preview ? {
       sites: preview.sites,
       projections: preview.projections,
       changes: preview.changes,
-      reportGenerated: true,
+      reportGenerated: Boolean(previewReportPath),
     } : null,
   };
 
@@ -106,6 +159,7 @@ if (require.main === module) {
     console.error(JSON.stringify({
       ok: false,
       version: "mse-25.86",
+      verdict: "BLOCKED",
       readOnly: true,
       writes: false,
       error: "MSE_25_86_VM_READINESS_FAILED",
@@ -117,8 +171,12 @@ if (require.main === module) {
 
 module.exports = {
   EXPECTED_BRANCH,
+  DEFAULT_REPORT_DIR,
   repositoryState,
   loadBackendEnvironment,
+  previewReports,
+  findCreatedPreview,
   databaseReadiness,
+  readinessBlockers,
   run,
 };
