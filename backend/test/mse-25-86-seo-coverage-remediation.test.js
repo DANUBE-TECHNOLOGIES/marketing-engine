@@ -18,6 +18,9 @@ const {
   summarizePlans,
 } = require("../scripts/mse-25-86-seo-coverage-remediation");
 const {
+  verifyPersistedPlan,
+} = require("../scripts/mse-25-86-post-apply-verify");
+const {
   rollbackSnapshots,
 } = require("../scripts/mse-25-86-seo-coverage-rollback");
 const {
@@ -58,6 +61,16 @@ function weakPage(slug, city, title) {
       { id: `text-${slug}`, blockType: "text", content: { text: `Notre équipe vous accueille à ${city} pour préparer votre projet.` } },
     ],
   };
+}
+
+function fullyRemediatedSite(target) {
+  const city = target.city;
+  const pages = [
+    pageFromSeo(target.city === "Melun" || target.city === "Amilly" ? "accueil" : "home", homeSeo(city), `${homeBodySentence(city)}${target.localContext ? ` ${localContextSentence(city)}` : ""}`),
+    pageFromSeo("services", servicesSeo(city), servicesBodySentence(city)),
+  ];
+  if (target.appointment) pages.push(pageFromSeo("contact", contactSeo(city), contactBodySentence(city)));
+  return { id: `site-${city}`, slug: city.toLowerCase().replace(/[^a-z0-9]+/g, "-"), agency: { city }, pages };
 }
 
 test("MSE-25.86 targets exactly the nine sites from the coverage report", () => {
@@ -212,6 +225,36 @@ test("site summaries remain agency-scoped for preview review", () => {
   assert.equal(summary[0].appointmentRemediation, false);
   assert.equal(summary[0].territorialAnchor, true);
   assert.equal(summary[0].projection.allRequiredStrong, true);
+});
+
+test("post-apply verification certifies persisted scores equal to projected scores", () => {
+  const target = TARGETS.find((item) => item.city === "Dax");
+  const site = fullyRemediatedSite(target);
+  const plan = buildTargetPlan([site], target);
+  const expectedProjection = projectionForPlan(plan);
+  const verification = verifyPersistedPlan(plan, expectedProjection);
+  assert.equal(verification.verified, true);
+  assert.equal(verification.intentsVerified, true);
+  assert.equal(verification.localContextVerified, true);
+  for (const check of verification.intentChecks) {
+    assert.equal(check.statusStrong, true, check.intent);
+    assert.equal(check.scoreMatchesProjection, true, check.intent);
+  }
+});
+
+test("post-apply verification detects persisted drift from projected scores", () => {
+  const target = TARGETS.find((item) => item.city === "Dax");
+  const expectedSite = fullyRemediatedSite(target);
+  const expectedPlan = buildTargetPlan([expectedSite], target);
+  const expectedProjection = projectionForPlan(expectedPlan);
+
+  const driftedSite = fullyRemediatedSite(target);
+  driftedSite.pages.find((page) => page.slug === "services").seoTitle = "Nos services à Dax";
+  const driftedPlan = buildTargetPlan([driftedSite], target);
+  const verification = verifyPersistedPlan(driftedPlan, expectedProjection);
+  assert.equal(verification.verified, false);
+  assert.equal(verification.intentsVerified, false);
+  assert.equal(verification.intentChecks.find((item) => item.intent === "ticketing").scoreMatchesProjection, false);
 });
 
 test("rollback restores snapshots in reverse order", async () => {
