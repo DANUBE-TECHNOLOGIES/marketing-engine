@@ -5,15 +5,15 @@ const path = require("node:path");
 const { PrismaClient } = require("@prisma/client");
 
 const TARGETS = Object.freeze([
-  { city: "Ozoir la Ferrière", home: ["home", "accueil", "index", ""], services: ["services"], contact: ["contact"], localContext: false },
-  { city: "Maurepas", home: ["home", "accueil", "index", ""], services: ["services"], contact: ["contact"], localContext: false },
-  { city: "Nevers", home: ["home", "accueil", "index", ""], services: ["services"], contact: ["contact"], localContext: false },
-  { city: "Dax", home: ["home", "accueil", "index", ""], services: ["services"], contact: ["contact"], localContext: false },
-  { city: "Gien", home: ["home", "accueil", "index", ""], services: ["services"], contact: ["contact"], localContext: false },
-  { city: "Bois-Colombes", home: ["home", "accueil", "index", ""], services: ["services"], contact: ["contact"], localContext: false },
-  { city: "Lamorlaye", home: ["home", "accueil", "index", ""], services: ["services"], contact: ["contact"], localContext: false },
-  { city: "Melun", home: ["accueil", "home", "index", ""], services: ["services"], contact: ["contact"], localContext: true },
-  { city: "Amilly", home: ["accueil", "home", "index", ""], services: ["services"], contact: ["contact"], localContext: true },
+  { city: "Ozoir la Ferrière", home: ["home", "accueil", "index", ""], services: ["services"], contact: ["contact"], appointment: true, localContext: false },
+  { city: "Maurepas", home: ["home", "accueil", "index", ""], services: ["services"], contact: ["contact"], appointment: true, localContext: false },
+  { city: "Nevers", home: ["home", "accueil", "index", ""], services: ["services"], contact: ["contact"], appointment: true, localContext: false },
+  { city: "Dax", home: ["home", "accueil", "index", ""], services: ["services"], contact: ["contact"], appointment: true, localContext: false },
+  { city: "Gien", home: ["home", "accueil", "index", ""], services: ["services"], contact: ["contact"], appointment: true, localContext: false },
+  { city: "Bois-Colombes", home: ["home", "accueil", "index", ""], services: ["services"], contact: ["contact"], appointment: true, localContext: false },
+  { city: "Lamorlaye", home: ["home", "accueil", "index", ""], services: ["services"], contact: ["contact"], appointment: true, localContext: false },
+  { city: "Melun", home: ["accueil", "home", "index", ""], services: ["services"], contact: ["contact"], appointment: false, localContext: true },
+  { city: "Amilly", home: ["accueil", "home", "index", ""], services: ["services"], contact: ["contact"], appointment: true, localContext: true },
 ]);
 
 function normalize(value) {
@@ -60,42 +60,49 @@ function headingBlock(page) {
 }
 
 function descriptiveStringKey(content) {
-  return ["subtitle", "subTitle", "description", "text", "body", "paragraph", "intro", "content"]
+  return ["description", "text", "body", "paragraph", "intro", "content", "subtitle", "subTitle"]
     .find((key) => typeof content?.[key] === "string" && content[key].trim()) || null;
 }
 
 function descriptiveBlock(page) {
   const blocks = Array.isArray(page?.blocks) ? page.blocks : [];
-  const hero = blocks.find((block) => {
-    const content = blockContent(block);
-    return isHero(block) && descriptiveStringKey(content);
-  });
-  if (hero) return hero;
-  return blocks.find((block) => descriptiveStringKey(blockContent(block))) || null;
+  return blocks.find((block) => !isHero(block) && descriptiveStringKey(blockContent(block))) || null;
 }
 
 function homeSeo(city) {
   return {
-    seoTitle: `Agence de voyages à ${city} | Conseils, sur mesure, séjours, circuits, croisières`,
-    metaDescription: `À ${city}, notre agence de voyages vous conseille et vous accompagne pour vos voyages sur mesure, séjours, circuits et croisières. Contact et rendez-vous en agence.`,
-    h1: `Agence de voyages à ${city} : conseils, sur mesure, séjours, circuits et croisières`,
+    seoTitle: `Agence de voyages à ${city} | Conseil voyage, sur mesure, séjours, circuits, croisières`,
+    metaDescription: `À ${city}, notre agence de voyages assure conseil voyage et accompagnement pour voyage sur mesure, séjours, circuits et croisières.`,
+    h1: `Agence de voyages à ${city} : conseil voyage, sur mesure, séjours, circuits et croisières`,
   };
 }
 
 function servicesSeo(city) {
   return {
-    seoTitle: `Services de voyage à ${city} | Billetterie, vols et sur mesure`,
-    metaDescription: `Billetterie et vols à ${city}, voyages sur mesure, séjours, circuits et croisières : bénéficiez des conseils de votre agence de voyages locale.`,
-    h1: `Billetterie, vols et services de voyage à ${city}`,
+    seoTitle: `Billetterie et vols à ${city} | Services de voyage sur mesure`,
+    metaDescription: `Billetterie et vols à ${city}, voyage sur mesure, séjours, circuits et croisières avec les conseils de votre agence de voyages locale.`,
+    h1: `Billetterie et vols à ${city} : services de voyage sur mesure`,
   };
 }
 
 function contactSeo(city) {
   return {
-    seoTitle: `Contact et rendez-vous | Agence de voyages à ${city}`,
+    seoTitle: `Contact et rendez-vous à ${city} | Agence de voyages`,
     metaDescription: `Contactez votre agence de voyages à ${city} pour un rendez-vous, un conseil voyage ou l’accompagnement de votre prochain projet.`,
     h1: `Contact et rendez-vous avec votre agence de voyages à ${city}`,
   };
+}
+
+function homeBodySentence(city) {
+  return `À ${city}, notre équipe vous apporte conseil voyage et accompagnement pour vos voyages sur mesure, séjours, circuits et croisières.`;
+}
+
+function servicesBodySentence(city) {
+  return `À ${city}, notre service de billetterie et vols complète nos conseils pour les voyages sur mesure, séjours, circuits et croisières.`;
+}
+
+function contactBodySentence(city) {
+  return `À ${city}, contactez notre agence physique pour un rendez-vous et un conseil voyage personnalisé.`;
 }
 
 function localContextSentence(city) {
@@ -146,21 +153,20 @@ async function updatePageSeo(tx, page, desired, snapshots, changes, dryRun) {
   });
 }
 
-async function appendLocalContext(tx, page, city, snapshots, changes, dryRun) {
+async function appendExistingBodyText(tx, page, sentence, snapshots, changes, dryRun, reason) {
   const block = descriptiveBlock(page);
   if (!block) {
-    const error = new Error(`Aucun texte existant utilisable sur /${page?.slug || "home"}; création de bloc interdite.`);
-    error.code = "MSE_25_86_EXISTING_TEXT_REQUIRED";
+    const error = new Error(`Aucun texte non-hero existant utilisable sur /${page?.slug || "home"}; modification du hero ou création de bloc interdite.`);
+    error.code = "MSE_25_86_EXISTING_NON_HERO_TEXT_REQUIRED";
     throw error;
   }
   const content = blockContent(block);
   const key = descriptiveStringKey(content);
-  const sentence = localContextSentence(city);
   if (normalize(content[key]).includes(normalize(sentence))) return;
   const nextContent = { ...content, [key]: `${String(content[key]).trim()} ${sentence}`.trim() };
   snapshots.push({ type: "block", id: block.id, pageId: page.id, content: cloneJson(content) });
   if (!dryRun) await tx.pageBlock.update({ where: { id: block.id }, data: { content: nextContent } });
-  changes.push({ pageId: page.id, slug: page.slug, localContextBlockId: block.id, localContextKey: key });
+  changes.push({ pageId: page.id, slug: page.slug, textBlockId: block.id, textKey: key, reason });
 }
 
 async function loadTargetSite(prisma, tenantId, city) {
@@ -201,18 +207,28 @@ async function run({ dryRun = !explicitTrue(process.env.MSE_25_86_CONFIRM), tena
       const home = pageByCandidates(site.pages, target.home);
       const services = pageByCandidates(site.pages, target.services);
       const contact = pageByCandidates(site.pages, target.contact);
-      if (!home || !services || !contact) {
+      if (!home || !services || (target.appointment && !contact)) {
         const error = new Error(`Pages SEO attendues manquantes pour ${target.city}.`);
         error.code = "MSE_25_86_TARGET_PAGE_MISSING";
-        error.details = { city: target.city, home: Boolean(home), services: Boolean(services), contact: Boolean(contact) };
+        error.details = { city: target.city, home: Boolean(home), services: Boolean(services), contactRequired: target.appointment, contact: Boolean(contact) };
         throw error;
       }
 
       await prisma.$transaction(async (tx) => {
         await updatePageSeo(tx, home, homeSeo(target.city), snapshots, changes, dryRun);
+        await appendExistingBodyText(tx, home, homeBodySentence(target.city), snapshots, changes, dryRun, "home-intent-qualification");
+
         await updatePageSeo(tx, services, servicesSeo(target.city), snapshots, changes, dryRun);
-        await updatePageSeo(tx, contact, contactSeo(target.city), snapshots, changes, dryRun);
-        if (target.localContext) await appendLocalContext(tx, home, target.city, snapshots, changes, dryRun);
+        await appendExistingBodyText(tx, services, servicesBodySentence(target.city), snapshots, changes, dryRun, "ticketing-intent-qualification");
+
+        if (target.appointment) {
+          await updatePageSeo(tx, contact, contactSeo(target.city), snapshots, changes, dryRun);
+          await appendExistingBodyText(tx, contact, contactBodySentence(target.city), snapshots, changes, dryRun, "appointment-intent-qualification");
+        }
+
+        if (target.localContext) {
+          await appendExistingBodyText(tx, home, localContextSentence(target.city), snapshots, changes, dryRun, "territorial-anchor");
+        }
       });
     }
 
@@ -222,6 +238,7 @@ async function run({ dryRun = !explicitTrue(process.env.MSE_25_86_CONFIRM), tena
       dryRun,
       writes: !dryRun,
       frontendFilesTouched: 0,
+      heroBodyTextTouched: 0,
       structuralBlocksCreated: 0,
       structuralBlocksDeleted: 0,
       targetCities: TARGETS.map((item) => item.city),
@@ -231,7 +248,7 @@ async function run({ dryRun = !explicitTrue(process.env.MSE_25_86_CONFIRM), tena
     const targetFile = path.join(reportDir, `mse-25-86-${dryRun ? "preview" : "apply"}-${timestamp()}.json`);
     fs.mkdirSync(reportDir, { recursive: true });
     fs.writeFileSync(targetFile, JSON.stringify(report, null, 2) + "\n", "utf8");
-    console.log(JSON.stringify({ ok: true, dryRun, writes: !dryRun, sites: TARGETS.length, changes: changes.length, frontendFilesTouched: 0, reportPath: targetFile }, null, 2));
+    console.log(JSON.stringify({ ok: true, dryRun, writes: !dryRun, sites: TARGETS.length, changes: changes.length, frontendFilesTouched: 0, heroBodyTextTouched: 0, reportPath: targetFile }, null, 2));
     return report;
   } finally {
     await prisma.$disconnect();
@@ -252,6 +269,9 @@ module.exports = {
   homeSeo,
   servicesSeo,
   contactSeo,
+  homeBodySentence,
+  servicesBodySentence,
+  contactBodySentence,
   localContextSentence,
   headingBlock,
   descriptiveBlock,
