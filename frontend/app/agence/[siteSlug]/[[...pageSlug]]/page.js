@@ -16,6 +16,7 @@ import PublicReassuranceBand from "../../../../components/public-site/PublicReas
 import PublicSiteSections, {
   renderablePublicSections,
 } from "../../../../components/public-site/PublicSiteSections";
+import HeroV2Renderer from "../../../../components/public-site/renderers/HeroV2Renderer";
 
 import JsonLd from "../../../../components/JsonLd";
 
@@ -98,13 +99,31 @@ function pageSections(page) {
   return [];
 }
 
+function sectionType(section) {
+  return String(
+    section?.jsonContent?.__builderType ||
+    section?.content?.__builderType ||
+    section?.sectionType ||
+    section?.type ||
+    section?.key ||
+    ""
+  )
+    .replace(/--\d+$/, "")
+    .trim()
+    .toLowerCase();
+}
+
+function isHeroSection(section) {
+  const type = sectionType(section);
+  return type === "hero" || type.includes("hero-") || type.includes("-hero");
+}
+
 function pageHasHero(page) {
-  return renderablePublicSections(page).some((section) => {
-    const type = String(section?.type || section?.blockType || section?.kind || "")
-      .trim()
-      .toLowerCase();
-    return type === "hero" || type.includes("hero-") || type.includes("-hero");
-  });
+  return renderablePublicSections(page).some(isHeroSection);
+}
+
+function homeHeroSection(homePage) {
+  return renderablePublicSections(homePage).find(isHeroSection) || null;
 }
 
 function canonicalPath({ siteSlug, pageSlug }) {
@@ -207,10 +226,12 @@ export default async function AgencySitePage({ params }) {
 
   let site;
   let page;
+  let homePage;
   try {
-    [site, page] = await Promise.all([
+    [site, page, homePage] = await Promise.all([
       publicSiteApi.getSite(resolved.siteSlug),
       loadPage({ siteSlug: resolved.siteSlug, pageSlug }),
+      isHomePage(pageSlug) ? Promise.resolve(null) : publicSiteApi.getHome(resolved.siteSlug),
     ]);
   } catch (error) {
     if (error?.statusCode === 404) notFound();
@@ -244,7 +265,8 @@ export default async function AgencySitePage({ params }) {
     image: localSeo.image,
   });
   const pageSemanticsSchema = buildPageSemanticsSchema({ page, url: currentUrl });
-  const needsFallbackHeading = !legalPage && !pageHasHero(page);
+  const sharedHero = !isHomePage(pageSlug) ? homeHeroSection(homePage) : null;
+  const needsFallbackHeading = !legalPage && !pageHasHero(page) && !sharedHero;
   let legalRuntimeHtml = null;
   if (legalPage) {
     const runtime = await fetchPublicBrandLegalRuntime(resolved.siteSlug);
@@ -264,6 +286,16 @@ export default async function AgencySitePage({ params }) {
         data-public-page-kind={legalPage ? "legal" : "content"}
         data-content-quality={quality.criticallyThin ? "critical" : quality.thin ? "thin" : quality.strong ? "strong" : "standard"}
       >
+        {sharedHero ? (
+          <HeroV2Renderer
+            section={sharedHero}
+            site={site}
+            page={page}
+            forcePageIntent
+            sharedNetworkHero
+          />
+        ) : null}
+
         {!isHomePage(pageSlug) ? <PublicBreadcrumbs items={visibleBreadcrumbItems} /> : null}
 
         {legalPage && legalRuntimeHtml ? (
@@ -279,7 +311,6 @@ export default async function AgencySitePage({ params }) {
               </section>
             ) : null}
             <PublicSiteSections site={site} page={page} />
-            {isHomePage(pageSlug) ? <PublicReassuranceBand /> : null}
           </>
         )}
 
@@ -288,6 +319,8 @@ export default async function AgencySitePage({ params }) {
           <LocalContentContext site={site} kind={localSeo.kind} quality={quality} />
         ) : null}
         {legalPage ? <LegalJourneyCta site={site} /> : null}
+
+        <PublicReassuranceBand />
       </div>
     </>
   );
@@ -299,6 +332,7 @@ export {
   canonicalPageSlug,
   canonicalPath,
   canonicalUrl,
+  homeHeroSection,
   isAliasPage,
   isHomePage,
   isLegalPage,
