@@ -1,4 +1,5 @@
 import HeroV2Renderer from "./HeroV2Renderer";
+import PageHeaderRenderer from "./PageHeaderRenderer";
 import CtaV2Renderer from "./CtaV2Renderer";
 import AgencyV2Renderer from "./AgencyV2Renderer";
 import FeaturesV2Renderer from "./FeaturesV2Renderer";
@@ -20,9 +21,11 @@ import ReviewsRenderer from "./ReviewsRenderer";
 import TestimonialsRenderer from "./TestimonialsRenderer";
 import SeparatorRenderer from "./SeparatorRenderer";
 import TeamRenderer from "./TeamRenderer";
+import FlexiblePaymentRenderer from "./FlexiblePaymentRenderer";
 
 export const PUBLIC_RENDERER_REGISTRY = {
   hero: HeroV2Renderer,
+  "page-header": PageHeaderRenderer,
   cta: CtaV2Renderer,
   "contact-cta": CtaV2Renderer,
   agency: AgencyV2Renderer,
@@ -40,6 +43,7 @@ export const PUBLIC_RENDERER_REGISTRY = {
   intro: RichTextV2Renderer,
   "agency-introduction": RichTextV2Renderer,
   "agency-story": RichTextV2Renderer,
+  "partners-introduction": RichTextV2Renderer,
   image_text: ImageTextV2Renderer,
   "image-text": ImageTextV2Renderer,
   gallery: GalleryV2Renderer,
@@ -55,6 +59,7 @@ export const PUBLIC_RENDERER_REGISTRY = {
   partners: PartnersRenderer,
   logos: PartnersRenderer,
   "partner-logos": PartnersRenderer,
+  "partner-categories": PartnerDirectoryRenderer,
   "partner-directory": PartnerDirectoryRenderer,
   "partners-directory": PartnerDirectoryRenderer,
   appointment: AppointmentRenderer,
@@ -69,6 +74,8 @@ export const PUBLIC_RENDERER_REGISTRY = {
   equipe: TeamRenderer,
   "team-grid": TeamRenderer,
   "equipe-grid": TeamRenderer,
+  flexible_payment: FlexiblePaymentRenderer,
+  "flexible-payment": FlexiblePaymentRenderer,
 };
 
 export function getPublicRenderer(type) {

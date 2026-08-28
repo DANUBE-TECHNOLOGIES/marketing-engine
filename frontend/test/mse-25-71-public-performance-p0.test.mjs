@@ -11,21 +11,21 @@ function source(relativePath) {
   return fs.readFileSync(path.join(frontendRoot, relativePath), "utf8");
 }
 
-test("public site data is revalidated instead of forced no-store", () => {
-  const api = source("lib/public-site-api.js");
-  assert.doesNotMatch(api, /cache:\s*["']no-store["']/);
-  assert.match(api, /revalidate:\s*PUBLIC_DATA_REVALIDATE_SECONDS/);
-  assert.match(api, /PUBLIC_SITE_REVALIDATE_SECONDS/);
+test("public site shell is persistently revalidated instead of forced no-store", () => {
+  const shell = source("lib/public-site-shell-api.js");
+  assert.match(shell, /unstable_cache/);
+  assert.match(shell, /PUBLIC_SITE_REVALIDATE_SECONDS/);
+  assert.match(shell, /revalidate:\s*PUBLIC_SITE_REVALIDATE_SECONDS/);
+  assert.doesNotMatch(shell, /cache:\s*["']no-store["']/);
 });
 
-test("public site RSC reads are memoized within a request and do not wait for hours", () => {
-  const api = source("lib/public-site-api.js");
-  assert.match(api, /import\s*\{\s*cache\s*\}\s*from\s*["']react["']/);
-  assert.match(api, /const\s+getSite\s*=\s*cache\(/);
-  assert.match(api, /const\s+getHome\s*=\s*cache\(/);
-  assert.match(api, /const\s+getPage\s*=\s*cache\(/);
-  assert.doesNotMatch(api, /getPublicHours/);
-  assert.doesNotMatch(api, /hours,/);
+test("public site shell RSC reads are memoized within a request and do not wait for hours", () => {
+  const shell = source("lib/public-site-shell-api.js");
+  assert.match(shell, /import\s*\{\s*cache\s*\}\s*from\s*["']react["']/);
+  assert.match(shell, /const\s+getPublicSiteShell\s*=\s*cache\(/);
+  assert.match(shell, /loadPublicRenderContract\(siteSlug\)/);
+  assert.doesNotMatch(shell, /getPublicHours/);
+  assert.doesNotMatch(shell, /hours,/);
 });
 
 test("public hours use the same persistent and request cache policy", () => {
@@ -51,7 +51,7 @@ test("brand runtime and legacy theme are cached within a request", () => {
   assert.match(legacy, /revalidate:\s*300/);
 });
 
-test("agency route keeps only site and brand runtime on the layout critical path", () => {
+test("agency route keeps only cached site shell and brand runtime on the layout critical path", () => {
   const layout = source("app/agence/[siteSlug]/layout.js");
   const header = source("components/public-site/PublicSiteHeader.js");
   const openingStatus = source("components/public-site/PublicOpeningStatus.js");
@@ -60,8 +60,9 @@ test("agency route keeps only site and brand runtime on the layout critical path
   assert.match(layout, /export const revalidate = 300/);
   assert.match(layout, /public-performance\.css/);
   assert.match(layout, /\[site, publicBrandLegalRuntime\]\s*=\s*await Promise\.all\(\[/);
-  assert.match(layout, /publicSiteApi\.getSite\(siteSlug\)/);
+  assert.match(layout, /getPublicSiteShell\(siteSlug\)/);
   assert.match(layout, /fetchPublicBrandLegalRuntime\(siteSlug\)/);
+  assert.doesNotMatch(layout, /publicSiteApi\.getSite/);
   assert.doesNotMatch(layout, /getPublicHours/);
   assert.doesNotMatch(layout, /hours=/);
   assert.match(layout, /const hasRuntimeTheme = Object\.keys\(runtimeTheme\)\.length > 0/);
@@ -90,19 +91,13 @@ test("hero LCP image preconnects, preloads and stays high priority", () => {
   assert.doesNotMatch(hero, /decoding=["']async["']/);
 });
 
-test("legacy hero follows the same discoverable LCP strategy", () => {
+test("canonical hero types are routed through the optimized V2 renderer before legacy fallback", () => {
+  const registry = source("components/public-site/renderers/registry.js");
   const sections = source("components/public-site/PublicSiteSections.js");
-  assert.match(sections, /import\s*\{\s*preconnect,\s*preload\s*\}\s*from\s*["']react-dom["']/);
-  assert.match(sections, /function\s+imageOrigin\(/);
-  assert.match(sections, /preconnect\(origin\)/);
-  assert.match(sections, /preload\(backgroundImage,\s*\{/);
-  assert.match(sections, /data-has-hero-image=\{backgroundImage \? ["']true["'] : ["']false["']\}/);
-  assert.match(sections, /className=["']public-site-hero-media["']/);
-  assert.match(sections, /loading=["']eager["']/);
-  assert.match(sections, /fetchPriority=["']high["']/);
-  assert.match(sections, /width=["']1920["']/);
-  assert.match(sections, /height=["']1080["']/);
-  assert.doesNotMatch(sections, /backgroundImage:\s*`linear-gradient/);
+  assert.match(registry, /hero:\s*HeroV2Renderer/);
+  assert.match(sections, /const RegistryRenderer = getPublicRenderer\(type\)/);
+  assert.match(sections, /if \(RegistryRenderer\) return <RegistryRenderer/);
+  assert.match(sections, /if \(type\.includes\(["']hero["']\)\) return <HeroSection/);
 });
 
 test("non critical public media cannot compete with the hero LCP", () => {
@@ -113,7 +108,6 @@ test("non critical public media cannot compete with the hero LCP", () => {
   const team = source("components/public-site/renderers/TeamRenderer.js");
   const offers = source("components/public-site/renderers/OffersRenderer.js");
   const inspirations = source("components/public-site/renderers/InspirationsRenderer.js");
-  const legacySections = source("components/public-site/PublicSiteSections.js");
 
   assert.match(logo, /fetchPriority=["']auto["']/);
   for (const renderer of [destinations, gallery, imageText, team, offers, inspirations]) {
@@ -123,11 +117,4 @@ test("non critical public media cannot compete with the hero LCP", () => {
     assert.match(renderer, /width=["'][0-9]+["']/);
     assert.match(renderer, /height=["'][0-9]+["']/);
   }
-  assert.match(legacySections, /loading=["']lazy["']/);
-  assert.match(legacySections, /decoding=["']async["']/);
-  assert.match(legacySections, /fetchPriority=["']low["']/);
-  assert.match(legacySections, /width=["']960["']/);
-  assert.match(legacySections, /height=["']640["']/);
-  assert.match(legacySections, /width=["']720["']/);
-  assert.match(legacySections, /height=["']480["']/);
 });

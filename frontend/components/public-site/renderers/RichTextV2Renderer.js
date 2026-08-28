@@ -32,6 +32,23 @@ function normalizeLabel(value) {
     .toLowerCase();
 }
 
+function isHomePage(page) {
+  const slug = normalizeLabel(page?.slug);
+  return !slug || ["home", "accueil", "index"].includes(slug);
+}
+
+function isGenericHomeIntro(section, page) {
+  if (!isHomePage(page)) return false;
+  const title = normalizeLabel(getSectionTitle(section, null));
+  return ["accueil", "bienvenue", "home"].includes(title);
+}
+
+function isRedundantHomeLocalSection(section, page) {
+  if (!isHomePage(page)) return false;
+  const title = normalizeLabel(getSectionTitle(section, null));
+  return /agence\s+de\s+proximite/.test(title) && /environs/.test(title);
+}
+
 const LEGAL_HEADINGS = [
   ["editeur du site", "Éditeur du site", "▤"],
   ["informations legales", "Informations légales", "▧"],
@@ -60,11 +77,8 @@ function legalHeading(value) {
   const normalized = normalizeLabel(value);
   const found = LEGAL_HEADINGS.find(([key]) => normalized === key);
   if (found) return { title: found[1], icon: found[2] };
-
   const raw = String(value || "").trim();
-  if (raw.endsWith(":") && raw.length <= 64) {
-    return { title: raw.replace(/\s*:\s*$/, ""), icon: "•" };
-  }
+  if (raw.endsWith(":") && raw.length <= 64) return { title: raw.replace(/\s*:\s*$/, ""), icon: "•" };
   return null;
 }
 
@@ -108,9 +122,7 @@ function LegalCard({ group, index }) {
         <h2>{group.title}</h2>
       </div>
       <div className="public-site-legal-card-copy">
-        {group.paragraphs.map((paragraph, paragraphIndex) => (
-          <p key={`${index}-${paragraphIndex}`}>{paragraph}</p>
-        ))}
+        {group.paragraphs.map((paragraph, paragraphIndex) => <p key={`${index}-${paragraphIndex}`}>{paragraph}</p>)}
       </div>
     </article>
   );
@@ -121,10 +133,7 @@ function PersonalDataDisclosure({ group }) {
     <details className="public-site-legal-disclosure">
       <summary>
         <span className="public-site-legal-card-icon" aria-hidden="true">{group.icon}</span>
-        <span className="public-site-legal-disclosure-copy">
-          <strong>{group.title}</strong>
-          <span>Vos droits, nos engagements et la gestion des données.</span>
-        </span>
+        <span className="public-site-legal-disclosure-copy"><strong>{group.title}</strong><span>Vos droits, nos engagements et la gestion des données.</span></span>
         <span className="public-site-legal-disclosure-chevron" aria-hidden="true">⌄</span>
       </summary>
       <div className="public-site-legal-disclosure-content">
@@ -140,19 +149,11 @@ function LegalDocument({ section, page, content, paragraphs }) {
   const groups = buildLegalGroups(values);
   const compactGroups = groups.filter((group) => !isPersonalDataGroup(group));
   const personalDataGroup = groups.find(isPersonalDataGroup);
-
   return (
     <section className="public-site-section public-site-legal-document">
       <div className="public-site-container">
-        <header className="public-site-legal-heading">
-          <h1>{title}</h1>
-          <span aria-hidden="true" />
-        </header>
-
-        <div className="public-site-legal-grid">
-          {compactGroups.map((group, index) => <LegalCard group={group} index={index} key={`${group.title}-${index}`} />)}
-        </div>
-
+        <header className="public-site-legal-heading"><h1>{title}</h1><span aria-hidden="true" /></header>
+        <div className="public-site-legal-grid">{compactGroups.map((group, index) => <LegalCard group={group} index={index} key={`${group.title}-${index}`} />)}</div>
         {personalDataGroup ? <PersonalDataDisclosure group={personalDataGroup} /> : null}
       </div>
     </section>
@@ -163,19 +164,12 @@ export default function RichTextV2Renderer({ section, page }) {
   const content = getSectionContent(section);
   const alignment = normalizeAlignment(content.alignment);
   const paragraphs = textParagraphs(content.html);
-
-  if (isLegalPage(page)) {
-    return <LegalDocument section={section} page={page} content={content} paragraphs={paragraphs} />;
-  }
-
+  if (isLegalPage(page)) return <LegalDocument section={section} page={page} content={content} paragraphs={paragraphs} />;
+  if (isGenericHomeIntro(section, page) || isRedundantHomeLocalSection(section, page)) return null;
   return (
     <section className="public-site-section public-site-rich-text">
       <div className="public-site-container public-site-prose" style={{ textAlign: alignment }}>
-        {getSectionTitle(section, null) ? (
-          <h2 style={alignment === "left" ? undefined : { marginInline: alignment === "center" ? "auto" : "0 0 22px auto" }}>
-            {getSectionTitle(section, null)}
-          </h2>
-        ) : null}
+        {getSectionTitle(section, null) ? <h2>{getSectionTitle(section, null)}</h2> : null}
         {content.text ? <p>{content.text}</p> : null}
         {content.description ? <p>{content.description}</p> : null}
         {paragraphs.map((paragraph, index) => <p key={`paragraph-${index}`}>{paragraph}</p>)}
@@ -183,3 +177,9 @@ export default function RichTextV2Renderer({ section, page }) {
     </section>
   );
 }
+
+export {
+  isGenericHomeIntro,
+  isRedundantHomeLocalSection,
+  textParagraphs,
+};

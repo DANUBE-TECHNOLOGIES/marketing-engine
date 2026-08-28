@@ -77,18 +77,33 @@
   text-underline-offset: 0.2em;
 }
 
+/*
+ * Les liens restent de vrais liens crawlables mais cessent de ressembler à
+ * une seconde navigation SEO sous chaque section.
+ */
 .public-site-related-links {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem 1.25rem;
-  margin-top: 2rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid color-mix(in srgb, var(--public-text) 16%, transparent);
+  gap: 0.5rem 1rem;
+  margin-top: 1.35rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid color-mix(in srgb, var(--public-text) 11%, transparent);
+  color: color-mix(in srgb, var(--public-text) 64%, transparent);
 }
 
 .public-site-related-links a {
-  font-weight: 600;
+  color: inherit;
+  font-size: 0.78rem;
+  font-weight: 650;
+  line-height: 1.45;
+  text-decoration: none;
   text-underline-offset: 0.2em;
+}
+
+.public-site-related-links a:hover,
+.public-site-related-links a:focus-visible {
+  color: var(--public-primary);
+  text-decoration: underline;
 }
 
 .public-site-footer-address {
@@ -115,5 +130,9 @@
 @media (max-width: 760px) {
   .public-site-navigation {
     padding-inline: 14px 30px;
+  }
+
+  .public-site-related-links {
+    gap: 0.45rem 0.85rem;
   }
 }

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 
-import { publicSiteApi } from "../../../lib/public-site-api";
+import { getPublicSiteShell } from "../../../lib/public-site-shell-api";
 import { getPublicBrandTheme } from "../../../lib/public-brand-api";
 import PublicSiteHeader from "../../../components/public-site/PublicSiteHeader";
 import PublicSiteFooter from "../../../components/public-site/PublicSiteFooter";
@@ -17,6 +17,7 @@ import "../../sites/[siteSlug]/public-site.css";
 import "../../../components/public-site/brand-runtime.css";
 import "../../../components/public-site/premium-public.css";
 import "../../../components/public-site/premium-sections.css";
+import "../../../components/public-site/network-home-hero.css";
 import "../../../components/public-site/legal-experience.css";
 import "../../../components/public-site/logo-emphasis.css";
 import "../../../components/public-site/public-readability-fixes.css";
@@ -33,7 +34,7 @@ export default async function PublicAgencySiteLayout({ children, params }) {
 
   try {
     [site, publicBrandLegalRuntime] = await Promise.all([
-      publicSiteApi.getSite(siteSlug),
+      getPublicSiteShell(siteSlug),
       fetchPublicBrandLegalRuntime(siteSlug),
     ]);
   } catch (error) {

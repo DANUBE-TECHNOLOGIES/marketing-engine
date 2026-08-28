@@ -12,7 +12,9 @@ import LegalRuntimeDocument from "../../../../components/public-site/LegalRuntim
 import LocalContentContext from "../../../../components/public-site/LocalContentContext";
 import LocalSeoAreaLinks from "../../../../components/public-site/LocalSeoAreaLinks";
 import PublicBreadcrumbs from "../../../../components/public-site/PublicBreadcrumbs";
-import PublicSiteSections from "../../../../components/public-site/PublicSiteSections";
+import PublicSiteSections, {
+  renderablePublicSections,
+} from "../../../../components/public-site/PublicSiteSections";
 
 import JsonLd from "../../../../components/JsonLd";
 
@@ -96,7 +98,7 @@ function pageSections(page) {
 }
 
 function pageHasHero(page) {
-  return pageSections(page).some((section) => {
+  return renderablePublicSections(page).some((section) => {
     const type = String(section?.type || section?.blockType || section?.kind || "")
       .trim()
       .toLowerCase();

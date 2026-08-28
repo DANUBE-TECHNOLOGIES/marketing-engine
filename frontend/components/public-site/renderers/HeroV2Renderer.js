@@ -1,5 +1,4 @@
 import { preconnect, preload } from "react-dom";
-
 import {
   getSectionContent,
 } from "./helpers";
@@ -8,6 +7,9 @@ import {
   resolvePublicCtaHref,
   sitePageHref,
 } from "./ctaLinks";
+
+const NETWORK_HOME_HERO_IMAGE =
+  "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=2400&q=85";
 
 function ctaLabel(cta, legacyLabel, fallback) {
   return cta?.label || legacyLabel || fallback;
@@ -35,6 +37,11 @@ function pageSlug(page) {
   return String(page?.slug || "").trim().toLowerCase();
 }
 
+function isHomePage(page) {
+  const slug = pageSlug(page);
+  return !slug || ["home", "accueil", "index"].includes(slug);
+}
+
 function genericHeroTitle(value, site) {
   const title = String(value || "").replace(/\s+/g, " ").trim();
   if (!title) return true;
@@ -52,6 +59,7 @@ function intentHeroTitle({ page, site }) {
   if (["destinations", "destination"].includes(slug)) return `Destinations et voyages depuis ${city}`;
   if (["inspiration", "inspirations"].includes(slug)) return `Inspirations voyage depuis ${city}`;
   if (["equipe", "team", "notre-equipe"].includes(slug)) return `Votre équipe de conseillers voyage à ${city}`;
+  if (["partenaires", "partners", "nos-partenaires"].includes(slug)) return `Nos partenaires voyage à ${city}`;
   if (["contact", "nous-contacter"].includes(slug)) return `Contacter votre agence de voyages à ${city}`;
   if (["avis", "reviews", "avis-clients"].includes(slug)) return `Avis clients de votre agence de voyages à ${city}`;
   return null;
@@ -72,10 +80,16 @@ function resolvedHeroAlt({ content, site, title }) {
   return title;
 }
 
-function heroImageOrigin(value) {
+function resolvedHeroImage({ content, page }) {
+  const configured = content.backgroundImage || content.imageUrl || null;
+  if (configured) return configured;
+  return isHomePage(page) ? NETWORK_HOME_HERO_IMAGE : null;
+}
+
+function imageOrigin(value) {
   try {
-    const url = new URL(String(value || ""));
-    return ["http:", "https:"].includes(url.protocol) ? url.origin : null;
+    const url = new URL(value);
+    return url.origin;
   } catch {
     return null;
   }
@@ -86,13 +100,14 @@ export default function HeroV2Renderer({ section, site, page }) {
   const title = resolvedHeroTitle({ content, section, site, page });
   const subtitle = content.subtitle || content.text || content.description || site?.agency?.description || "Votre agence vous accompagne dans la création de vos plus beaux voyages.";
   const alignment = normalizeAlignment(content.alignment);
-  const backgroundImage = content.backgroundImage || content.imageUrl || null;
+  const backgroundImage = resolvedHeroImage({ content, page });
   const backgroundPosition = content.backgroundPosition || "center";
   const imageAlt = resolvedHeroAlt({ content, site, title });
-  const overlayOpacity = Math.min(Math.max(Number(content.overlayOpacity ?? 68), 20), 90) / 100;
+  const overlayOpacity = Math.min(Math.max(Number(content.overlayOpacity ?? 72), 20), 90) / 100;
+  const homeHero = isHomePage(page);
 
   if (backgroundImage) {
-    const origin = heroImageOrigin(backgroundImage);
+    const origin = imageOrigin(backgroundImage);
     if (origin) preconnect(origin);
     preload(backgroundImage, {
       as: "image",
@@ -104,22 +119,32 @@ export default function HeroV2Renderer({ section, site, page }) {
   const secondaryCta = content.secondaryCta || null;
   const primaryHref = primaryCta?.href
     ? resolvePublicCtaHref(site, primaryCta.href, "contact")
-    : phoneHref(site?.agency?.phone) || sitePageHref(site, "contact");
+    : sitePageHref(site, "contact");
   const secondaryHref = secondaryCta
-    ? resolvePublicCtaHref(site, secondaryCta.href, "contact")
-    : content.secondaryButton
-      ? sitePageHref(site, "contact")
-      : null;
+    ? resolvePublicCtaHref(site, secondaryCta.href, "destinations")
+    : homeHero
+      ? sitePageHref(site, "destinations")
+      : content.secondaryButton
+        ? sitePageHref(site, "contact")
+        : null;
 
   const contentStyle = { textAlign: alignment };
   const centered = alignment === "center";
   const rightAligned = alignment === "right";
+  const heroClassName = [
+    "public-site-hero",
+    "public-site-hero--immersive",
+    homeHero ? "public-site-hero--home" : "public-site-hero--inner",
+  ].filter(Boolean).join(" ");
+
+  const overlayStyle = homeHero
+    ? `linear-gradient(90deg, rgba(7,29,48,${overlayOpacity}) 0%, rgba(7,29,48,${Math.max(overlayOpacity - 0.16, 0.38)}) 34%, rgba(7,29,48,0.18) 58%, rgba(7,29,48,0.04) 76%, rgba(7,29,48,0) 100%)`
+    : `linear-gradient(90deg, rgba(7,29,48,${overlayOpacity}) 0%, rgba(7,29,48,${Math.max(overlayOpacity - 0.12, 0.42)}) 46%, rgba(7,29,48,0.12) 78%, rgba(7,29,48,0.04) 100%)`;
 
   return (
-    <section className="public-site-hero" data-has-hero-image={backgroundImage ? "true" : "false"}>
+    <section className={heroClassName} data-has-hero-image={backgroundImage ? "true" : "false"} data-page-slug={pageSlug(page) || "home"}>
       {backgroundImage ? (
         <div className="public-site-hero-media" aria-hidden="true">
-          {/* A real img keeps the primary visual discoverable by image crawlers; CSS handles presentation. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={backgroundImage}
@@ -132,28 +157,21 @@ export default function HeroV2Renderer({ section, site, page }) {
           />
           <span
             className="public-site-hero-overlay"
-            style={{
-              background: `linear-gradient(90deg, rgba(8,31,52,${overlayOpacity}) 0%, rgba(8,31,52,${Math.max(overlayOpacity - 0.12, 0.2)}) 48%, rgba(8,31,52,${Math.max(overlayOpacity - 0.35, 0.08)}) 100%)`,
-            }}
+            style={{ background: overlayStyle }}
           />
+          <span className="public-site-hero-fade" />
         </div>
       ) : null}
 
-      <div className="public-site-container" style={contentStyle}>
-        <p className="public-site-eyebrow">{content.eyebrow || defaultHeroEyebrow(site)}</p>
-        <h1 style={centered ? { marginInline: "auto" } : rightAligned ? { marginLeft: "auto" } : undefined}>{title}</h1>
-        <p className="public-site-hero-text" style={centered ? { marginInline: "auto" } : rightAligned ? { marginLeft: "auto" } : undefined}>{subtitle}</p>
-        <div className="public-site-hero-actions" style={{ justifyContent: centered ? "center" : rightAligned ? "flex-end" : "flex-start" }}>
-          {primaryHref ? (
-            <a className="public-site-button" href={primaryHref}>
-              {ctaLabel(primaryCta, content.primaryButton, primaryCta?.href ? "En savoir plus" : "Appeler l’agence")}
-            </a>
-          ) : null}
-          {secondaryHref ? (
-            <a className="public-site-button public-site-button-secondary" href={secondaryHref}>
-              {ctaLabel(secondaryCta, content.secondaryButton, "Nous contacter")}
-            </a>
-          ) : null}
+      <div className="public-site-container">
+        <div className="public-site-hero-copy" style={contentStyle}>
+          <p className="public-site-eyebrow">{content.eyebrow || defaultHeroEyebrow(site)}</p>
+          <h1 style={centered ? { marginInline: "auto" } : rightAligned ? { marginLeft: "auto" } : undefined}>{title}</h1>
+          <p className="public-site-hero-text" style={centered ? { marginInline: "auto" } : rightAligned ? { marginLeft: "auto" } : undefined}>{subtitle}</p>
+          <div className="public-site-hero-actions" style={{ justifyContent: centered ? "center" : rightAligned ? "flex-end" : "flex-start" }}>
+            {primaryHref ? <a className="public-site-button" href={primaryHref}>{ctaLabel(primaryCta, content.primaryButton, "Demander un devis")}</a> : null}
+            {secondaryHref ? <a className="public-site-button public-site-button-secondary" href={secondaryHref}>{ctaLabel(secondaryCta, content.secondaryButton, homeHero ? "Découvrir nos voyages" : "Nous contacter")}</a> : null}
+          </div>
         </div>
       </div>
     </section>
@@ -161,11 +179,14 @@ export default function HeroV2Renderer({ section, site, page }) {
 }
 
 export {
+  NETWORK_HOME_HERO_IMAGE,
   defaultHeroEyebrow,
   defaultHeroTitle,
   genericHeroTitle,
-  heroImageOrigin,
+  imageOrigin,
   intentHeroTitle,
+  isHomePage,
   resolvedHeroAlt,
+  resolvedHeroImage,
   resolvedHeroTitle,
 };

@@ -1,0 +1,147 @@
+import fs from "node:fs";
+import path from "node:path";
+import test from "node:test";
+import assert from "node:assert/strict";
+
+const ROOT = path.resolve(import.meta.dirname, "..");
+function read(relative) { return fs.readFileSync(path.join(ROOT, relative), "utf8"); }
+
+const api = read("lib/public-site-api.js");
+const publicSections = read("components/public-site/PublicSiteSections.js");
+const heroCss = read("components/public-site/hero-finish.css");
+const destinations = read("components/public-site/renderers/DestinationsRenderer.js");
+const features = read("components/public-site/renderers/FeaturesV2Renderer.js");
+const inspirations = read("components/public-site/renderers/InspirationsRenderer.js");
+const team = read("components/public-site/renderers/TeamRenderer.js");
+const teamCss = read("components/public-site/renderers/TeamRenderer.module.css");
+const partners = read("components/public-site/renderers/PartnersRenderer.js");
+const partnerDirectory = read("components/public-site/renderers/PartnerDirectoryRenderer.js");
+const partnerDirectoryCss = read("components/public-site/renderers/PartnerDirectoryRenderer.module.css");
+const contact = read("components/public-site/renderers/ContactRenderer.js");
+const hours = read("components/public-site/renderers/HoursRenderer.js");
+const map = read("components/public-site/renderers/MapRenderer.js");
+const tree = read("../backend/src/modules/agency-site/templates/default-tree.js");
+const sections = read("../backend/src/modules/agency-site/templates/section-definitions.js");
+
+function assertCanonicalInspirationsLink(source) {
+  const hasCanonicalRoute = /\/inspirations/.test(source) || /siteHref\(site,\s*["']inspirations["']\)/.test(source);
+  assert.equal(hasCanonicalRoute, true, "Expected a canonical inspirations route or siteHref(site, \"inspirations\") helper call");
+  assert.doesNotMatch(source, /\$\{root\}\/inspiration["`]/);
+  assert.doesNotMatch(source, /siteHref\(site,\s*["']inspiration["']\)/);
+}
+
+test("MSE-25.42 keeps V2 PageBlocks canonical and home ordering in memory", () => {
+  assert.match(api, /if \(blocks\.length\)/);
+  assert.match(api, /presentationOrder:\s*rank \* 1000 \+ tieBreaker/);
+  assert.match(api, /destinations:\s*20/);
+  assert.match(api, /flexible_payment:\s*30/);
+  assert.match(api, /services:\s*40/);
+  assert.match(api, /team:\s*50/);
+  assert.match(api, /reviews:\s*60/);
+});
+
+test("MSE-25.42 keeps the immersive home hero and compact secondary hero", () => {
+  assert.match(heroCss, /public-site-hero--home/);
+  assert.match(heroCss, /public-site-hero--inner/);
+  assert.match(heroCss, /width:68%/);
+  assert.match(heroCss, /width:42%/);
+  assert.match(heroCss, /min-height:clamp\(300px,25vw,390px\)/);
+  assert.match(heroCss, /@media\(max-width:760px\)/);
+});
+
+test("MSE-25.42 destination cards preserve hydrated imagery and local navigation", () => {
+  assert.match(destinations, /item\.imageUrl/);
+  assert.match(destinations, /item\.heroImage/);
+  assert.match(destinations, /public-site-destination-card-image/);
+  assert.match(destinations, /public-site-related-links/);
+  assertCanonicalInspirationsLink(destinations);
+});
+
+test("MSE-25.42 services use premium cards and canonical secondary routes", () => {
+  assert.match(features, /public-site-feature-card/);
+  assert.match(features, /resolvedTargetCities/);
+  assert.match(features, /public-site-related-links/);
+  assertCanonicalInspirationsLink(features);
+});
+
+test("MSE-25.42 inspirations expose editorial cards and link back to commercial pages", () => {
+  assert.match(inspirations, /public-site-editorial-grid/);
+  assert.match(inspirations, /public-site-editorial-card/);
+  assert.match(inspirations, /\/destinations/);
+  assert.match(inspirations, /\/services/);
+  assert.match(inspirations, /\/contact/);
+});
+
+test("MSE-25.42 team page renders actual advisor media with a premium single-member composition", () => {
+  assert.match(team, /member\.imageUrl/);
+  assert.match(team, /member\.photoUrl/);
+  assert.match(team, /const singleMember=uniqueMembers\.length===1/);
+  assert.match(team, /styles\.single/);
+  assert.match(teamCss, /\.single\{grid-template-columns:minmax\(0,1040px\);justify-content:start\}/);
+  assert.match(teamCss, /\.single \.card\{display:grid;grid-template-columns:330px minmax\(0,1fr\)/);
+  assert.match(teamCss, /\.single \.portrait\{width:252px/);
+});
+
+test("MSE-25.42 compacts Team and Partners secondary pages without altering stored content", () => {
+  assert.match(publicSections, /function compactSecondarySections/);
+  assert.match(publicSections, /\["page-header", "team-introduction", "expertise"\]/);
+  assert.match(publicSections, /\["page-header", "partners-introduction"\]/);
+  assert.match(publicSections, /\^votre équipe voyage/);
+  assert.match(publicSections, /\^notre expertise\$/);
+  assert.match(publicSections, /\^des partenaires sélectionnés pour vos voyages/);
+  assert.match(publicSections, /if \(type\.includes\("cta"\)\) return 30/);
+  assert.match(publicSections, /compactSecondarySections\(/);
+});
+
+test("MSE-25.42 keeps Home partners compact and reserves the full catalogue for the Partners page", () => {
+  assert.match(partners, /getCommonPartners/);
+  assert.doesNotMatch(partners, /FULL_PARTNERS|PARTNER_DIRECTORY_CATEGORIES|getPublishablePartnerProfiles/);
+  assert.match(partners, /PartnerDirectoryRenderer/);
+  assert.match(partners, /if \(!pageIsHome\(page\)\)/);
+  assert.match(partners, /pageHasExplicitDirectory/);
+  assert.match(partnerDirectory, /getPartnerDirectoryCategories/);
+  assert.match(partnerDirectory, /getPublishablePartnerProfiles/);
+  assert.match(partnerDirectory, /data-partner-directory="full"/);
+  assert.match(partnerDirectory, /PreferredPartners/);
+  assert.match(partnerDirectory, /open=\{index === 0\}/);
+  assert.match(partnerDirectory, /visibleTags\.slice\(0, 3\)/);
+  assert.match(partnerDirectoryCss, /width:min\(1480px,calc\(100% - 64px\)\)/);
+  assert.match(partnerDirectoryCss, /grid-template-columns:118px minmax\(0,1fr\)/);
+});
+
+test("MSE-25.42 promotes legacy secondary partners blocks to the full directory without duplication", () => {
+  assert.match(partners, /DIRECTORY_TYPES/);
+  assert.match(partners, /if \(pageHasExplicitDirectory\(page\)\) return null/);
+  assert.match(partners, /return <PartnerDirectoryRenderer section=\{section\} site=\{site\} page=\{page\} \/>/);
+});
+
+test("MSE-25.42 secondary partner and team pages inherit useful Home content only when needed", () => {
+  assert.match(api, /partenaires:\s*Object\.freeze/);
+  assert.match(api, /family:\s*"partners"/);
+  assert.match(api, /equipe:\s*Object\.freeze/);
+  assert.match(api, /family:\s*"team"/);
+  assert.match(api, /services:\s*Object\.freeze/);
+  assert.match(api, /destinations:\s*Object\.freeze/);
+});
+
+test("MSE-25.42 contact, map and hours provide a connected local conversion path", () => {
+  assert.match(contact, /resolvedTargetCities/);
+  assert.match(contact, /public-site-agency-profile/);
+  assertCanonicalInspirationsLink(contact);
+  assert.match(map, /google\.com\/maps\/search/);
+  assert.match(map, /Calculer l’itinéraire/);
+  assert.match(map, /\/equipe/);
+  assert.match(hours, /getPublicHours/);
+  assert.match(hours, /public-site-hours-status-card/);
+  assert.match(hours, /\/contact/);
+});
+
+test("MSE-25.42 canonical page tree uses the plural inspirations route", () => {
+  assert.match(tree, /slug:\s*"inspirations"/);
+  assert.doesNotMatch(tree, /slug:\s*"inspiration"/);
+});
+
+test("MSE-25.42 generated TEAM and PARTNERS pages contain their real public renderers", () => {
+  assert.match(sections, /TEAM:\s*\["page-header",\s*"team-introduction",\s*"team"/);
+  assert.match(sections, /PARTNERS:\s*\["page-header",\s*"partners-introduction",\s*"partner-directory"/);
+});
