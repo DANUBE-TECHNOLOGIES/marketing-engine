@@ -91,13 +91,25 @@ class SiteReadinessClient {
 
   async check({
     agencyId,
+    siteSlug,
     headers,
   }) {
     let response;
 
+    const query = new URLSearchParams();
+    const normalizedSiteSlug = String(siteSlug || "").trim();
+    if (normalizedSiteSlug) {
+      query.set("siteSlug", normalizedSiteSlug);
+    }
+
+    const queryString = query.toString();
+    const readinessUrl =
+      `${this.backendOrigin}${this.readinessPathPrefix}/agencies/${encodeURIComponent(String(agencyId))}/readiness` +
+      (queryString ? `?${queryString}` : "");
+
     try {
       response = await fetch(
-        `${this.backendOrigin}${this.readinessPathPrefix}/agencies/${encodeURIComponent(String(agencyId))}/readiness`,
+        readinessUrl,
         {
           method: "GET",
           headers: forwardedHeaders(headers),
