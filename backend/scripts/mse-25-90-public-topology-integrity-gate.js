@@ -8,6 +8,11 @@
  * may expose additional destination/editorial pages. Instead it certifies the
  * published site set, mandatory canonical routes and absence of legacy aliases.
  *
+ * The /inspiration index is intentionally not a mandatory sitemap route: the
+ * dedicated frontend route switches to noindex when an agency has no published
+ * inspiration article. In that state, omitting /inspiration from the sitemap is
+ * the correct canonical/indexation behaviour and must not fail this topology gate.
+ *
  * No Google API call and no CMS/database mutation is performed here.
  */
 
@@ -34,9 +39,12 @@ const DEFAULT_REQUIRED_PATHS = [
   "partenaires",
   "services",
   "destinations",
-  "inspiration",
   "contact",
 ];
+
+const CONDITIONAL_PATHS = new Set([
+  "inspiration",
+]);
 
 const LEGACY_PATH_SEGMENTS = new Set([
   "home",
@@ -162,10 +170,12 @@ function summarizeTopology(topology, {
   const siteDetails = actualSites.map((siteSlug) => {
     const site = topology.sites.get(siteSlug);
     const missingPaths = requiredPaths.filter((path) => !site.paths.has(path));
+    const conditionalPaths = [...CONDITIONAL_PATHS].filter((path) => site.paths.has(path));
     return {
       siteSlug,
       urlCount: site.urls.length,
       missingPaths,
+      conditionalPaths,
       ok: missingPaths.length === 0,
     };
   });
@@ -230,7 +240,7 @@ async function main() {
 
   for (const site of summary.siteDetails) {
     console.log(
-      `SITE=${site.siteSlug} URLS=${site.urlCount} REQUIRED_ROUTES=${site.missingPaths.length ? `MISSING:${site.missingPaths.join("|")}` : "OK"}`
+      `SITE=${site.siteSlug} URLS=${site.urlCount} REQUIRED_ROUTES=${site.missingPaths.length ? `MISSING:${site.missingPaths.join("|")}` : "OK"} CONDITIONAL_ROUTES=${site.conditionalPaths.length ? site.conditionalPaths.join("|") : "NONE"}`
     );
   }
 
@@ -267,6 +277,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  CONDITIONAL_PATHS,
   DEFAULT_REQUIRED_PATHS,
   LEGACY_PATH_SEGMENTS,
   buildTopology,
