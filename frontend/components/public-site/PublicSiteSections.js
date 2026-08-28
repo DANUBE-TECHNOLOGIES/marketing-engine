@@ -207,8 +207,10 @@ function CtaSection({ section, site }) {
   return <section className="public-site-section public-site-cta"><div className="public-site-container"><h2>{sectionTitle(section,content)||"Préparons votre prochain voyage"}</h2>{content.text?<p>{content.text}</p>:null}<div className="public-site-hero-actions"><a className="public-site-button" href={publicPageHref(site,"contact")}>{content.primaryButton||content.primaryCta?.label||"Demander un devis"}</a></div></div></section>;
 }
 
-export default function PublicSiteSections({ page, site }) {
-  const sections = renderablePublicSections(page);
+export default function PublicSiteSections({ page, site, suppressHero = false }) {
+  const sections = renderablePublicSections(page).filter(
+    (section) => !(suppressHero && getSectionType(section).includes("hero"))
+  );
 
   return sections.map((section, index) => {
     const type = getSectionType(section);
