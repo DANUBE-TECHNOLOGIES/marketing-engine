@@ -1,5 +1,6 @@
 import Link from "next/link";
 import JsonLd from "../JsonLd";
+import PublicReassuranceBand from "../public-site/PublicReassuranceBand";
 import {
   buildBreadcrumbSchema,
   buildDestinationSchema,
@@ -311,6 +312,8 @@ export default function DestinationPage({ data }) {
           </div>
         </div>
       </section>
+
+      <PublicReassuranceBand />
     </div>
   );
 }
