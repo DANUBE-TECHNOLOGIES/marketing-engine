@@ -2,6 +2,7 @@
 
 const {
   createGoogleAccessTokenProvider,
+  createPersistentOAuthAccessTokenProvider,
   googleAuthLibraryStatus,
 } = require("./auth");
 const { DisabledSearchConsoleProvider, GoogleSearchConsoleProvider } = require("./provider");
@@ -18,9 +19,20 @@ function disabledProvider(reason, requestedEnabled = false) {
   return provider;
 }
 
-function createConfiguredSearchConsoleProvider({ env = process.env, GoogleAuth, fetchImpl, moduleLoader } = {}) {
+function createConfiguredSearchConsoleProvider({ env = process.env, prisma, GoogleAuth, fetchImpl, moduleLoader } = {}) {
   if (!enabled(env.SEARCH_CONSOLE_ENABLED)) {
     return disabledProvider("feature-disabled", false);
+  }
+
+  if (prisma?.googleToken) {
+    const provider = new GoogleSearchConsoleProvider({
+      accessTokenProvider: createPersistentOAuthAccessTokenProvider({ prisma, env, fetchImpl }),
+      fetchImpl,
+    });
+    provider.requestedEnabled = true;
+    provider.disabledReason = null;
+    provider.credentialMode = "persistent-oauth-token";
+    return provider;
   }
 
   if (!GoogleAuth) {
