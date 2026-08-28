@@ -11,6 +11,7 @@ export default function IndexationPage() {
   return (
     <>
       <div className="indexation-page-tools">
+        <Link href="/indexation/observability">Observabilité de l’indexation</Link>
         <Link href="/indexation/local-seo">Couverture SEO locale</Link>
         <Link href="/indexation/local-content">Unicité des contenus locaux</Link>
         <Link href="/indexation/performance">Performance Search Console</Link>
