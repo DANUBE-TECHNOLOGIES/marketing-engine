@@ -1,0 +1,142 @@
+name: MSE-25.86 SEO coverage remediation
+
+on:
+  push:
+    branches:
+      - feature/mse-25-86-seo-coverage-remediation-on-85-20260828
+  pull_request:
+    branches:
+      - feature/mse-25-85-sitemap-cache-safety
+
+permissions:
+  contents: read
+
+jobs:
+  backend-safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Assert no frontend regression surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE="$(git merge-base HEAD origin/feature/mse-25-85-sitemap-cache-safety)"
+          fi
+          CHANGED="$(git diff --name-only "$BASE" HEAD)"
+          printf '%s\n' "$CHANGED"
+          if printf '%s\n' "$CHANGED" | grep -E '^frontend/'; then
+            echo "MSE-25.86 must not modify frontend files." >&2
+            exit 1
+          fi
+
+      - name: Assert remediation stays non-structural and atomic
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const source = fs.readFileSync('backend/scripts/mse-25-86-seo-coverage-remediation.js', 'utf8');
+          const forbidden = [
+            /pageBlock\.create\s*\(/,
+            /pageBlock\.delete\s*\(/,
+            /agencySitePage\.create\s*\(/,
+            /agencySitePage\.delete\s*\(/,
+          ];
+          for (const pattern of forbidden) {
+            if (pattern.test(source)) {
+              console.error(`Forbidden structural mutation detected: ${pattern}`);
+              process.exit(1);
+            }
+          }
+          if (!/networkAtomic:\s*true/.test(source) || !/preflightAllSitesBeforeWrite:\s*true/.test(source)) {
+            console.error('Network atomicity/preflight contract missing.');
+            process.exit(1);
+          }
+          NODE
+
+      - name: Validate guarded operational entrypoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n backend/scripts/mse-25-86-execute.sh
+          grep -q 'MSE_25_86_APPLY_ACK=SEO-COVERAGE-9-SITES' backend/scripts/mse-25-86-execute.sh
+          grep -q 'MSE_25_86_ROLLBACK_ACK=RESTORE-MSE-25-86' backend/scripts/mse-25-86-execute.sh
+          grep -q 'DATABASE_URL absente' backend/scripts/mse-25-86-execute.sh
+          grep -q 'mse-25-86-post-apply-verify.js' backend/scripts/mse-25-86-execute.sh
+          grep -q 'MSE-25.86 POST-APPLY VERIFY' backend/scripts/mse-25-86-execute.sh
+
+      - name: Assert post-apply verification is read-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const source = fs.readFileSync('backend/scripts/mse-25-86-post-apply-verify.js', 'utf8');
+          const forbidden = [
+            /(?:db|prisma)\.[A-Za-z0-9_]+\.(?:create|createMany|update|updateMany|delete|deleteMany|upsert)\s*\(/,
+            /\$executeRaw(?:Unsafe)?\s*\(/,
+            /\$queryRawUnsafe\s*\(/,
+          ];
+          for (const pattern of forbidden) {
+            if (pattern.test(source)) {
+              console.error(`Post-apply verifier must remain read-only: ${pattern}`);
+              process.exit(1);
+            }
+          }
+          if (!/automaticRollbackForbidden:\s*true/.test(source) || !/rollbackRequiresSeparateHumanDecision:\s*true/.test(source)) {
+            console.error('Post-apply rollback policy missing.');
+            process.exit(1);
+          }
+          NODE
+
+      - name: Validate VM readiness handoff contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check backend/scripts/mse-25-86-vm-readiness.js
+          grep -q 'feature/mse-25-86-seo-coverage-remediation-on-85-20260828' backend/scripts/mse-25-86-vm-readiness.js
+          grep -Eq 'runRemediation\(\{[^}]*dryRun: true' backend/scripts/mse-25-86-vm-readiness.js
+          grep -q 'cleanWorktree' backend/scripts/mse-25-86-vm-readiness.js
+          grep -q 'databaseConnected' backend/scripts/mse-25-86-vm-readiness.js
+          grep -q 'READY_FOR_APPLY_REVIEW' backend/scripts/mse-25-86-vm-readiness.js
+          grep -q 'previewReportPersisted' backend/scripts/mse-25-86-vm-readiness.js
+          grep -q 'mse-25.86:vm-readiness' backend/package.json
+          node -e 'JSON.parse(require("fs").readFileSync("backend/package.json","utf8"))'
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Generate Prisma client
+        working-directory: backend
+        run: npx prisma generate
+
+      - name: Run MSE-25.86 focused tests
+        working-directory: backend
+        run: |
+          node --test test/mse-25-86-seo-coverage-remediation.test.js
+          node --test test/mse-25-86-contact-seo-only.test.js
+          node --test test/mse-25-86-vm-readiness.test.js
+
+      - name: Syntax-check apply, verify and rollback scripts
+        working-directory: backend
+        run: |
+          node --check scripts/mse-25-86-vm-readiness.js
+          node --check scripts/mse-25-86-seo-coverage-remediation.js
+          node --check scripts/mse-25-86-post-apply-verify.js
+          node --check scripts/mse-25-86-seo-coverage-rollback.js
