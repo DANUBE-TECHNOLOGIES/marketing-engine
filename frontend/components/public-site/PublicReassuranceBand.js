@@ -48,37 +48,36 @@ const TRUST_REFERENCES = Object.freeze([
   },
 ]);
 
-function BrandMark({ item }) {
-  if (!item.logo) {
-    return <span className="public-reassurance-logo-fallback">{item.label}</span>;
-  }
-
+function BrandMark({ item, kind }) {
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      className="public-reassurance-logo"
-      src={item.logo}
-      alt={`Logo ${item.label}`}
-      loading="lazy"
-      decoding="async"
-      referrerPolicy="no-referrer"
-    />
+    <div
+      className={`public-reassurance-mark public-reassurance-mark--${kind}`}
+      data-reassurance-id={item.id}
+      title={item.label}
+    >
+      <div className="public-reassurance-logo-slot">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          className="public-reassurance-logo"
+          src={item.logo}
+          alt={`Logo ${item.label}`}
+          loading="lazy"
+          decoding="async"
+          referrerPolicy="no-referrer"
+        />
+      </div>
+      <span className="public-reassurance-mark-label">{item.label}</span>
+      {item.detail ? <small>{item.detail}</small> : null}
+    </div>
   );
 }
 
-function Badge({ item, kind }) {
+function BrandRow({ items, kind }) {
   return (
-    <div
-      className={`public-reassurance-badge public-reassurance-badge--${kind}`}
-      data-reassurance-id={item.id}
-    >
-      <div className="public-reassurance-logo-slot">
-        <BrandMark item={item} />
-      </div>
-      <div className="public-reassurance-badge-copy">
-        <strong>{item.label}</strong>
-        {item.detail ? <small>{item.detail}</small> : null}
-      </div>
+    <div className={`public-reassurance-marks public-reassurance-marks--${kind}`}>
+      {items.map((item) => (
+        <BrandMark key={item.id} item={item} kind={kind} />
+      ))}
     </div>
   );
 }
@@ -89,41 +88,29 @@ export default function PublicReassuranceBand() {
       className="public-reassurance"
       aria-label="Moyens de paiement et garanties professionnelles"
     >
-      <div className="public-site-container public-reassurance-inner">
-        <div
-          className="public-reassurance-group"
-          aria-label="Moyens de paiement acceptés"
-        >
-          <div className="public-reassurance-group-title">
+      <div className="public-site-container public-reassurance-shell">
+        <div className="public-reassurance-panel public-reassurance-panel--payments">
+          <header className="public-reassurance-heading">
+            <span className="public-reassurance-kicker">Paiement en agence</span>
             <div>
-              <span className="public-reassurance-kicker">Paiement en agence</span>
               <strong>Moyens de paiement acceptés</strong>
               <small>Selon les conditions de votre dossier</small>
             </div>
-          </div>
-          <div className="public-reassurance-badges public-reassurance-badges--payments">
-            {PAYMENT_METHODS.map((item) => (
-              <Badge key={item.id} item={item} kind="payment" />
-            ))}
-          </div>
+          </header>
+          <BrandRow items={PAYMENT_METHODS} kind="payment" />
         </div>
 
-        <div
-          className="public-reassurance-group"
-          aria-label="Garanties et affiliations professionnelles"
-        >
-          <div className="public-reassurance-group-title">
+        <div className="public-reassurance-divider" aria-hidden="true" />
+
+        <div className="public-reassurance-panel public-reassurance-panel--trust">
+          <header className="public-reassurance-heading">
+            <span className="public-reassurance-kicker">Votre agence en toute confiance</span>
             <div>
-              <span className="public-reassurance-kicker">Votre agence en toute confiance</span>
               <strong>Garanties & affiliations</strong>
               <small>Les repères professionnels de Mondescale</small>
             </div>
-          </div>
-          <div className="public-reassurance-badges public-reassurance-badges--trust">
-            {TRUST_REFERENCES.map((item) => (
-              <Badge key={item.id} item={item} kind="trust" />
-            ))}
-          </div>
+          </header>
+          <BrandRow items={TRUST_REFERENCES} kind="trust" />
         </div>
       </div>
     </section>
