@@ -18,7 +18,7 @@ test("redirect status helper covers canonical HTTP redirect codes", () => {
   }
 });
 
-test("collectLinks extracts unique internal agency targets while preserving edges", () => {
+test("collectLinks extracts unique internal agency targets and unique page-target edges", () => {
   const pages = [
     {
       url: "https://agences.mondescale.com/agence/demo/contact",
@@ -32,7 +32,17 @@ test("collectLinks extracts unique internal agency targets while preserving edge
   ];
 
   const graph = collectLinks(pages);
-  assert.equal(graph.edges.length, 3);
+  assert.equal(graph.edges.length, 2);
+  assert.deepEqual(graph.edges, [
+    {
+      source: "https://agences.mondescale.com/agence/demo/contact",
+      target: "https://agences.mondescale.com/agence/demo/services",
+    },
+    {
+      source: "https://agences.mondescale.com/agence/demo/contact",
+      target: "https://agences.mondescale.com/agence/demo/inspiration",
+    },
+  ]);
   assert.deepEqual(graph.targets.sort(), [
     "https://agences.mondescale.com/agence/demo/inspiration",
     "https://agences.mondescale.com/agence/demo/services",
