@@ -3,7 +3,7 @@
 const crypto = require("node:crypto");
 const express = require("express");
 
-const SEARCH_CONSOLE_SCOPE = "https://www.googleapis.com/auth/webmasters.readonly";
+const SEARCH_CONSOLE_SCOPE = "https://www.googleapis.com/auth/webmasters";
 const SEARCH_CONSOLE_PROVIDER = "search-console";
 const STATE_TTL_MS = 10 * 60 * 1000;
 
@@ -107,7 +107,7 @@ function createSearchConsoleOAuthRoutes(prisma, { fetchImpl = fetch } = {}) {
         });
       });
 
-      return res.send(`<!doctype html><html><body style="font-family:Arial;padding:40px"><h2>Search Console connectée</h2><p>Le jeton de lecture seule Search Console a été enregistré séparément du token Google Business.</p><p>Vous pouvez fermer cette fenêtre et reprendre MSE-25.48.</p></body></html>`);
+      return res.send(`<!doctype html><html><body style="font-family:Arial;padding:40px"><h2>Search Console connectée</h2><p>Le jeton Search Console a été enregistré séparément du token Google Business. Les écritures restent soumises aux gardes et à l'approbation explicite du cockpit.</p><p>Vous pouvez fermer cette fenêtre et retourner dans Local Engine.</p></body></html>`);
     } catch (error) {
       return res.status(500).json({ ok: false, error: "SEARCH_CONSOLE_OAUTH_CALLBACK_FAILED", message: error.message });
     }
