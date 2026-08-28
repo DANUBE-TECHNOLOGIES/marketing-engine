@@ -31,6 +31,22 @@ test("MSE-25.86 attribute helpers support quoted and unquoted HTML attributes", 
   assert.equal(hasAttr(tag, "loading"), false);
 });
 
+test("MSE-25.86 exact attribute parsing never mistakes data-* suffixes for real attributes", () => {
+  const tag = '<article data-partner-id="fram" data-width="99" id="real-card"></article>';
+  assert.equal(attr(tag, "id"), "real-card");
+  assert.equal(attr(tag, "width"), null);
+  assert.equal(hasAttr(tag, "id"), true);
+  assert.equal(hasAttr('<article data-partner-id="fram"></article>', "id"), false);
+
+  const html = [
+    '<article data-partner-id="fram"></article>',
+    '<article data-preferred-partner-id="fram"></article>',
+    '<article id="actual"></article>',
+    '<article id="actual"></article>',
+  ].join("");
+  assert.deepEqual(duplicateIds(html), ["actual"]);
+});
+
 test("MSE-25.86 accepts explicit geometry, fill images and aspect-ratio reservation", () => {
   assert.equal(hasReservedGeometry('<img width="160" height="64" alt="">'), true);
   assert.equal(hasReservedGeometry('<img data-nimg="fill" alt="">'), true);
