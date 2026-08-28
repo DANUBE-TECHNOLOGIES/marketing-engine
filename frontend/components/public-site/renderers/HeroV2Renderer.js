@@ -52,8 +52,9 @@ function genericHeroTitle(value, site) {
 
 function intentHeroTitle({ page, site }) {
   const city = siteCity(site);
-  if (!city) return null;
   const slug = pageSlug(page);
+
+  if (!city) return String(page?.title || "").trim() || null;
   if (!slug || ["home", "accueil", "index"].includes(slug)) return `Agence de voyages à ${city}`;
   if (slug === "services") return `Services de votre agence de voyages à ${city}`;
   if (["destinations", "destination"].includes(slug)) return `Destinations et voyages depuis ${city}`;
@@ -62,12 +63,13 @@ function intentHeroTitle({ page, site }) {
   if (["partenaires", "partners", "nos-partenaires"].includes(slug)) return `Nos partenaires voyage à ${city}`;
   if (["contact", "nous-contacter"].includes(slug)) return `Contacter votre agence de voyages à ${city}`;
   if (["avis", "reviews", "avis-clients"].includes(slug)) return `Avis clients de votre agence de voyages à ${city}`;
-  return null;
+  return String(page?.title || "").trim() || null;
 }
 
-function resolvedHeroTitle({ content, section, site, page }) {
+function resolvedHeroTitle({ content, section, site, page, forcePageIntent = false }) {
   const configured = content.title || content.heading || section.title || "";
   const localIntent = intentHeroTitle({ page, site });
+  if (forcePageIntent && localIntent) return localIntent;
   if (localIntent && genericHeroTitle(configured, site)) return localIntent;
   return configured || localIntent || defaultHeroTitle(site);
 }
@@ -80,10 +82,10 @@ function resolvedHeroAlt({ content, site, title }) {
   return title;
 }
 
-function resolvedHeroImage({ content, page }) {
+function resolvedHeroImage({ content, page, sharedNetworkHero = false }) {
   const configured = content.backgroundImage || content.imageUrl || null;
   if (configured) return configured;
-  return isHomePage(page) ? NETWORK_HOME_HERO_IMAGE : null;
+  return isHomePage(page) || sharedNetworkHero ? NETWORK_HOME_HERO_IMAGE : null;
 }
 
 function imageOrigin(value) {
@@ -95,16 +97,17 @@ function imageOrigin(value) {
   }
 }
 
-export default function HeroV2Renderer({ section, site, page }) {
+export default function HeroV2Renderer({ section, site, page, forcePageIntent = false, sharedNetworkHero = false }) {
   const content = getSectionContent(section);
-  const title = resolvedHeroTitle({ content, section, site, page });
+  const title = resolvedHeroTitle({ content, section, site, page, forcePageIntent });
   const subtitle = content.subtitle || content.text || content.description || site?.agency?.description || "Votre agence vous accompagne dans la création de vos plus beaux voyages.";
   const alignment = normalizeAlignment(content.alignment);
-  const backgroundImage = resolvedHeroImage({ content, page });
+  const backgroundImage = resolvedHeroImage({ content, page, sharedNetworkHero });
   const backgroundPosition = content.backgroundPosition || "center";
   const imageAlt = resolvedHeroAlt({ content, site, title });
   const overlayOpacity = Math.min(Math.max(Number(content.overlayOpacity ?? 72), 20), 90) / 100;
   const homeHero = isHomePage(page);
+  const immersiveNetworkHero = homeHero || sharedNetworkHero;
 
   if (backgroundImage) {
     const origin = imageOrigin(backgroundImage);
@@ -122,7 +125,7 @@ export default function HeroV2Renderer({ section, site, page }) {
     : sitePageHref(site, "contact");
   const secondaryHref = secondaryCta
     ? resolvePublicCtaHref(site, secondaryCta.href, "destinations")
-    : homeHero
+    : immersiveNetworkHero
       ? sitePageHref(site, "destinations")
       : content.secondaryButton
         ? sitePageHref(site, "contact")
@@ -134,10 +137,10 @@ export default function HeroV2Renderer({ section, site, page }) {
   const heroClassName = [
     "public-site-hero",
     "public-site-hero--immersive",
-    homeHero ? "public-site-hero--home" : "public-site-hero--inner",
+    immersiveNetworkHero ? "public-site-hero--home" : "public-site-hero--inner",
   ].filter(Boolean).join(" ");
 
-  const overlayStyle = homeHero
+  const overlayStyle = immersiveNetworkHero
     ? `linear-gradient(90deg, rgba(7,29,48,${overlayOpacity}) 0%, rgba(7,29,48,${Math.max(overlayOpacity - 0.16, 0.38)}) 34%, rgba(7,29,48,0.18) 58%, rgba(7,29,48,0.04) 76%, rgba(7,29,48,0) 100%)`
     : `linear-gradient(90deg, rgba(7,29,48,${overlayOpacity}) 0%, rgba(7,29,48,${Math.max(overlayOpacity - 0.12, 0.42)}) 46%, rgba(7,29,48,0.12) 78%, rgba(7,29,48,0.04) 100%)`;
 
@@ -170,7 +173,7 @@ export default function HeroV2Renderer({ section, site, page }) {
           <p className="public-site-hero-text" style={centered ? { marginInline: "auto" } : rightAligned ? { marginLeft: "auto" } : undefined}>{subtitle}</p>
           <div className="public-site-hero-actions" style={{ justifyContent: centered ? "center" : rightAligned ? "flex-end" : "flex-start" }}>
             {primaryHref ? <a className="public-site-button" href={primaryHref}>{ctaLabel(primaryCta, content.primaryButton, "Demander un devis")}</a> : null}
-            {secondaryHref ? <a className="public-site-button public-site-button-secondary" href={secondaryHref}>{ctaLabel(secondaryCta, content.secondaryButton, homeHero ? "Découvrir nos voyages" : "Nous contacter")}</a> : null}
+            {secondaryHref ? <a className="public-site-button public-site-button-secondary" href={secondaryHref}>{ctaLabel(secondaryCta, content.secondaryButton, immersiveNetworkHero ? "Découvrir nos voyages" : "Nous contacter")}</a> : null}
           </div>
         </div>
       </div>
