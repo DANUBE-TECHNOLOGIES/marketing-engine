@@ -38,6 +38,9 @@ const COMMERCIAL_PAGE_INTENTS = Object.freeze([
   { key: "ticketing", label: "billetterie et vols", terms: ["billetterie", "billetterie-vols", "vol", "vols"] },
 ]);
 
+const DESTINATION_HERO_WIDTH = 1920;
+const DESTINATION_HERO_HEIGHT = 1080;
+
 function commercialPageLinks(site) {
   const root = String(site?.basePath || `/agence/${encodeURIComponent(site?.slug || "")}`).replace(/\/$/, "");
   const pages = Array.isArray(site?.pages) ? site.pages : [];
@@ -223,6 +226,8 @@ export default function DestinationPage({ data }) {
             src={d.heroImageUrl}
             alt=""
             aria-hidden="true"
+            width={DESTINATION_HERO_WIDTH}
+            height={DESTINATION_HERO_HEIGHT}
             fetchPriority="high"
             loading="eager"
             decoding="async"
@@ -320,5 +325,7 @@ export default function DestinationPage({ data }) {
 
 export {
   COMMERCIAL_PAGE_INTENTS,
+  DESTINATION_HERO_HEIGHT,
+  DESTINATION_HERO_WIDTH,
   commercialPageLinks,
 };
