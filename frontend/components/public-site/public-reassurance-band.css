@@ -1,78 +1,26 @@
 .public-reassurance {
-  padding: 74px 0 78px;
+  padding: 34px 0 38px;
   border-top: 1px solid rgba(16, 42, 67, 0.08);
-  border-bottom: 1px solid rgba(16, 42, 67, 0.08);
-  background:
-    radial-gradient(circle at 15% 15%, rgba(11, 95, 255, 0.08), transparent 28%),
-    linear-gradient(180deg, #ffffff 0%, #f7f9fc 100%);
+  background: linear-gradient(180deg, #ffffff 0%, #f7f9fc 100%);
 }
 
 .public-reassurance-inner {
   display: grid;
-  gap: 34px;
-}
-
-.public-reassurance-heading {
-  max-width: 780px;
-}
-
-.public-reassurance-kicker {
-  margin: 0 0 9px;
-  color: var(--public-primary);
-  font-size: 0.76rem;
-  font-weight: 850;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.public-reassurance-heading h2 {
-  margin: 0;
-  color: var(--public-text);
-  font-size: clamp(2rem, 4vw, 3rem);
-  line-height: 1.05;
-  letter-spacing: -0.035em;
-}
-
-.public-reassurance-heading > p:last-child {
-  max-width: 720px;
-  margin: 16px 0 0;
-  color: var(--public-muted);
-  line-height: 1.65;
-}
-
-.public-reassurance-groups {
-  display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px;
+  gap: 16px;
 }
 
 .public-reassurance-group {
   min-width: 0;
-  padding: 24px;
+  padding: 18px;
   border: 1px solid rgba(16, 42, 67, 0.1);
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 18px 48px rgba(16, 42, 67, 0.06);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 12px 30px rgba(16, 42, 67, 0.045);
 }
 
 .public-reassurance-group-title {
-  display: flex;
-  align-items: center;
-  gap: 13px;
-  margin-bottom: 20px;
-}
-
-.public-reassurance-group-title > span {
-  width: 38px;
-  height: 38px;
-  display: grid;
-  flex: 0 0 auto;
-  place-items: center;
-  border-radius: 12px;
-  background: var(--public-soft-blue);
-  color: var(--public-primary);
-  font-size: 0.72rem;
-  font-weight: 900;
+  margin-bottom: 14px;
 }
 
 .public-reassurance-group-title > div {
@@ -81,89 +29,90 @@
   gap: 2px;
 }
 
+.public-reassurance-kicker {
+  margin: 0 0 3px;
+  color: var(--public-primary);
+  font-size: 0.66rem;
+  font-weight: 850;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
 .public-reassurance-group-title strong {
   color: var(--public-text);
-  font-size: 1rem;
+  font-size: 0.98rem;
 }
 
 .public-reassurance-group-title small {
   color: var(--public-muted);
-  font-size: 0.75rem;
+  font-size: 0.7rem;
 }
 
 .public-reassurance-badges {
   display: grid;
-  gap: 10px;
-}
-
-.public-reassurance-badges--payments {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.public-reassurance-badges--trust {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
 }
 
 .public-reassurance-badge {
-  min-height: 62px;
+  min-height: 48px;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 3px;
-  padding: 12px 14px;
+  gap: 2px;
+  padding: 9px 11px;
   border: 1px solid rgba(16, 42, 67, 0.09);
-  border-radius: 14px;
+  border-radius: 11px;
   background: #ffffff;
 }
 
 .public-reassurance-badge strong {
   color: var(--public-text);
-  font-size: 0.86rem;
+  font-size: 0.8rem;
   line-height: 1.2;
 }
 
 .public-reassurance-badge small {
   color: var(--public-muted);
-  font-size: 0.68rem;
-  line-height: 1.25;
+  font-size: 0.63rem;
+  line-height: 1.2;
 }
 
 .public-reassurance-badge--payment {
   align-items: center;
-  min-height: 56px;
+  min-height: 44px;
   text-align: center;
 }
 
 .public-reassurance-badge--payment strong {
-  font-size: 0.9rem;
-  letter-spacing: 0.015em;
+  font-size: 0.82rem;
+  letter-spacing: 0.01em;
 }
 
 .public-reassurance-badge[data-reassurance-id="visa"] strong,
 .public-reassurance-badge[data-reassurance-id="groupama"] strong,
 .public-reassurance-badge[data-reassurance-id="cediv"] strong,
 .public-reassurance-badge[data-reassurance-id="edv"] strong {
-  letter-spacing: 0.035em;
+  letter-spacing: 0.025em;
 }
 
 @media (max-width: 900px) {
-  .public-reassurance {
-    padding: 58px 0 62px;
-  }
-
-  .public-reassurance-groups {
+  .public-reassurance-inner {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 560px) {
-  .public-reassurance-group {
-    padding: 20px;
-    border-radius: 20px;
+  .public-reassurance {
+    padding: 26px 0 30px;
   }
 
-  .public-reassurance-badges--payments,
-  .public-reassurance-badges--trust {
+  .public-reassurance-group {
+    padding: 15px;
+    border-radius: 15px;
+  }
+
+  .public-reassurance-badges {
     grid-template-columns: 1fr;
   }
 }
