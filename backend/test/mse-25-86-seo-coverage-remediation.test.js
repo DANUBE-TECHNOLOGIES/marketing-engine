@@ -8,7 +8,11 @@ const {
   homeSeo,
   servicesSeo,
   contactSeo,
+  homeBodySentence,
+  servicesBodySentence,
+  contactBodySentence,
   localContextSentence,
+  descriptiveBlock,
 } = require("../scripts/mse-25-86-seo-coverage-remediation");
 const {
   INTENTS,
@@ -28,14 +32,10 @@ function pageFromSeo(slug, seo, body) {
     seoTitle: seo.seoTitle,
     metaDescription: seo.metaDescription,
     blocks: [
-      { blockType: "hero", content: { h1: seo.h1, subtitle: body } },
+      { blockType: "hero", content: { h1: seo.h1, subtitle: "Hero conservé" } },
+      { blockType: "text", content: { text: body } },
     ],
   };
-}
-
-function longBody(city, extra = "") {
-  const sentence = `À ${city}, notre agence de voyages propose conseil voyage, accompagnement, voyage sur mesure, séjours, circuits, croisières, billetterie et vols, avec contact et rendez vous en agence physique. `;
-  return `${sentence.repeat(9)} ${extra}`.trim();
 }
 
 test("MSE-25.86 targets exactly the nine sites from the coverage report", () => {
@@ -55,10 +55,9 @@ test("MSE-25.86 targets exactly the nine sites from the coverage report", () => 
   );
 });
 
-test("home remediation makes advice, custom, package and cruise locally strong", () => {
+test("home remediation makes advice, custom, package and cruise locally strong without depth padding", () => {
   for (const city of TARGETS.map((item) => item.city)) {
-    const seo = homeSeo(city);
-    const page = pageFromSeo("home", seo, longBody(city));
+    const page = pageFromSeo("home", homeSeo(city), homeBodySentence(city));
     for (const key of ["advice", "custom", "package", "cruise"]) {
       const intent = INTENTS.find((item) => item.key === key);
       const result = qualityForTarget(page, city, intent);
@@ -68,23 +67,21 @@ test("home remediation makes advice, custom, package and cruise locally strong",
   }
 });
 
-test("services remediation makes ticketing locally strong", () => {
+test("services remediation makes ticketing locally strong without depth padding", () => {
   for (const city of TARGETS.map((item) => item.city)) {
-    const seo = servicesSeo(city);
-    const page = pageFromSeo("services", seo, longBody(city));
+    const page = pageFromSeo("services", servicesSeo(city), servicesBodySentence(city));
     const intent = INTENTS.find((item) => item.key === "ticketing");
     const result = qualityForTarget(page, city, intent);
     assert.equal(result.status, "strong", `${city}: ${result.score}`);
   }
 });
 
-test("contact remediation makes appointment intent locally strong", () => {
-  for (const city of TARGETS.map((item) => item.city)) {
-    const seo = contactSeo(city);
-    const page = pageFromSeo("contact", seo, longBody(city));
+test("contact remediation makes appointment intent locally strong where report requires it", () => {
+  for (const target of TARGETS.filter((item) => item.appointment)) {
+    const page = pageFromSeo("contact", contactSeo(target.city), contactBodySentence(target.city));
     const intent = INTENTS.find((item) => item.key === "appointment");
-    const result = qualityForTarget(page, city, intent);
-    assert.equal(result.status, "strong", `${city}: ${result.score}`);
+    const result = qualityForTarget(page, target.city, intent);
+    assert.equal(result.status, "strong", `${target.city}: ${result.score}`);
   }
 });
 
@@ -93,13 +90,30 @@ test("Melun and Amilly local-context addition closes territorial anchoring dimen
     const home = pageFromSeo(
       "accueil",
       homeSeo(city),
-      longBody(city, localContextSentence(city))
+      `${homeBodySentence(city)} ${localContextSentence(city)}`
     );
-    const site = {
-      agency: { city },
-      pages: [home],
-    };
-    const depth = auditLocalSemanticDepth(site);
+    const depth = auditLocalSemanticDepth({ agency: { city }, pages: [home] });
     assert.equal(depth.dimensions.localContext, true);
   }
+});
+
+test("body enrichment never selects hero text", () => {
+  const page = {
+    blocks: [
+      { blockType: "hero", content: { h1: "Titre", subtitle: "Sous-titre hero" } },
+      { blockType: "text", content: { text: "Texte éditorial existant" } },
+    ],
+  };
+  const block = descriptiveBlock(page);
+  assert.ok(block);
+  assert.equal(block.blockType, "text");
+});
+
+test("body enrichment refuses hero-only pages instead of changing presentation", () => {
+  const page = {
+    blocks: [
+      { blockType: "hero", content: { h1: "Titre", subtitle: "Sous-titre hero" } },
+    ],
+  };
+  assert.equal(descriptiveBlock(page), null);
 });
