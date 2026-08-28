@@ -1,8 +1,6 @@
 const express = require("express");
 
 const BUSINESS_SCOPE = "https://www.googleapis.com/auth/business.manage";
-const SEARCH_CONSOLE_SCOPE = "https://www.googleapis.com/auth/webmasters.readonly";
-const SEARCH_CONSOLE_STATE = "mse-25.48-search-console";
 
 function buildAuthUrl({ clientId, redirectUri, scope, state }) {
   const params = new URLSearchParams({
@@ -16,10 +14,6 @@ function buildAuthUrl({ clientId, redirectUri, scope, state }) {
   });
   if (state) params.set("state", state);
   return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
-}
-
-function resolveProvider(state) {
-  return state === SEARCH_CONSOLE_STATE ? "search-console" : "google";
 }
 
 module.exports = function createGoogleOAuthRoutes(prisma) {
@@ -46,17 +40,6 @@ module.exports = function createGoogleOAuthRoutes(prisma) {
     res.redirect(buildAuthUrl({ clientId: oauth.clientId, redirectUri: oauth.redirectUri, scope: BUSINESS_SCOPE }));
   });
 
-  router.get(["/search-console/auth", "/api/search-console/auth"], async (_req, res) => {
-    const oauth = requireOAuthClient(res);
-    if (!oauth) return;
-    res.redirect(buildAuthUrl({
-      clientId: oauth.clientId,
-      redirectUri: oauth.redirectUri,
-      scope: SEARCH_CONSOLE_SCOPE,
-      state: SEARCH_CONSOLE_STATE,
-    }));
-  });
-
   router.get([
     "/google/callback",
     "/api/google/callback",
@@ -64,11 +47,14 @@ module.exports = function createGoogleOAuthRoutes(prisma) {
     "/google-business-statuts",
     "/google-buisness-status",
     "/google-buisness-statuts"
-  ], async (req, res) => {
+  ], async (req, res, next) => {
+    // Tout callback portant un state appartient à un provider OAuth spécialisé
+    // (notamment Search Console) et ne doit jamais être consommé par Google Business.
+    if (req.query.state) return next();
+
     try {
       const code = req.query.code;
       const oauthError = req.query.error;
-      const provider = resolveProvider(req.query.state);
 
       if (oauthError) return res.status(400).send(`Erreur OAuth Google : ${oauthError}`);
       if (!code) return res.status(400).send("Code OAuth manquant");
@@ -99,19 +85,15 @@ module.exports = function createGoogleOAuthRoutes(prisma) {
       }
 
       const expiryDate = Date.now() + Number(tokenData.expires_in || 3600) * 1000;
-      await prisma.googleToken.deleteMany({ where: { provider } });
+      await prisma.googleToken.deleteMany({ where: { provider: "google" } });
       await prisma.googleToken.create({
         data: {
-          provider,
+          provider: "google",
           accessToken: tokenData.access_token,
           refreshToken: tokenData.refresh_token,
           expiryDate: BigInt(expiryDate)
         }
       });
-
-      if (provider === "search-console") {
-        return res.send(`<html><body style="font-family:Arial;padding:40px"><h2>Connexion Google Search Console réussie</h2><p>Le token de lecture Search Console a été enregistré séparément du token Google Business.</p><p>Vous pouvez retourner dans Local Engine.</p></body></html>`);
-      }
 
       return res.send(`<html><body style="font-family:Arial;padding:40px"><h2>Connexion Google Business réussie</h2><p>Le refresh token Google Business a bien été enregistré.</p><p>Vous pouvez retourner dans Local Engine.</p></body></html>`);
     } catch (error) {
@@ -152,13 +134,6 @@ module.exports = function createGoogleOAuthRoutes(prisma) {
     } catch (error) { res.status(500).json({ error: error.message }); }
   });
 
-  router.get("/search-console/token-status", async (_req, res) => {
-    try {
-      const token = await prisma.googleToken.findFirst({ where: { provider: "search-console" }, orderBy: { createdAt: "desc" } });
-      res.json({ provider: "search-console", exists: Boolean(token), hasAccessToken: Boolean(token?.accessToken), hasRefreshToken: Boolean(token?.refreshToken), expiryDate: token?.expiryDate ? String(token.expiryDate) : null, expired: token?.expiryDate ? Number(token.expiryDate) < Date.now() : true });
-    } catch (error) { res.status(500).json({ error: error.message }); }
-  });
-
   router.post("/google/refresh-token", async (_req, res) => {
     try {
       await refreshAccessToken();
@@ -191,7 +166,4 @@ module.exports = function createGoogleOAuthRoutes(prisma) {
 };
 
 module.exports.buildAuthUrl = buildAuthUrl;
-module.exports.resolveProvider = resolveProvider;
 module.exports.BUSINESS_SCOPE = BUSINESS_SCOPE;
-module.exports.SEARCH_CONSOLE_SCOPE = SEARCH_CONSOLE_SCOPE;
-module.exports.SEARCH_CONSOLE_STATE = SEARCH_CONSOLE_STATE;
