@@ -1,26 +1,26 @@
 .public-reassurance {
-  padding: 34px 0 38px;
+  padding: 36px 0 40px;
   border-top: 1px solid rgba(16, 42, 67, 0.08);
-  background: linear-gradient(180deg, #ffffff 0%, #f7f9fc 100%);
+  background: linear-gradient(180deg, #ffffff 0%, #f6f8fb 100%);
 }
 
 .public-reassurance-inner {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: 18px;
 }
 
 .public-reassurance-group {
   min-width: 0;
-  padding: 18px;
+  padding: 20px;
   border: 1px solid rgba(16, 42, 67, 0.1);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 12px 30px rgba(16, 42, 67, 0.045);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 14px 34px rgba(16, 42, 67, 0.055);
 }
 
 .public-reassurance-group-title {
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 
 .public-reassurance-group-title > div {
@@ -30,7 +30,7 @@
 }
 
 .public-reassurance-kicker {
-  margin: 0 0 3px;
+  margin: 0 0 4px;
   color: var(--public-primary);
   font-size: 0.66rem;
   font-weight: 850;
@@ -40,7 +40,8 @@
 
 .public-reassurance-group-title strong {
   color: var(--public-text);
-  font-size: 0.98rem;
+  font-size: 1rem;
+  line-height: 1.25;
 }
 
 .public-reassurance-group-title small {
@@ -51,68 +52,138 @@
 .public-reassurance-badges {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  gap: 10px;
 }
 
 .public-reassurance-badge {
-  min-height: 48px;
+  min-width: 0;
+  min-height: 88px;
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(16, 42, 67, 0.1);
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(16, 42, 67, 0.025);
+}
+
+.public-reassurance-logo-slot {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid rgba(16, 42, 67, 0.07);
+  padding-right: 10px;
+}
+
+.public-reassurance-logo {
+  width: 74px;
+  height: 44px;
+  display: block;
+  overflow: visible;
+}
+
+.public-reassurance-logo--wide {
+  width: 80px;
+}
+
+.public-reassurance-logo-fallback {
+  color: var(--public-text);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.public-reassurance-badge-copy {
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 2px;
-  padding: 9px 11px;
-  border: 1px solid rgba(16, 42, 67, 0.09);
-  border-radius: 11px;
-  background: #ffffff;
+  gap: 4px;
 }
 
 .public-reassurance-badge strong {
   color: var(--public-text);
-  font-size: 0.8rem;
-  line-height: 1.2;
+  font-size: 0.79rem;
+  line-height: 1.25;
 }
 
 .public-reassurance-badge small {
   color: var(--public-muted);
-  font-size: 0.63rem;
-  line-height: 1.2;
+  font-size: 0.64rem;
+  line-height: 1.35;
 }
 
 .public-reassurance-badge--payment {
-  align-items: center;
-  min-height: 44px;
-  text-align: center;
+  min-height: 82px;
+}
+
+.public-reassurance-badge--payment .public-reassurance-badge-copy {
+  justify-content: center;
 }
 
 .public-reassurance-badge--payment strong {
-  font-size: 0.82rem;
-  letter-spacing: 0.01em;
+  font-size: 0.8rem;
 }
 
-.public-reassurance-badge[data-reassurance-id="visa"] strong,
-.public-reassurance-badge[data-reassurance-id="groupama"] strong,
-.public-reassurance-badge[data-reassurance-id="cediv"] strong,
-.public-reassurance-badge[data-reassurance-id="edv"] strong {
-  letter-spacing: 0.025em;
+.public-reassurance-badge[data-reassurance-id="visa"] .public-reassurance-logo,
+.public-reassurance-badge[data-reassurance-id="mastercard"] .public-reassurance-logo {
+  width: 70px;
+}
+
+.public-reassurance-badge[data-reassurance-id="amex"] .public-reassurance-logo {
+  width: 66px;
+}
+
+.public-reassurance-badge[data-reassurance-id="cediv"] .public-reassurance-logo,
+.public-reassurance-badge[data-reassurance-id="edv"] .public-reassurance-logo,
+.public-reassurance-badge[data-reassurance-id="atout-france"] .public-reassurance-logo,
+.public-reassurance-badge[data-reassurance-id="groupama"] .public-reassurance-logo {
+  width: 78px;
+}
+
+@media (max-width: 1080px) {
+  .public-reassurance-badge {
+    grid-template-columns: 70px minmax(0, 1fr);
+  }
+
+  .public-reassurance-logo {
+    width: 64px;
+  }
 }
 
 @media (max-width: 900px) {
   .public-reassurance-inner {
     grid-template-columns: 1fr;
   }
+
+  .public-reassurance-badge {
+    grid-template-columns: 86px minmax(0, 1fr);
+  }
 }
 
 @media (max-width: 560px) {
   .public-reassurance {
-    padding: 26px 0 30px;
+    padding: 28px 0 32px;
   }
 
   .public-reassurance-group {
-    padding: 15px;
-    border-radius: 15px;
+    padding: 16px;
+    border-radius: 16px;
   }
 
   .public-reassurance-badges {
     grid-template-columns: 1fr;
+  }
+
+  .public-reassurance-badge {
+    min-height: 76px;
+    grid-template-columns: 78px minmax(0, 1fr);
+    padding: 10px 12px;
+  }
+
+  .public-reassurance-logo-slot {
+    height: 50px;
   }
 }
