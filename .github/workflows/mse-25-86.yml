@@ -69,6 +69,15 @@ jobs:
           }
           NODE
 
+      - name: Validate guarded operational entrypoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n backend/scripts/mse-25-86-execute.sh
+          grep -q 'MSE_25_86_APPLY_ACK=SEO-COVERAGE-9-SITES' backend/scripts/mse-25-86-execute.sh
+          grep -q 'MSE_25_86_ROLLBACK_ACK=RESTORE-MSE-25-86' backend/scripts/mse-25-86-execute.sh
+          grep -q 'DATABASE_URL absente' backend/scripts/mse-25-86-execute.sh
+
       - name: Install backend dependencies
         working-directory: backend
         run: npm ci
