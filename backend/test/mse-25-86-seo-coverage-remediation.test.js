@@ -14,6 +14,7 @@ const {
   localContextSentence,
   descriptiveBlock,
   buildTargetPlan,
+  projectionForPlan,
   summarizePlans,
 } = require("../scripts/mse-25-86-seo-coverage-remediation");
 const {
@@ -40,6 +41,21 @@ function pageFromSeo(slug, seo, body) {
     blocks: [
       { id: `hero-${slug}`, blockType: "hero", content: { h1: seo.h1, subtitle: "Hero conservé" } },
       { id: `text-${slug}`, blockType: "text", content: { text: body } },
+    ],
+  };
+}
+
+function weakPage(slug, city, title) {
+  return {
+    id: `page-${slug}`,
+    slug,
+    published: true,
+    status: "published",
+    seoTitle: `${title} ${city}`,
+    metaDescription: `Découvrez notre agence à ${city}.`,
+    blocks: [
+      { id: `hero-${slug}`, blockType: "hero", content: { h1: `${title} ${city}`, subtitle: "Hero conservé" } },
+      { id: `text-${slug}`, blockType: "text", content: { text: `Notre équipe vous accueille à ${city} pour préparer votre projet.` } },
     ],
   };
 }
@@ -93,11 +109,7 @@ test("contact remediation makes appointment intent locally strong where report r
 
 test("Melun and Amilly local-context addition closes territorial anchoring dimension", () => {
   for (const city of ["Melun", "Amilly"]) {
-    const home = pageFromSeo(
-      "accueil",
-      homeSeo(city),
-      `${homeBodySentence(city)} ${localContextSentence(city)}`
-    );
+    const home = pageFromSeo("accueil", homeSeo(city), `${homeBodySentence(city)} ${localContextSentence(city)}`);
     const depth = auditLocalSemanticDepth({ agency: { city }, pages: [home] });
     assert.equal(depth.dimensions.localContext, true);
   }
@@ -116,11 +128,7 @@ test("body enrichment never selects hero text", () => {
 });
 
 test("body enrichment refuses hero-only pages instead of changing presentation", () => {
-  const page = {
-    blocks: [
-      { blockType: "hero", content: { h1: "Titre", subtitle: "Sous-titre hero" } },
-    ],
-  };
+  const page = { blocks: [{ blockType: "hero", content: { h1: "Titre", subtitle: "Sous-titre hero" } }] };
   assert.equal(descriptiveBlock(page), null);
 });
 
@@ -139,11 +147,49 @@ test("network preflight rejects an incomplete site before any apply phase", () =
       pageFromSeo("contact", contactSeo("Dax"), contactBodySentence("Dax")),
     ],
   };
+  assert.throws(() => buildTargetPlan([site], target), (error) => error?.code === "MSE_25_86_EXISTING_NON_HERO_TEXT_REQUIRED");
+});
 
-  assert.throws(
-    () => buildTargetPlan([site], target),
-    (error) => error?.code === "MSE_25_86_EXISTING_NON_HERO_TEXT_REQUIRED"
-  );
+test("projected coverage reports before/after and requires all target intents strong", () => {
+  const target = TARGETS.find((item) => item.city === "Dax");
+  const site = {
+    id: "site-dax",
+    slug: "dax",
+    agency: { city: "Dax" },
+    pages: [
+      weakPage("home", "Dax", "Votre agence"),
+      weakPage("services", "Dax", "Nos services"),
+      weakPage("contact", "Dax", "Nous contacter"),
+    ],
+  };
+  const projection = projectionForPlan(buildTargetPlan([site], target));
+  assert.equal(projection.city, "Dax");
+  assert.equal(projection.allRequiredStrong, true);
+  for (const key of projection.requiredIntents) {
+    assert.equal(projection.after[key].status, "strong", key);
+    assert.ok(projection.after[key].score >= 80, key);
+  }
+  assert.ok(projection.before.advice.score < projection.after.advice.score);
+  assert.ok(projection.before.ticketing.score < projection.after.ticketing.score);
+  assert.ok(projection.before.appointment.score < projection.after.appointment.score);
+});
+
+test("territorial projection explicitly closes local-context gap for Melun", () => {
+  const target = TARGETS.find((item) => item.city === "Melun");
+  const site = {
+    id: "site-melun",
+    slug: "melun",
+    agency: { city: "Melun" },
+    pages: [
+      weakPage("accueil", "Melun", "Votre agence"),
+      weakPage("services", "Melun", "Nos services"),
+    ],
+  };
+  const projection = projectionForPlan(buildTargetPlan([site], target));
+  assert.equal(projection.localContextBefore, false);
+  assert.equal(projection.localContextAfter, true);
+  assert.equal(projection.allRequiredStrong, true);
+  assert.equal(projection.after.appointment, null);
 });
 
 test("site summaries remain agency-scoped for preview review", () => {
@@ -158,34 +204,27 @@ test("site summaries remain agency-scoped for preview review", () => {
     ],
   };
   const plan = buildTargetPlan([site], target);
-  const summary = summarizePlans([plan], [
-    { city: "Melun", role: "home" },
-    { city: "Melun", role: "services" },
-  ]);
+  const projection = projectionForPlan(plan);
+  const summary = summarizePlans([plan], [{ city: "Melun", role: "home" }, { city: "Melun", role: "services" }], [projection]);
   assert.equal(summary.length, 1);
   assert.equal(summary[0].city, "Melun");
   assert.equal(summary[0].plannedChanges, 2);
   assert.equal(summary[0].appointmentRemediation, false);
   assert.equal(summary[0].territorialAnchor, true);
+  assert.equal(summary[0].projection.allRequiredStrong, true);
 });
 
 test("rollback restores snapshots in reverse order", async () => {
   const calls = [];
   const tx = {
-    pageBlock: {
-      update: async (payload) => calls.push({ model: "block", payload }),
-    },
-    agencySitePage: {
-      update: async (payload) => calls.push({ model: "page", payload }),
-    },
+    pageBlock: { update: async (payload) => calls.push({ model: "block", payload }) },
+    agencySitePage: { update: async (payload) => calls.push({ model: "page", payload }) },
   };
-
   const snapshots = [
     { type: "page", id: "page-1", slug: "home", seoTitle: "old title", metaDescription: "old meta" },
     { type: "block", id: "block-1", pageId: "page-1", content: { text: "original" } },
     { type: "block", id: "block-1", pageId: "page-1", content: { text: "after first change" } },
   ];
-
   const restored = await rollbackSnapshots(tx, snapshots, { dryRun: false });
   assert.equal(restored.length, 3);
   assert.equal(calls[0].model, "block");
