@@ -44,6 +44,31 @@ jobs:
             exit 1
           fi
 
+      - name: Assert remediation stays non-structural and atomic
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const source = fs.readFileSync('backend/scripts/mse-25-86-seo-coverage-remediation.js', 'utf8');
+          const forbidden = [
+            /pageBlock\.create\s*\(/,
+            /pageBlock\.delete\s*\(/,
+            /agencySitePage\.create\s*\(/,
+            /agencySitePage\.delete\s*\(/,
+          ];
+          for (const pattern of forbidden) {
+            if (pattern.test(source)) {
+              console.error(`Forbidden structural mutation detected: ${pattern}`);
+              process.exit(1);
+            }
+          }
+          if (!/networkAtomic:\s*true/.test(source) || !/preflightAllSitesBeforeWrite:\s*true/.test(source)) {
+            console.error('Network atomicity/preflight contract missing.');
+            process.exit(1);
+          }
+          NODE
+
       - name: Install backend dependencies
         working-directory: backend
         run: npm ci
