@@ -226,7 +226,7 @@ module.exports = function registerModules(app, { prisma }) {
   }
 
   if (searchConsoleSubmission.routes) {
-    const provider = searchConsoleSubmission.createConfiguredSearchConsoleProvider();
+    const provider = searchConsoleSubmission.createConfiguredSearchConsoleProvider({ prisma });
     app.use(searchConsoleSubmission.routes({ prisma, provider }));
   }
 
