@@ -93,7 +93,7 @@ export default function FeaturesV2Renderer({ section, site }) {
         ) : null}
         <div className="public-site-related-links" aria-label={city ? `Poursuivre votre projet avec l’agence de ${city}` : "Préparer votre voyage avec l’agence"}>
           <Link href={`${root}/destinations`}>{city ? `Destinations conseillées par notre agence à ${city}` : "Explorer nos destinations"}</Link>
-          <Link href={`${root}/inspirations`}>{city ? `Conseils voyage de notre équipe à ${city}` : "Lire nos conseils voyage"}</Link>
+          <Link href={`${root}/inspiration`}>{city ? `Conseils voyage de notre équipe à ${city}` : "Lire nos conseils voyage"}</Link>
           <Link href={`${root}/contact`}>{city ? `Demander conseil à notre agence de voyages à ${city}` : "Demander un conseil personnalisé"}</Link>
         </div>
       </div>
