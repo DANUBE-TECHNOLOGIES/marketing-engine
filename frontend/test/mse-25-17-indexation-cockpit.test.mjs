@@ -76,9 +76,11 @@ test("MSE-25.17 failed submissions restart with a fresh preflight", () => {
 
 test("MSE-25.17 cockpit is exposed in the internal navigation", () => {
   const layout = read("app/layout.js");
+  const nav = read("components/AdminEngineNav.js");
 
-  assert.match(layout, /href=["']\/indexation["']/);
-  assert.match(layout, />Indexation</);
+  assert.match(layout, /<AdminEngineNav\s*\/>/);
+  assert.match(nav, /["']\/indexation["']\s*,\s*["']Indexation["']/);
+  assert.match(nav, /ADMIN_LINKS\.map/);
 });
 
 test("MSE-25.17 page is an internal noindex operations screen", () => {
