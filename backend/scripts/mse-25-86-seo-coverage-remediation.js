@@ -379,5 +379,6 @@ module.exports = {
   projectPage,
   projectionForPlan,
   summarizePlans,
+  loadSites,
   run,
 };
