@@ -144,10 +144,11 @@ test("MSE-25.80 isolated OAuth owns Search Console and keeps controlled write sc
 
   assert.match(isolated, /\/search-console\/auth/);
   assert.match(isolated, /const SEARCH_CONSOLE_SCOPE = ["']https:\/\/www\.googleapis\.com\/auth\/webmasters["']/);
+  assert.match(isolated, /const SEARCH_CONSOLE_PROVIDER = ["']search-console["']/);
   assert.doesNotMatch(isolated, /webmasters\.readonly/);
   assert.match(isolated, /createHmac/);
   assert.match(isolated, /randomBytes/);
-  assert.match(isolated, /provider:\s*["']search-console["']/);
+  assert.match(isolated, /provider:\s*SEARCH_CONSOLE_PROVIDER/);
 });
 
 test("MSE-25.80 isolated Search Console OAuth is mounted before provider routes and receives Prisma", () => {
