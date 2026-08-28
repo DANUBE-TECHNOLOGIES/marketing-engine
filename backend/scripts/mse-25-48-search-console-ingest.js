@@ -6,6 +6,7 @@ const path = require("node:path");
 const { PrismaClient } = require("@prisma/client");
 const { fetchSearchAnalytics } = require("../src/modules/minisite-semantic-engine/search-console-analytics");
 const { getSearchConsoleAccessToken } = require("../src/modules/minisite-semantic-engine/search-console-token-provider");
+const { resolveSearchConsoleSiteUrl } = require("../src/modules/minisite-semantic-engine/search-console-property-resolver");
 const { bootstrapMse2548Env } = require("../src/modules/minisite-semantic-engine/mse-25-48-env");
 
 async function run({ prisma, emitOutput = true } = {}) {
@@ -13,8 +14,11 @@ async function run({ prisma, emitOutput = true } = {}) {
   const client = prisma || new PrismaClient();
   try {
     const token = await getSearchConsoleAccessToken({ prisma: client });
+    const property = await resolveSearchConsoleSiteUrl({ accessToken: token.accessToken });
+    const pagePrefix = process.env.SEARCH_CONSOLE_PAGE_PREFIX || process.env.SEARCH_CONSOLE_PREFERRED_HOST || "agences.mondescale.com";
     const analytics = await fetchSearchAnalytics({
-      siteUrl: process.env.SEARCH_CONSOLE_SITE_URL,
+      siteUrl: property.siteUrl,
+      pagePrefix,
       accessToken: token.accessToken,
       startDate: process.env.MSE_25_48_START_DATE,
       endDate: process.env.MSE_25_48_END_DATE,
@@ -29,15 +33,18 @@ async function run({ prisma, emitOutput = true } = {}) {
       readOnly: true,
       writes: false,
       tokenSource: token.source,
+      propertySource: property.source,
+      propertyPermissionLevel: property.permissionLevel || null,
       reportPath,
       analyticsFingerprint: analytics.analyticsFingerprint,
       siteUrl: analytics.siteUrl,
+      pagePrefix: analytics.pagePrefix,
       startDate: analytics.startDate,
       endDate: analytics.endDate,
       rowCount: analytics.rowCount,
     };
     if (emitOutput) console.log(JSON.stringify(output, null, 2));
-    return { analytics, reportPath, tokenSource: token.source };
+    return { analytics, reportPath, tokenSource: token.source, propertySource: property.source, propertyPermissionLevel: property.permissionLevel || null };
   } finally {
     if (!prisma) await client.$disconnect();
   }

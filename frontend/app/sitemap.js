@@ -2,8 +2,11 @@ import {
   fetchMiniSiteSitemap,
 } from "../lib/minisite-structured-data/client";
 
+export const dynamic =
+  "force-dynamic";
+
 export const revalidate =
-  300;
+  0;
 
 const PUBLIC_ORIGIN =
   String(
@@ -170,6 +173,12 @@ function normalizePriority(
 export default async function sitemap() {
   const payload =
     await fetchMiniSiteSitemap();
+
+  if (payload?.error) {
+    throw new Error(
+      `MINISITE_SITEMAP_UNAVAILABLE:${payload.error}`
+    );
+  }
 
   const entries =
     Array.isArray(
