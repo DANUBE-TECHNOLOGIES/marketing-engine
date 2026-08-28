@@ -68,9 +68,6 @@ function normalizeLaunchReadiness(payload) {
       completed: checks.filter((check) => check.required && check.ready).length,
       missing: failedRequired.length,
     },
-    ready:
-      payload?.readiness?.ready === true ||
-      payload?.launchState?.code === "ready_to_publish",
     source: "agency-launch-prepublication",
     site: payload?.site || null,
     agency: payload?.agency || null,
@@ -159,9 +156,8 @@ class SiteReadinessClient {
   assertReady(readiness) {
     const score = Number(readiness?.score || 0);
     const missing = Number(readiness?.summary?.missing || 0);
-    const ready = readiness?.ready === true;
 
-    if (!ready || missing !== 0) {
+    if (score !== 100 || missing !== 0) {
       throw sitePublicationError(
         "SITE_NOT_READY",
         "Le mini-site ne peut pas être publié tant que tous les critères obligatoires ne sont pas validés.",
