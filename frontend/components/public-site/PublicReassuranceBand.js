@@ -23,42 +23,31 @@ function Badge({ item, kind }) {
 
 export default function PublicReassuranceBand() {
   return (
-    <section className="public-reassurance" aria-labelledby="public-reassurance-title">
+    <section className="public-reassurance" aria-label="Moyens de paiement et garanties professionnelles">
       <div className="public-site-container public-reassurance-inner">
-        <header className="public-reassurance-heading">
-          <p className="public-reassurance-kicker">Réservation en agence</p>
-          <h2 id="public-reassurance-title">Des paiements simples, un voyage encadré</h2>
-          <p>
-            Réglez votre voyage avec les principaux moyens de paiement et bénéficiez des garanties,
-            affiliations et protections professionnelles de votre agence.
-          </p>
-        </header>
-
-        <div className="public-reassurance-groups">
-          <div className="public-reassurance-group" aria-label="Moyens de paiement acceptés">
-            <div className="public-reassurance-group-title">
-              <span aria-hidden="true">01</span>
-              <div>
-                <strong>Moyens de paiement</strong>
-                <small>Selon les conditions de votre dossier</small>
-              </div>
-            </div>
-            <div className="public-reassurance-badges public-reassurance-badges--payments">
-              {PAYMENT_METHODS.map((item) => <Badge key={item.id} item={item} kind="payment" />)}
+        <div className="public-reassurance-group" aria-label="Moyens de paiement acceptés">
+          <div className="public-reassurance-group-title">
+            <div>
+              <span className="public-reassurance-kicker">Paiement en agence</span>
+              <strong>Moyens de paiement acceptés</strong>
+              <small>Selon les conditions de votre dossier</small>
             </div>
           </div>
+          <div className="public-reassurance-badges public-reassurance-badges--payments">
+            {PAYMENT_METHODS.map((item) => <Badge key={item.id} item={item} kind="payment" />)}
+          </div>
+        </div>
 
-          <div className="public-reassurance-group" aria-label="Garanties et affiliations professionnelles">
-            <div className="public-reassurance-group-title">
-              <span aria-hidden="true">02</span>
-              <div>
-                <strong>Garanties & affiliations</strong>
-                <small>Les repères professionnels de Mondescale</small>
-              </div>
+        <div className="public-reassurance-group" aria-label="Garanties et affiliations professionnelles">
+          <div className="public-reassurance-group-title">
+            <div>
+              <span className="public-reassurance-kicker">Votre agence en toute confiance</span>
+              <strong>Garanties & affiliations</strong>
+              <small>Les repères professionnels de Mondescale</small>
             </div>
-            <div className="public-reassurance-badges public-reassurance-badges--trust">
-              {TRUST_REFERENCES.map((item) => <Badge key={item.id} item={item} kind="trust" />)}
-            </div>
+          </div>
+          <div className="public-reassurance-badges public-reassurance-badges--trust">
+            {TRUST_REFERENCES.map((item) => <Badge key={item.id} item={item} kind="trust" />)}
           </div>
         </div>
       </div>
