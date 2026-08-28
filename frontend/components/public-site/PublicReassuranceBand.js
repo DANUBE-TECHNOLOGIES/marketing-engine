@@ -48,6 +48,9 @@ const TRUST_REFERENCES = Object.freeze([
   },
 ]);
 
+const LOGO_INTRINSIC_WIDTH = 160;
+const LOGO_INTRINSIC_HEIGHT = 64;
+
 function BrandMark({ item, kind }) {
   return (
     <div
@@ -61,6 +64,8 @@ function BrandMark({ item, kind }) {
           className="public-reassurance-logo"
           src={item.logo}
           alt={`Logo ${item.label}`}
+          width={LOGO_INTRINSIC_WIDTH}
+          height={LOGO_INTRINSIC_HEIGHT}
           loading="lazy"
           decoding="async"
           referrerPolicy="no-referrer"
@@ -117,4 +122,9 @@ export default function PublicReassuranceBand() {
   );
 }
 
-export { PAYMENT_METHODS, TRUST_REFERENCES };
+export {
+  LOGO_INTRINSIC_HEIGHT,
+  LOGO_INTRINSIC_WIDTH,
+  PAYMENT_METHODS,
+  TRUST_REFERENCES,
+};
