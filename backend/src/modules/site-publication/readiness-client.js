@@ -157,7 +157,10 @@ class SiteReadinessClient {
     const score = Number(readiness?.score || 0);
     const missing = Number(readiness?.summary?.missing || 0);
 
-    if (score !== 100 || missing !== 0) {
+    const failedRequired = (readiness?.checks || [])
+      .filter((check) => check.required && !check.ready);
+
+    if (missing !== 0 || failedRequired.length !== 0) {
       throw sitePublicationError(
         "SITE_NOT_READY",
         "Le mini-site ne peut pas être publié tant que tous les critères obligatoires ne sont pas validés.",

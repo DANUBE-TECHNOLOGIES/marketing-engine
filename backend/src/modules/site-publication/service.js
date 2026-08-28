@@ -515,7 +515,6 @@ class SitePublicationService {
       );
 
     const ready =
-      score === 100 &&
       missing === 0 &&
       failedChecks.length === 0;
 
