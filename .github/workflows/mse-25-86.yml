@@ -104,6 +104,18 @@ jobs:
           }
           NODE
 
+      - name: Validate VM readiness handoff contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check backend/scripts/mse-25-86-vm-readiness.js
+          grep -q 'feature/mse-25-86-seo-coverage-remediation-on-85-20260828' backend/scripts/mse-25-86-vm-readiness.js
+          grep -q 'runRemediation({ dryRun: true })' backend/scripts/mse-25-86-vm-readiness.js
+          grep -q 'cleanWorktree' backend/scripts/mse-25-86-vm-readiness.js
+          grep -q 'databaseConnected' backend/scripts/mse-25-86-vm-readiness.js
+          grep -q 'mse-25.86:vm-readiness' backend/package.json
+          node -e 'JSON.parse(require("fs").readFileSync("backend/package.json","utf8"))'
+
       - name: Install backend dependencies
         working-directory: backend
         run: npm ci
@@ -119,6 +131,7 @@ jobs:
       - name: Syntax-check apply, verify and rollback scripts
         working-directory: backend
         run: |
+          node --check scripts/mse-25-86-vm-readiness.js
           node --check scripts/mse-25-86-seo-coverage-remediation.js
           node --check scripts/mse-25-86-post-apply-verify.js
           node --check scripts/mse-25-86-seo-coverage-rollback.js
