@@ -155,7 +155,7 @@ function buildTargetPlan(sites, target) {
 
   requirePageStructure(home, target.city, "home");
   requirePageStructure(services, target.city, "services");
-  if (target.appointment) requirePageStructure(contact, target.city, "contact");
+  if (target.appointment) requirePageStructure(contact, target.city, "contact", { bodyText: false });
 
   return { target, site, home, services, contact };
 }
@@ -193,7 +193,10 @@ function projectionForPlan(plan) {
   const city = target.city;
   const projectedHome = projectPage(home, homeSeo(city), [homeBodySentence(city), target.localContext ? localContextSentence(city) : null]);
   const projectedServices = projectPage(services, servicesSeo(city), [servicesBodySentence(city)]);
-  const projectedContact = target.appointment ? projectPage(contact, contactSeo(city), [contactBodySentence(city)]) : contact;
+  const contactHasBodyText = target.appointment && Boolean(descriptiveBlock(contact));
+  const projectedContact = target.appointment
+    ? projectPage(contact, contactSeo(city), contactHasBodyText ? [contactBodySentence(city)] : [])
+    : contact;
 
   const before = {
     advice: intentResult(home, city, "advice"),
@@ -229,6 +232,7 @@ function projectionForPlan(plan) {
     after,
     requiredIntents: requiredKeys,
     allRequiredStrong,
+    contactBodyEnrichment: contactHasBodyText,
     localContextBefore: Boolean(semanticBefore?.dimensions?.localContext),
     localContextAfter: Boolean(semanticAfter?.dimensions?.localContext),
   };
@@ -278,7 +282,9 @@ async function applyPlan(tx, plan, snapshots, changes, dryRun) {
   await appendExistingBodyText(tx, services, servicesBodySentence(city), snapshots, changes, dryRun, "ticketing-intent-qualification", city, "services");
   if (target.appointment) {
     await updatePageSeo(tx, contact, contactSeo(city), snapshots, changes, dryRun, city, "contact");
-    await appendExistingBodyText(tx, contact, contactBodySentence(city), snapshots, changes, dryRun, "appointment-intent-qualification", city, "contact");
+    if (descriptiveBlock(contact)) {
+      await appendExistingBodyText(tx, contact, contactBodySentence(city), snapshots, changes, dryRun, "appointment-intent-qualification", city, "contact");
+    }
   }
   if (target.localContext) await appendExistingBodyText(tx, home, localContextSentence(city), snapshots, changes, dryRun, "territorial-anchor", city, "home");
 }
@@ -292,6 +298,7 @@ function summarizePlans(plans, changes, projections = []) {
       siteSlug: site.slug,
       pages: { home: home.slug || "home", services: services.slug, contact: target.appointment ? (contact?.slug || null) : null },
       appointmentRemediation: target.appointment,
+      contactBodyEnrichment: target.appointment ? Boolean(descriptiveBlock(contact)) : false,
       territorialAnchor: target.localContext,
       plannedChanges: changes.filter((item) => item.city === target.city).length,
       projection,
