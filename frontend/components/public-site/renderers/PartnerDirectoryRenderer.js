@@ -30,7 +30,7 @@ function PartnerCard({ partner }) {
         {visibleTags.length ? <div className={styles.tags} aria-label={`Spécialités de ${profile.name}`}>{visibleTags.map((tag) => <span key={tag}>{tag}</span>)}</div> : null}
         {profile.details ? (
           <details className={styles.details}>
-            <summary>Voir les spécialités</summary>
+            <summary>Découvrir ses spécialités</summary>
             <div className={styles.metadata}>
               <MetadataGroup label="Destinations" values={profile.details.destinations} />
               <MetadataGroup label="Types de voyages" values={profile.details.travelTypes} />
