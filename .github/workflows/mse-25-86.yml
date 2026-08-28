@@ -1,0 +1,63 @@
+name: MSE-25.86 SEO coverage remediation
+
+on:
+  push:
+    branches:
+      - feature/mse-25-86-seo-coverage-remediation-on-85-20260828
+  pull_request:
+    branches:
+      - feature/mse-25-85-sitemap-cache-safety
+
+permissions:
+  contents: read
+
+jobs:
+  backend-safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Assert no frontend regression surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE="$(git merge-base HEAD origin/feature/mse-25-85-sitemap-cache-safety)"
+          fi
+          CHANGED="$(git diff --name-only "$BASE" HEAD)"
+          printf '%s\n' "$CHANGED"
+          if printf '%s\n' "$CHANGED" | grep -E '^frontend/'; then
+            echo "MSE-25.86 must not modify frontend files." >&2
+            exit 1
+          fi
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Generate Prisma client
+        working-directory: backend
+        run: npx prisma generate
+
+      - name: Run MSE-25.86 focused tests
+        working-directory: backend
+        run: node --test test/mse-25-86-seo-coverage-remediation.test.js
+
+      - name: Syntax-check apply and rollback scripts
+        working-directory: backend
+        run: |
+          node --check scripts/mse-25-86-seo-coverage-remediation.js
+          node --check scripts/mse-25-86-seo-coverage-rollback.js
