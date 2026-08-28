@@ -26,8 +26,10 @@ services:
     ports:
       - "127.0.0.1:4000:4000"
     networks:
-      - default
-      - runtime
+      default:
+        aliases:
+          - mle-backend
+      runtime: {}
     environment:
       NODE_ENV: "development"
       DATABASE_URL: "${DATABASE_URL}"
@@ -92,8 +94,8 @@ services:
       BASIC_AUTH_USERNAME: "${BASIC_AUTH_USERNAME}"
       BASIC_AUTH_PASSWORD: "${BASIC_AUTH_PASSWORD}"
       IDENTITY_HMAC_SECRET: "${IDENTITY_HMAC_SECRET}"
-      BACKEND_INTERNAL_URL: "http://backend:4000"
-      MONDESCALE_BACKEND_URL: "http://backend:4000"
+      BACKEND_INTERNAL_URL: "http://mle-backend:4000"
+      MONDESCALE_BACKEND_URL: "http://mle-backend:4000"
       NEXT_PUBLIC_SITE_URL: "${NEXT_PUBLIC_SITE_URL}"
       PUBLIC_SITE_URL: "${PUBLIC_SITE_URL}"
       NEXT_PUBLIC_SITE_ORIGIN: "${NEXT_PUBLIC_SITE_ORIGIN}"
