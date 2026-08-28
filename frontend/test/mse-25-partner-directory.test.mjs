@@ -87,7 +87,7 @@ test("full partner directory exposes categorized supplier inventory with complet
   assert.match(renderer, /getPartnerDirectoryCategories/);
   assert.match(renderer, /getPartnerProfile/);
   assert.match(renderer, /getPublishablePartnerProfiles/);
-  assert.match(renderer, /Voir les spécialités/);
+  assert.match(renderer, /Découvrir ses spécialités/);
   assert.match(renderer, /Destinations/);
   assert.match(renderer, /Types de voyages/);
   assert.match(renderer, /Site du partenaire/);
