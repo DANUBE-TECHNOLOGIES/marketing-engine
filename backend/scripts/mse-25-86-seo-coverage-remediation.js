@@ -113,10 +113,53 @@ function cloneJson(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));
 }
 
-async function updatePageSeo(tx, page, desired, snapshots, changes, dryRun) {
-  if (!page) return;
+function requirePageStructure(page, city, role, { bodyText = true } = {}) {
+  if (!page) {
+    const error = new Error(`Page ${role} manquante pour ${city}.`);
+    error.code = "MSE_25_86_TARGET_PAGE_MISSING";
+    error.details = { city, role };
+    throw error;
+  }
+  if (!headingBlock(page)) {
+    const error = new Error(`Aucun bloc de titre existant sur ${city} /${page.slug || "home"}; création structurelle interdite.`);
+    error.code = "MSE_25_86_EXISTING_HEADING_REQUIRED";
+    error.details = { city, role, slug: page.slug || "home" };
+    throw error;
+  }
+  if (bodyText && !descriptiveBlock(page)) {
+    const error = new Error(`Aucun texte non-hero existant utilisable sur ${city} /${page.slug || "home"}; modification du hero ou création de bloc interdite.`);
+    error.code = "MSE_25_86_EXISTING_NON_HERO_TEXT_REQUIRED";
+    error.details = { city, role, slug: page.slug || "home" };
+    throw error;
+  }
+}
+
+function buildTargetPlan(sites, target) {
+  const wanted = normalize(target.city);
+  const site = (sites || []).find((item) => normalize(item?.agency?.city) === wanted) || null;
+  if (!site) {
+    const error = new Error(`Mini-site introuvable pour ${target.city}.`);
+    error.code = "MSE_25_86_SITE_NOT_FOUND";
+    error.details = { city: target.city };
+    throw error;
+  }
+
+  const home = pageByCandidates(site.pages, target.home);
+  const services = pageByCandidates(site.pages, target.services);
+  const contact = pageByCandidates(site.pages, target.contact);
+
+  requirePageStructure(home, target.city, "home");
+  requirePageStructure(services, target.city, "services");
+  if (target.appointment) requirePageStructure(contact, target.city, "contact");
+
+  return { target, site, home, services, contact };
+}
+
+async function updatePageSeo(tx, page, desired, snapshots, changes, dryRun, city, role) {
   snapshots.push({
     type: "page",
+    city,
+    role,
     id: page.id,
     slug: page.slug,
     seoTitle: page.seoTitle || null,
@@ -128,15 +171,10 @@ async function updatePageSeo(tx, page, desired, snapshots, changes, dryRun) {
   if (page.metaDescription !== desired.metaDescription) pageData.metaDescription = desired.metaDescription;
 
   const block = headingBlock(page);
-  if (!block) {
-    const error = new Error(`Aucun bloc de titre existant sur /${page.slug || "home"}; création structurelle interdite.`);
-    error.code = "MSE_25_86_EXISTING_HEADING_REQUIRED";
-    throw error;
-  }
   const content = blockContent(block);
   const key = headingKey(content);
   const nextContent = { ...content, [key]: desired.h1 };
-  snapshots.push({ type: "block", id: block.id, pageId: page.id, content: cloneJson(content) });
+  snapshots.push({ type: "block", city, role, id: block.id, pageId: page.id, content: cloneJson(content) });
 
   if (!dryRun) {
     if (Object.keys(pageData).length) await tx.agencySitePage.update({ where: { id: page.id }, data: pageData });
@@ -144,6 +182,8 @@ async function updatePageSeo(tx, page, desired, snapshots, changes, dryRun) {
   }
 
   changes.push({
+    city,
+    role,
     pageId: page.id,
     slug: page.slug,
     pageFields: Object.keys(pageData),
@@ -153,24 +193,19 @@ async function updatePageSeo(tx, page, desired, snapshots, changes, dryRun) {
   });
 }
 
-async function appendExistingBodyText(tx, page, sentence, snapshots, changes, dryRun, reason) {
+async function appendExistingBodyText(tx, page, sentence, snapshots, changes, dryRun, reason, city, role) {
   const block = descriptiveBlock(page);
-  if (!block) {
-    const error = new Error(`Aucun texte non-hero existant utilisable sur /${page?.slug || "home"}; modification du hero ou création de bloc interdite.`);
-    error.code = "MSE_25_86_EXISTING_NON_HERO_TEXT_REQUIRED";
-    throw error;
-  }
   const content = blockContent(block);
   const key = descriptiveStringKey(content);
   if (normalize(content[key]).includes(normalize(sentence))) return;
   const nextContent = { ...content, [key]: `${String(content[key]).trim()} ${sentence}`.trim() };
-  snapshots.push({ type: "block", id: block.id, pageId: page.id, content: cloneJson(content) });
+  snapshots.push({ type: "block", city, role, id: block.id, pageId: page.id, content: cloneJson(content) });
   if (!dryRun) await tx.pageBlock.update({ where: { id: block.id }, data: { content: nextContent } });
-  changes.push({ pageId: page.id, slug: page.slug, textBlockId: block.id, textKey: key, reason });
+  changes.push({ city, role, pageId: page.id, slug: page.slug, textBlockId: block.id, textKey: key, reason });
 }
 
-async function loadTargetSite(prisma, tenantId, city) {
-  const sites = await prisma.agencySite.findMany({
+async function loadSites(prisma, tenantId) {
+  return prisma.agencySite.findMany({
     where: { tenantId },
     include: {
       agency: true,
@@ -180,8 +215,42 @@ async function loadTargetSite(prisma, tenantId, city) {
       },
     },
   });
-  const wanted = normalize(city);
-  return sites.find((site) => normalize(site?.agency?.city) === wanted) || null;
+}
+
+async function applyPlan(tx, plan, snapshots, changes, dryRun) {
+  const { target, home, services, contact } = plan;
+  const city = target.city;
+
+  await updatePageSeo(tx, home, homeSeo(city), snapshots, changes, dryRun, city, "home");
+  await appendExistingBodyText(tx, home, homeBodySentence(city), snapshots, changes, dryRun, "home-intent-qualification", city, "home");
+
+  await updatePageSeo(tx, services, servicesSeo(city), snapshots, changes, dryRun, city, "services");
+  await appendExistingBodyText(tx, services, servicesBodySentence(city), snapshots, changes, dryRun, "ticketing-intent-qualification", city, "services");
+
+  if (target.appointment) {
+    await updatePageSeo(tx, contact, contactSeo(city), snapshots, changes, dryRun, city, "contact");
+    await appendExistingBodyText(tx, contact, contactBodySentence(city), snapshots, changes, dryRun, "appointment-intent-qualification", city, "contact");
+  }
+
+  if (target.localContext) {
+    await appendExistingBodyText(tx, home, localContextSentence(city), snapshots, changes, dryRun, "territorial-anchor", city, "home");
+  }
+}
+
+function summarizePlans(plans, changes) {
+  return plans.map(({ target, site, home, services, contact }) => ({
+    city: target.city,
+    siteId: site.id,
+    siteSlug: site.slug,
+    pages: {
+      home: home.slug || "home",
+      services: services.slug,
+      contact: target.appointment ? (contact?.slug || null) : null,
+    },
+    appointmentRemediation: target.appointment,
+    territorialAnchor: target.localContext,
+    plannedChanges: changes.filter((item) => item.city === target.city).length,
+  }));
 }
 
 async function run({ dryRun = !explicitTrue(process.env.MSE_25_86_CONFIRM), tenantSlug = process.env.TENANT_SLUG || "mondescale", reportDir = process.env.MSE_25_86_REPORT_DIR || "/home/admin1/mse-25-86-reports" } = {}) {
@@ -197,58 +266,35 @@ async function run({ dryRun = !explicitTrue(process.env.MSE_25_86_CONFIRM), tena
       throw error;
     }
 
-    for (const target of TARGETS) {
-      const site = await loadTargetSite(prisma, tenant.id, target.city);
-      if (!site) {
-        const error = new Error(`Mini-site introuvable pour ${target.city}.`);
-        error.code = "MSE_25_86_SITE_NOT_FOUND";
-        throw error;
+    const sites = await loadSites(prisma, tenant.id);
+    const plans = TARGETS.map((target) => buildTargetPlan(sites, target));
+
+    await prisma.$transaction(async (tx) => {
+      for (const plan of plans) {
+        await applyPlan(tx, plan, snapshots, changes, dryRun);
       }
-      const home = pageByCandidates(site.pages, target.home);
-      const services = pageByCandidates(site.pages, target.services);
-      const contact = pageByCandidates(site.pages, target.contact);
-      if (!home || !services || (target.appointment && !contact)) {
-        const error = new Error(`Pages SEO attendues manquantes pour ${target.city}.`);
-        error.code = "MSE_25_86_TARGET_PAGE_MISSING";
-        error.details = { city: target.city, home: Boolean(home), services: Boolean(services), contactRequired: target.appointment, contact: Boolean(contact) };
-        throw error;
-      }
-
-      await prisma.$transaction(async (tx) => {
-        await updatePageSeo(tx, home, homeSeo(target.city), snapshots, changes, dryRun);
-        await appendExistingBodyText(tx, home, homeBodySentence(target.city), snapshots, changes, dryRun, "home-intent-qualification");
-
-        await updatePageSeo(tx, services, servicesSeo(target.city), snapshots, changes, dryRun);
-        await appendExistingBodyText(tx, services, servicesBodySentence(target.city), snapshots, changes, dryRun, "ticketing-intent-qualification");
-
-        if (target.appointment) {
-          await updatePageSeo(tx, contact, contactSeo(target.city), snapshots, changes, dryRun);
-          await appendExistingBodyText(tx, contact, contactBodySentence(target.city), snapshots, changes, dryRun, "appointment-intent-qualification");
-        }
-
-        if (target.localContext) {
-          await appendExistingBodyText(tx, home, localContextSentence(target.city), snapshots, changes, dryRun, "territorial-anchor");
-        }
-      });
-    }
+    });
 
     const report = {
       type: "mse-25.86-seo-coverage-remediation",
       generatedAt,
       dryRun,
       writes: !dryRun,
+      networkAtomic: true,
+      preflightAllSitesBeforeWrite: true,
       frontendFilesTouched: 0,
       heroBodyTextTouched: 0,
       structuralBlocksCreated: 0,
       structuralBlocksDeleted: 0,
       targetCities: TARGETS.map((item) => item.city),
+      sites: summarizePlans(plans, changes),
       changes,
       rollbackSnapshots: snapshots,
     };
     const targetFile = path.join(reportDir, `mse-25-86-${dryRun ? "preview" : "apply"}-${timestamp()}.json`);
     fs.mkdirSync(reportDir, { recursive: true });
     fs.writeFileSync(targetFile, JSON.stringify(report, null, 2) + "\n", "utf8");
-    console.log(JSON.stringify({ ok: true, dryRun, writes: !dryRun, sites: TARGETS.length, changes: changes.length, frontendFilesTouched: 0, heroBodyTextTouched: 0, reportPath: targetFile }, null, 2));
+    console.log(JSON.stringify({ ok: true, dryRun, writes: !dryRun, sites: plans.length, changes: changes.length, networkAtomic: true, frontendFilesTouched: 0, heroBodyTextTouched: 0, reportPath: targetFile }, null, 2));
     return report;
   } finally {
     await prisma.$disconnect();
@@ -275,5 +321,8 @@ module.exports = {
   localContextSentence,
   headingBlock,
   descriptiveBlock,
+  requirePageStructure,
+  buildTargetPlan,
+  summarizePlans,
   run,
 };
