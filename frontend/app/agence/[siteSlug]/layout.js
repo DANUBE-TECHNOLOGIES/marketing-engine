@@ -18,6 +18,7 @@ import "../../../components/public-site/brand-runtime.css";
 import "../../../components/public-site/premium-public.css";
 import "../../../components/public-site/premium-sections.css";
 import "../../../components/public-site/network-home-hero.css";
+import "../../../components/public-site/public-reassurance-band.css";
 import "../../../components/public-site/legal-experience.css";
 import "../../../components/public-site/logo-emphasis.css";
 import "../../../components/public-site/public-readability-fixes.css";
