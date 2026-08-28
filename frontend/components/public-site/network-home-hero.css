@@ -1,8 +1,8 @@
 /*
- * MSE-25.74 — Network home Hero.
- * Full-bleed premium visual treatment shared by every agency home.
- * A configured local visual stays authoritative; otherwise the network fallback
- * from HeroV2Renderer is used without changing the LCP image contract.
+ * MSE-25.74 / MSE-25.78 — Network Hero.
+ * Full-bleed premium visual treatment shared by every public agency page.
+ * The home keeps the largest presentation; secondary pages reuse the same
+ * visual language with a deliberately more compact height.
  */
 .public-site-hero--home.public-site-hero--immersive {
   position: relative;
@@ -112,6 +112,39 @@
   background: rgba(5,29,50,.24);
 }
 
+/* Secondary pages reuse the home Hero image, but should not feel like a second
+ * home page. Keep the same identity while shortening the visual entry point.
+ */
+.public-site-hero--home.public-site-hero--immersive:not([data-page-slug="home"]) {
+  min-height: clamp(390px, 46vh, 500px);
+}
+
+.public-site-hero--home:not([data-page-slug="home"]) > .public-site-container {
+  min-height: clamp(390px, 46vh, 500px);
+  padding: clamp(54px, 6vw, 74px) 0 clamp(82px, 8vw, 104px);
+}
+
+.public-site-hero--home:not([data-page-slug="home"]) .public-site-hero-copy {
+  width: min(720px, 68%);
+  padding: clamp(28px, 3.4vw, 40px);
+  border-radius: 26px;
+}
+
+.public-site-hero--home:not([data-page-slug="home"]) h1 {
+  font-size: clamp(2.55rem, 4.25vw, 4.25rem);
+  line-height: 1.01;
+}
+
+.public-site-hero--home:not([data-page-slug="home"]) .public-site-hero-text {
+  margin-top: 18px;
+  font-size: clamp(.98rem, 1.25vw, 1.1rem);
+  line-height: 1.58;
+}
+
+.public-site-hero--home:not([data-page-slug="home"]) .public-site-hero-actions {
+  margin-top: 22px;
+}
+
 @media (max-width: 900px) {
   .public-site-hero--home > .public-site-container {
     width: min(100% - 32px, 1220px);
@@ -119,6 +152,10 @@
 
   .public-site-hero--home .public-site-hero-copy {
     width: min(720px, 86%);
+  }
+
+  .public-site-hero--home:not([data-page-slug="home"]) .public-site-hero-copy {
+    width: min(680px, 88%);
   }
 }
 
@@ -158,5 +195,18 @@
     min-height: 44px;
     padding-inline: 16px;
     font-size: .82rem;
+  }
+
+  .public-site-hero--home.public-site-hero--immersive:not([data-page-slug="home"]) {
+    min-height: 500px;
+  }
+
+  .public-site-hero--home:not([data-page-slug="home"]) > .public-site-container {
+    min-height: 500px;
+    padding: 66px 0 92px;
+  }
+
+  .public-site-hero--home:not([data-page-slug="home"]) h1 {
+    font-size: clamp(2.35rem, 11vw, 3.55rem);
   }
 }
