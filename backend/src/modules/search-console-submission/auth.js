@@ -1,6 +1,6 @@
 "use strict";
 
-const SEARCH_CONSOLE_SCOPE = "https://www.googleapis.com/auth/webmasters.readonly";
+const SEARCH_CONSOLE_SCOPE = "https://www.googleapis.com/auth/webmasters";
 const SEARCH_CONSOLE_PROVIDER = "search-console";
 const TOKEN_REFRESH_SKEW_MS = 60 * 1000;
 
