@@ -1,0 +1,49 @@
+name: Site Publication Readiness
+
+on:
+  push:
+    branches:
+      - 'feature/mse-25-71-*'
+      - 'fix/site-publication-*'
+    paths:
+      - 'backend/src/modules/site-publication/**'
+      - 'backend/src/modules/agency-launch/**'
+      - 'backend/test/site-publication-target-readiness.test.js'
+      - 'backend/package.json'
+      - 'backend/package-lock.json'
+      - '.github/workflows/site-publication-readiness.yml'
+  pull_request:
+    paths:
+      - 'backend/src/modules/site-publication/**'
+      - 'backend/src/modules/agency-launch/**'
+      - 'backend/test/site-publication-target-readiness.test.js'
+      - 'backend/package.json'
+      - 'backend/package-lock.json'
+      - '.github/workflows/site-publication-readiness.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  targeted-readiness:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend
+        run: npm ci
+
+      - name: Targeted publication readiness regression tests
+        run: node --test test/site-publication-target-readiness.test.js
