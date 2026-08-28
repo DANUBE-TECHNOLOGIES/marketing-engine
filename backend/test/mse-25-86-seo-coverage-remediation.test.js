@@ -13,6 +13,8 @@ const {
   contactBodySentence,
   localContextSentence,
   descriptiveBlock,
+  buildTargetPlan,
+  summarizePlans,
 } = require("../scripts/mse-25-86-seo-coverage-remediation");
 const {
   rollbackSnapshots,
@@ -29,14 +31,15 @@ const {
 
 function pageFromSeo(slug, seo, body) {
   return {
+    id: `page-${slug}`,
     slug,
     published: true,
     status: "published",
     seoTitle: seo.seoTitle,
     metaDescription: seo.metaDescription,
     blocks: [
-      { blockType: "hero", content: { h1: seo.h1, subtitle: "Hero conservé" } },
-      { blockType: "text", content: { text: body } },
+      { id: `hero-${slug}`, blockType: "hero", content: { h1: seo.h1, subtitle: "Hero conservé" } },
+      { id: `text-${slug}`, blockType: "text", content: { text: body } },
     ],
   };
 }
@@ -119,6 +122,51 @@ test("body enrichment refuses hero-only pages instead of changing presentation",
     ],
   };
   assert.equal(descriptiveBlock(page), null);
+});
+
+test("network preflight rejects an incomplete site before any apply phase", () => {
+  const target = TARGETS.find((item) => item.city === "Dax");
+  const site = {
+    id: "site-dax",
+    slug: "dax",
+    agency: { city: "Dax" },
+    pages: [
+      pageFromSeo("home", homeSeo("Dax"), homeBodySentence("Dax")),
+      {
+        ...pageFromSeo("services", servicesSeo("Dax"), servicesBodySentence("Dax")),
+        blocks: [{ id: "hero-services", blockType: "hero", content: { h1: servicesSeo("Dax").h1, subtitle: "Hero uniquement" } }],
+      },
+      pageFromSeo("contact", contactSeo("Dax"), contactBodySentence("Dax")),
+    ],
+  };
+
+  assert.throws(
+    () => buildTargetPlan([site], target),
+    (error) => error?.code === "MSE_25_86_EXISTING_NON_HERO_TEXT_REQUIRED"
+  );
+});
+
+test("site summaries remain agency-scoped for preview review", () => {
+  const target = TARGETS.find((item) => item.city === "Melun");
+  const site = {
+    id: "site-melun",
+    slug: "melun",
+    agency: { city: "Melun" },
+    pages: [
+      pageFromSeo("accueil", homeSeo("Melun"), homeBodySentence("Melun")),
+      pageFromSeo("services", servicesSeo("Melun"), servicesBodySentence("Melun")),
+    ],
+  };
+  const plan = buildTargetPlan([site], target);
+  const summary = summarizePlans([plan], [
+    { city: "Melun", role: "home" },
+    { city: "Melun", role: "services" },
+  ]);
+  assert.equal(summary.length, 1);
+  assert.equal(summary[0].city, "Melun");
+  assert.equal(summary[0].plannedChanges, 2);
+  assert.equal(summary[0].appointmentRemediation, false);
+  assert.equal(summary[0].territorialAnchor, true);
 });
 
 test("rollback restores snapshots in reverse order", async () => {
