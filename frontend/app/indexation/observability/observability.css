@@ -1,0 +1,89 @@
+.observability-controls {
+  align-items: end;
+}
+
+.observability-controls > label {
+  min-width: min(520px, 100%);
+}
+
+.observability-metrics {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.observability-table-card {
+  margin-top: 20px;
+}
+
+.observability-table-wrap {
+  overflow-x: auto;
+}
+
+.observability-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 920px;
+}
+
+.observability-table th,
+.observability-table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid rgba(16, 42, 67, 0.09);
+  text-align: left;
+  vertical-align: top;
+}
+
+.observability-table th {
+  color: var(--indexation-muted, #60758a);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.observability-table td strong,
+.observability-table td small {
+  display: block;
+}
+
+.observability-table td small {
+  margin-top: 4px;
+  color: var(--indexation-muted, #60758a);
+  font-size: 0.72rem;
+}
+
+.observability-state {
+  display: inline-flex;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #eef3f7;
+  color: #334e68;
+  font-size: 0.7rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.observability-state-search_data_available {
+  background: #e7f6ec;
+  color: #17653a;
+}
+
+.observability-state-no_search_data_yet {
+  background: #fff4d8;
+  color: #805b10;
+}
+
+.observability-state-read_error {
+  background: #fdecec;
+  color: #9b2c2c;
+}
+
+@media (max-width: 1180px) {
+  .observability-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .observability-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
