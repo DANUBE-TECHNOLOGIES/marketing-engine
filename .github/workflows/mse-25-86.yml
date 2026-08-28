@@ -130,6 +130,7 @@ jobs:
         working-directory: backend
         run: |
           node --test test/mse-25-86-seo-coverage-remediation.test.js
+          node --test test/mse-25-86-contact-seo-only.test.js
           node --test test/mse-25-86-vm-readiness.test.js
 
       - name: Syntax-check apply, verify and rollback scripts
