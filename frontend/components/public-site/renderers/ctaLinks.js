@@ -1,5 +1,9 @@
 "use strict";
 
+const PUBLIC_ROUTE_ALIASES = Object.freeze({
+  inspirations: "inspiration",
+});
+
 function siteRoot(site) {
   const explicitBasePath = String(site?.basePath || "").trim();
   if (explicitBasePath) return explicitBasePath.replace(/\/$/, "");
@@ -10,11 +14,26 @@ function siteRoot(site) {
     : "/";
 }
 
-function sitePageHref(site, slug = "") {
-  const root = siteRoot(site);
+function canonicalPublicSlug(slug = "") {
   const normalized = String(slug || "")
     .trim()
     .replace(/^\/+|\/+$/g, "");
+
+  if (!normalized) return "";
+
+  const parts = normalized.split("/").filter(Boolean);
+  const first = String(parts[0] || "").toLowerCase();
+
+  if (Object.prototype.hasOwnProperty.call(PUBLIC_ROUTE_ALIASES, first)) {
+    parts[0] = PUBLIC_ROUTE_ALIASES[first];
+  }
+
+  return parts.join("/");
+}
+
+function sitePageHref(site, slug = "") {
+  const root = siteRoot(site);
+  const normalized = canonicalPublicSlug(slug);
 
   if (!normalized) return root;
 
@@ -71,4 +90,9 @@ export function phoneHref(phone) {
   return normalized ? `tel:${normalized}` : null;
 }
 
-export { sitePageHref, siteRoot };
+export {
+  PUBLIC_ROUTE_ALIASES,
+  canonicalPublicSlug,
+  sitePageHref,
+  siteRoot,
+};
