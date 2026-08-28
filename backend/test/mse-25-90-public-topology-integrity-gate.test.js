@@ -2,6 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const {
+  CONDITIONAL_PATHS,
   DEFAULT_REQUIRED_PATHS,
   buildTopology,
   parseAgencyUrl,
@@ -19,7 +20,6 @@ function siteUrls(siteSlug, extra = []) {
     "partenaires",
     "services",
     "destinations",
-    "inspiration",
     "contact",
     ...extra,
   ].map((path) => `${ORIGIN}/agence/${siteSlug}${path ? `/${path}` : ""}`);
@@ -66,10 +66,38 @@ test("MSE-25.90 accepts variable per-site URL counts when canonical core routes 
   assert.deepEqual(
     summary.siteDetails.map((site) => [site.siteSlug, site.urlCount]),
     [
-      ["ambassade-fram-mondescale-gien", 8],
-      ["tui-store-amilly", 10],
+      ["ambassade-fram-mondescale-gien", 7],
+      ["tui-store-amilly", 9],
     ]
   );
+});
+
+test("MSE-25.90 treats inspiration index as conditional sitemap topology", () => {
+  assert.equal(DEFAULT_REQUIRED_PATHS.includes("inspiration"), false);
+  assert.equal(CONDITIONAL_PATHS.has("inspiration"), true);
+
+  const withoutInspiration = buildTopology(siteUrls("tui-store-amilly"), ORIGIN);
+  const withoutSummary = summarizeTopology(withoutInspiration, {
+    expectedSites: ["tui-store-amilly"],
+    expectedSiteCount: 1,
+    requiredPaths: DEFAULT_REQUIRED_PATHS,
+  });
+
+  assert.equal(withoutSummary.ok, true);
+  assert.deepEqual(withoutSummary.siteDetails[0].conditionalPaths, []);
+
+  const withInspiration = buildTopology(
+    siteUrls("tui-store-amilly", ["inspiration"]),
+    ORIGIN
+  );
+  const withSummary = summarizeTopology(withInspiration, {
+    expectedSites: ["tui-store-amilly"],
+    expectedSiteCount: 1,
+    requiredPaths: DEFAULT_REQUIRED_PATHS,
+  });
+
+  assert.equal(withSummary.ok, true);
+  assert.deepEqual(withSummary.siteDetails[0].conditionalPaths, ["inspiration"]);
 });
 
 test("MSE-25.90 fails closed when an expected published site disappears", () => {
