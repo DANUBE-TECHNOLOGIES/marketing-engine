@@ -5,6 +5,7 @@ const path = require("node:path");
 
 const root = path.resolve(__dirname, "..");
 const { createConfiguredSearchConsoleProvider } = require("../src/modules/search-console-submission/config");
+const { createSearchConsoleProvider } = require("../src/modules/search-console-submission/provider-factory");
 const { createPersistentOAuthAccessTokenProvider } = require("../src/modules/search-console-submission/auth");
 
 function read(relativePath) {
@@ -35,6 +36,17 @@ test("MSE-25.80 persistent OAuth is authoritative when Prisma is available", () 
   assert.equal(provider.credentialMode, "persistent-oauth-token");
   assert.equal(provider.requestedEnabled, true);
   assert.equal(provider.disabledReason, null);
+});
+
+test("MSE-25.80 provider factory honors feature-disabled instead of reviving a legacy provider", () => {
+  const provider = createSearchConsoleProvider({
+    prisma: prismaWithToken(null),
+    env: { SEARCH_CONSOLE_ENABLED: "false" },
+  });
+
+  assert.equal(provider.name, "disabled");
+  assert.equal(provider.disabledReason, "feature-disabled");
+  assert.equal(provider.requestedEnabled, false);
 });
 
 test("MSE-25.80 persistent provider reuses a non-expired access token without refresh", async () => {
@@ -143,10 +155,17 @@ test("MSE-25.80 isolated Search Console OAuth is mounted before provider routes 
   );
 });
 
+test("MSE-25.80 routes honor an explicitly disabled configured provider", () => {
+  const routes = read("src/modules/search-console-submission/routes.js");
+  assert.match(routes, /const activeProvider=provider \|\| createSearchConsoleProvider\(\{prisma\}\)/);
+  assert.doesNotMatch(routes, /provider && provider\.name !== ["']disabled["']/);
+});
+
 test("MSE-25.80 health exposes the active credential mode without enabling auto-submit", () => {
   const routes = read("src/modules/search-console-submission/routes.js");
 
   assert.match(routes, /credentialMode:active\?\.credentialMode\|\|null/);
+  assert.match(routes, /providerConfigured:active\?\.name!==["']disabled["']&&readiness\.configured===true/);
   assert.match(routes, /explicitApprovalRequired:true/);
   assert.match(routes, /autoSubmit:false/);
 });
