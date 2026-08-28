@@ -31,6 +31,25 @@ case "$MODE" in
     export MSE_25_86_CONFIRM=true
     echo "MSE-25.86 APPLY — transaction réseau atomique, 9 sites"
     node scripts/mse-25-86-seo-coverage-remediation.js
+    APPLY_REPORT="$(ls -1t "$REPORT_DIR"/mse-25-86-apply-*.json 2>/dev/null | head -n 1 || true)"
+    if [[ -z "$APPLY_REPORT" || ! -f "$APPLY_REPORT" ]]; then
+      echo "MSE-25.86: rapport d'application introuvable après écriture ; vérification post-apply impossible." >&2
+      exit 6
+    fi
+    export MSE_25_86_APPLY_REPORT="$APPLY_REPORT"
+    echo "MSE-25.86 POST-APPLY VERIFY — lecture seule depuis $APPLY_REPORT"
+    node scripts/mse-25-86-post-apply-verify.js
+    ;;
+
+  verify)
+    REPORT_FILE="${2:-${MSE_25_86_APPLY_REPORT:-}}"
+    if [[ -z "$REPORT_FILE" || ! -f "$REPORT_FILE" ]]; then
+      echo "MSE-25.86: verify refusé. Fournir le rapport JSON d'application réel en second argument." >&2
+      exit 7
+    fi
+    export MSE_25_86_APPLY_REPORT="$REPORT_FILE"
+    echo "MSE-25.86 VERIFY — lecture seule depuis $REPORT_FILE"
+    node scripts/mse-25-86-post-apply-verify.js
     ;;
 
   rollback)
@@ -50,7 +69,7 @@ case "$MODE" in
     ;;
 
   *)
-    echo "Usage: $0 {preview|apply|rollback [apply-report.json]}" >&2
+    echo "Usage: $0 {preview|apply|verify [apply-report.json]|rollback [apply-report.json]}" >&2
     exit 64
     ;;
 esac
