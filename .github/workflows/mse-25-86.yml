@@ -77,6 +77,28 @@ jobs:
           grep -q 'MSE_25_86_APPLY_ACK=SEO-COVERAGE-9-SITES' backend/scripts/mse-25-86-execute.sh
           grep -q 'MSE_25_86_ROLLBACK_ACK=RESTORE-MSE-25-86' backend/scripts/mse-25-86-execute.sh
           grep -q 'DATABASE_URL absente' backend/scripts/mse-25-86-execute.sh
+          grep -q 'mse-25-86-post-apply-verify.js' backend/scripts/mse-25-86-execute.sh
+          grep -q 'MSE-25.86 POST-APPLY VERIFY' backend/scripts/mse-25-86-execute.sh
+
+      - name: Assert post-apply verification is read-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const source = fs.readFileSync('backend/scripts/mse-25-86-post-apply-verify.js', 'utf8');
+          const forbidden = [/\.create\s*\(/, /\.update\s*\(/, /\.delete\s*\(/, /\.upsert\s*\(/];
+          for (const pattern of forbidden) {
+            if (pattern.test(source)) {
+              console.error(`Post-apply verifier must remain read-only: ${pattern}`);
+              process.exit(1);
+            }
+          }
+          if (!/automaticRollbackForbidden:\s*true/.test(source) || !/rollbackRequiresSeparateHumanDecision:\s*true/.test(source)) {
+            console.error('Post-apply rollback policy missing.');
+            process.exit(1);
+          }
+          NODE
 
       - name: Install backend dependencies
         working-directory: backend
@@ -90,8 +112,9 @@ jobs:
         working-directory: backend
         run: node --test test/mse-25-86-seo-coverage-remediation.test.js
 
-      - name: Syntax-check apply and rollback scripts
+      - name: Syntax-check apply, verify and rollback scripts
         working-directory: backend
         run: |
           node --check scripts/mse-25-86-seo-coverage-remediation.js
+          node --check scripts/mse-25-86-post-apply-verify.js
           node --check scripts/mse-25-86-seo-coverage-rollback.js
