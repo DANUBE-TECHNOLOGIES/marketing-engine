@@ -74,6 +74,9 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+    networks:
+      - default
+      - runtime
     environment:
       NODE_ENV: "production"
       GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID}"
@@ -102,3 +105,8 @@ services:
 
 volumes:
   postgres_data:
+
+networks:
+  runtime:
+    external: true
+    name: "${MONDESCALE_RUNTIME_NETWORK:-mondescale-local-engine_default}"
