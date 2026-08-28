@@ -6,7 +6,8 @@ const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const { createConfiguredSearchConsoleProvider } = require("../src/modules/search-console-submission/config");
 const { createSearchConsoleProvider } = require("../src/modules/search-console-submission/provider-factory");
-const { createPersistentOAuthAccessTokenProvider } = require("../src/modules/search-console-submission/auth");
+const { SEARCH_CONSOLE_SCOPE, createPersistentOAuthAccessTokenProvider } = require("../src/modules/search-console-submission/auth");
+const { SEARCH_CONSOLE_SCOPE: OAUTH_SCOPE } = require("../src/routes/searchConsoleOAuth");
 
 function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
@@ -47,6 +48,12 @@ test("MSE-25.80 provider factory honors feature-disabled instead of reviving a l
   assert.equal(provider.name, "disabled");
   assert.equal(provider.disabledReason, "feature-disabled");
   assert.equal(provider.requestedEnabled, false);
+});
+
+test("MSE-25.80 OAuth and fallback use the sitemap-capable Search Console scope", () => {
+  const expected = "https://www.googleapis.com/auth/webmasters";
+  assert.equal(OAUTH_SCOPE, expected);
+  assert.equal(SEARCH_CONSOLE_SCOPE, expected);
 });
 
 test("MSE-25.80 persistent provider reuses a non-expired access token without refresh", async () => {
@@ -136,7 +143,8 @@ test("MSE-25.80 isolated OAuth owns Search Console and keeps controlled write sc
   const isolated = read("src/routes/searchConsoleOAuth.js");
 
   assert.match(isolated, /\/search-console\/auth/);
-  assert.match(isolated, /https:\/\/www\.googleapis\.com\/auth\/webmasters["']/);
+  assert.match(isolated, /const SEARCH_CONSOLE_SCOPE = ["']https:\/\/www\.googleapis\.com\/auth\/webmasters["']/);
+  assert.doesNotMatch(isolated, /webmasters\.readonly/);
   assert.match(isolated, /createHmac/);
   assert.match(isolated, /randomBytes/);
   assert.match(isolated, /provider:\s*["']search-console["']/);
