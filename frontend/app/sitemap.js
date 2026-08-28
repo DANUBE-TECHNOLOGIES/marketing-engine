@@ -2,8 +2,11 @@ import {
   fetchMiniSiteSitemap,
 } from "../lib/minisite-structured-data/client";
 
-export const revalidate =
-  300;
+// The sitemap depends on the runtime backend and must not be prerendered during
+// the Docker build, where the backend service is not reachable from the build
+// container. Otherwise Next can persist an empty <urlset> until revalidation.
+export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 const PUBLIC_ORIGIN =
   String(
