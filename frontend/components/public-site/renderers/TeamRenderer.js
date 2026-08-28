@@ -8,6 +8,27 @@ function localTeamTitle(site) { const city=clean(site?.agency?.city||site?.city)
 function localTeamIntro(site) { const city=clean(site?.agency?.city||site?.city); return city?`Des conseillers qui connaissent vos projets, vos envies et les solutions disponibles pour construire votre voyage depuis ${city}.`:"Des conseillers disponibles pour écouter votre projet et construire avec vous un voyage réellement adapté."; }
 function siteHref(site,slug){const root=String(site?.basePath||`/agence/${encodeURIComponent(site?.slug||"")}`).replace(/\/$/,"");return `${root}/${slug}`;}
 function memberPresentation(member){return clean(member.description||member.bio);}
+function memberImage(member){
+ if(!member||typeof member!=="object")return null;
+ const candidates=[
+  member.image,
+  member.imageUrl,
+  member.photo,
+  member.photoUrl,
+  member.avatar,
+  member.avatarUrl,
+  member.portrait,
+  member.portraitUrl,
+  member.media?.url,
+  member.media?.src,
+  member.image?.url,
+  member.image?.src,
+  member.photo?.url,
+  member.photo?.src,
+ ];
+ return candidates.find((value)=>typeof value==="string"&&value.trim())||null;
+}
+function memberImageAlt(member,name){return clean(member?.imageAlt||member?.photoAlt||member?.avatarAlt||member?.media?.altText||member?.media?.alt)||`Portrait de ${name}`;}
 
 export default function TeamRenderer({section,site}){
  const content=getSectionContent(section); const city=clean(site?.agency?.city||site?.city);
@@ -17,9 +38,9 @@ export default function TeamRenderer({section,site}){
  return <section className={`public-site-section public-site-team ${styles.section}`} data-team-size={uniqueMembers.length}>
   <div className="public-site-container">
    <header className={styles.heading}><div><p className="public-site-section-kicker">Votre équipe</p><h2>{getSectionTitle(section,localTeamTitle(site))}</h2></div><p className={styles.intro}>{content.text||content.description||localTeamIntro(site)}</p></header>
-   {uniqueMembers.length?<div className={`${styles.grid} ${singleMember?styles.single:""}`}>{uniqueMembers.map((member,index)=>{const name=clean(member.name||member.title)||"Conseiller voyage";const role=clean(member.role||member.jobTitle||member.subtitle)||"Conseiller voyage";const image=member.image||member.imageUrl||member.photo||member.photoUrl||null;const presentation=memberPresentation(member);return <article className={styles.card} key={member.id||member.email||name||index}><div className={styles.portrait}>{image?<img src={image} alt={member.imageAlt||`Portrait de ${name}`} loading="lazy" decoding="async" fetchPriority="low" width="720" height="720"/>:<span>{initials(name)}</span>}</div><div className={styles.copy}><h3>{name}</h3><p className={styles.role}>{city?`${role} à ${city}`:role}</p>{presentation?<p>{presentation}</p>:null}</div></article>})}</div>:null}
+   {uniqueMembers.length?<div className={`${styles.grid} ${singleMember?styles.single:""}`}>{uniqueMembers.map((member,index)=>{const name=clean(member.name||member.title)||"Conseiller voyage";const role=clean(member.role||member.jobTitle||member.subtitle)||"Conseiller voyage";const image=memberImage(member);const presentation=memberPresentation(member);return <article className={styles.card} key={member.id||member.email||name||index}><div className={styles.portrait}>{image?<img src={image} alt={memberImageAlt(member,name)} loading="lazy" decoding="async" fetchPriority="low" width="720" height="720"/>:<span>{initials(name)}</span>}</div><div className={styles.copy}><h3>{name}</h3><p className={styles.role}>{city?`${role} à ${city}`:role}</p>{presentation?<p>{presentation}</p>:null}</div></article>})}</div>:null}
    <nav className={styles.links} aria-label={city?`Préparer votre voyage avec l’équipe de ${city}`:"Préparer votre voyage avec notre équipe"}><Link href={siteHref(site,"services")}>Découvrir nos services</Link><Link href={siteHref(site,"destinations")}>Explorer nos destinations</Link><Link href={siteHref(site,"contact")}>Échanger avec un conseiller</Link></nav>
   </div>
  </section>;
 }
-export {localTeamIntro,localTeamTitle,memberPresentation,siteHref};
+export {localTeamIntro,localTeamTitle,memberImage,memberImageAlt,memberPresentation,siteHref};
