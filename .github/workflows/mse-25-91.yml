@@ -10,6 +10,7 @@ on:
       - 'backend/**'
       - 'docker-compose.yml'
       - 'scripts/mse-25-91-vm-deploy.sh'
+      - 'scripts/mse-25-91-public-contract-preflight.js'
       - '.github/workflows/mse-25-91.yml'
 
 permissions:
@@ -72,5 +73,7 @@ jobs:
           node --test test/mse-25-86-seo-coverage-remediation.test.js
           node --test test/mse-25-86-vm-readiness.test.js
 
-      - name: Validate guarded deployment script
-        run: bash -n scripts/mse-25-91-vm-deploy.sh
+      - name: Validate guarded deployment scripts
+        run: |
+          bash -n scripts/mse-25-91-vm-deploy.sh
+          node --check scripts/mse-25-91-public-contract-preflight.js
