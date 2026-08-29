@@ -10,6 +10,7 @@ const {
   isLegacyTeamPlaceholder,
   isTeamBlock,
   memberAssetId,
+  publicMediaUrl,
   teamCollections,
 } = require("../src/modules/public-site-read/team-media-hydrator");
 
@@ -25,7 +26,13 @@ test("MSE-25.91 recognises legacy teamMembers collections", () => {
 
 test("MSE-25.91 recognises generic historical team placeholders", () => {
   assert.equal(isLegacyTeamPlaceholder({ name: "Votre équipe", imageUrl: "" }), true);
-  assert.equal(isLegacyTeamPlaceholder({ name: "Céline", imageUrl: "/media/celine.webp" }), false);
+  assert.equal(isLegacyTeamPlaceholder({ name: "Céline", imageUrl: "/media/assets/celine.webp" }), false);
+});
+
+test("MSE-25.91 normalizes internal media URLs to same-origin public paths", () => {
+  assert.equal(publicMediaUrl("http://backend:4000/media/assets/celine.webp"), "/media/assets/celine.webp");
+  assert.equal(publicMediaUrl("https://internal.example/media/brand-assets/logo.png"), "/media/brand-assets/logo.png");
+  assert.equal(publicMediaUrl("https://cdn.example/celine.webp"), "https://cdn.example/celine.webp");
 });
 
 test("MSE-25.91 resolves team asset ids and exposes a real image URL", () => {
@@ -53,15 +60,15 @@ test("MSE-25.91 resolves team asset ids and exposes a real image URL", () => {
         title: "Portrait Céline",
         type: "image",
         status: "draft",
-        payload: { image: { publicUrl: "/media/celine.webp" } },
+        payload: { image: { publicUrl: "http://backend:4000/media/assets/celine.webp" } },
         currentVersion: 3,
       },
     ]
   );
 
   const hydrated = pages[0].blocks[0].content.teamMembers[0];
-  assert.equal(hydrated.image, "/media/celine.webp");
-  assert.equal(hydrated.imageUrl, "/media/celine.webp");
+  assert.equal(hydrated.image, "/media/assets/celine.webp");
+  assert.equal(hydrated.imageUrl, "/media/assets/celine.webp");
   assert.equal(hydrated.__mediaSource, "asset-engine");
 });
 
@@ -78,7 +85,7 @@ test("MSE-25.91 replaces placeholder-only team blocks with the real canonical pr
                 {
                   name: "Céline",
                   role: "Conseillère voyage",
-                  imageUrl: "/media/celine.webp",
+                  imageUrl: "/media/assets/celine.webp",
                 },
               ],
             },
@@ -127,7 +134,7 @@ test("MSE-25.91 replaces placeholder-only team blocks with the real canonical pr
     const content = page.blocks[0].content;
     assert.equal(content.members.length, 1);
     assert.equal(content.members[0].name, "Céline");
-    assert.equal(content.members[0].imageUrl, "/media/celine.webp");
+    assert.equal(content.members[0].imageUrl, "/media/assets/celine.webp");
     assert.equal(content.__teamSource, "canonical-real-team-profile");
   }
 });
