@@ -1,140 +1,63 @@
 /*
  * MSE-25.91 final public locks.
- * Loaded last by the agency layout so older public CSS cannot re-expand the
- * home hero or visually suppress the canonical company logo.
+ * Keep this file intentionally small: it must only protect the canonical
+ * header logo presentation. Hero geometry is owned by the MSE-25.77 public
+ * experience CSS and must not be overridden here.
  */
 
 .public-site-header-logo-wrap {
   flex: 0 0 auto;
-  width: 190px !important;
-  height: 78px !important;
+  width: 170px !important;
+  min-width: 170px !important;
+  height: 72px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: flex-start !important;
-  overflow: hidden !important;
+  overflow: visible !important;
 }
 
-/* The bundled Mondescale PNG contains generous transparent/white margins.
- * Scale the bitmap inside a clipped slot, not the slot itself. */
 .public-site-header-logo-wrap .public-brand-logo,
 .public-site-header__brand-logo {
   display: block !important;
   visibility: visible !important;
   opacity: 1 !important;
-  width: auto !important;
-  height: 74px !important;
-  max-width: none !important;
-  max-height: none !important;
+  width: 150px !important;
+  height: auto !important;
+  max-width: 150px !important;
+  max-height: 64px !important;
   object-fit: contain !important;
   object-position: left center !important;
-  transform: scale(2.75) !important;
-  transform-origin: left center !important;
-}
-
-/* Home only. Keep the image band compact while allowing the CTA row to remain
- * fully visible; the previous max-height lock could clip the buttons. */
-.public-site-hero--home.public-site-hero--immersive[data-page-slug="home"],
-.public-site-hero--home[data-has-hero-image="true"][data-page-slug="home"] {
-  min-height: clamp(340px, 30vw, 400px) !important;
-  height: clamp(340px, 30vw, 400px) !important;
-  max-height: 400px !important;
-}
-
-.public-site-hero--home[data-page-slug="home"] > .public-site-container {
-  min-height: clamp(340px, 30vw, 400px) !important;
-  height: clamp(340px, 30vw, 400px) !important;
-  max-height: 400px !important;
-  padding: 18px 0 44px !important;
-  align-items: center !important;
-}
-
-.public-site-hero--home[data-page-slug="home"] .public-site-hero-copy {
-  width: min(540px, 52%) !important;
-  padding: clamp(18px, 2vw, 26px) !important;
-  border-radius: 22px !important;
-}
-
-.public-site-hero--home[data-page-slug="home"] .public-site-eyebrow {
-  margin-bottom: 10px !important;
-  padding: 6px 10px !important;
-  font-size: .66rem !important;
-}
-
-.public-site-hero--home[data-page-slug="home"] h1 {
-  max-width: 510px !important;
-  font-size: clamp(2.15rem, 3.15vw, 3.25rem) !important;
-  line-height: .98 !important;
-}
-
-.public-site-hero--home[data-page-slug="home"] .public-site-hero-text {
-  margin-top: 10px !important;
-  font-size: clamp(.86rem, .95vw, .96rem) !important;
-  line-height: 1.42 !important;
-}
-
-.public-site-hero--home[data-page-slug="home"] .public-site-hero-actions {
-  margin-top: 12px !important;
-  gap: 9px !important;
-}
-
-.public-site-hero--home[data-page-slug="home"] .public-site-button {
-  min-height: 40px !important;
-  padding-inline: 15px !important;
-  font-size: .76rem !important;
+  transform: none !important;
 }
 
 @media (max-width: 900px) {
   .public-site-header-logo-wrap {
-    width: 170px !important;
-    height: 70px !important;
+    width: 155px !important;
+    min-width: 155px !important;
+    height: 68px !important;
   }
 
   .public-site-header-logo-wrap .public-brand-logo,
   .public-site-header__brand-logo {
-    height: 66px !important;
-    transform: scale(2.45) !important;
-  }
-
-  .public-site-hero--home[data-page-slug="home"] .public-site-hero-copy {
-    width: min(520px, 76%) !important;
+    width: 138px !important;
+    max-width: 138px !important;
+    max-height: 58px !important;
   }
 }
 
 @media (max-width: 640px) {
   .public-site-header-logo-wrap {
-    width: min(54vw, 190px) !important;
+    width: 145px !important;
+    min-width: 145px !important;
     height: 62px !important;
-    justify-content: center !important;
+    justify-content: flex-start !important;
   }
 
   .public-site-header-logo-wrap .public-brand-logo,
   .public-site-header__brand-logo {
-    height: 58px !important;
-    object-position: center !important;
-    transform: scale(2.05) !important;
-    transform-origin: center !important;
-  }
-
-  .public-site-hero--home.public-site-hero--immersive[data-page-slug="home"],
-  .public-site-hero--home[data-has-hero-image="true"][data-page-slug="home"] {
-    min-height: 470px !important;
-    height: auto !important;
-    max-height: none !important;
-  }
-
-  .public-site-hero--home[data-page-slug="home"] > .public-site-container {
-    min-height: 470px !important;
-    height: auto !important;
-    max-height: none !important;
-    padding: 52px 0 76px !important;
-  }
-
-  .public-site-hero--home[data-page-slug="home"] .public-site-hero-copy {
-    width: 100% !important;
-    padding: 20px 18px !important;
-  }
-
-  .public-site-hero--home[data-page-slug="home"] h1 {
-    font-size: clamp(2.15rem, 10vw, 3.05rem) !important;
+    width: 128px !important;
+    max-width: 128px !important;
+    max-height: 54px !important;
+    object-position: left center !important;
   }
 }
