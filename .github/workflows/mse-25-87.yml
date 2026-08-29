@@ -15,6 +15,7 @@ on:
       - 'frontend/components/public-site/public-readability-fixes.css'
       - 'frontend/app/agence/[siteSlug]/layout.js'
       - 'frontend/test/mse-25-87-public-regression-fixes.test.mjs'
+      - 'scripts/mse-25-87-vm-deploy.sh'
       - '.github/workflows/mse-25-87.yml'
 
 permissions:
@@ -53,6 +54,10 @@ jobs:
           components/public-site/renderers/TeamRenderer.js
           components/public-site/PublicPaymentMethodsBand.js
           app/agence/[siteSlug]/layout.js
+
+      - name: Validate guarded VM deployment script
+        working-directory: .
+        run: bash -n scripts/mse-25-87-vm-deploy.sh
 
       - name: Build public frontend
         run: npm run build
