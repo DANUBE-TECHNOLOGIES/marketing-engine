@@ -142,13 +142,26 @@ async function loadTeamMediaAssets({
   });
 }
 
+function publicMediaUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+
+  const assetIndex = raw.indexOf("/media/assets/");
+  if (assetIndex >= 0) return raw.slice(assetIndex);
+
+  const brandIndex = raw.indexOf("/media/brand-assets/");
+  if (brandIndex >= 0) return raw.slice(brandIndex);
+
+  return raw;
+}
+
 function assetImageUrl(asset) {
   const payload = asObject(asset?.payload);
   const file = asObject(payload.file);
   const media = asObject(payload.media);
   const image = asObject(payload.image);
   const original = asObject(payload.original);
-  return String(
+  return publicMediaUrl(
     payload.publicUrl ||
     payload.url ||
     payload.src ||
@@ -169,7 +182,7 @@ function assetImageUrl(asset) {
     original.publicUrl ||
     original.url ||
     ""
-  ).trim();
+  );
 }
 
 function directMemberImageUrl(member) {
@@ -201,7 +214,8 @@ function directMemberImageUrl(member) {
     member.media?.url,
   ];
 
-  return String(candidates.find((value) => typeof value === "string" && value.trim()) || "").trim();
+  const value = candidates.find((candidate) => typeof candidate === "string" && candidate.trim()) || "";
+  return publicMediaUrl(value);
 }
 
 function hydrateMember(member, byId) {
@@ -387,6 +401,7 @@ module.exports = {
   teamCollections,
   teamMediaReferences,
   loadTeamMediaAssets,
+  publicMediaUrl,
   assetImageUrl,
   directMemberImageUrl,
   hydrateMember,
