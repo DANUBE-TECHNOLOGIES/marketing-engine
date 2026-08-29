@@ -42,6 +42,36 @@ function memberPresentation(member) {
   return clean(member.description || member.bio);
 }
 
+function assetUrl(value) {
+  if (!value) return null;
+  if (typeof value === "string") return value.trim() || null;
+  if (typeof value !== "object") return null;
+
+  return clean(
+    value.publicUrl ||
+    value.url ||
+    value.src ||
+    value.path ||
+    value.assetUrl ||
+    value.fileUrl ||
+    ""
+  ) || null;
+}
+
+function memberImageUrl(member) {
+  return (
+    assetUrl(member.image) ||
+    assetUrl(member.imageUrl) ||
+    assetUrl(member.photo) ||
+    assetUrl(member.photoUrl) ||
+    assetUrl(member.portrait) ||
+    assetUrl(member.portraitUrl) ||
+    assetUrl(member.media) ||
+    assetUrl(member.asset) ||
+    null
+  );
+}
+
 export default function TeamRenderer({ section, site }) {
   const content = getSectionContent(section);
   const city = clean(site?.agency?.city || site?.city);
@@ -76,7 +106,7 @@ export default function TeamRenderer({ section, site }) {
             {uniqueMembers.map((member, index) => {
               const name = clean(member.name || member.title) || "Conseiller voyage";
               const role = clean(member.role || member.jobTitle || member.subtitle) || "Conseiller voyage";
-              const image = member.image || member.imageUrl || member.photo || member.photoUrl || null;
+              const image = memberImageUrl(member);
               const presentation = memberPresentation(member);
 
               return (
@@ -86,7 +116,7 @@ export default function TeamRenderer({ section, site }) {
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={image}
-                        alt={member.imageAlt || `Portrait de ${name}`}
+                        alt={member.imageAlt || member.photoAlt || `Portrait de ${name}`}
                         loading="lazy"
                         decoding="async"
                         fetchPriority="low"
@@ -130,8 +160,10 @@ export default function TeamRenderer({ section, site }) {
 }
 
 export {
+  assetUrl,
   localTeamIntro,
   localTeamTitle,
+  memberImageUrl,
   memberPresentation,
   siteHref,
 };
