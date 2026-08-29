@@ -1,28 +1,24 @@
 /*
- * MSE-25.74 / MSE-25.78 / MSE-25.91 — Network Hero.
- * Full-bleed premium visual treatment shared by every public agency page.
- * The home remains immersive without monopolising the first viewport.
+ * MSE-25.91 — Canonical network home hero.
+ * The hero is deliberately contained inside the public page frame: on very
+ * wide screens it must not become a panoramic strip spanning the viewport.
  */
 .public-site-hero--home.public-site-hero--immersive {
   position: relative;
-  min-height: clamp(440px, 52vh, 570px);
+  width: min(1480px, calc(100% - 48px));
+  min-height: 420px;
+  height: 420px;
+  margin: 18px auto 0;
   overflow: hidden;
+  border-radius: 26px;
   background: #082947;
   color: #fff;
+  box-shadow: 0 18px 52px rgba(7,29,48,.12);
 }
 
-.public-site-hero--home.public-site-hero--immersive::before {
-  display: none;
-}
-
+.public-site-hero--home.public-site-hero--immersive::before,
 .public-site-hero--home.public-site-hero--immersive::after {
-  right: -8%;
-  bottom: -118px;
-  left: -8%;
-  height: 172px;
-  z-index: 4;
-  background: var(--public-background, #fff);
-  pointer-events: none;
+  display: none;
 }
 
 .public-site-hero--home .public-site-hero-media {
@@ -53,156 +49,144 @@
   inset: 0;
   width: auto;
   background:
-    radial-gradient(circle at 30% 48%, rgba(4,24,42,.18), transparent 42%),
-    linear-gradient(180deg, rgba(5,25,43,.04) 0%, rgba(5,25,43,.02) 58%, rgba(5,25,43,.18) 100%);
+    radial-gradient(circle at 26% 46%, rgba(4,24,42,.16), transparent 40%),
+    linear-gradient(180deg, rgba(5,25,43,.03) 0%, rgba(5,25,43,.02) 62%, rgba(5,25,43,.13) 100%);
   pointer-events: none;
 }
 
 .public-site-hero--home > .public-site-container {
   position: relative;
   z-index: 3;
-  width: min(1220px, calc(100% - 48px));
-  min-height: clamp(440px, 52vh, 570px);
+  width: min(1320px, calc(100% - 64px));
+  height: 100%;
+  min-height: 0;
   display: flex;
   align-items: center;
-  padding: clamp(54px, 6vw, 78px) 0 clamp(92px, 8vw, 118px);
+  padding: 30px 0;
 }
 
 .public-site-hero--home .public-site-hero-copy {
-  width: min(680px, 58%);
-  padding: clamp(28px, 3.6vw, 44px);
-  border: 1px solid rgba(255,255,255,.17);
-  border-radius: 28px;
-  background:
-    linear-gradient(135deg, rgba(5,29,50,.74), rgba(5,29,50,.42));
-  box-shadow: 0 30px 86px rgba(0,0,0,.2);
-  backdrop-filter: blur(8px);
+  width: min(590px, 52%);
+  max-height: calc(100% - 44px);
+  padding: 30px 34px;
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 22px;
+  background: linear-gradient(135deg, rgba(5,29,50,.76), rgba(5,29,50,.48));
+  box-shadow: 0 24px 64px rgba(0,0,0,.18);
+  backdrop-filter: blur(7px);
 }
 
 .public-site-hero--home .public-site-eyebrow {
-  margin-bottom: 16px;
+  margin-bottom: 11px;
   color: #fff;
 }
 
 .public-site-hero--home h1 {
-  max-width: 640px;
+  max-width: 540px;
+  margin: 0;
   color: #fff;
   font-family: var(--public-heading-font, "DM Serif Display", serif);
-  font-size: clamp(2.75rem, 4.7vw, 4.8rem);
-  line-height: .99;
-  letter-spacing: -.04em;
+  font-size: clamp(2.35rem, 3vw, 3.65rem);
+  line-height: 1;
+  letter-spacing: -.035em;
   text-wrap: balance;
 }
 
 .public-site-hero--home .public-site-hero-text {
-  max-width: 600px;
-  margin-top: 20px;
-  color: rgba(255,255,255,.92);
-  font-size: clamp(.98rem, 1.35vw, 1.14rem);
-  line-height: 1.62;
+  max-width: 540px;
+  margin-top: 13px;
+  color: rgba(255,255,255,.93);
+  font-size: clamp(.94rem, 1vw, 1.04rem);
+  line-height: 1.5;
 }
 
 .public-site-hero--home .public-site-hero-actions {
-  margin-top: 24px;
+  margin-top: 17px;
+  gap: 11px;
+}
+
+.public-site-hero--home .public-site-button {
+  min-height: 44px;
+  padding: 11px 18px;
 }
 
 .public-site-hero--home .public-site-button-secondary {
-  border-color: rgba(255,255,255,.74);
-  background: rgba(5,29,50,.24);
+  border-color: rgba(255,255,255,.78);
+  background: rgba(5,29,50,.28);
 }
 
+/* Hero reused on inner pages stays shorter than the home hero. */
 .public-site-hero--home.public-site-hero--immersive:not([data-page-slug="home"]) {
-  min-height: clamp(370px, 43vh, 470px);
-}
-
-.public-site-hero--home:not([data-page-slug="home"]) > .public-site-container {
-  min-height: clamp(370px, 43vh, 470px);
-  padding: clamp(48px, 5vw, 66px) 0 clamp(76px, 7vw, 94px);
+  min-height: 360px;
+  height: 360px;
 }
 
 .public-site-hero--home:not([data-page-slug="home"]) .public-site-hero-copy {
-  width: min(680px, 64%);
-  padding: clamp(26px, 3vw, 36px);
-  border-radius: 24px;
+  width: min(560px, 56%);
+  padding: 26px 30px;
 }
 
 .public-site-hero--home:not([data-page-slug="home"]) h1 {
-  font-size: clamp(2.4rem, 3.8vw, 3.9rem);
-  line-height: 1.01;
+  font-size: clamp(2.15rem, 2.7vw, 3.25rem);
 }
 
-.public-site-hero--home:not([data-page-slug="home"]) .public-site-hero-text {
-  margin-top: 16px;
-  font-size: clamp(.95rem, 1.15vw, 1.06rem);
-  line-height: 1.56;
-}
-
-.public-site-hero--home:not([data-page-slug="home"]) .public-site-hero-actions {
-  margin-top: 20px;
-}
-
-@media (max-width: 900px) {
-  .public-site-hero--home > .public-site-container {
-    width: min(100% - 32px, 1220px);
-  }
-
-  .public-site-hero--home .public-site-hero-copy {
-    width: min(680px, 86%);
-  }
-
-  .public-site-hero--home:not([data-page-slug="home"]) .public-site-hero-copy {
-    width: min(650px, 88%);
-  }
-}
-
-@media (max-width: 640px) {
+@media (max-width: 1100px) {
   .public-site-hero--home.public-site-hero--immersive {
-    min-height: 540px;
-  }
-
-  .public-site-hero--home.public-site-hero--immersive::after {
-    bottom: -90px;
-    height: 132px;
+    width: min(100% - 32px, 1480px);
+    height: 400px;
+    min-height: 400px;
   }
 
   .public-site-hero--home > .public-site-container {
-    min-height: 540px;
-    align-items: flex-end;
-    padding: 64px 0 94px;
+    width: min(100% - 40px, 1320px);
   }
 
   .public-site-hero--home .public-site-hero-copy {
+    width: min(600px, 65%);
+    padding: 27px 30px;
+  }
+}
+
+@media (max-width: 760px) {
+  .public-site-hero--home.public-site-hero--immersive,
+  .public-site-hero--home.public-site-hero--immersive:not([data-page-slug="home"]) {
+    width: calc(100% - 24px);
+    height: auto;
+    min-height: 500px;
+    margin-top: 12px;
+    border-radius: 20px;
+  }
+
+  .public-site-hero--home > .public-site-container,
+  .public-site-hero--home:not([data-page-slug="home"]) > .public-site-container {
+    width: calc(100% - 28px);
+    min-height: 500px;
+    align-items: flex-end;
+    padding: 46px 0 24px;
+  }
+
+  .public-site-hero--home .public-site-hero-copy,
+  .public-site-hero--home:not([data-page-slug="home"]) .public-site-hero-copy {
     width: 100%;
-    padding: 24px 22px;
-    border-radius: 22px;
-    background: linear-gradient(135deg, rgba(5,29,50,.82), rgba(5,29,50,.56));
+    max-height: none;
+    padding: 23px 21px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, rgba(5,29,50,.84), rgba(5,29,50,.62));
     backdrop-filter: none;
   }
 
-  .public-site-hero--home h1 {
-    font-size: clamp(2.45rem, 12vw, 3.8rem);
+  .public-site-hero--home h1,
+  .public-site-hero--home:not([data-page-slug="home"]) h1 {
+    font-size: clamp(2.15rem, 10.5vw, 3rem);
   }
 
   .public-site-hero--home .public-site-hero-actions {
-    gap: 10px;
+    gap: 9px;
   }
 
   .public-site-hero--home .public-site-button {
-    min-height: 44px;
-    padding-inline: 16px;
-    font-size: .82rem;
-  }
-
-  .public-site-hero--home.public-site-hero--immersive:not([data-page-slug="home"]) {
-    min-height: 470px;
-  }
-
-  .public-site-hero--home:not([data-page-slug="home"]) > .public-site-container {
-    min-height: 470px;
-    padding: 60px 0 84px;
-  }
-
-  .public-site-hero--home:not([data-page-slug="home"]) h1 {
-    font-size: clamp(2.2rem, 10.5vw, 3.3rem);
+    min-height: 42px;
+    padding-inline: 14px;
+    font-size: .8rem;
   }
 }
