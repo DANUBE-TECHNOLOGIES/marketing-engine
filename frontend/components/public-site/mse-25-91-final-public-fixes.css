@@ -1,18 +1,26 @@
 /*
  * MSE-25.91 final public locks.
- * Keep this file intentionally small: it protects the canonical header logo
- * only. Hero geometry is owned by network-home-hero.css.
+ * The bundled Mondescale PNG contains generous internal whitespace. The
+ * header therefore scales the image content itself while keeping every
+ * ancestor overflow-visible so the mark is not cropped.
  */
 
+.public-site-header-main,
+.public-site-header-identity,
 .public-site-header-logo-wrap {
+  overflow: visible !important;
+}
+
+.public-site-header-logo-wrap {
+  position: relative !important;
+  z-index: 2 !important;
   flex: 0 0 auto;
-  width: 260px !important;
-  min-width: 260px !important;
+  width: 245px !important;
+  min-width: 245px !important;
   height: 92px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: flex-start !important;
-  overflow: visible !important;
 }
 
 .public-site-header-logo-wrap .public-brand-logo,
@@ -20,41 +28,47 @@
   display: block !important;
   visibility: visible !important;
   opacity: 1 !important;
-  width: 230px !important;
+  width: 190px !important;
   height: auto !important;
-  max-width: 230px !important;
-  max-height: 82px !important;
+  max-width: none !important;
+  max-height: none !important;
   object-fit: contain !important;
   object-position: left center !important;
-  transform: none !important;
+  transform: scale(2.75) !important;
+  transform-origin: left center !important;
+}
+
+.public-site-brand-copy {
+  position: relative;
+  z-index: 3;
+  margin-left: 8px;
 }
 
 @media (max-width: 1100px) {
   .public-site-header-logo-wrap {
-    width: 225px !important;
-    min-width: 225px !important;
-    height: 84px !important;
+    width: 215px !important;
+    min-width: 215px !important;
+    height: 82px !important;
   }
 
   .public-site-header-logo-wrap .public-brand-logo,
   .public-site-header__brand-logo {
-    width: 205px !important;
-    max-width: 205px !important;
-    max-height: 74px !important;
+    width: 174px !important;
+    transform: scale(2.5) !important;
   }
 }
 
 @media (max-width: 760px) {
   .public-site-header-logo-wrap {
-    width: 188px !important;
-    min-width: 188px !important;
-    height: 72px !important;
+    width: 176px !important;
+    min-width: 176px !important;
+    height: 70px !important;
   }
 
   .public-site-header-logo-wrap .public-brand-logo,
   .public-site-header__brand-logo {
-    width: 172px !important;
-    max-width: 172px !important;
-    max-height: 64px !important;
+    width: 148px !important;
+    transform: scale(2.15) !important;
+    transform-origin: left center !important;
   }
 }
