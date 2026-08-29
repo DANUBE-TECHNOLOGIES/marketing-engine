@@ -4,7 +4,6 @@ import { getPublicSiteShell } from "../../../lib/public-site-shell-api";
 import { getPublicBrandTheme } from "../../../lib/public-brand-api";
 import PublicSiteHeader from "../../../components/public-site/PublicSiteHeader";
 import PublicSiteFooter from "../../../components/public-site/PublicSiteFooter";
-import PublicPaymentMethodsBand from "../../../components/public-site/PublicPaymentMethodsBand";
 import PublicBrandLegalRuntime from "../../../components/public-site/PublicBrandLegalRuntime";
 import JsonLd from "../../../components/JsonLd";
 import { buildWebSiteSchema } from "../../../lib/seo/json-ld";
@@ -26,7 +25,6 @@ import "../../../components/public-site/logo-emphasis.css";
 import "../../../components/public-site/public-readability-fixes.css";
 import "../../../components/public-site/seo-crawlability.css";
 import "../../../components/public-site/public-performance.css";
-import "../../../components/public-site/payment-methods-band.css";
 
 export const revalidate = 300;
 
@@ -76,7 +74,6 @@ export default async function PublicAgencySiteLayout({ children, params }) {
 
         <main>{children}</main>
 
-        <PublicPaymentMethodsBand />
         <PublicSiteFooter site={site} />
       </div>
     </PublicBrandLegalRuntime>
