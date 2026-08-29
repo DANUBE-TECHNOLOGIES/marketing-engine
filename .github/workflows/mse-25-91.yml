@@ -10,6 +10,7 @@ on:
       - 'backend/**'
       - 'docker-compose.yml'
       - 'scripts/mse-25-91-vm-deploy.sh'
+      - 'scripts/mse-25-91-post-validation-cleanup.sh'
       - 'scripts/mse-25-91-public-contract-preflight.js'
       - 'scripts/mse-25-91-canonical-drift-check.js'
       - '.github/workflows/mse-25-91.yml'
@@ -80,5 +81,6 @@ jobs:
       - name: Validate guarded deployment scripts
         run: |
           bash -n scripts/mse-25-91-vm-deploy.sh
+          bash -n scripts/mse-25-91-post-validation-cleanup.sh
           node --check scripts/mse-25-91-public-contract-preflight.js
           node --check scripts/mse-25-91-canonical-drift-check.js
