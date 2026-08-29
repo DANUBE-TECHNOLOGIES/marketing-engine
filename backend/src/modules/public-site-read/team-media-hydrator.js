@@ -7,6 +7,17 @@ const TEAM_BLOCK_TYPES = new Set([
   "equipe-grid",
 ]);
 
+const TEAM_COLLECTION_KEYS = Object.freeze([
+  "members",
+  "items",
+  "team",
+  "teamMembers",
+  "people",
+  "staff",
+  "advisors",
+  "consultants",
+]);
+
 function asObject(value) {
   return (
     value &&
@@ -39,6 +50,11 @@ function memberAssetId(member) {
   const avatar = asObject(member.avatar);
   const portrait = asObject(member.portrait);
   const media = asObject(member.media);
+  const photoAsset = asObject(member.photoAsset);
+  const portraitAsset = asObject(member.portraitAsset);
+  const profilePhoto = asObject(member.profilePhoto);
+  const profileImage = asObject(member.profileImage);
+  const picture = asObject(member.picture);
 
   return String(
     member.imageAssetId ||
@@ -57,14 +73,22 @@ function memberAssetId(member) {
     portrait.id ||
     media.assetId ||
     media.id ||
+    photoAsset.assetId ||
+    photoAsset.id ||
+    portraitAsset.assetId ||
+    portraitAsset.id ||
+    profilePhoto.assetId ||
+    profilePhoto.id ||
+    profileImage.assetId ||
+    profileImage.id ||
+    picture.assetId ||
+    picture.id ||
     ""
   ).trim();
 }
 
 function teamCollections(content) {
-  return ["members", "items", "team", "people", "staff"].filter((key) =>
-    Array.isArray(content?.[key])
-  );
+  return TEAM_COLLECTION_KEYS.filter((key) => Array.isArray(content?.[key]));
 }
 
 function teamMediaReferences(pages = []) {
@@ -101,17 +125,23 @@ async function loadTeamMediaAssets({
     return [];
   }
 
+  /*
+   * The page publication is the public gate. Historical portrait assets can
+   * still carry legacy type/status values even though a published team block
+   * explicitly references them. Filtering here made those valid portraits
+   * disappear from the public contract. Only deleted assets remain excluded.
+   */
   return prisma.asset.findMany({
     where: {
       tenantId: String(tenantId),
       id: { in: references },
-      type: "MEDIA_IMAGE",
-      status: "published",
       deletedAt: null,
     },
     select: {
       id: true,
       title: true,
+      type: true,
+      status: true,
       payload: true,
       currentVersion: true,
     },
@@ -122,38 +152,68 @@ function assetImageUrl(asset) {
   const payload = asObject(asset?.payload);
   const file = asObject(payload.file);
   const media = asObject(payload.media);
+  const image = asObject(payload.image);
+  const original = asObject(payload.original);
   return String(
     payload.publicUrl ||
     payload.url ||
     payload.src ||
+    payload.path ||
+    payload.href ||
     payload.fileUrl ||
     payload.storageUrl ||
     payload.originalUrl ||
     file.publicUrl ||
     file.url ||
+    file.src ||
     media.publicUrl ||
     media.url ||
+    media.src ||
+    image.publicUrl ||
+    image.url ||
+    image.src ||
+    original.publicUrl ||
+    original.url ||
     ""
   ).trim();
+}
+
+function directMemberImageUrl(member) {
+  if (!member || typeof member !== "object") return "";
+
+  const candidates = [
+    typeof member.image === "string" ? member.image : "",
+    member.imageUrl,
+    typeof member.photo === "string" ? member.photo : "",
+    member.photoUrl,
+    typeof member.avatar === "string" ? member.avatar : "",
+    member.avatarUrl,
+    typeof member.portrait === "string" ? member.portrait : "",
+    member.portraitUrl,
+    member.photoAsset?.publicUrl,
+    member.photoAsset?.url,
+    member.portraitAsset?.publicUrl,
+    member.portraitAsset?.url,
+    member.profilePhoto?.publicUrl,
+    member.profilePhoto?.url,
+    member.profilePhotoUrl,
+    member.profileImage?.publicUrl,
+    member.profileImage?.url,
+    member.profileImageUrl,
+    member.picture?.publicUrl,
+    member.picture?.url,
+    member.pictureUrl,
+    member.media?.publicUrl,
+    member.media?.url,
+  ];
+
+  return String(candidates.find((value) => typeof value === "string" && value.trim()) || "").trim();
 }
 
 function hydrateMember(member, byId) {
   if (!member || typeof member !== "object") return member;
 
-  const existingUrl = String(
-    (typeof member.image === "string" ? member.image : "") ||
-    member.imageUrl ||
-    (typeof member.photo === "string" ? member.photo : "") ||
-    member.photoUrl ||
-    (typeof member.avatar === "string" ? member.avatar : "") ||
-    member.avatarUrl ||
-    (typeof member.portrait === "string" ? member.portrait : "") ||
-    member.portraitUrl ||
-    member.media?.publicUrl ||
-    member.media?.url ||
-    ""
-  ).trim();
-
+  const existingUrl = directMemberImageUrl(member);
   if (existingUrl) {
     return {
       ...member,
@@ -241,6 +301,7 @@ async function hydrateTeamMediaAssets({
 
 module.exports = {
   TEAM_BLOCK_TYPES,
+  TEAM_COLLECTION_KEYS,
   asObject,
   blockType,
   isTeamBlock,
@@ -249,6 +310,7 @@ module.exports = {
   teamMediaReferences,
   loadTeamMediaAssets,
   assetImageUrl,
+  directMemberImageUrl,
   hydrateMember,
   hydrateTeamMembers,
   hydrateTeamMediaAssets,
