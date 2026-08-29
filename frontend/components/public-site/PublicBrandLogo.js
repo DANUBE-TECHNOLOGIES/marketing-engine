@@ -1,28 +1,102 @@
+const MONDESCALE_FALLBACK_LOGO = "/brand/logo-mondescale.png";
+
+function assetPublicUrl(asset) {
+  if (!asset) return null;
+  if (typeof asset === "string") return asset.trim() || null;
+  if (Array.isArray(asset)) {
+    for (const candidate of asset) {
+      const value = assetPublicUrl(candidate);
+      if (value) return value;
+    }
+    return null;
+  }
+  if (typeof asset !== "object") return null;
+  return (
+    asset.publicUrl ||
+    asset.url ||
+    asset.src ||
+    asset.path ||
+    asset.href ||
+    asset.assetUrl ||
+    asset.fileUrl ||
+    asset.file?.publicUrl ||
+    asset.file?.url ||
+    null
+  );
+}
+
 function normalizeAsset(asset) {
   if (!asset) return null;
+  if (Array.isArray(asset)) {
+    const preferred =
+      asset.find((candidate) => {
+        const type = String(candidate?.type || candidate?.kind || candidate?.role || "").toLowerCase();
+        const variant = String(candidate?.variant || candidate?.name || candidate?.title || "").toLowerCase();
+        return type.includes("logo") && /(primary|principal|main)/.test(variant);
+      }) ||
+      asset.find((candidate) => String(candidate?.type || candidate?.kind || candidate?.role || "").toLowerCase().includes("logo")) ||
+      asset.find((candidate) => assetPublicUrl(candidate));
+    return normalizeAsset(preferred);
+  }
   if (typeof asset === "string") return { publicUrl: asset };
-  return asset;
+  if (typeof asset !== "object") return null;
+  const publicUrl = assetPublicUrl(asset);
+  return publicUrl ? { ...asset, publicUrl } : null;
 }
 
 function resolveLogo({ brand, brandAssets, site }) {
-  const assets =
-    brandAssets ||
-    brand?.assets ||
-    site?.brand?.assets ||
-    site?.branding?.assets ||
-    site?.brandProfile?.assets ||
-    {};
+  const assetCollections = [
+    brandAssets,
+    brand?.assets,
+    site?.brandAssets,
+    site?.brand?.assets,
+    site?.branding?.assets,
+    site?.brandProfile?.assets,
+  ].filter(Boolean);
 
-  return normalizeAsset(
-    assets.logoPrimary ||
-    assets.logoLight ||
-    assets.logoDark ||
-    brand?.logo ||
-    brand?.logoUrl ||
-    site?.logoUrl ||
-    site?.theme?.logoUrl ||
-    null
+  const explicitCandidates = [];
+  for (const assets of assetCollections) {
+    if (Array.isArray(assets)) {
+      explicitCandidates.push(assets);
+      continue;
+    }
+    explicitCandidates.push(
+      assets.logoPrimary,
+      assets.logo,
+      assets.primaryLogo,
+      assets.logoLight,
+      assets.logoDark,
+      assets.brandLogo,
+    );
+  }
+
+  explicitCandidates.push(
+    brand?.logo,
+    brand?.logoUrl,
+    brand?.values?.logo,
+    brand?.values?.logoUrl,
+    site?.logo,
+    site?.logoUrl,
+    site?.theme?.logo,
+    site?.theme?.logoUrl,
+    site?.branding?.logo,
+    site?.branding?.logoUrl,
+    site?.brandProfile?.logo,
+    site?.brandProfile?.logoUrl,
   );
+
+  for (const candidate of explicitCandidates) {
+    const normalized = normalizeAsset(candidate);
+    if (normalized?.publicUrl) return normalized;
+  }
+
+  // The network logo is bundled with the public frontend so a missing or
+  // temporarily incomplete Brand Studio contract never removes the company
+  // identity from the top of an agency mini-site.
+  return {
+    publicUrl: MONDESCALE_FALLBACK_LOGO,
+    altText: "Logo Mondescale",
+  };
 }
 
 const DEFAULT_LOGO_WIDTH = 240;
@@ -55,10 +129,17 @@ export default function PublicBrandLogo({
       width={logo.width || DEFAULT_LOGO_WIDTH}
       height={logo.height || DEFAULT_LOGO_HEIGHT}
       loading={priority ? "eager" : "lazy"}
-      fetchPriority="auto"
+      fetchPriority={priority ? "high" : "auto"}
       decoding="async"
     />
   );
 }
 
-export { DEFAULT_LOGO_HEIGHT, DEFAULT_LOGO_WIDTH, normalizeAsset, resolveLogo };
+export {
+  DEFAULT_LOGO_HEIGHT,
+  DEFAULT_LOGO_WIDTH,
+  MONDESCALE_FALLBACK_LOGO,
+  assetPublicUrl,
+  normalizeAsset,
+  resolveLogo,
+};
