@@ -8,7 +8,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
 const read = (relative) => fs.readFileSync(path.join(root, relative), "utf8");
 
-test("MSE-25.91 restores a guaranteed prominent Mondescale header logo without clipping", () => {
+test("MSE-25.91 reserves the real Mondescale logo footprint without header overlap", () => {
   const source = read("components/public-site/PublicBrandLogo.js");
   const finalCss = read("components/public-site/mse-25-91-final-public-fixes.css");
   assert.match(source, /data-public-brand-logo="1"/);
@@ -16,11 +16,12 @@ test("MSE-25.91 restores a guaranteed prominent Mondescale header logo without c
   assert.match(source, /asset\.publicUrl/);
   assert.match(source, /site\?\.brandProfile\?\.assets/);
   assert.match(finalCss, /overflow: visible !important/);
-  assert.match(finalCss, /width: 245px !important/);
-  assert.match(finalCss, /width: 190px !important/);
-  assert.match(finalCss, /transform: scale\(2\.75\) !important/);
-  assert.match(finalCss, /transform-origin: left center !important/);
-  assert.match(finalCss, /max-height: none !important/);
+  assert.match(finalCss, /flex: 0 0 310px !important/);
+  assert.match(finalCss, /width: 310px !important/);
+  assert.match(finalCss, /width: 180px !important/);
+  assert.match(finalCss, /transform: scale\(1\.9\) !important/);
+  assert.match(finalCss, /max-width: 235px !important/);
+  assert.doesNotMatch(finalCss, /scale\(2\.75\)/);
 });
 
 test("MSE-25.91 restores team portrait asset-object fallbacks on home and team page", () => {
