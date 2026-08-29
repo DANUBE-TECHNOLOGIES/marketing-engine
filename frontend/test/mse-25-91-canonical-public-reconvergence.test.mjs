@@ -8,7 +8,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
 const read = (relative) => fs.readFileSync(path.join(root, relative), "utf8");
 
-test("MSE-25.91 restores a guaranteed Mondescale header logo without clipping", () => {
+test("MSE-25.91 restores a guaranteed prominent Mondescale header logo without clipping", () => {
   const source = read("components/public-site/PublicBrandLogo.js");
   const finalCss = read("components/public-site/mse-25-91-final-public-fixes.css");
   assert.match(source, /data-public-brand-logo="1"/);
@@ -17,7 +17,9 @@ test("MSE-25.91 restores a guaranteed Mondescale header logo without clipping", 
   assert.match(source, /site\?\.brandProfile\?\.assets/);
   assert.match(finalCss, /overflow: visible !important/);
   assert.match(finalCss, /transform: none !important/);
-  assert.match(finalCss, /width: 150px !important/);
+  assert.match(finalCss, /width: 260px !important/);
+  assert.match(finalCss, /width: 230px !important/);
+  assert.doesNotMatch(finalCss, /transform:\s*scale/);
 });
 
 test("MSE-25.91 restores team portrait asset-object fallbacks on home and team page", () => {
@@ -46,15 +48,19 @@ test("MSE-25.91 preserves home partner network and agency partner selection", ()
   assert.match(source, /Notre sélection principale/);
 });
 
-test("MSE-25.91 leaves immersive home hero geometry to the canonical MSE-25.77 experience and routes travel CTA to showcase", () => {
+test("MSE-25.91 keeps the home hero contained, balanced and routes travel CTA to showcase", () => {
   const renderer = read("components/public-site/renderers/HeroV2Renderer.js");
-  const css = read("components/public-site/mse-25-91-final-public-fixes.css");
+  const css = read("components/public-site/network-home-hero.css");
   assert.match(renderer, /public-site-hero--immersive/);
   assert.match(renderer, /NETWORK_HOME_HERO_IMAGE/);
   assert.match(renderer, /getShowcaseUrl\(site\)/);
   assert.match(renderer, /Découvrir nos voyages/);
-  assert.doesNotMatch(css, /public-site-hero--home/);
-  assert.doesNotMatch(css, /max-height:\s*400px/);
+  assert.match(css, /width: min\(1480px, calc\(100% - 48px\)\)/);
+  assert.match(css, /height: 420px/);
+  assert.match(css, /margin: 18px auto 0/);
+  assert.match(css, /border-radius: 26px/);
+  assert.match(css, /width: min\(590px, 52%\)/);
+  assert.doesNotMatch(css, /52vh/);
 });
 
 test("MSE-25.91 exposes payment reassurance once and keeps Visa resilient", () => {
