@@ -60,6 +60,10 @@ jobs:
         working-directory: backend
         run: npm ci
 
+      - name: MSE-25.91 public media contract tests
+        working-directory: backend
+        run: node --test test/mse-25-91-team-media-public-contract.test.js
+
       - name: MSE-25.86 preservation tests
         working-directory: backend
         run: |
