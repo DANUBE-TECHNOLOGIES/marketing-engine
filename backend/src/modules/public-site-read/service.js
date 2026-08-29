@@ -249,6 +249,7 @@ class PublicSiteReadService {
         "website",
         "googleBusinessUrl",
         "googleMapsUrl",
+        "googleReviewUrl",
         "facebookUrl",
         "instagramUrl",
         "linkedinUrl",
