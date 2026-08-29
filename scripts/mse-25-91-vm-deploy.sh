@@ -8,7 +8,8 @@ REMOTE="${MSE_25_91_REMOTE:-origin}"
 MIN_FREE_MB="${MSE_25_91_MIN_FREE_MB:-3200}"
 FRONTEND_CONTAINER_NAME="${MSE_25_91_FRONTEND_CONTAINER_NAME:-mle_frontend}"
 BACKEND_CONTAINER_NAME="${MSE_25_91_BACKEND_CONTAINER_NAME:-mle_backend}"
-ROLLBACK_CONTAINER_NAME="${MSE_25_91_ROLLBACK_CONTAINER_NAME:-mle_frontend_mse_25_91_rollback}"
+FRONTEND_ROLLBACK_NAME="${MSE_25_91_ROLLBACK_CONTAINER_NAME:-mle_frontend_mse_25_91_rollback}"
+BACKEND_ROLLBACK_NAME="${MSE_25_91_BACKEND_ROLLBACK_NAME:-mle_backend_mse_25_91_rollback}"
 FRONTEND_IMAGE="${MSE_25_91_FRONTEND_IMAGE:-mondescale-marketing-frontend:mse-25-3}"
 PROBE_SITE_SLUG="${MSE_25_91_PROBE_SITE_SLUG:-ambassade-fram-mondescale-bois-colombes}"
 
@@ -45,23 +46,34 @@ assert_free_space() {
   (( available >= MIN_FREE_MB )) || fail "insufficient free space: ${available} MB available"
 }
 
-LEGACY_PRESERVED=false
-NEW_CONTAINER_STARTED=false
+FRONTEND_PRESERVED=false
+NEW_FRONTEND_STARTED=false
+BACKEND_PRESERVED=false
+NEW_BACKEND_STARTED=false
 
 rollback() {
   local exit_code=$?
   trap - ERR
   set +e
 
-  if [[ "$NEW_CONTAINER_STARTED" == "true" ]]; then
-    log "deployment failed after replacement; removing new frontend"
+  if [[ "$NEW_FRONTEND_STARTED" == "true" ]]; then
+    log "deployment failed after frontend replacement; removing new frontend"
     remove_container_if_exists "$FRONTEND_CONTAINER_NAME"
   fi
-
-  if [[ "$LEGACY_PRESERVED" == "true" ]] && container_exists "$ROLLBACK_CONTAINER_NAME"; then
+  if [[ "$FRONTEND_PRESERVED" == "true" ]] && container_exists "$FRONTEND_ROLLBACK_NAME"; then
     log "restoring preserved frontend container"
-    docker rename "$ROLLBACK_CONTAINER_NAME" "$FRONTEND_CONTAINER_NAME" >/dev/null 2>&1 || true
+    docker rename "$FRONTEND_ROLLBACK_NAME" "$FRONTEND_CONTAINER_NAME" >/dev/null 2>&1 || true
     docker start "$FRONTEND_CONTAINER_NAME" >/dev/null 2>&1 || true
+  fi
+
+  if [[ "$NEW_BACKEND_STARTED" == "true" ]]; then
+    log "deployment failed after backend reconvergence; removing new backend"
+    remove_container_if_exists "$BACKEND_CONTAINER_NAME"
+  fi
+  if [[ "$BACKEND_PRESERVED" == "true" ]] && container_exists "$BACKEND_ROLLBACK_NAME"; then
+    log "restoring preserved backend container"
+    docker rename "$BACKEND_ROLLBACK_NAME" "$BACKEND_CONTAINER_NAME" >/dev/null 2>&1 || true
+    docker start "$BACKEND_CONTAINER_NAME" >/dev/null 2>&1 || true
   fi
 
   exit "$exit_code"
@@ -77,6 +89,7 @@ docker compose version >/dev/null 2>&1 || fail "docker compose plugin is require
 
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || fail "run from marketing-engine repository"
 cd "$REPO_ROOT"
+CANONICAL_BACKEND_SOURCE="$(readlink -f "$REPO_ROOT/backend")"
 
 [[ -z "$(git status --porcelain)" ]] || fail "worktree must be clean"
 CURRENT_BRANCH="$(git branch --show-current)"
@@ -93,29 +106,49 @@ log "deploying $DEPLOY_HEAD"
 log "running lightweight canonical public contract test"
 node --test frontend/test/mse-25-91-canonical-public-reconvergence.test.mjs
 
-# Backend source is bind-mounted. Do not rely on nodemon/inotify to notice a
-# host-side git fast-forward: explicitly restart only the backend process so the
-# public contract is guaranteed to load the just-pulled module versions. This
-# performs no image build, migration, or database write.
-container_exists "$BACKEND_CONTAINER_NAME" || fail "backend container $BACKEND_CONTAINER_NAME not found"
-log "forcing backend process reload after source update"
-docker restart "$BACKEND_CONTAINER_NAME" >/dev/null
+grep -Fq 'realTeamMembers' backend/src/modules/public-site-read/team-media-hydrator.js || fail "canonical host backend source misses realTeamMembers"
+grep -Fq 'isLegacyTeamPlaceholder' backend/src/modules/public-site-read/team-media-hydrator.js || fail "canonical host backend source misses isLegacyTeamPlaceholder"
 
-log "waiting for backend after explicit restart"
+container_exists "$BACKEND_CONTAINER_NAME" || fail "backend container $BACKEND_CONTAINER_NAME not found"
+CURRENT_BACKEND_SOURCE="$(docker inspect "$BACKEND_CONTAINER_NAME" --format '{{range .Mounts}}{{if eq .Destination "/app"}}{{.Source}}{{end}}{{end}}')"
+CURRENT_BACKEND_SOURCE="$(readlink -f "$CURRENT_BACKEND_SOURCE" 2>/dev/null || printf '%s' "$CURRENT_BACKEND_SOURCE")"
+log "current backend source: ${CURRENT_BACKEND_SOURCE:-unknown}"
+log "canonical backend source: $CANONICAL_BACKEND_SOURCE"
+
+if [[ "$CURRENT_BACKEND_SOURCE" != "$CANONICAL_BACKEND_SOURCE" ]]; then
+  log "backend source is non-canonical; preserving legacy backend before reconvergence"
+  remove_container_if_exists "$BACKEND_ROLLBACK_NAME"
+  docker rename "$BACKEND_CONTAINER_NAME" "$BACKEND_ROLLBACK_NAME"
+  docker stop "$BACKEND_ROLLBACK_NAME" >/dev/null
+  BACKEND_PRESERVED=true
+
+  log "starting backend from canonical repository without migrations or database writes"
+  docker compose up -d --no-deps backend
+  NEW_BACKEND_STARTED=true
+  container_running "$BACKEND_CONTAINER_NAME" || fail "canonical backend container is not running"
+else
+  log "backend already uses canonical repository; restarting process explicitly"
+  docker restart "$BACKEND_CONTAINER_NAME" >/dev/null
+fi
+
+log "waiting for canonical backend"
 BACKEND_READY=false
-for attempt in $(seq 1 45); do
+for attempt in $(seq 1 60); do
   BACKEND_CODE="$(curl --silent --show-error --connect-timeout 3 --max-time 8 --output /dev/null --write-out '%{http_code}' http://127.0.0.1:4000/health 2>/dev/null || true)"
-  log "backend restart attempt $attempt: HTTP ${BACKEND_CODE:-000}"
+  log "backend attempt $attempt: HTTP ${BACKEND_CODE:-000}"
   if [[ "$BACKEND_CODE" == "200" ]]; then
     BACKEND_READY=true
     break
   fi
   sleep 2
 done
-[[ "$BACKEND_READY" == "true" ]] || fail "backend did not become healthy after explicit restart"
+[[ "$BACKEND_READY" == "true" ]] || fail "canonical backend did not become healthy"
 
-log "verifying backend container sees canonical team normalizer source"
-docker exec "$BACKEND_CONTAINER_NAME" node -e "const fs=require('fs');const p='/app/src/modules/public-site-read/team-media-hydrator.js';const s=fs.readFileSync(p,'utf8');if(!s.includes('canonicalTeamMembers')||!s.includes('isGenericTeamPlaceholder')){console.error('BACKEND_SOURCE_MARKER=FAIL');process.exit(1)}console.log('BACKEND_SOURCE_MARKER=OK')"
+log "verifying canonical backend mount and source markers"
+ACTIVE_BACKEND_SOURCE="$(docker inspect "$BACKEND_CONTAINER_NAME" --format '{{range .Mounts}}{{if eq .Destination "/app"}}{{.Source}}{{end}}{{end}}')"
+ACTIVE_BACKEND_SOURCE="$(readlink -f "$ACTIVE_BACKEND_SOURCE" 2>/dev/null || printf '%s' "$ACTIVE_BACKEND_SOURCE")"
+[[ "$ACTIVE_BACKEND_SOURCE" == "$CANONICAL_BACKEND_SOURCE" ]] || fail "backend still mounted from $ACTIVE_BACKEND_SOURCE"
+docker exec "$BACKEND_CONTAINER_NAME" node -e "const fs=require('fs');const p='/app/src/modules/public-site-read/team-media-hydrator.js';const s=fs.readFileSync(p,'utf8');if(!s.includes('realTeamMembers')||!s.includes('isLegacyTeamPlaceholder')){console.error('BACKEND_SOURCE_MARKER=FAIL');process.exit(1)}console.log('BACKEND_SOURCE_MARKER=OK')"
 
 log "validating real public team portrait contract before frontend build"
 MSE_25_91_PROBE_SITE_SLUG="$PROBE_SITE_SLUG" node scripts/mse-25-91-public-contract-preflight.js
@@ -126,11 +159,7 @@ npm cache clean --force >/dev/null 2>&1 || true
 rm -rf frontend/node_modules frontend/.next
 assert_free_space "$REPO_ROOT"
 
-if container_exists "$ROLLBACK_CONTAINER_NAME"; then
-  log "removing stale MSE-25.91 rollback container"
-  docker rm -f "$ROLLBACK_CONTAINER_NAME" >/dev/null
-fi
-
+remove_container_if_exists "$FRONTEND_ROLLBACK_NAME"
 CURRENT_IMAGE_ID=""
 if container_exists "$FRONTEND_CONTAINER_NAME"; then
   CURRENT_IMAGE_ID="$(docker inspect -f '{{.Image}}' "$FRONTEND_CONTAINER_NAME" 2>/dev/null || true)"
@@ -142,20 +171,18 @@ docker compose build frontend
 NEW_IMAGE_ID="$(docker image inspect "$FRONTEND_IMAGE" --format '{{.Id}}')"
 [[ -n "$NEW_IMAGE_ID" ]] || fail "new frontend image was not created"
 log "built frontend image: $NEW_IMAGE_ID"
-
-log "reclaiming build cache after successful image creation"
 docker builder prune -af >/dev/null 2>&1 || true
 
 if container_exists "$FRONTEND_CONTAINER_NAME"; then
   log "preserving current frontend container for visual rollback"
-  docker rename "$FRONTEND_CONTAINER_NAME" "$ROLLBACK_CONTAINER_NAME"
-  docker stop "$ROLLBACK_CONTAINER_NAME" >/dev/null
-  LEGACY_PRESERVED=true
+  docker rename "$FRONTEND_CONTAINER_NAME" "$FRONTEND_ROLLBACK_NAME"
+  docker stop "$FRONTEND_ROLLBACK_NAME" >/dev/null
+  FRONTEND_PRESERVED=true
 fi
 
 log "starting canonical frontend"
 docker compose up -d --no-deps --no-build frontend
-NEW_CONTAINER_STARTED=true
+NEW_FRONTEND_STARTED=true
 container_running "$FRONTEND_CONTAINER_NAME" || fail "new frontend container is not running"
 
 log "waiting for /healthz"
@@ -192,12 +219,16 @@ log "revalidating public team portrait contract after frontend switch"
 MSE_25_91_PROBE_SITE_SLUG="$PROBE_SITE_SLUG" node scripts/mse-25-91-public-contract-preflight.js
 
 trap - ERR
-NEW_CONTAINER_STARTED=false
+NEW_FRONTEND_STARTED=false
+NEW_BACKEND_STARTED=false
 
-log "deployment complete; previous frontend kept stopped as $ROLLBACK_CONTAINER_NAME until visual validation"
+log "deployment complete; rollback containers retained until visual validation"
 printf 'MSE_25_91_DEPLOYED_HEAD=%s\n' "$DEPLOY_HEAD"
 printf 'MSE_25_91_NEW_IMAGE=%s\n' "$NEW_IMAGE_ID"
 printf 'MSE_25_91_PREVIOUS_IMAGE=%s\n' "${CURRENT_IMAGE_ID:-none}"
+printf 'MSE_25_91_BACKEND_SOURCE=%s\n' "$ACTIVE_BACKEND_SOURCE"
 docker ps --filter "name=^/${FRONTEND_CONTAINER_NAME}$" --format 'FRONTEND={{.Names}} STATUS={{.Status}} IMAGE={{.Image}} ID={{.ID}}'
-docker ps -a --filter "name=^/${ROLLBACK_CONTAINER_NAME}$" --format 'ROLLBACK={{.Names}} STATUS={{.Status}} IMAGE={{.Image}} ID={{.ID}}'
+docker ps --filter "name=^/${BACKEND_CONTAINER_NAME}$" --format 'BACKEND={{.Names}} STATUS={{.Status}} IMAGE={{.Image}} ID={{.ID}}'
+docker ps -a --filter "name=^/${FRONTEND_ROLLBACK_NAME}$" --format 'FRONTEND_ROLLBACK={{.Names}} STATUS={{.Status}} IMAGE={{.Image}} ID={{.ID}}'
+docker ps -a --filter "name=^/${BACKEND_ROLLBACK_NAME}$" --format 'BACKEND_ROLLBACK={{.Names}} STATUS={{.Status}} IMAGE={{.Image}} ID={{.ID}}'
 df -h /
