@@ -103,6 +103,9 @@ git merge --ff-only "$REMOTE_HEAD"
 DEPLOY_HEAD="$(git rev-parse HEAD)"
 log "deploying $DEPLOY_HEAD"
 
+log "validating canonical public stack drift guard"
+node scripts/mse-25-91-canonical-drift-check.js
+
 log "running lightweight canonical public contract test"
 node --test frontend/test/mse-25-91-canonical-public-reconvergence.test.mjs
 
