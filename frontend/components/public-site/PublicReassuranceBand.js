@@ -7,7 +7,8 @@ const PAYMENT_METHODS = Object.freeze([
   {
     id: "visa",
     label: "VISA",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg",
+    logo: "https://commons.wikimedia.org/wiki/Special:Redirect/file/Visa_2021.svg",
+    fallback: "VISA",
   },
   {
     id: "mastercard",
@@ -59,6 +60,7 @@ function BrandMark({ item, kind }) {
       title={item.label}
     >
       <div className="public-reassurance-logo-slot">
+        {item.fallback ? <span className="public-reassurance-logo-fallback">{item.fallback}</span> : null}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           className="public-reassurance-logo"
@@ -68,7 +70,6 @@ function BrandMark({ item, kind }) {
           height={LOGO_INTRINSIC_HEIGHT}
           loading="lazy"
           decoding="async"
-          referrerPolicy="no-referrer"
         />
       </div>
       <span className="public-reassurance-mark-label">{item.label}</span>
