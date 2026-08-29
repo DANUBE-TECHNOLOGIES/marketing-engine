@@ -7,6 +7,7 @@ DEPLOY_ACK="${MSE_25_91_DEPLOY_ACK:-}"
 REMOTE="${MSE_25_91_REMOTE:-origin}"
 MIN_FREE_MB="${MSE_25_91_MIN_FREE_MB:-3200}"
 FRONTEND_CONTAINER_NAME="${MSE_25_91_FRONTEND_CONTAINER_NAME:-mle_frontend}"
+BACKEND_CONTAINER_NAME="${MSE_25_91_BACKEND_CONTAINER_NAME:-mle_backend}"
 ROLLBACK_CONTAINER_NAME="${MSE_25_91_ROLLBACK_CONTAINER_NAME:-mle_frontend_mse_25_91_rollback}"
 FRONTEND_IMAGE="${MSE_25_91_FRONTEND_IMAGE:-mondescale-marketing-frontend:mse-25-3}"
 PROBE_SITE_SLUG="${MSE_25_91_PROBE_SITE_SLUG:-ambassade-fram-mondescale-bois-colombes}"
@@ -92,22 +93,29 @@ log "deploying $DEPLOY_HEAD"
 log "running lightweight canonical public contract test"
 node --test frontend/test/mse-25-91-canonical-public-reconvergence.test.mjs
 
-# Backend is bind-mounted from ./backend and runs under nodemon in the canonical
-# compose topology. A git fast-forward therefore reloads backend source without
-# a database migration or image rebuild. Wait for that reload and verify the
-# real public contract before spending time rebuilding/switching the frontend.
-log "waiting for bind-mounted backend source reload"
+# Backend source is bind-mounted. Do not rely on nodemon/inotify to notice a
+# host-side git fast-forward: explicitly restart only the backend process so the
+# public contract is guaranteed to load the just-pulled module versions. This
+# performs no image build, migration, or database write.
+container_exists "$BACKEND_CONTAINER_NAME" || fail "backend container $BACKEND_CONTAINER_NAME not found"
+log "forcing backend process reload after source update"
+docker restart "$BACKEND_CONTAINER_NAME" >/dev/null
+
+log "waiting for backend after explicit restart"
 BACKEND_READY=false
-for attempt in $(seq 1 30); do
+for attempt in $(seq 1 45); do
   BACKEND_CODE="$(curl --silent --show-error --connect-timeout 3 --max-time 8 --output /dev/null --write-out '%{http_code}' http://127.0.0.1:4000/health 2>/dev/null || true)"
-  log "backend reload attempt $attempt: HTTP ${BACKEND_CODE:-000}"
+  log "backend restart attempt $attempt: HTTP ${BACKEND_CODE:-000}"
   if [[ "$BACKEND_CODE" == "200" ]]; then
     BACKEND_READY=true
     break
   fi
   sleep 2
 done
-[[ "$BACKEND_READY" == "true" ]] || fail "backend did not become healthy after source reload"
+[[ "$BACKEND_READY" == "true" ]] || fail "backend did not become healthy after explicit restart"
+
+log "verifying backend container sees canonical team normalizer source"
+docker exec "$BACKEND_CONTAINER_NAME" node -e "const fs=require('fs');const p='/app/src/modules/public-site-read/team-media-hydrator.js';const s=fs.readFileSync(p,'utf8');if(!s.includes('canonicalTeamMembers')||!s.includes('isGenericTeamPlaceholder')){console.error('BACKEND_SOURCE_MARKER=FAIL');process.exit(1)}console.log('BACKEND_SOURCE_MARKER=OK')"
 
 log "validating real public team portrait contract before frontend build"
 MSE_25_91_PROBE_SITE_SLUG="$PROBE_SITE_SLUG" node scripts/mse-25-91-public-contract-preflight.js
@@ -180,7 +188,6 @@ if grep -Fq 'public-payment-band' "$SSR_FILE"; then
 fi
 rm -f "$SSR_FILE"
 
-# Re-run the contract gate after the frontend switch as an end-to-end guard.
 log "revalidating public team portrait contract after frontend switch"
 MSE_25_91_PROBE_SITE_SLUG="$PROBE_SITE_SLUG" node scripts/mse-25-91-public-contract-preflight.js
 
