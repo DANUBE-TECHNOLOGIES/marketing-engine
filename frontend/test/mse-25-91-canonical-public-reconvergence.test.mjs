@@ -30,6 +30,14 @@ test("MSE-25.91 restores team portrait asset-object fallbacks on home and team p
   assert.match(source, /Portrait de \$\{name\}/);
 });
 
+test("MSE-25.91 proxies backend media through the public frontend", () => {
+  const config = read("next.config.js");
+  assert.match(config, /source: "\/media\/assets\/:path\*"/);
+  assert.match(config, /destination: `\$\{origin\}\/media\/assets\/:path\*`/);
+  assert.match(config, /source: "\/media\/brand-assets\/:path\*"/);
+  assert.match(config, /BACKEND_INTERNAL_URL/);
+});
+
 test("MSE-25.91 preserves home partner network and agency partner selection", () => {
   const source = read("components/public-site/renderers/PartnersRenderer.js");
   assert.match(source, /getCommonPartners/);
