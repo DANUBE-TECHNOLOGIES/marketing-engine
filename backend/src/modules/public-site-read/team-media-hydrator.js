@@ -125,12 +125,6 @@ async function loadTeamMediaAssets({
     return [];
   }
 
-  /*
-   * The page publication is the public gate. Historical portrait assets can
-   * still carry legacy type/status values even though a published team block
-   * explicitly references them. Filtering here made those valid portraits
-   * disappear from the public contract. Only deleted assets remain excluded.
-   */
   return prisma.asset.findMany({
     where: {
       tenantId: String(tenantId),
@@ -254,6 +248,88 @@ function hydrateMember(member, byId) {
   };
 }
 
+function normalizedLabel(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
+function isLegacyTeamPlaceholder(member) {
+  if (!member || typeof member !== "object") return false;
+  if (directMemberImageUrl(member)) return false;
+
+  const label = normalizedLabel(member.name || member.title);
+  return ["votre equipe", "notre equipe", "equipe"].includes(label);
+}
+
+function realTeamMembers(pages = []) {
+  const unique = new Map();
+
+  for (const page of pages) {
+    for (const block of page?.blocks || []) {
+      if (!isTeamBlock(block)) continue;
+      const content = asObject(block.content);
+
+      for (const key of teamCollections(content)) {
+        for (const member of content[key]) {
+          if (!member || typeof member !== "object") continue;
+          if (isLegacyTeamPlaceholder(member)) continue;
+          if (!directMemberImageUrl(member)) continue;
+
+          const identity = String(
+            member.id ||
+            member.email ||
+            member.name ||
+            member.title ||
+            directMemberImageUrl(member)
+          ).trim();
+
+          if (identity && !unique.has(identity)) {
+            unique.set(identity, member);
+          }
+        }
+      }
+    }
+  }
+
+  return [...unique.values()];
+}
+
+function replaceLegacyTeamPlaceholders(pages = []) {
+  const canonicalMembers = realTeamMembers(pages);
+  if (!canonicalMembers.length) return pages;
+
+  return pages.map((page) => ({
+    ...page,
+    blocks: (page.blocks || []).map((block) => {
+      if (!isTeamBlock(block)) return block;
+
+      const content = asObject(block.content);
+      const nextContent = { ...content };
+
+      for (const key of teamCollections(content)) {
+        const members = content[key];
+        const placeholderOnly =
+          members.length > 0 &&
+          members.every((member) => isLegacyTeamPlaceholder(member));
+
+        if (placeholderOnly) {
+          nextContent[key] = canonicalMembers.map((member) => ({ ...member }));
+          nextContent.__teamSource = "canonical-real-team-profile";
+        }
+      }
+
+      return {
+        ...block,
+        content: nextContent,
+      };
+    }),
+  }));
+}
+
 function hydrateTeamMembers(
   pages = [],
   assets = []
@@ -262,7 +338,7 @@ function hydrateTeamMembers(
     assets.map((asset) => [String(asset.id), asset])
   );
 
-  return pages.map((page) => ({
+  const hydratedPages = pages.map((page) => ({
     ...page,
     blocks: (page.blocks || []).map((block) => {
       if (!isTeamBlock(block)) return block;
@@ -282,6 +358,8 @@ function hydrateTeamMembers(
       };
     }),
   }));
+
+  return replaceLegacyTeamPlaceholders(hydratedPages);
 }
 
 async function hydrateTeamMediaAssets({
@@ -312,6 +390,10 @@ module.exports = {
   assetImageUrl,
   directMemberImageUrl,
   hydrateMember,
+  normalizedLabel,
+  isLegacyTeamPlaceholder,
+  realTeamMembers,
+  replaceLegacyTeamPlaceholders,
   hydrateTeamMembers,
   hydrateTeamMediaAssets,
 };
