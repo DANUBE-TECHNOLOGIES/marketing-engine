@@ -9,6 +9,7 @@ MIN_FREE_MB="${MSE_25_91_MIN_FREE_MB:-3200}"
 FRONTEND_CONTAINER_NAME="${MSE_25_91_FRONTEND_CONTAINER_NAME:-mle_frontend}"
 ROLLBACK_CONTAINER_NAME="${MSE_25_91_ROLLBACK_CONTAINER_NAME:-mle_frontend_mse_25_91_rollback}"
 FRONTEND_IMAGE="${MSE_25_91_FRONTEND_IMAGE:-mondescale-marketing-frontend:mse-25-3}"
+PROBE_SITE_SLUG="${MSE_25_91_PROBE_SITE_SLUG:-ambassade-fram-mondescale-bois-colombes}"
 
 log() { printf '[MSE-25.91] %s\n' "$*"; }
 fail() { printf '[MSE-25.91] ERROR: %s\n' "$*" >&2; exit 1; }
@@ -143,6 +144,20 @@ done
 [[ "$HEALTHY" == "true" ]] || fail "frontend health endpoint did not return HTTP 200"
 grep -Fq 'marketing-engine-frontend' "$HEALTH_FILE" || fail "unexpected frontend health payload"
 rm -f "$HEALTH_FILE"
+
+log "validating frontend -> canonical backend service DNS"
+docker exec "$FRONTEND_CONTAINER_NAME" node -e "fetch('http://backend:4000/health').then(r=>{console.log('BACKEND_HTTP='+r.status);if(!r.ok)process.exit(1)}).catch(e=>{console.error(e);process.exit(1)})"
+
+log "validating real mini-site SSR for $PROBE_SITE_SLUG"
+SSR_FILE="$(mktemp)"
+SSR_CODE="$(curl --silent --show-error --connect-timeout 5 --max-time 30 --output "$SSR_FILE" --write-out '%{http_code}' "http://127.0.0.1:3000/agence/$PROBE_SITE_SLUG" 2>/dev/null || true)"
+log "public SSR probe: HTTP ${SSR_CODE:-000}"
+[[ "$SSR_CODE" == "200" ]] || fail "real mini-site SSR did not return HTTP 200"
+grep -Fq 'data-public-brand-logo="1"' "$SSR_FILE" || fail "header brand logo marker missing from SSR"
+if grep -Fq 'public-payment-band' "$SSR_FILE"; then
+  fail "duplicate legacy payment band still present in SSR"
+fi
+rm -f "$SSR_FILE"
 
 trap - ERR
 NEW_CONTAINER_STARTED=false
