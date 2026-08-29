@@ -7,6 +7,7 @@ const path = require("node:path");
 
 const {
   hydrateTeamMembers,
+  isLegacyTeamPlaceholder,
   isTeamBlock,
   memberAssetId,
   teamCollections,
@@ -20,6 +21,11 @@ test("MSE-25.91 recognises every public team renderer variant", () => {
 
 test("MSE-25.91 recognises legacy teamMembers collections", () => {
   assert.deepEqual(teamCollections({ teamMembers: [{ name: "Céline" }] }), ["teamMembers"]);
+});
+
+test("MSE-25.91 recognises generic historical team placeholders", () => {
+  assert.equal(isLegacyTeamPlaceholder({ name: "Votre équipe", imageUrl: "" }), true);
+  assert.equal(isLegacyTeamPlaceholder({ name: "Céline", imageUrl: "/media/celine.webp" }), false);
 });
 
 test("MSE-25.91 resolves team asset ids and exposes a real image URL", () => {
@@ -57,6 +63,73 @@ test("MSE-25.91 resolves team asset ids and exposes a real image URL", () => {
   assert.equal(hydrated.image, "/media/celine.webp");
   assert.equal(hydrated.imageUrl, "/media/celine.webp");
   assert.equal(hydrated.__mediaSource, "asset-engine");
+});
+
+test("MSE-25.91 replaces placeholder-only team blocks with the real canonical profile", () => {
+  const pages = hydrateTeamMembers(
+    [
+      {
+        slug: "accueil",
+        blocks: [
+          {
+            blockType: "team",
+            content: {
+              members: [
+                {
+                  name: "Céline",
+                  role: "Conseillère voyage",
+                  imageUrl: "/media/celine.webp",
+                },
+              ],
+            },
+          },
+        ],
+      },
+      {
+        slug: "agence",
+        blocks: [
+          {
+            blockType: "team",
+            content: {
+              members: [
+                {
+                  name: "Votre équipe",
+                  role: "Conseillers voyage",
+                  imageUrl: "",
+                },
+              ],
+            },
+          },
+        ],
+      },
+      {
+        slug: "equipe",
+        blocks: [
+          {
+            blockType: "team",
+            content: {
+              members: [
+                {
+                  name: "Votre équipe",
+                  role: "Conseillers voyage",
+                  imageUrl: "",
+                },
+              ],
+            },
+          },
+        ],
+      },
+    ],
+    []
+  );
+
+  for (const page of pages.slice(1)) {
+    const content = page.blocks[0].content;
+    assert.equal(content.members.length, 1);
+    assert.equal(content.members[0].name, "Céline");
+    assert.equal(content.members[0].imageUrl, "/media/celine.webp");
+    assert.equal(content.__teamSource, "canonical-real-team-profile");
+  }
 });
 
 test("MSE-25.91 public-site service actually runs team hydration", () => {
