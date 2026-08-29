@@ -12,6 +12,8 @@ const NAVIGATION_ALIASES = Object.freeze({
   inspirations: "inspiration",
 });
 
+const TUI_SHOWCASE_DISABLED_CITIES = new Set(["amilly", "melun"]);
+
 function normalizeNavigation(site) {
   if (Array.isArray(site.navigation)) return site.navigation;
   if (Array.isArray(site.navigation?.main)) return site.navigation.main;
@@ -63,6 +65,12 @@ function telephoneHref(phone) {
   return `tel:${String(phone || "").replace(/\s+/g, "")}`;
 }
 
+function isTuiShowcaseDisabled(site) {
+  const name = String(site?.name || site?.brand?.name || "").trim().toLowerCase();
+  const city = String(site?.agency?.city || "").trim().toLowerCase();
+  return name.includes("tui") && TUI_SHOWCASE_DISABLED_CITIES.has(city);
+}
+
 export default function PublicSiteHeader({ site, brand, brandRuntime, brandAssets }) {
   const resolvedPublicBrand =
     brand || brandRuntime?.runtime?.brand || site?.brand || site?.branding || site?.brandProfile || null;
@@ -70,7 +78,8 @@ export default function PublicSiteHeader({ site, brand, brandRuntime, brandAsset
   const pages = uniquePublishedNavigation(site);
   const agency = site.agency || {};
   const city = String(agency.city || "").trim();
-  const showcaseUrl = getShowcaseUrl(site);
+  const showcaseDisabled = isTuiShowcaseDisabled(site);
+  const showcaseUrl = showcaseDisabled ? null : getShowcaseUrl(site);
 
   return (
     <>
@@ -129,16 +138,18 @@ export default function PublicSiteHeader({ site, brand, brandRuntime, brandAsset
               Demander un devis
             </Link>
 
-            <a
-              className="public-site-header-cta public-site-header-showcase"
-              href={showcaseUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={city ? `Découvrir les voyages proposés par l’agence de ${city}` : "Découvrir nos voyages"}
-            >
-              Découvrir nos voyages
-              <span aria-hidden="true">↗</span>
-            </a>
+            {showcaseUrl ? (
+              <a
+                className="public-site-header-cta public-site-header-showcase"
+                href={showcaseUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={city ? `Découvrir les voyages proposés par l’agence de ${city}` : "Découvrir nos voyages"}
+              >
+                Découvrir nos voyages
+                <span aria-hidden="true">↗</span>
+              </a>
+            ) : null}
           </div>
         </div>
 
@@ -163,8 +174,10 @@ export default function PublicSiteHeader({ site, brand, brandRuntime, brandAsset
 
 export {
   NAVIGATION_ALIASES,
+  TUI_SHOWCASE_DISABLED_CITIES,
   canonicalNavigationSlug,
   extractSlug,
+  isTuiShowcaseDisabled,
   normalizeNavigation,
   normalizePageSlug,
   pageHref,
