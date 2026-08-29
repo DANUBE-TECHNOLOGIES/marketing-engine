@@ -61,6 +61,24 @@
   white-space: nowrap;
 }
 
+/*
+ * The premium layer used a 72vh / 760px hero, which pushed the first useful
+ * content too far below the fold on desktop. Keep a strong visual without
+ * letting the hero dominate the whole viewport.
+ */
+.public-site-hero {
+  min-height: clamp(430px, 56vh, 590px) !important;
+}
+
+.public-site-hero .public-site-container {
+  padding-top: clamp(56px, 7vw, 86px) !important;
+  padding-bottom: clamp(72px, 8vw, 104px) !important;
+}
+
+.public-site-hero h1 {
+  font-size: clamp(2.7rem, 5.2vw, 4.9rem) !important;
+}
+
 .public-site-breadcrumb {
   display: flex;
   flex-wrap: wrap;
@@ -115,5 +133,18 @@
 @media (max-width: 760px) {
   .public-site-navigation {
     padding-inline: 14px 30px;
+  }
+
+  .public-site-hero {
+    min-height: 500px !important;
+  }
+
+  .public-site-hero .public-site-container {
+    padding-top: 54px !important;
+    padding-bottom: 84px !important;
+  }
+
+  .public-site-hero h1 {
+    font-size: clamp(2.45rem, 11vw, 4rem) !important;
   }
 }

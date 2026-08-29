@@ -1,0 +1,63 @@
+name: MSE-25.87 public regression fixes
+
+on:
+  push:
+    branches:
+      - feature/mse-25-87-public-regression-fixes-20260829
+  pull_request:
+    paths:
+      - 'frontend/lib/showcase-url.js'
+      - 'frontend/components/public-site/PublicBrandLogo.js'
+      - 'frontend/components/public-site/renderers/HeroV2Renderer.js'
+      - 'frontend/components/public-site/renderers/TeamRenderer.js'
+      - 'frontend/components/public-site/PublicPaymentMethodsBand.js'
+      - 'frontend/components/public-site/payment-methods-band.css'
+      - 'frontend/components/public-site/public-readability-fixes.css'
+      - 'frontend/app/agence/[siteSlug]/layout.js'
+      - 'frontend/test/mse-25-87-public-regression-fixes.test.mjs'
+      - 'scripts/mse-25-87-vm-deploy.sh'
+      - '.github/workflows/mse-25-87.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  public-regression-safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Run focused regression tests
+        run: node --test test/mse-25-87-public-regression-fixes.test.mjs
+
+      - name: Lint changed public files
+        run: >-
+          npx eslint
+          lib/showcase-url.js
+          components/public-site/PublicBrandLogo.js
+          components/public-site/renderers/HeroV2Renderer.js
+          components/public-site/renderers/TeamRenderer.js
+          components/public-site/PublicPaymentMethodsBand.js
+          app/agence/[siteSlug]/layout.js
+
+      - name: Validate guarded VM deployment script
+        working-directory: .
+        run: bash -n scripts/mse-25-87-vm-deploy.sh
+
+      - name: Build public frontend
+        run: npm run build

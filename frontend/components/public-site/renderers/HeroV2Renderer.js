@@ -1,5 +1,6 @@
 import { preconnect, preload } from "react-dom";
 
+import { getShowcaseUrl } from "../../../lib/showcase-url";
 import {
   getSectionContent,
 } from "./helpers";
@@ -81,6 +82,17 @@ function heroImageOrigin(value) {
   }
 }
 
+function isShowcaseCta(cta, legacyLabel) {
+  const label = String(cta?.label || legacyLabel || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return /\bdecouvrir\b/.test(label) && /\b(nos|vos)?\s*voyages?\b/.test(label);
+}
+
 export default function HeroV2Renderer({ section, site, page }) {
   const content = getSectionContent(section);
   const title = resolvedHeroTitle({ content, section, site, page });
@@ -102,14 +114,20 @@ export default function HeroV2Renderer({ section, site, page }) {
 
   const primaryCta = content.primaryCta || null;
   const secondaryCta = content.secondaryCta || null;
-  const primaryHref = primaryCta?.href
-    ? resolvePublicCtaHref(site, primaryCta.href, "contact")
-    : phoneHref(site?.agency?.phone) || sitePageHref(site, "contact");
-  const secondaryHref = secondaryCta
-    ? resolvePublicCtaHref(site, secondaryCta.href, "contact")
-    : content.secondaryButton
-      ? sitePageHref(site, "contact")
-      : null;
+  const primaryShowcase = isShowcaseCta(primaryCta, content.primaryButton);
+  const secondaryShowcase = isShowcaseCta(secondaryCta, content.secondaryButton);
+  const primaryHref = primaryShowcase
+    ? getShowcaseUrl(site)
+    : primaryCta?.href
+      ? resolvePublicCtaHref(site, primaryCta.href, "contact")
+      : phoneHref(site?.agency?.phone) || sitePageHref(site, "contact");
+  const secondaryHref = secondaryShowcase
+    ? getShowcaseUrl(site)
+    : secondaryCta
+      ? resolvePublicCtaHref(site, secondaryCta.href, "contact")
+      : content.secondaryButton
+        ? sitePageHref(site, "contact")
+        : null;
 
   const contentStyle = { textAlign: alignment };
   const centered = alignment === "center";
@@ -145,12 +163,20 @@ export default function HeroV2Renderer({ section, site, page }) {
         <p className="public-site-hero-text" style={centered ? { marginInline: "auto" } : rightAligned ? { marginLeft: "auto" } : undefined}>{subtitle}</p>
         <div className="public-site-hero-actions" style={{ justifyContent: centered ? "center" : rightAligned ? "flex-end" : "flex-start" }}>
           {primaryHref ? (
-            <a className="public-site-button" href={primaryHref}>
+            <a
+              className="public-site-button"
+              href={primaryHref}
+              {...(primaryShowcase ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+            >
               {ctaLabel(primaryCta, content.primaryButton, primaryCta?.href ? "En savoir plus" : "Appeler l’agence")}
             </a>
           ) : null}
           {secondaryHref ? (
-            <a className="public-site-button public-site-button-secondary" href={secondaryHref}>
+            <a
+              className="public-site-button public-site-button-secondary"
+              href={secondaryHref}
+              {...(secondaryShowcase ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+            >
               {ctaLabel(secondaryCta, content.secondaryButton, "Nous contacter")}
             </a>
           ) : null}
@@ -166,6 +192,7 @@ export {
   genericHeroTitle,
   heroImageOrigin,
   intentHeroTitle,
+  isShowcaseCta,
   resolvedHeroAlt,
   resolvedHeroTitle,
 };
