@@ -11,6 +11,7 @@ on:
       - 'docker-compose.yml'
       - 'scripts/mse-25-91-vm-deploy.sh'
       - 'scripts/mse-25-91-public-contract-preflight.js'
+      - 'scripts/mse-25-91-canonical-drift-check.js'
       - '.github/workflows/mse-25-91.yml'
 
 permissions:
@@ -30,6 +31,9 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: frontend/package-lock.json
+
+      - name: Canonical public drift guard
+        run: node scripts/mse-25-91-canonical-drift-check.js
 
       - name: Install frontend dependencies
         working-directory: frontend
@@ -77,3 +81,4 @@ jobs:
         run: |
           bash -n scripts/mse-25-91-vm-deploy.sh
           node --check scripts/mse-25-91-public-contract-preflight.js
+          node --check scripts/mse-25-91-canonical-drift-check.js
