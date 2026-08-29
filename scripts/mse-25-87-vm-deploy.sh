@@ -7,6 +7,7 @@ PROBE_SITE_SLUG="${MSE_25_87_PROBE_SITE_SLUG:-}"
 SKIP_GIT_UPDATE="${MSE_25_87_SKIP_GIT_UPDATE:-false}"
 DEPLOY_ACK="${MSE_25_87_DEPLOY_ACK:-}"
 EXPECTED_ACK="PUBLIC-REGRESSION-RECOVERY"
+MIN_FREE_MB="${MSE_25_87_MIN_FREE_MB:-3072}"
 
 log() {
   printf '[MSE-25.87] %s\n' "$*"
@@ -15,6 +16,20 @@ log() {
 fail() {
   printf '[MSE-25.87] ERROR: %s\n' "$*" >&2
   exit 1
+}
+
+free_mb() {
+  df -Pm "$1" | awk 'NR==2 {print $4}'
+}
+
+assert_free_space() {
+  local label="$1"
+  local path="$2"
+  local available
+  available="$(free_mb "$path")"
+  [[ "$available" =~ ^[0-9]+$ ]] || fail "cannot determine free space for $label ($path)"
+  log "$label free space: ${available} MB (minimum ${MIN_FREE_MB} MB)"
+  (( available >= MIN_FREE_MB )) || fail "insufficient free space for $label: ${available} MB available, ${MIN_FREE_MB} MB required"
 }
 
 [[ "$DEPLOY_ACK" == "$EXPECTED_ACK" ]] || fail "set MSE_25_87_DEPLOY_ACK=$EXPECTED_ACK before deployment"
@@ -41,15 +56,24 @@ fi
 PREVIOUS_HEAD="$(git rev-parse HEAD)"
 DEPLOY_HEAD="$PREVIOUS_HEAD"
 ROLLBACK_REQUIRED=false
+ROLLBACK_TAG=""
+PREVIOUS_IMAGE_REF=""
 
 rollback() {
   local exit_code=$?
-  if [[ "$ROLLBACK_REQUIRED" == "true" ]]; then
-    log "deployment failed; restoring frontend from $PREVIOUS_HEAD"
-    git reset --hard "$PREVIOUS_HEAD" >/dev/null 2>&1 || true
-    docker compose build frontend >/dev/null 2>&1 || true
-    docker compose up -d --no-deps frontend >/dev/null 2>&1 || true
+  trap - ERR
+  set +e
+
+  if [[ "$ROLLBACK_REQUIRED" == "true" && -n "$ROLLBACK_TAG" && -n "$PREVIOUS_IMAGE_REF" ]]; then
+    log "deployment failed after container replacement; restoring previous frontend image"
+    docker image tag "$ROLLBACK_TAG" "$PREVIOUS_IMAGE_REF" >/dev/null 2>&1
+    docker compose up -d --no-deps --force-recreate frontend >/dev/null 2>&1
   fi
+
+  if [[ -n "$ROLLBACK_TAG" ]]; then
+    docker image rm "$ROLLBACK_TAG" >/dev/null 2>&1 || true
+  fi
+
   exit "$exit_code"
 }
 trap rollback ERR
@@ -64,12 +88,17 @@ fi
 
 DEPLOY_HEAD="$(git rev-parse HEAD)"
 log "deploying $DEPLOY_HEAD"
-ROLLBACK_REQUIRED=true
+
+assert_free_space "repository filesystem" "$REPO_ROOT"
+DOCKER_ROOT="$(docker info --format '{{.DockerRootDir}}' 2>/dev/null || true)"
+if [[ -n "$DOCKER_ROOT" && -d "$DOCKER_ROOT" ]]; then
+  assert_free_space "Docker filesystem" "$DOCKER_ROOT"
+fi
 
 log "running focused MSE-25.87 regression tests"
 (
   cd frontend
-  npm ci --ignore-scripts
+  npm ci --ignore-scripts --no-audit --no-fund
   node --test test/mse-25-87-public-regression-fixes.test.mjs
   npx eslint \
     lib/showcase-url.js \
@@ -80,10 +109,23 @@ log "running focused MSE-25.87 regression tests"
     'app/agence/[siteSlug]/layout.js'
 )
 
+log "capturing currently running frontend image for rollback"
+CURRENT_CONTAINER_ID="$(docker compose ps -q frontend)"
+if [[ -n "$CURRENT_CONTAINER_ID" ]]; then
+  PREVIOUS_IMAGE_ID="$(docker inspect -f '{{.Image}}' "$CURRENT_CONTAINER_ID")"
+  PREVIOUS_IMAGE_REF="$(docker inspect -f '{{.Config.Image}}' "$CURRENT_CONTAINER_ID")"
+  ROLLBACK_TAG="mse-25-87-rollback:$(date +%s)"
+  docker image tag "$PREVIOUS_IMAGE_ID" "$ROLLBACK_TAG"
+  log "rollback image captured as $ROLLBACK_TAG"
+else
+  log "no existing frontend container found; image rollback will not be available"
+fi
+
 log "building frontend image"
 docker compose build frontend
 
 log "replacing frontend container only"
+ROLLBACK_REQUIRED=true
 docker compose up -d --no-deps frontend
 
 CONTAINER_ID="$(docker compose ps -q frontend)"
@@ -133,6 +175,10 @@ fi
 
 ROLLBACK_REQUIRED=false
 trap - ERR
+
+if [[ -n "$ROLLBACK_TAG" ]]; then
+  docker image rm "$ROLLBACK_TAG" >/dev/null 2>&1 || true
+fi
 
 log "deployment complete"
 printf 'MSE_25_87_DEPLOYED_HEAD=%s\n' "$DEPLOY_HEAD"
