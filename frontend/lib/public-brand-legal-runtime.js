@@ -1,5 +1,3 @@
-import { cache } from "react";
-
 function normalizeSiteSlug(value) {
   return String(value || "")
     .trim()
@@ -25,12 +23,7 @@ function getTenantSlug() {
   ).trim();
 }
 
-const PUBLIC_RUNTIME_REVALIDATE_SECONDS = Math.max(
-  30,
-  Number(process.env.PUBLIC_SITE_REVALIDATE_SECONDS || 300) || 300
-);
-
-export const fetchPublicBrandLegalRuntime = cache(async (siteSlug) => {
+export async function fetchPublicBrandLegalRuntime(siteSlug) {
   const normalizedSlug = normalizeSiteSlug(siteSlug);
   if (!normalizedSlug) return null;
 
@@ -43,9 +36,7 @@ export const fetchPublicBrandLegalRuntime = cache(async (siteSlug) => {
         Accept: "application/json",
         "x-tenant-slug": getTenantSlug(),
       },
-      next: {
-        revalidate: PUBLIC_RUNTIME_REVALIDATE_SECONDS,
-      },
+      cache: "no-store",
     });
 
     if (response.status === 404) return null;
@@ -68,7 +59,7 @@ export const fetchPublicBrandLegalRuntime = cache(async (siteSlug) => {
     });
     return null;
   }
-});
+}
 
 export function runtimeCssVariables(contract) {
   const variables = contract?.runtime?.brand?.cssVariables;
@@ -128,8 +119,4 @@ export function resolveLegalPageHtml(pageSlug, contract) {
   };
 }
 
-export {
-  PUBLIC_RUNTIME_REVALIDATE_SECONDS,
-  getTenantSlug,
-  getRuntimeOrigin,
-};
+export { getTenantSlug, getRuntimeOrigin };

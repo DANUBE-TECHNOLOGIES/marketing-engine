@@ -101,9 +101,6 @@ export default function OffersRenderer({ section, site }) {
                         alt={offerImageAlt(item)}
                         loading="lazy"
                         decoding="async"
-                        fetchPriority="low"
-                        width="720"
-                        height="480"
                         style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                       />
                     </div>

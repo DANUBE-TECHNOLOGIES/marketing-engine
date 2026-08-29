@@ -1,9 +1,7 @@
-import { Suspense } from "react";
 import Link from "next/link";
 
 import { getShowcaseUrl } from "../../lib/showcase-url";
 import PublicBrandLogo from "./PublicBrandLogo";
-import PublicOpeningStatus from "./PublicOpeningStatus";
 
 const NAVIGATION_ALIASES = Object.freeze({
   home: "",
@@ -63,7 +61,7 @@ function telephoneHref(phone) {
   return `tel:${String(phone || "").replace(/\s+/g, "")}`;
 }
 
-export default function PublicSiteHeader({ site, brand, brandRuntime, brandAssets }) {
+export default function PublicSiteHeader({ site, hours, brand, brandRuntime, brandAssets }) {
   const resolvedPublicBrand =
     brand || brandRuntime?.runtime?.brand || site?.brand || site?.branding || site?.brandProfile || null;
   const resolvedPublicBrandAssets = brandAssets || resolvedPublicBrand?.assets || {};
@@ -78,9 +76,12 @@ export default function PublicSiteHeader({ site, brand, brandRuntime, brandAsset
         <div className="public-site-container public-site-trustbar-inner">
           <span>{city ? `Votre agence de voyages de proximité à ${city}` : "Votre agence de voyages de proximité"}</span>
           <div className="public-site-trustbar-items">
-            <Suspense fallback={null}>
-              <PublicOpeningStatus siteSlug={site.slug} />
-            </Suspense>
+            {hours?.status ? (
+              <span className={["public-site-opening-status", hours.status.isOpen ? "is-open" : "is-closed"].join(" ")}>
+                <i />
+                {hours.status.label}
+              </span>
+            ) : null}
             <span>Conseils personnalisés</span>
             <span>Accompagnement avant, pendant et après</span>
           </div>

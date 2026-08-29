@@ -1,5 +1,3 @@
-import { preconnect, preload } from "react-dom";
-
 import {
   getSectionContent,
 } from "./helpers";
@@ -72,15 +70,6 @@ function resolvedHeroAlt({ content, site, title }) {
   return title;
 }
 
-function heroImageOrigin(value) {
-  try {
-    const url = new URL(String(value || ""));
-    return ["http:", "https:"].includes(url.protocol) ? url.origin : null;
-  } catch {
-    return null;
-  }
-}
-
 export default function HeroV2Renderer({ section, site, page }) {
   const content = getSectionContent(section);
   const title = resolvedHeroTitle({ content, section, site, page });
@@ -90,15 +79,6 @@ export default function HeroV2Renderer({ section, site, page }) {
   const backgroundPosition = content.backgroundPosition || "center";
   const imageAlt = resolvedHeroAlt({ content, site, title });
   const overlayOpacity = Math.min(Math.max(Number(content.overlayOpacity ?? 68), 20), 90) / 100;
-
-  if (backgroundImage) {
-    const origin = heroImageOrigin(backgroundImage);
-    if (origin) preconnect(origin);
-    preload(backgroundImage, {
-      as: "image",
-      fetchPriority: "high",
-    });
-  }
 
   const primaryCta = content.primaryCta || null;
   const secondaryCta = content.secondaryCta || null;
@@ -126,8 +106,7 @@ export default function HeroV2Renderer({ section, site, page }) {
             alt={imageAlt}
             loading="eager"
             fetchPriority="high"
-            width="1920"
-            height="1080"
+            decoding="async"
             style={{ objectPosition: backgroundPosition }}
           />
           <span
@@ -164,7 +143,6 @@ export {
   defaultHeroEyebrow,
   defaultHeroTitle,
   genericHeroTitle,
-  heroImageOrigin,
   intentHeroTitle,
   resolvedHeroAlt,
   resolvedHeroTitle,

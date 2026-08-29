@@ -102,7 +102,11 @@ export default function PublicBrandLogo({
           ? "eager"
           : "lazy"
       }
-      fetchPriority="auto"
+      fetchPriority={
+        priority
+          ? "high"
+          : "auto"
+      }
       decoding="async"
     />
   );

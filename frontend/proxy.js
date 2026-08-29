@@ -58,7 +58,6 @@ export function proxy(request) {
       pathname.startsWith("/api/website-builder/inspirations/"));
 
   const isPublicRoute =
-    pathname === "/healthz" ||
     pathname === "/agence" ||
     pathname.startsWith("/agence/") ||
     pathname === "/sites" ||
@@ -83,6 +82,7 @@ export function proxy(request) {
   if (isPublicRoute) {
     return NextResponse.next();
   }
+
 
   /*
    * agences.mondescale.com est exclusivement le domaine public

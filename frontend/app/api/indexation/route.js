@@ -98,57 +98,6 @@ function actionPath(operation, runId) {
   }
 }
 
-function isMissingBackendPreflight(error, operation) {
-  return operation === "preflight" && Number(error?.status || 0) === 404;
-}
-
-async function compatibilityPreflight(payload = {}) {
-  const requestedSiteUrl = String(payload?.siteUrl || "").trim();
-  const [health, properties] = await Promise.all([
-    backendRequest(READ_RESOURCES.health),
-    backendRequest(READ_RESOURCES.properties),
-  ]);
-
-  const availableProperties = Array.isArray(properties?.properties) ? properties.properties : [];
-  const property = requestedSiteUrl
-    ? availableProperties.find((item) => String(item?.siteUrl || "") === requestedSiteUrl) || null
-    : null;
-
-  const requiredPermissionLevel =
-    properties?.requiredPermissionLevel || health?.requiredPermissionLevel || "siteOwner";
-  const providerReady = Boolean(
-    health?.ok &&
-    health?.providerConfigured &&
-    health?.providerTransportConfigured &&
-    health?.tokenReadiness?.configured &&
-    health?.tokenReadiness?.searchConsoleTokenConfigured
-  );
-  const propertyReady = Boolean(property?.eligibleForSitemapSubmission);
-  const ready = providerReady && propertyReady;
-
-  return {
-    ok: ready,
-    operation: "preflight",
-    compatibilityMode: true,
-    reason: ready
-      ? "BACKEND_PREFLIGHT_ROUTE_MISSING_FALLBACK_READY"
-      : !providerReady
-        ? "SEARCH_CONSOLE_PROVIDER_NOT_READY"
-        : property
-          ? "PROPERTY_NOT_ELIGIBLE_FOR_SITEMAP_SUBMISSION"
-          : "PROPERTY_NOT_FOUND",
-    siteUrl: requestedSiteUrl || null,
-    provider: health?.provider || properties?.provider || "google-search-console",
-    providerReady,
-    requiredPermissionLevel,
-    permissionLevel: property?.permissionLevel || null,
-    eligibleForSitemapSubmission: Boolean(property?.eligibleForSitemapSubmission),
-    explicitApprovalRequired: health?.explicitApprovalRequired !== false,
-    autoSubmit: Boolean(health?.autoSubmit),
-    property,
-  };
-}
-
 export async function POST(request) {
   let body;
   try { body = await request.json(); } catch { return jsonError("Payload JSON invalide.", 400); }
@@ -159,13 +108,6 @@ export async function POST(request) {
   try {
     return Response.json(await backendRequest(path, { method: "POST", body: JSON.stringify({ ...(body?.payload || {}) }) }));
   } catch (error) {
-    if (isMissingBackendPreflight(error, operation)) {
-      try {
-        return Response.json(await compatibilityPreflight(body?.payload || {}));
-      } catch (fallbackError) {
-        return jsonError(fallbackError.message, Number(fallbackError.status || 500), fallbackError.payload || null);
-      }
-    }
     return jsonError(error.message, Number(error.status || 500), error.payload || null);
   }
 }

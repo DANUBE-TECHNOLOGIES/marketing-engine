@@ -84,15 +84,7 @@ export default function TeamRenderer({ section, site }) {
                   <div className="public-site-team-portrait">
                     {image ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={image}
-                        alt={member.imageAlt || `Portrait de ${name}`}
-                        loading="lazy"
-                        decoding="async"
-                        fetchPriority="low"
-                        width="640"
-                        height="640"
-                      />
+                      <img src={image} alt={member.imageAlt || `Portrait de ${name}`} loading="lazy" />
                     ) : (
                       <span>{initials(name)}</span>
                     )}

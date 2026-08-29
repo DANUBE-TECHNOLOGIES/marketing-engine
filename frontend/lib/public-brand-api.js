@@ -1,5 +1,3 @@
-import { cache } from "react";
-
 const BACKEND_URL =
   process.env.BACKEND_INTERNAL_URL ||
   "http://backend:4000";
@@ -8,7 +6,7 @@ const TENANT_SLUG =
   process.env.NEXT_PUBLIC_TENANT_SLUG ||
   "mondescale";
 
-const fetchPublicBrandTheme = cache(async () => {
+export async function getPublicBrandTheme() {
   const response = await fetch(
     `${BACKEND_URL}/public/brands/${encodeURIComponent(
       TENANT_SLUG
@@ -29,10 +27,6 @@ const fetchPublicBrandTheme = cache(async () => {
   }
 
   return response.json();
-});
-
-export async function getPublicBrandTheme() {
-  return fetchPublicBrandTheme();
 }
 
 /*

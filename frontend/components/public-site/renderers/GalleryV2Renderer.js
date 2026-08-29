@@ -75,9 +75,6 @@ export default function GalleryV2Renderer({ section, site }) {
                     alt={galleryAlt(image, section, site)}
                     loading="lazy"
                     decoding="async"
-                    fetchPriority="low"
-                    width="900"
-                    height="600"
                     style={{
                       width: "100%",
                       height: "100%",

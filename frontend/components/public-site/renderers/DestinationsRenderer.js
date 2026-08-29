@@ -95,9 +95,6 @@ function DestinationCard({ item, site }) {
           alt={destinationImageAlt(item)}
           loading="lazy"
           decoding="async"
-          fetchPriority="low"
-          width="720"
-          height="480"
           style={{
             position: "absolute",
             inset: 0,
