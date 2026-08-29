@@ -1,0 +1,72 @@
+name: MSE-25.91 canonical public reconvergence
+
+on:
+  push:
+    branches:
+      - integration/mse-25-91-canonical-public-reconvergence-20260829
+  pull_request:
+    paths:
+      - 'frontend/**'
+      - 'backend/**'
+      - 'docker-compose.yml'
+      - 'scripts/mse-25-91-vm-deploy.sh'
+      - '.github/workflows/mse-25-91.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  canonical-public:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Canonical public regression tests
+        working-directory: frontend
+        run: |
+          node --test test/mse-25-91-canonical-public-reconvergence.test.mjs
+          node --test test/mse-25-85-sitemap-cache-safety.test.mjs
+
+      - name: Lint canonical public files
+        working-directory: frontend
+        run: >-
+          npx eslint
+          app/agence/[siteSlug]/layout.js
+          components/public-site/PublicBrandLogo.js
+          components/public-site/PublicPaymentMethodsBand.js
+          components/public-site/renderers/HeroV2Renderer.js
+          components/public-site/renderers/TeamRenderer.js
+          components/public-site/renderers/PartnersRenderer.js
+          lib/showcase-url.js
+
+      - name: Build canonical public frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Setup backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: MSE-25.86 preservation tests
+        working-directory: backend
+        run: |
+          node --test test/mse-25-84-sitemap-transient-read-retry.test.js
+          node --test test/mse-25-86-contact-seo-only.test.js
+          node --test test/mse-25-86-seo-coverage-remediation.test.js
+          node --test test/mse-25-86-vm-readiness.test.js
+
+      - name: Validate guarded deployment script
+        run: bash -n scripts/mse-25-91-vm-deploy.sh

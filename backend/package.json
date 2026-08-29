@@ -102,6 +102,11 @@
     "mse-25.67:guarded-rollback": "node scripts/mse-25-67-guarded-rollback.js",
     "mse-25.68:readiness": "node scripts/mse-25-68-readiness.js",
     "mse-25.68:post-rollback-verify": "node scripts/mse-25-68-post-rollback-verify.js",
+    "mse-25.86:vm-readiness": "node scripts/mse-25-86-vm-readiness.js",
+    "mse-25.86:preview": "bash scripts/mse-25-86-execute.sh preview",
+    "mse-25.86:apply": "bash scripts/mse-25-86-execute.sh apply",
+    "mse-25.86:verify": "bash scripts/mse-25-86-execute.sh verify",
+    "mse-25.86:rollback": "bash scripts/mse-25-86-execute.sh rollback",
     "mse-25:operational-status": "node scripts/mse-25-operational-status.js"
   },
   "dependencies": {

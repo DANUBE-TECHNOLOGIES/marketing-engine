@@ -2,11 +2,11 @@ import {
   fetchMiniSiteSitemap,
 } from "../lib/minisite-structured-data/client";
 
-// The sitemap depends on the runtime backend and must not be prerendered during
-// the Docker build, where the backend service is not reachable from the build
-// container. Otherwise Next can persist an empty <urlset> until revalidation.
-export const dynamic = "force-dynamic";
-export const revalidate = 300;
+export const dynamic =
+  "force-dynamic";
+
+export const revalidate =
+  0;
 
 const PUBLIC_ORIGIN =
   String(
@@ -173,6 +173,12 @@ function normalizePriority(
 export default async function sitemap() {
   const payload =
     await fetchMiniSiteSitemap();
+
+  if (payload?.error) {
+    throw new Error(
+      `MINISITE_SITEMAP_UNAVAILABLE:${payload.error}`
+    );
+  }
 
   const entries =
     Array.isArray(

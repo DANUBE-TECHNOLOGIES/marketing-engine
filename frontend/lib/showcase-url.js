@@ -1,4 +1,4 @@
-const DEFAULT_SHOWCASE_URL = "https://mondescale.com";
+const DEFAULT_SHOWCASE_URL = "https://www.mondescale.com";
 
 function normalizeExternalUrl(value) {
   const candidate = String(value || "").trim();
@@ -7,6 +7,11 @@ function normalizeExternalUrl(value) {
   try {
     const url = new URL(candidate.startsWith("http") ? candidate : `https://${candidate}`);
     if (!["http:", "https:"].includes(url.protocol)) return null;
+
+    if (url.hostname.toLowerCase() === "mondescale.com") {
+      url.hostname = "www.mondescale.com";
+    }
+
     return url.toString();
   } catch {
     return null;
@@ -21,3 +26,5 @@ export function getShowcaseUrl(site) {
 
   return configured || DEFAULT_SHOWCASE_URL;
 }
+
+export { DEFAULT_SHOWCASE_URL, normalizeExternalUrl };

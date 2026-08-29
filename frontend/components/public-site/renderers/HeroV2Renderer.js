@@ -1,9 +1,9 @@
 import { preconnect, preload } from "react-dom";
+import { getShowcaseUrl } from "../../../lib/showcase-url";
 import {
   getSectionContent,
 } from "./helpers";
 import {
-  phoneHref,
   resolvePublicCtaHref,
   sitePageHref,
 } from "./ctaLinks";
@@ -97,6 +97,17 @@ function imageOrigin(value) {
   }
 }
 
+function isShowcaseCta(cta, legacyLabel) {
+  const label = String(cta?.label || legacyLabel || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return /\bdecouvrir\b/.test(label) && /\b(nos|vos)?\s*voyages?\b/.test(label);
+}
+
 export default function HeroV2Renderer({ section, site, page, forcePageIntent = false, sharedNetworkHero = false }) {
   const content = getSectionContent(section);
   const title = resolvedHeroTitle({ content, section, site, page, forcePageIntent });
@@ -120,16 +131,24 @@ export default function HeroV2Renderer({ section, site, page, forcePageIntent = 
 
   const primaryCta = content.primaryCta || null;
   const secondaryCta = content.secondaryCta || null;
-  const primaryHref = primaryCta?.href
-    ? resolvePublicCtaHref(site, primaryCta.href, "contact")
-    : sitePageHref(site, "contact");
-  const secondaryHref = secondaryCta
-    ? resolvePublicCtaHref(site, secondaryCta.href, "destinations")
-    : immersiveNetworkHero
-      ? sitePageHref(site, "destinations")
-      : content.secondaryButton
-        ? sitePageHref(site, "contact")
-        : null;
+  const primaryShowcase = isShowcaseCta(primaryCta, content.primaryButton);
+  const secondaryShowcase =
+    isShowcaseCta(secondaryCta, content.secondaryButton) ||
+    (!secondaryCta && !content.secondaryButton && immersiveNetworkHero);
+  const primaryHref = primaryShowcase
+    ? getShowcaseUrl(site)
+    : primaryCta?.href
+      ? resolvePublicCtaHref(site, primaryCta.href, "contact")
+      : sitePageHref(site, "contact");
+  const secondaryHref = secondaryShowcase
+    ? getShowcaseUrl(site)
+    : secondaryCta
+      ? resolvePublicCtaHref(site, secondaryCta.href, "destinations")
+      : immersiveNetworkHero
+        ? sitePageHref(site, "destinations")
+        : content.secondaryButton
+          ? sitePageHref(site, "contact")
+          : null;
 
   const contentStyle = { textAlign: alignment };
   const centered = alignment === "center";
@@ -172,8 +191,24 @@ export default function HeroV2Renderer({ section, site, page, forcePageIntent = 
           <h1 style={centered ? { marginInline: "auto" } : rightAligned ? { marginLeft: "auto" } : undefined}>{title}</h1>
           <p className="public-site-hero-text" style={centered ? { marginInline: "auto" } : rightAligned ? { marginLeft: "auto" } : undefined}>{subtitle}</p>
           <div className="public-site-hero-actions" style={{ justifyContent: centered ? "center" : rightAligned ? "flex-end" : "flex-start" }}>
-            {primaryHref ? <a className="public-site-button" href={primaryHref}>{ctaLabel(primaryCta, content.primaryButton, "Demander un devis")}</a> : null}
-            {secondaryHref ? <a className="public-site-button public-site-button-secondary" href={secondaryHref}>{ctaLabel(secondaryCta, content.secondaryButton, immersiveNetworkHero ? "Découvrir nos voyages" : "Nous contacter")}</a> : null}
+            {primaryHref ? (
+              <a
+                className="public-site-button"
+                href={primaryHref}
+                {...(primaryShowcase ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+              >
+                {ctaLabel(primaryCta, content.primaryButton, "Demander un devis")}
+              </a>
+            ) : null}
+            {secondaryHref ? (
+              <a
+                className="public-site-button public-site-button-secondary"
+                href={secondaryHref}
+                {...(secondaryShowcase ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+              >
+                {ctaLabel(secondaryCta, content.secondaryButton, immersiveNetworkHero ? "Découvrir nos voyages" : "Nous contacter")}
+              </a>
+            ) : null}
           </div>
         </div>
       </div>
@@ -189,6 +224,7 @@ export {
   imageOrigin,
   intentHeroTitle,
   isHomePage,
+  isShowcaseCta,
   resolvedHeroAlt,
   resolvedHeroImage,
   resolvedHeroTitle,
