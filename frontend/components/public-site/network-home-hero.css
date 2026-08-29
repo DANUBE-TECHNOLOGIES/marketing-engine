@@ -1,12 +1,11 @@
 /*
- * MSE-25.74 / MSE-25.78 — Network Hero.
+ * MSE-25.74 / MSE-25.78 / MSE-25.91 — Network Hero.
  * Full-bleed premium visual treatment shared by every public agency page.
- * The home keeps the largest presentation; secondary pages reuse the same
- * visual language with a deliberately more compact height.
+ * The home remains immersive without monopolising the first viewport.
  */
 .public-site-hero--home.public-site-hero--immersive {
   position: relative;
-  min-height: clamp(520px, 62vh, 690px);
+  min-height: clamp(440px, 52vh, 570px);
   overflow: hidden;
   background: #082947;
   color: #fff;
@@ -18,9 +17,9 @@
 
 .public-site-hero--home.public-site-hero--immersive::after {
   right: -8%;
-  bottom: -128px;
+  bottom: -118px;
   left: -8%;
-  height: 190px;
+  height: 172px;
   z-index: 4;
   background: var(--public-background, #fff);
   pointer-events: none;
@@ -63,17 +62,17 @@
   position: relative;
   z-index: 3;
   width: min(1220px, calc(100% - 48px));
-  min-height: clamp(520px, 62vh, 690px);
+  min-height: clamp(440px, 52vh, 570px);
   display: flex;
   align-items: center;
-  padding: clamp(74px, 8vw, 112px) 0 clamp(116px, 11vw, 150px);
+  padding: clamp(54px, 6vw, 78px) 0 clamp(92px, 8vw, 118px);
 }
 
 .public-site-hero--home .public-site-hero-copy {
-  width: min(760px, 64%);
-  padding: clamp(34px, 4.4vw, 56px);
+  width: min(680px, 58%);
+  padding: clamp(28px, 3.6vw, 44px);
   border: 1px solid rgba(255,255,255,.17);
-  border-radius: 32px;
+  border-radius: 28px;
   background:
     linear-gradient(135deg, rgba(5,29,50,.74), rgba(5,29,50,.42));
   box-shadow: 0 30px 86px rgba(0,0,0,.2);
@@ -81,30 +80,30 @@
 }
 
 .public-site-hero--home .public-site-eyebrow {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
   color: #fff;
 }
 
 .public-site-hero--home h1 {
-  max-width: 680px;
+  max-width: 640px;
   color: #fff;
   font-family: var(--public-heading-font, "DM Serif Display", serif);
-  font-size: clamp(3rem, 5.5vw, 5.65rem);
-  line-height: .98;
+  font-size: clamp(2.75rem, 4.7vw, 4.8rem);
+  line-height: .99;
   letter-spacing: -.04em;
   text-wrap: balance;
 }
 
 .public-site-hero--home .public-site-hero-text {
-  max-width: 640px;
-  margin-top: 26px;
+  max-width: 600px;
+  margin-top: 20px;
   color: rgba(255,255,255,.92);
-  font-size: clamp(1.02rem, 1.55vw, 1.22rem);
-  line-height: 1.68;
+  font-size: clamp(.98rem, 1.35vw, 1.14rem);
+  line-height: 1.62;
 }
 
 .public-site-hero--home .public-site-hero-actions {
-  margin-top: 30px;
+  margin-top: 24px;
 }
 
 .public-site-hero--home .public-site-button-secondary {
@@ -112,37 +111,34 @@
   background: rgba(5,29,50,.24);
 }
 
-/* Secondary pages reuse the home Hero image, but should not feel like a second
- * home page. Keep the same identity while shortening the visual entry point.
- */
 .public-site-hero--home.public-site-hero--immersive:not([data-page-slug="home"]) {
-  min-height: clamp(390px, 46vh, 500px);
+  min-height: clamp(370px, 43vh, 470px);
 }
 
 .public-site-hero--home:not([data-page-slug="home"]) > .public-site-container {
-  min-height: clamp(390px, 46vh, 500px);
-  padding: clamp(54px, 6vw, 74px) 0 clamp(82px, 8vw, 104px);
+  min-height: clamp(370px, 43vh, 470px);
+  padding: clamp(48px, 5vw, 66px) 0 clamp(76px, 7vw, 94px);
 }
 
 .public-site-hero--home:not([data-page-slug="home"]) .public-site-hero-copy {
-  width: min(720px, 68%);
-  padding: clamp(28px, 3.4vw, 40px);
-  border-radius: 26px;
+  width: min(680px, 64%);
+  padding: clamp(26px, 3vw, 36px);
+  border-radius: 24px;
 }
 
 .public-site-hero--home:not([data-page-slug="home"]) h1 {
-  font-size: clamp(2.55rem, 4.25vw, 4.25rem);
+  font-size: clamp(2.4rem, 3.8vw, 3.9rem);
   line-height: 1.01;
 }
 
 .public-site-hero--home:not([data-page-slug="home"]) .public-site-hero-text {
-  margin-top: 18px;
-  font-size: clamp(.98rem, 1.25vw, 1.1rem);
-  line-height: 1.58;
+  margin-top: 16px;
+  font-size: clamp(.95rem, 1.15vw, 1.06rem);
+  line-height: 1.56;
 }
 
 .public-site-hero--home:not([data-page-slug="home"]) .public-site-hero-actions {
-  margin-top: 22px;
+  margin-top: 20px;
 }
 
 @media (max-width: 900px) {
@@ -151,40 +147,40 @@
   }
 
   .public-site-hero--home .public-site-hero-copy {
-    width: min(720px, 86%);
+    width: min(680px, 86%);
   }
 
   .public-site-hero--home:not([data-page-slug="home"]) .public-site-hero-copy {
-    width: min(680px, 88%);
+    width: min(650px, 88%);
   }
 }
 
 @media (max-width: 640px) {
   .public-site-hero--home.public-site-hero--immersive {
-    min-height: 610px;
+    min-height: 540px;
   }
 
   .public-site-hero--home.public-site-hero--immersive::after {
-    bottom: -96px;
-    height: 140px;
+    bottom: -90px;
+    height: 132px;
   }
 
   .public-site-hero--home > .public-site-container {
-    min-height: 610px;
+    min-height: 540px;
     align-items: flex-end;
-    padding: 72px 0 104px;
+    padding: 64px 0 94px;
   }
 
   .public-site-hero--home .public-site-hero-copy {
     width: 100%;
-    padding: 26px 24px;
-    border-radius: 24px;
+    padding: 24px 22px;
+    border-radius: 22px;
     background: linear-gradient(135deg, rgba(5,29,50,.82), rgba(5,29,50,.56));
     backdrop-filter: none;
   }
 
   .public-site-hero--home h1 {
-    font-size: clamp(2.65rem, 13vw, 4.2rem);
+    font-size: clamp(2.45rem, 12vw, 3.8rem);
   }
 
   .public-site-hero--home .public-site-hero-actions {
@@ -198,15 +194,15 @@
   }
 
   .public-site-hero--home.public-site-hero--immersive:not([data-page-slug="home"]) {
-    min-height: 500px;
+    min-height: 470px;
   }
 
   .public-site-hero--home:not([data-page-slug="home"]) > .public-site-container {
-    min-height: 500px;
-    padding: 66px 0 92px;
+    min-height: 470px;
+    padding: 60px 0 84px;
   }
 
   .public-site-hero--home:not([data-page-slug="home"]) h1 {
-    font-size: clamp(2.35rem, 11vw, 3.55rem);
+    font-size: clamp(2.2rem, 10.5vw, 3.3rem);
   }
 }
