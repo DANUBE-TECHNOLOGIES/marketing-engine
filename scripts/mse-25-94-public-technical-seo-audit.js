@@ -12,7 +12,7 @@ const AGENCIES = [
   'ambassade-fram-mondescale-dax',
   'ambassade-fram-mondescale-gien',
   'ambassade-fram-mondescale-bois-colombes',
-  'ambassade-fram-mondescale-lamorlaye',
+  'mondescale-lamorlaye',
   'tui-store-melun',
   'tui-store-amilly',
 ];
