@@ -44,7 +44,35 @@ function normalizeAsset(asset) {
   return publicUrl ? { ...asset, publicUrl } : null;
 }
 
-function resolveLogo({ brand, brandAssets, site }) {
+function isMondescaleIdentity({ brand, site, agency }) {
+  const identity = [
+    brand?.values?.name,
+    brand?.name,
+    site?.name,
+    site?.slug,
+    agency?.name,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  return identity.includes("mondescale");
+}
+
+function resolveLogo({ brand, brandAssets, site, agency }) {
+  // The public Mondescale header must never depend on a stale or broken
+  // Brand Studio URL. The canonical network logo is shipped inside the
+  // frontend image and is therefore guaranteed to exist at runtime.
+  if (isMondescaleIdentity({ brand, site, agency })) {
+    return {
+      publicUrl: MONDESCALE_FALLBACK_LOGO,
+      altText: "Logo Mondescale",
+      width: 360,
+      height: 144,
+      __source: "bundled-canonical",
+    };
+  }
+
   const assetCollections = [
     brandAssets,
     brand?.assets,
@@ -90,9 +118,6 @@ function resolveLogo({ brand, brandAssets, site }) {
     if (normalized?.publicUrl) return normalized;
   }
 
-  // The network logo is bundled with the public frontend so a missing or
-  // temporarily incomplete Brand Studio contract never removes the company
-  // identity from the top of an agency mini-site.
   return {
     publicUrl: MONDESCALE_FALLBACK_LOGO,
     altText: "Logo Mondescale",
@@ -110,7 +135,7 @@ export default function PublicBrandLogo({
   className = "",
   priority = false,
 }) {
-  const logo = resolveLogo({ brand, brandAssets, site });
+  const logo = resolveLogo({ brand, brandAssets, site, agency });
   if (!logo?.publicUrl) return null;
 
   const name =
@@ -123,6 +148,7 @@ export default function PublicBrandLogo({
   return (
     <img
       data-public-brand-logo="1"
+      data-public-brand-logo-source={logo.__source || "runtime"}
       className={["public-brand-logo", className].filter(Boolean).join(" ")}
       src={logo.publicUrl}
       alt={logo.altText || logo.title || `Logo ${name}`}
@@ -140,6 +166,7 @@ export {
   DEFAULT_LOGO_WIDTH,
   MONDESCALE_FALLBACK_LOGO,
   assetPublicUrl,
+  isMondescaleIdentity,
   normalizeAsset,
   resolveLogo,
 };
