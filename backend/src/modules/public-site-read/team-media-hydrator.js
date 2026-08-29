@@ -1,5 +1,12 @@
 "use strict";
 
+const TEAM_BLOCK_TYPES = new Set([
+  "team",
+  "equipe",
+  "team-grid",
+  "equipe-grid",
+]);
+
 function asObject(value) {
   return (
     value &&
@@ -21,7 +28,7 @@ function blockType(block) {
 }
 
 function isTeamBlock(block) {
-  return blockType(block) === "team";
+  return TEAM_BLOCK_TYPES.has(blockType(block));
 }
 
 function memberAssetId(member) {
@@ -30,19 +37,24 @@ function memberAssetId(member) {
   const image = asObject(member.image);
   const photo = asObject(member.photo);
   const avatar = asObject(member.avatar);
+  const portrait = asObject(member.portrait);
   const media = asObject(member.media);
 
   return String(
     member.imageAssetId ||
     member.photoAssetId ||
     member.avatarAssetId ||
+    member.portraitAssetId ||
     member.mediaAssetId ||
+    member.assetId ||
     image.assetId ||
     image.id ||
     photo.assetId ||
     photo.id ||
     avatar.assetId ||
     avatar.id ||
+    portrait.assetId ||
+    portrait.id ||
     media.assetId ||
     media.id ||
     ""
@@ -50,7 +62,7 @@ function memberAssetId(member) {
 }
 
 function teamCollections(content) {
-  return ["members", "items", "team"].filter((key) =>
+  return ["members", "items", "team", "people", "staff"].filter((key) =>
     Array.isArray(content?.[key])
   );
 }
@@ -106,6 +118,25 @@ async function loadTeamMediaAssets({
   });
 }
 
+function assetImageUrl(asset) {
+  const payload = asObject(asset?.payload);
+  const file = asObject(payload.file);
+  const media = asObject(payload.media);
+  return String(
+    payload.publicUrl ||
+    payload.url ||
+    payload.src ||
+    payload.fileUrl ||
+    payload.storageUrl ||
+    payload.originalUrl ||
+    file.publicUrl ||
+    file.url ||
+    media.publicUrl ||
+    media.url ||
+    ""
+  ).trim();
+}
+
 function hydrateMember(member, byId) {
   if (!member || typeof member !== "object") return member;
 
@@ -116,6 +147,9 @@ function hydrateMember(member, byId) {
     member.photoUrl ||
     (typeof member.avatar === "string" ? member.avatar : "") ||
     member.avatarUrl ||
+    (typeof member.portrait === "string" ? member.portrait : "") ||
+    member.portraitUrl ||
+    member.media?.publicUrl ||
     member.media?.url ||
     ""
   ).trim();
@@ -135,13 +169,7 @@ function hydrateMember(member, byId) {
   if (!asset) return member;
 
   const payload = asObject(asset.payload);
-  const imageUrl = String(
-    payload.url ||
-    payload.publicUrl ||
-    payload.src ||
-    ""
-  ).trim();
-
+  const imageUrl = assetImageUrl(asset);
   if (!imageUrl) return member;
 
   const name = String(
@@ -156,7 +184,7 @@ function hydrateMember(member, byId) {
     image: imageUrl,
     imageUrl,
     imageAlt:
-      String(member.imageAlt || "").trim() ||
+      String(member.imageAlt || member.photoAlt || "").trim() ||
       String(payload.altText || payload.alt || "").trim() ||
       (name ? `Portrait de ${name}` : "") ||
       asset.title ||
@@ -212,6 +240,7 @@ async function hydrateTeamMediaAssets({
 }
 
 module.exports = {
+  TEAM_BLOCK_TYPES,
   asObject,
   blockType,
   isTeamBlock,
@@ -219,6 +248,7 @@ module.exports = {
   teamCollections,
   teamMediaReferences,
   loadTeamMediaAssets,
+  assetImageUrl,
   hydrateMember,
   hydrateTeamMembers,
   hydrateTeamMediaAssets,
