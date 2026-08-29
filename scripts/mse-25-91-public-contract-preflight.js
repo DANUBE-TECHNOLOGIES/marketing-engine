@@ -71,6 +71,7 @@ async function main() {
   }
 
   const diagnostics = [];
+  const imageUrls = new Set();
   let teamBlocks = 0;
   let members = 0;
   let membersWithImage = 0;
@@ -92,8 +93,10 @@ async function main() {
         for (const member of content[key]) {
           members += 1;
           const image = firstUrl(member);
-          if (image) membersWithImage += 1;
-          else {
+          if (image) {
+            membersWithImage += 1;
+            imageUrls.add(image);
+          } else {
             diagnostics.push({
               page: page.slug,
               blockType: type,
@@ -111,6 +114,7 @@ async function main() {
   console.log(`TEAM_BLOCKS=${teamBlocks}`);
   console.log(`TEAM_MEMBERS=${members}`);
   console.log(`TEAM_MEMBERS_WITH_IMAGE=${membersWithImage}`);
+  console.log(`TEAM_IMAGE_URLS=${JSON.stringify([...imageUrls])}`);
 
   if (diagnostics.length) {
     console.log("TEAM_DIAGNOSTICS=" + JSON.stringify(diagnostics));
@@ -120,6 +124,10 @@ async function main() {
   if (members === 0) throw new Error("public team blocks contain no members");
   if (membersWithImage !== members) {
     throw new Error(`public team portrait contract incomplete: ${membersWithImage}/${members}`);
+  }
+
+  if ([...imageUrls].some((url) => /\/media\/(assets|brand-assets)\//.test(url) && !url.startsWith("/media/"))) {
+    throw new Error("team media URL still exposes an internal absolute media origin");
   }
 
   console.log("TEAM_PUBLIC_CONTRACT=OK");
