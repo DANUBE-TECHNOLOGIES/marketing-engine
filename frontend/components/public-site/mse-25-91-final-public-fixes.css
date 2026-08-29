@@ -1,0 +1,121 @@
+/*
+ * MSE-25.91 final public locks.
+ * Loaded last by the agency layout so older public CSS cannot re-expand the
+ * home hero or visually suppress the canonical company logo.
+ */
+
+.public-site-header-logo-wrap {
+  flex: 0 0 auto;
+  width: clamp(220px, 18vw, 310px) !important;
+  height: 78px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  overflow: hidden !important;
+}
+
+.public-site-header-logo-wrap .public-brand-logo,
+.public-site-header__brand-logo {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  width: auto !important;
+  height: 74px !important;
+  max-width: none !important;
+  max-height: none !important;
+  object-fit: contain !important;
+  object-position: left center !important;
+  transform: scale(1.5) !important;
+  transform-origin: left center !important;
+}
+
+/* Home only: the visual remains full width, but must not monopolise the first
+ * viewport. These rules intentionally win over MSE-25.42 hero-finish.css. */
+.public-site-hero--home.public-site-hero--immersive[data-page-slug="home"],
+.public-site-hero--home[data-has-hero-image="true"][data-page-slug="home"] {
+  min-height: clamp(390px, 44vh, 480px) !important;
+  max-height: 480px !important;
+}
+
+.public-site-hero--home[data-page-slug="home"] > .public-site-container {
+  min-height: clamp(390px, 44vh, 480px) !important;
+  max-height: 480px !important;
+  padding-top: 38px !important;
+  padding-bottom: 72px !important;
+}
+
+.public-site-hero--home[data-page-slug="home"] .public-site-hero-copy {
+  width: min(590px, 54%) !important;
+  padding: clamp(22px, 2.6vw, 32px) !important;
+  border-radius: 24px !important;
+}
+
+.public-site-hero--home[data-page-slug="home"] h1 {
+  max-width: 560px !important;
+  font-size: clamp(2.45rem, 3.6vw, 3.75rem) !important;
+  line-height: .99 !important;
+}
+
+.public-site-hero--home[data-page-slug="home"] .public-site-hero-text {
+  margin-top: 14px !important;
+  font-size: clamp(.92rem, 1.05vw, 1.02rem) !important;
+  line-height: 1.5 !important;
+}
+
+.public-site-hero--home[data-page-slug="home"] .public-site-hero-actions {
+  margin-top: 18px !important;
+}
+
+@media (max-width: 900px) {
+  .public-site-header-logo-wrap {
+    width: clamp(190px, 28vw, 250px) !important;
+    height: 70px !important;
+  }
+
+  .public-site-header-logo-wrap .public-brand-logo,
+  .public-site-header__brand-logo {
+    height: 66px !important;
+    transform: scale(1.4) !important;
+  }
+
+  .public-site-hero--home[data-page-slug="home"] .public-site-hero-copy {
+    width: min(580px, 78%) !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .public-site-header-logo-wrap {
+    width: min(58vw, 220px) !important;
+    height: 62px !important;
+    justify-content: center !important;
+  }
+
+  .public-site-header-logo-wrap .public-brand-logo,
+  .public-site-header__brand-logo {
+    height: 58px !important;
+    object-position: center !important;
+    transform: scale(1.28) !important;
+    transform-origin: center !important;
+  }
+
+  .public-site-hero--home.public-site-hero--immersive[data-page-slug="home"],
+  .public-site-hero--home[data-has-hero-image="true"][data-page-slug="home"] {
+    min-height: 500px !important;
+    max-height: none !important;
+  }
+
+  .public-site-hero--home[data-page-slug="home"] > .public-site-container {
+    min-height: 500px !important;
+    max-height: none !important;
+    padding: 56px 0 82px !important;
+  }
+
+  .public-site-hero--home[data-page-slug="home"] .public-site-hero-copy {
+    width: 100% !important;
+    padding: 22px 20px !important;
+  }
+
+  .public-site-hero--home[data-page-slug="home"] h1 {
+    font-size: clamp(2.25rem, 10.5vw, 3.25rem) !important;
+  }
+}
