@@ -8,6 +8,29 @@ function localTeamTitle(site) { const city=clean(site?.agency?.city||site?.city)
 function localTeamIntro(site) { const city=clean(site?.agency?.city||site?.city); return city?`Des conseillers qui connaissent vos projets, vos envies et les solutions disponibles pour construire votre voyage depuis ${city}.`:"Des conseillers disponibles pour écouter votre projet et construire avec vous un voyage réellement adapté."; }
 function siteHref(site,slug){const root=String(site?.basePath||`/agence/${encodeURIComponent(site?.slug||"")}`).replace(/\/$/,"");return `${root}/${slug}`;}
 function memberPresentation(member){return clean(member.description||member.bio);}
+
+function assetUrl(value){
+ if(!value)return null;
+ if(typeof value==="string")return value.trim()||null;
+ if(Array.isArray(value)){
+  for(const candidate of value){const resolved=assetUrl(candidate);if(resolved)return resolved;}
+  return null;
+ }
+ if(typeof value!=="object")return null;
+ return assetUrl(
+  value.publicUrl||
+  value.url||
+  value.src||
+  value.path||
+  value.href||
+  value.assetUrl||
+  value.fileUrl||
+  value.file||
+  value.asset||
+  null
+ );
+}
+
 function memberImage(member){
  if(!member||typeof member!=="object")return null;
  const candidates=[
@@ -15,24 +38,44 @@ function memberImage(member){
   member.imageUrl,
   member.photo,
   member.photoUrl,
+  member.photoAsset,
   member.avatar,
   member.avatarUrl,
   member.portrait,
   member.portraitUrl,
-  member.media?.url,
-  member.media?.src,
-  member.image?.url,
-  member.image?.src,
-  member.photo?.url,
-  member.photo?.src,
+  member.portraitAsset,
+  member.media,
+  member.asset,
+  member.picture,
+  member.pictureUrl,
+  member.profileImage,
+  member.profileImageUrl,
+  member.profilePhoto,
+  member.profilePhotoUrl,
  ];
- return candidates.find((value)=>typeof value==="string"&&value.trim())||null;
+ for(const candidate of candidates){const resolved=assetUrl(candidate);if(resolved)return resolved;}
+ return null;
 }
 function memberImageAlt(member,name){return clean(member?.imageAlt||member?.photoAlt||member?.avatarAlt||member?.media?.altText||member?.media?.alt)||`Portrait de ${name}`;}
 
+function memberCollection(content,site){
+ const candidates=[
+  content.members,
+  content.items,
+  content.team,
+  content.teamMembers,
+  site?.team,
+  site?.teamMembers,
+  site?.agency?.team,
+  site?.agency?.teamMembers,
+  site?.agency?.members,
+ ];
+ return candidates.flatMap((value)=>Array.isArray(value)?value:[]).filter(Boolean);
+}
+
 export default function TeamRenderer({section,site}){
  const content=getSectionContent(section); const city=clean(site?.agency?.city||site?.city);
- const members=[...(Array.isArray(content.members)?content.members:[]),...(Array.isArray(content.items)?content.items:[]),...(Array.isArray(content.team)?content.team:[])].filter(Boolean);
+ const members=memberCollection(content,site);
  const uniqueMembers=members.filter((member,index,list)=>{const key=String(member.id||member.email||member.name||member.title||index);return list.findIndex((candidate,candidateIndex)=>String(candidate.id||candidate.email||candidate.name||candidate.title||candidateIndex)===key)===index;});
  if(!uniqueMembers.length&&content.showWhenEmpty!==true)return null; const singleMember=uniqueMembers.length===1;
  return <section className={`public-site-section public-site-team ${styles.section}`} data-team-size={uniqueMembers.length}>
@@ -43,4 +86,4 @@ export default function TeamRenderer({section,site}){
   </div>
  </section>;
 }
-export {localTeamIntro,localTeamTitle,memberImage,memberImageAlt,memberPresentation,siteHref};
+export {assetUrl,localTeamIntro,localTeamTitle,memberCollection,memberImage,memberImageAlt,memberPresentation,siteHref};
