@@ -8,17 +8,21 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
 const read = (relative) => fs.readFileSync(path.join(root, relative), "utf8");
 
-test("MSE-25.91 preserves canonical public brand logo runtime", () => {
+test("MSE-25.91 restores a guaranteed Mondescale header logo", () => {
   const source = read("components/public-site/PublicBrandLogo.js");
   assert.match(source, /data-public-brand-logo="1"/);
-  assert.match(source, /brandAssets/);
+  assert.match(source, /MONDESCALE_FALLBACK_LOGO = "\/brand\/logo-mondescale\.png"/);
+  assert.match(source, /asset\.publicUrl/);
   assert.match(source, /site\?\.brandProfile\?\.assets/);
 });
 
-test("MSE-25.91 preserves team portrait fallbacks from canonical lineage", () => {
+test("MSE-25.91 restores team portrait asset-object fallbacks on home and team page", () => {
   const source = read("components/public-site/renderers/TeamRenderer.js");
-  assert.match(source, /member\.avatar/);
-  assert.match(source, /member\.media\?\.url/);
+  assert.match(source, /function assetUrl/);
+  assert.match(source, /member\.photoAsset/);
+  assert.match(source, /member\.portraitAsset/);
+  assert.match(source, /member\.profilePhoto/);
+  assert.match(source, /site\?\.agency\?\.teamMembers/);
   assert.match(source, /Portrait de \$\{name\}/);
 });
 
@@ -30,20 +34,30 @@ test("MSE-25.91 preserves home partner network and agency partner selection", ()
   assert.match(source, /Notre sélection principale/);
 });
 
-test("MSE-25.91 keeps canonical immersive hero and routes travel CTA to showcase", () => {
-  const source = read("components/public-site/renderers/HeroV2Renderer.js");
-  assert.match(source, /public-site-hero--immersive/);
-  assert.match(source, /NETWORK_HOME_HERO_IMAGE/);
-  assert.match(source, /getShowcaseUrl\(site\)/);
-  assert.match(source, /Découvrir nos voyages/);
+test("MSE-25.91 keeps a compact immersive home hero and routes travel CTA to showcase", () => {
+  const renderer = read("components/public-site/renderers/HeroV2Renderer.js");
+  const css = read("components/public-site/network-home-hero.css");
+  assert.match(renderer, /public-site-hero--immersive/);
+  assert.match(renderer, /NETWORK_HOME_HERO_IMAGE/);
+  assert.match(renderer, /getShowcaseUrl\(site\)/);
+  assert.match(renderer, /Découvrir nos voyages/);
+  assert.match(css, /min-height: clamp\(440px, 52vh, 570px\)/);
 });
 
-test("MSE-25.91 keeps payment band before footer and Visa visible", () => {
+test("MSE-25.91 exposes payment reassurance once and keeps Visa resilient", () => {
   const layout = read("app/agence/[siteSlug]/layout.js");
-  const payment = read("components/public-site/PublicPaymentMethodsBand.js");
-  assert.ok(layout.indexOf("<PublicPaymentMethodsBand />") < layout.indexOf("<PublicSiteFooter site={site} />"));
-  assert.match(payment, /label: "Visa"/);
-  assert.match(payment, /mark: "VISA"/);
+  const reassurance = read("components/public-site/PublicReassuranceBand.js");
+  assert.doesNotMatch(layout, /PublicPaymentMethodsBand/);
+  assert.match(reassurance, /id: "visa"/);
+  assert.match(reassurance, /Visa_2021\.svg/);
+  assert.match(reassurance, /fallback: "VISA"/);
+});
+
+test("MSE-25.91 uses the canonical backend service DNS", () => {
+  const compose = read("../docker-compose.yml");
+  assert.match(compose, /BACKEND_INTERNAL_URL: "http:\/\/backend:4000"/);
+  assert.match(compose, /MONDESCALE_BACKEND_URL: "http:\/\/backend:4000"/);
+  assert.doesNotMatch(compose, /BACKEND_INTERNAL_URL: "http:\/\/mle-backend:4000"/);
 });
 
 test("MSE-25.91 never emits bare mondescale.com showcase host", () => {
