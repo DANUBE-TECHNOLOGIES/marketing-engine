@@ -16,10 +16,11 @@ test("MSE-25.91 restores a guaranteed prominent Mondescale header logo without c
   assert.match(source, /asset\.publicUrl/);
   assert.match(source, /site\?\.brandProfile\?\.assets/);
   assert.match(finalCss, /overflow: visible !important/);
-  assert.match(finalCss, /transform: none !important/);
-  assert.match(finalCss, /width: 260px !important/);
-  assert.match(finalCss, /width: 230px !important/);
-  assert.doesNotMatch(finalCss, /transform:\s*scale/);
+  assert.match(finalCss, /width: 245px !important/);
+  assert.match(finalCss, /width: 190px !important/);
+  assert.match(finalCss, /transform: scale\(2\.75\) !important/);
+  assert.match(finalCss, /transform-origin: left center !important/);
+  assert.match(finalCss, /max-height: none !important/);
 });
 
 test("MSE-25.91 restores team portrait asset-object fallbacks on home and team page", () => {
@@ -48,7 +49,7 @@ test("MSE-25.91 preserves home partner network and agency partner selection", ()
   assert.match(source, /Notre sélection principale/);
 });
 
-test("MSE-25.91 keeps the home hero contained, balanced and routes travel CTA to showcase", () => {
+test("MSE-25.91 keeps the home hero contained and guarantees complete copy plus CTAs", () => {
   const renderer = read("components/public-site/renderers/HeroV2Renderer.js");
   const css = read("components/public-site/network-home-hero.css");
   assert.match(renderer, /public-site-hero--immersive/);
@@ -56,10 +57,13 @@ test("MSE-25.91 keeps the home hero contained, balanced and routes travel CTA to
   assert.match(renderer, /getShowcaseUrl\(site\)/);
   assert.match(renderer, /Découvrir nos voyages/);
   assert.match(css, /width: min\(1480px, calc\(100% - 48px\)\)/);
-  assert.match(css, /height: 420px/);
+  assert.match(css, /height: 460px/);
   assert.match(css, /margin: 18px auto 0/);
   assert.match(css, /border-radius: 26px/);
-  assert.match(css, /width: min\(590px, 52%\)/);
+  assert.match(css, /width: min\(620px, 54%\)/);
+  assert.match(css, /max-height: none/);
+  assert.match(css, /overflow: visible/);
+  assert.match(css, /font-size: clamp\(2\.2rem, 2\.65vw, 3\.15rem\)/);
   assert.doesNotMatch(css, /52vh/);
 });
 
