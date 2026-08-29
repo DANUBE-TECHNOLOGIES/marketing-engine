@@ -46,7 +46,7 @@ jobs:
           npx eslint
           app/agence/[siteSlug]/layout.js
           components/public-site/PublicBrandLogo.js
-          components/public-site/PublicPaymentMethodsBand.js
+          components/public-site/PublicReassuranceBand.js
           components/public-site/renderers/HeroV2Renderer.js
           components/public-site/renderers/TeamRenderer.js
           components/public-site/renderers/PartnersRenderer.js
