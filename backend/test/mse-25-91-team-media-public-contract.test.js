@@ -9,6 +9,7 @@ const {
   hydrateTeamMembers,
   isTeamBlock,
   memberAssetId,
+  teamCollections,
 } = require("../src/modules/public-site-read/team-media-hydrator");
 
 test("MSE-25.91 recognises every public team renderer variant", () => {
@@ -17,10 +18,14 @@ test("MSE-25.91 recognises every public team renderer variant", () => {
   }
 });
 
+test("MSE-25.91 recognises legacy teamMembers collections", () => {
+  assert.deepEqual(teamCollections({ teamMembers: [{ name: "Céline" }] }), ["teamMembers"]);
+});
+
 test("MSE-25.91 resolves team asset ids and exposes a real image URL", () => {
   const member = {
     name: "Céline",
-    portrait: { assetId: "asset-celine" },
+    portraitAsset: { id: "asset-celine" },
   };
   assert.equal(memberAssetId(member), "asset-celine");
 
@@ -31,7 +36,7 @@ test("MSE-25.91 resolves team asset ids and exposes a real image URL", () => {
         blocks: [
           {
             blockType: "equipe-grid",
-            content: { members: [member] },
+            content: { teamMembers: [member] },
           },
         ],
       },
@@ -40,13 +45,15 @@ test("MSE-25.91 resolves team asset ids and exposes a real image URL", () => {
       {
         id: "asset-celine",
         title: "Portrait Céline",
-        payload: { publicUrl: "/media/celine.webp" },
+        type: "image",
+        status: "draft",
+        payload: { image: { publicUrl: "/media/celine.webp" } },
         currentVersion: 3,
       },
     ]
   );
 
-  const hydrated = pages[0].blocks[0].content.members[0];
+  const hydrated = pages[0].blocks[0].content.teamMembers[0];
   assert.equal(hydrated.image, "/media/celine.webp");
   assert.equal(hydrated.imageUrl, "/media/celine.webp");
   assert.equal(hydrated.__mediaSource, "asset-engine");
