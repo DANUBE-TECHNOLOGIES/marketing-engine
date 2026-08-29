@@ -71,6 +71,7 @@ trap rollback ERR
 command -v git >/dev/null 2>&1 || fail "git is required"
 command -v docker >/dev/null 2>&1 || fail "docker is required"
 command -v curl >/dev/null 2>&1 || fail "curl is required"
+command -v node >/dev/null 2>&1 || fail "node is required"
 docker compose version >/dev/null 2>&1 || fail "docker compose plugin is required"
 
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || fail "run from marketing-engine repository"
@@ -90,6 +91,26 @@ log "deploying $DEPLOY_HEAD"
 
 log "running lightweight canonical public contract test"
 node --test frontend/test/mse-25-91-canonical-public-reconvergence.test.mjs
+
+# Backend is bind-mounted from ./backend and runs under nodemon in the canonical
+# compose topology. A git fast-forward therefore reloads backend source without
+# a database migration or image rebuild. Wait for that reload and verify the
+# real public contract before spending time rebuilding/switching the frontend.
+log "waiting for bind-mounted backend source reload"
+BACKEND_READY=false
+for attempt in $(seq 1 30); do
+  BACKEND_CODE="$(curl --silent --show-error --connect-timeout 3 --max-time 8 --output /dev/null --write-out '%{http_code}' http://127.0.0.1:4000/health 2>/dev/null || true)"
+  log "backend reload attempt $attempt: HTTP ${BACKEND_CODE:-000}"
+  if [[ "$BACKEND_CODE" == "200" ]]; then
+    BACKEND_READY=true
+    break
+  fi
+  sleep 2
+done
+[[ "$BACKEND_READY" == "true" ]] || fail "backend did not become healthy after source reload"
+
+log "validating real public team portrait contract before frontend build"
+MSE_25_91_PROBE_SITE_SLUG="$PROBE_SITE_SLUG" node scripts/mse-25-91-public-contract-preflight.js
 
 log "reclaiming safe build space"
 docker builder prune -af >/dev/null 2>&1 || true
@@ -158,6 +179,10 @@ if grep -Fq 'public-payment-band' "$SSR_FILE"; then
   fail "duplicate legacy payment band still present in SSR"
 fi
 rm -f "$SSR_FILE"
+
+# Re-run the contract gate after the frontend switch as an end-to-end guard.
+log "revalidating public team portrait contract after frontend switch"
+MSE_25_91_PROBE_SITE_SLUG="$PROBE_SITE_SLUG" node scripts/mse-25-91-public-contract-preflight.js
 
 trap - ERR
 NEW_CONTAINER_STARTED=false
