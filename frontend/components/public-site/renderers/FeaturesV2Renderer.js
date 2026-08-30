@@ -6,6 +6,8 @@ import {
 } from "./helpers";
 import { resolvedTargetCities } from "../../../lib/seo/local-area-config";
 
+const BUSINESS_TRAVEL_MARKERS = ["business travel", "voyage d'affaire", "voyages d'affaire", "voyage d’affaires", "voyages d’affaires"];
+
 function normalizeColumns(value) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return 3;
@@ -42,6 +44,38 @@ function featureHref(root, value) {
   return `${root}/${href.replace(/^\/+|\/+$/g, "")}`;
 }
 
+function isTuiSite(site) {
+  const identity = `${site?.slug || ""} ${site?.name || ""} ${site?.agency?.name || ""}`.toLowerCase();
+  return identity.includes("tui-store") || /\btui\b/.test(identity);
+}
+
+function hasBusinessTravel(items) {
+  return items.some((item) => {
+    const value = `${item?.id || ""} ${item?.title || ""} ${item?.label || ""} ${item?.text || ""} ${item?.description || ""}`.toLowerCase();
+    return BUSINESS_TRAVEL_MARKERS.some((marker) => value.includes(marker));
+  });
+}
+
+function businessTravelItem(site) {
+  const city = localCity(site);
+  return {
+    id: "business-travel",
+    icon: "💼",
+    title: "Business Travel – Voyages d’affaires",
+    text: city
+      ? `Déplacements professionnels depuis ${city} : vols, trains, hôtels et itinéraires adaptés à vos contraintes.`
+      : "Déplacements professionnels : vols, trains, hôtels et itinéraires adaptés à vos contraintes.",
+    description: "Nous accompagnons dirigeants, collaborateurs et équipes dans l’organisation de leurs voyages d’affaires, avec optimisation des trajets et des budgets, suivi des réservations et assistance en cas d’imprévu.",
+    href: "contact",
+  };
+}
+
+function serviceItems(site, sourceItems) {
+  const items = Array.isArray(sourceItems) ? sourceItems : [];
+  if (isTuiSite(site) || hasBusinessTravel(items)) return items;
+  return [...items, businessTravelItem(site)];
+}
+
 function defaultFeaturesTitle(site) {
   const city = localCity(site);
   return city ? `Nos services voyage à ${city}` : "Nos services voyage";
@@ -64,7 +98,7 @@ function defaultFeaturesIntroduction(site) {
 
 export default function FeaturesV2Renderer({ section, site }) {
   const content = getSectionContent(section);
-  const items = Array.isArray(content.items) ? content.items : [];
+  const items = serviceItems(site, content.items);
   const introduction = content.introduction || content.text || content.description || defaultFeaturesIntroduction(site);
   const columns = normalizeColumns(content.columns);
   const minimum = minimumCardWidth(columns);
@@ -101,4 +135,16 @@ export default function FeaturesV2Renderer({ section, site }) {
   );
 }
 
-export { defaultFeaturesIntroduction, defaultFeaturesTitle, featureHref, joinCities, localCity, siteRoot };
+export {
+  BUSINESS_TRAVEL_MARKERS,
+  businessTravelItem,
+  defaultFeaturesIntroduction,
+  defaultFeaturesTitle,
+  featureHref,
+  hasBusinessTravel,
+  isTuiSite,
+  joinCities,
+  localCity,
+  serviceItems,
+  siteRoot,
+};
