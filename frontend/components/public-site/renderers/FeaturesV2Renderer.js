@@ -59,7 +59,7 @@ function hasBusinessTravel(items) {
 
 function isGroupTravelItem(item) {
   const value = `${item?.id || ""} ${item?.title || ""} ${item?.label || ""}`.toLowerCase();
-  return GROUP_TRAVEL_MARKERS.some((marker) => value === marker || value.includes(` ${marker}`) || value.includes(`${marker} `));
+  return GROUP_TRAVEL_MARKERS.some((marker) => value.includes(marker));
 }
 
 function businessTravelItem(site) {
