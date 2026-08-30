@@ -1,5 +1,10 @@
 import Link from "next/link";
 
+import HeroV2Renderer from "./renderers/HeroV2Renderer";
+
+const BUSINESS_TRAVEL_HERO_IMAGE =
+  "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=2400&q=88";
+
 function siteRoot(site) {
   return String(site?.basePath || `/agence/${encodeURIComponent(site?.slug || "")}`).replace(/\/$/, "");
 }
@@ -39,25 +44,51 @@ function CardGrid({ items }) {
   );
 }
 
+function businessTravelHero(site) {
+  const city = cityName(site);
+  return {
+    id: "business-travel-hero",
+    type: "hero",
+    title: "Business Travel : vos voyages d’affaires accompagnés de A à Z",
+    content: {
+      __builderType: "hero",
+      eyebrow: "Voyages professionnels",
+      title: "Business Travel : vos voyages d’affaires accompagnés de A à Z",
+      text: city
+        ? `À ${city}, notre équipe organise, optimise et sécurise les déplacements professionnels de vos collaborateurs, avant, pendant et après chaque voyage.`
+        : "Notre équipe organise, optimise et sécurise les déplacements professionnels de vos collaborateurs, avant, pendant et après chaque voyage.",
+      backgroundImage: BUSINESS_TRAVEL_HERO_IMAGE,
+      imageAlt: city
+        ? `Voyages d’affaires et déplacements professionnels depuis ${city}`
+        : "Voyages d’affaires et déplacements professionnels",
+      backgroundPosition: "center 52%",
+      overlayOpacity: 78,
+      alignment: "left",
+      primaryCta: {
+        label: "Parler de vos déplacements",
+        href: "contact",
+      },
+      secondaryCta: {
+        label: "Découvrir nos services",
+        href: "services",
+      },
+    },
+  };
+}
+
 export default function BusinessTravelPage({ site }) {
   const city = cityName(site);
   const root = siteRoot(site);
-  const agencyLabel = city ? `notre agence de ${city}` : "notre agence";
+  const hero = businessTravelHero(site);
 
   return (
     <main className="public-site-business-travel">
-      <section className="public-site-section public-site-page-heading">
-        <div className="public-site-container public-site-prose">
-          <p className="public-site-eyebrow">Voyages professionnels</p>
-          <h1>Business Travel : vos voyages d’affaires accompagnés de A à Z</h1>
-          <p className="public-site-section-intro">
-            Vous vous concentrez sur votre activité, nous organisons et sécurisons les déplacements de vos collaborateurs. {city ? `À ${city}, ` : ""}{agencyLabel} vous accompagne avec une organisation souple, des solutions de réservation adaptées et un suivi avant, pendant et après chaque voyage.
-          </p>
-          <div className="public-site-related-links">
-            <Link href={`${root}/contact`}>Parler de vos déplacements professionnels</Link>
-          </div>
-        </div>
-      </section>
+      <HeroV2Renderer
+        section={hero}
+        site={site}
+        page={{ slug: "business-travel", title: hero.title }}
+        sharedNetworkHero
+      />
 
       <section className="public-site-section public-site-features">
         <div className="public-site-container">
@@ -118,4 +149,9 @@ export default function BusinessTravelPage({ site }) {
   );
 }
 
-export { cityName, siteRoot };
+export {
+  BUSINESS_TRAVEL_HERO_IMAGE,
+  businessTravelHero,
+  cityName,
+  siteRoot,
+};
