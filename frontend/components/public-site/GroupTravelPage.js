@@ -9,13 +9,55 @@ const GROUP_TYPES = [
   ["Groupes scolaires et éducatifs", "Transport, hébergement et programme sont organisés autour du projet, de l’âge des participants et des contraintes d’encadrement."],
 ];
 
-const FORMATS = [
-  ["Séjours", "Une destination, un hébergement adapté au groupe et des prestations sélectionnées selon vos envies."],
-  ["Circuits", "Un itinéraire construit étape par étape avec transports, visites, guides et hébergements coordonnés."],
-  ["Croisières", "Cabines, acheminements et prestations regroupés pour profiter ensemble du voyage dès le départ."],
-  ["Week-ends et escapades", "Quelques jours pour découvrir une ville, assister à un événement ou partager une expérience collective."],
-  ["Voyages sur mesure", "Un projet conçu à partir d’une page blanche lorsque votre groupe, votre destination ou votre programme sort des standards."],
-  ["Départs personnalisés", "Selon le projet, nous étudions les solutions de transport et les points de départ les plus cohérents pour votre groupe."],
+const GROUP_JOURNEYS = [
+  {
+    type: "Circuit",
+    destination: "Albanie",
+    title: "Entre cités historiques et Riviera albanaise",
+    duration: "8 jours / 7 nuits",
+    text: "Un itinéraire collectif entre Tirana, Berat, Gjirokastër et la côte ionienne, à personnaliser selon le rythme et les centres d’intérêt de votre groupe.",
+    image: "https://images.unsplash.com/photo-1602002418082-a4443e081dd1?auto=format&fit=crop&w=1200&q=82",
+  },
+  {
+    type: "Séjour",
+    destination: "Îles grecques",
+    title: "Une semaine au soleil à partager",
+    duration: "8 jours / 7 nuits",
+    text: "Hébergement, acheminement et temps forts organisés autour d’un point de chute commun, avec la liberté d’ajouter excursions et moments privatifs.",
+    image: "https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&w=1200&q=82",
+  },
+  {
+    type: "Croisière",
+    destination: "Méditerranée",
+    title: "Plusieurs escales, un seul voyage de groupe",
+    duration: "Selon itinéraire",
+    text: "Une formule particulièrement adaptée aux groupes : cabines, acheminements et prestations coordonnées, tout en laissant à chacun son propre rythme à bord.",
+    image: "https://images.unsplash.com/photo-1548574505-5e239809ee19?auto=format&fit=crop&w=1200&q=82",
+  },
+  {
+    type: "Escapade",
+    destination: "Europe",
+    title: "Capitales européennes le temps d’un week-end",
+    duration: "3 à 4 jours",
+    text: "Une parenthèse collective autour d’une ville, d’un événement ou d’une thématique, avec transport, hôtel, visites et temps libres assemblés sur mesure.",
+    image: "https://images.unsplash.com/photo-1499856871958-5b9627545d1a?auto=format&fit=crop&w=1200&q=82",
+  },
+  {
+    type: "Grand voyage",
+    destination: "Afrique australe",
+    title: "Safari et grands espaces en petit groupe",
+    duration: "10 jours et +",
+    text: "Un projet d’exception combinant étapes, safaris, hébergements et expériences, construit autour du budget, de la durée disponible et du profil des participants.",
+    image: "https://images.unsplash.com/photo-1516426122078-c23e76319801?auto=format&fit=crop&w=1200&q=82",
+  },
+  {
+    type: "Sur mesure",
+    destination: "Votre destination",
+    title: "Votre groupe, votre propre voyage",
+    duration: "À définir ensemble",
+    text: "Une destination en tête, une date ou simplement une envie ? Nous partons d’une page blanche pour imaginer un voyage qui n’appartient qu’à votre groupe.",
+    image: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=82",
+  },
 ];
 
 const STEPS = [
@@ -46,9 +88,29 @@ function CardGrid({ items, columns = 3 }) {
   );
 }
 
+function JourneyGrid({ journeys, contactHref }) {
+  return (
+    <div className="public-site-card-grid" data-columns="3">
+      {journeys.map((journey) => (
+        <article className="public-site-card public-site-feature-card" key={`${journey.type}-${journey.title}`} style={{ overflow: "hidden", padding: 0 }}>
+          <img src={journey.image} alt={`${journey.type} en groupe - ${journey.destination}`} loading="lazy" style={{ width: "100%", aspectRatio: "4 / 3", objectFit: "cover", display: "block" }} />
+          <div style={{ padding: "24px" }}>
+            <p className="public-site-section-kicker">{journey.type} · {journey.destination}</p>
+            <h3>{journey.title}</h3>
+            <p><strong>{journey.duration}</strong></p>
+            <p>{journey.text}</p>
+            <Link href={contactHref}>Imaginer ce voyage avec mon agence</Link>
+          </div>
+        </article>
+      ))}
+    </div>
+  );
+}
+
 export default function GroupTravelPage({ site }) {
   const city = cityName(site);
   const root = siteRoot(site);
+  const contactHref = `${root}/contact`;
   const hero = {
     id: "group-travel-hero",
     type: "hero",
@@ -62,7 +124,7 @@ export default function GroupTravelPage({ site }) {
       backgroundPosition: "center 48%",
       overlayOpacity: 68,
       primaryCta: { label: "Construire mon voyage de groupe", href: "contact" },
-      secondaryCta: { label: "Découvrir nos destinations", href: "destinations" },
+      secondaryCta: { label: "Découvrir nos inspirations", href: "#inspirations-groupe" },
     },
   };
 
@@ -74,21 +136,17 @@ export default function GroupTravelPage({ site }) {
         <div className="public-site-container">
           <p className="public-site-section-kicker">Votre groupe, votre voyage</p>
           <h2>Un projet collectif, une organisation sur mesure</h2>
-          <p className="public-site-section-intro">Un voyage de groupe ne se résume pas à réserver plusieurs places. Il faut faire coïncider les envies, le budget, le rythme, les transports et les prestations. Votre agence centralise le projet et construit une solution cohérente pour l’ensemble des participants.</p>
+          <p className="public-site-section-intro">Un voyage de groupe ne se résume pas à réserver plusieurs places. Votre agence fait coïncider les envies, le budget, le rythme, les transports et les prestations pour construire un voyage cohérent pour tous.</p>
           <CardGrid items={GROUP_TYPES} columns={4} />
         </div>
       </section>
 
-      <section className="public-site-section public-site-features">
+      <section id="inspirations-groupe" className="public-site-section public-site-features">
         <div className="public-site-container">
-          <p className="public-site-section-kicker">Toutes les envies de groupe</p>
-          <h2>Du week-end au grand circuit</h2>
-          <p className="public-site-section-intro">Le format s’adapte à votre groupe : séjour détente, circuit de découverte, croisière, escapade ou création entièrement personnalisée.</p>
-          <CardGrid items={FORMATS} columns={3} />
-          <div className="public-site-related-links">
-            <Link href={`${root}/destinations`}>Explorer nos destinations</Link>
-            <Link href={`${root}/inspiration`}>Trouver des idées de voyage</Link>
-          </div>
+          <p className="public-site-section-kicker">Quelques idées pour partir ensemble</p>
+          <h2>Des voyages à imaginer, puis à faire vôtres</h2>
+          <p className="public-site-section-intro">Ces inspirations ne sont pas un catalogue figé. Elles montrent différentes façons de voyager en groupe. Destination, durée, étapes, hébergements, visites et services peuvent être retravaillés avec votre conseiller selon votre projet.</p>
+          <JourneyGrid journeys={GROUP_JOURNEYS} contactHref={contactHref} />
         </div>
       </section>
 
@@ -128,8 +186,8 @@ export default function GroupTravelPage({ site }) {
           <h2>Vous avez une destination, une idée… ou simplement une date ?</h2>
           <p>Indiquez-nous le nombre approximatif de participants, la période, la durée envisagée et votre budget. Notre équipe vous aidera à transformer ces premiers éléments en un véritable projet de voyage.</p>
           <div className="public-site-related-links">
-            <Link href={`${root}/contact`}>{city ? `Présenter mon projet à l’agence de ${city}` : "Présenter mon projet de groupe"}</Link>
-            <Link href={`${root}/services`}>Découvrir tous nos services</Link>
+            <Link href={contactHref}>{city ? `Présenter mon projet à l’agence de ${city}` : "Présenter mon projet de groupe"}</Link>
+            <Link href={`${root}/destinations`}>Explorer toutes nos destinations</Link>
           </div>
         </div>
       </section>
@@ -137,4 +195,4 @@ export default function GroupTravelPage({ site }) {
   );
 }
 
-export { cityName, siteRoot };
+export { GROUP_JOURNEYS, cityName, siteRoot };
