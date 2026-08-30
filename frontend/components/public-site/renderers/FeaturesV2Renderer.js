@@ -7,6 +7,7 @@ import {
 import { resolvedTargetCities } from "../../../lib/seo/local-area-config";
 
 const BUSINESS_TRAVEL_MARKERS = ["business travel", "voyage d'affaire", "voyages d'affaire", "voyage d’affaires", "voyages d’affaires"];
+const GROUP_TRAVEL_MARKERS = ["groupe", "groupes", "voyage en groupe", "voyages en groupe"];
 
 function normalizeColumns(value) {
   const parsed = Number(value);
@@ -37,6 +38,11 @@ function localCity(site) {
   return String(site?.agency?.city || site?.city || "").trim();
 }
 
+function isTuiSite(site) {
+  const identity = `${site?.slug || ""} ${site?.name || ""} ${site?.agency?.name || ""}`.toLowerCase();
+  return identity.includes("tui-store") || /\btui\b/.test(identity);
+}
+
 function featureHref(root, value) {
   const href = String(value || "").trim();
   if (!href) return null;
@@ -49,6 +55,11 @@ function hasBusinessTravel(items) {
     const value = `${item?.id || ""} ${item?.title || ""} ${item?.label || ""} ${item?.text || ""} ${item?.description || ""}`.toLowerCase();
     return BUSINESS_TRAVEL_MARKERS.some((marker) => value.includes(marker));
   });
+}
+
+function isGroupTravelItem(item) {
+  const value = `${item?.id || ""} ${item?.title || ""} ${item?.label || ""}`.toLowerCase();
+  return GROUP_TRAVEL_MARKERS.some((marker) => value === marker || value.includes(` ${marker}`) || value.includes(`${marker} `));
 }
 
 function businessTravelItem(site) {
@@ -64,7 +75,10 @@ function businessTravelItem(site) {
 }
 
 function serviceItems(site, sourceItems) {
-  const items = Array.isArray(sourceItems) ? sourceItems : [];
+  const source = Array.isArray(sourceItems) ? sourceItems : [];
+  const items = isTuiSite(site)
+    ? source
+    : source.map((item) => isGroupTravelItem(item) ? { ...item, href: "voyages-en-groupe" } : item);
   if (hasBusinessTravel(items)) return items;
   return [...items, businessTravelItem(site)];
 }
@@ -130,11 +144,14 @@ export default function FeaturesV2Renderer({ section, site }) {
 
 export {
   BUSINESS_TRAVEL_MARKERS,
+  GROUP_TRAVEL_MARKERS,
   businessTravelItem,
   defaultFeaturesIntroduction,
   defaultFeaturesTitle,
   featureHref,
   hasBusinessTravel,
+  isGroupTravelItem,
+  isTuiSite,
   joinCities,
   localCity,
   serviceItems,
