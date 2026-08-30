@@ -55,12 +55,10 @@ function businessTravelItem(site) {
   const city = localCity(site);
   return {
     id: "business-travel",
-    icon: "💼",
-    title: "Business Travel – Voyages d’affaires",
+    title: "Business Travel",
     text: city
-      ? `Déplacements professionnels depuis ${city} : vols, trains, hôtels et itinéraires adaptés à vos contraintes.`
-      : "Déplacements professionnels : vols, trains, hôtels et itinéraires adaptés à vos contraintes.",
-    description: "Nous accompagnons dirigeants, collaborateurs et équipes dans l’organisation de leurs voyages d’affaires, avec optimisation des trajets et des budgets, suivi des réservations et assistance en cas d’imprévu.",
+      ? `Voyages d’affaires : organisation et suivi de vos déplacements professionnels depuis ${city}.`
+      : "Voyages d’affaires : organisation et suivi de vos déplacements professionnels.",
     href: "contact",
   };
 }
