@@ -9,11 +9,6 @@ import { buildBreadcrumbSchema, buildTravelAgencySchema } from "../../../../lib/
 
 const PUBLIC_ORIGIN = String(process.env.NEXT_PUBLIC_SITE_ORIGIN || "https://agences.mondescale.com").replace(/\/+$/g, "");
 
-function isTuiSite(site) {
-  const identity = `${site?.slug || ""} ${site?.name || ""} ${site?.agency?.name || ""}`.toLowerCase();
-  return identity.includes("tui-store") || /\btui\b/.test(identity);
-}
-
 function rootPath(siteSlug) {
   return `/agence/${siteSlug}`;
 }
@@ -22,13 +17,14 @@ export async function generateMetadata({ params }) {
   const resolved = await params;
   try {
     const site = await publicSiteApi.getSite(resolved.siteSlug);
-    if (!site || isTuiSite(site)) return { robots: { index: false, follow: false } };
+    if (!site) return { robots: { index: false, follow: false } };
     const city = String(site?.agency?.city || site?.city || "").trim();
+    const brand = String(site?.agency?.name || site?.name || "Mondescale Voyages").trim();
     const canonical = `${PUBLIC_ORIGIN}${rootPath(resolved.siteSlug)}/voyages-en-groupe`;
-    const title = city ? `Voyages en groupe à ${city} | Mondescale Voyages` : "Voyages en groupe | Mondescale Voyages";
+    const title = city ? `Voyages en groupe à ${city} | ${brand}` : `Voyages en groupe | ${brand}`;
     const description = city
-      ? `Votre agence Mondescale à ${city} organise vos voyages de groupe sur mesure : séjours, circuits, croisières et escapades pour associations, CSE, collectivités, familles et amis.`
-      : "Mondescale organise vos voyages de groupe sur mesure : séjours, circuits, croisières et escapades, avec un accompagnement de proximité.";
+      ? `Votre agence à ${city} organise vos voyages de groupe sur mesure : séjours, circuits, croisières et escapades pour associations, CSE, collectivités, familles et amis.`
+      : "Votre agence organise vos voyages de groupe sur mesure : séjours, circuits, croisières et escapades, avec un accompagnement de proximité.";
     return {
       title,
       description,
@@ -51,7 +47,7 @@ export default async function GroupTravelRoute({ params }) {
     if (error?.statusCode === 404) notFound();
     throw error;
   }
-  if (!site || isTuiSite(site)) notFound();
+  if (!site) notFound();
 
   const root = rootPath(resolved.siteSlug);
   const currentUrl = `${PUBLIC_ORIGIN}${root}/voyages-en-groupe`;
@@ -77,5 +73,3 @@ export default async function GroupTravelRoute({ params }) {
     </>
   );
 }
-
-export { isTuiSite };
