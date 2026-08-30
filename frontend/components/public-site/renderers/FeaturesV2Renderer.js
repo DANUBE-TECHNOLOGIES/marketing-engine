@@ -59,7 +59,7 @@ function businessTravelItem(site) {
     text: city
       ? `Voyages d’affaires : organisation et suivi de vos déplacements professionnels depuis ${city}.`
       : "Voyages d’affaires : organisation et suivi de vos déplacements professionnels.",
-    href: "contact",
+    href: "business-travel",
   };
 }
 
