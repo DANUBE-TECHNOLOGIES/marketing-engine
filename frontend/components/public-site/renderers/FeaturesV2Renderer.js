@@ -44,11 +44,6 @@ function featureHref(root, value) {
   return `${root}/${href.replace(/^\/+|\/+$/g, "")}`;
 }
 
-function isTuiSite(site) {
-  const identity = `${site?.slug || ""} ${site?.name || ""} ${site?.agency?.name || ""}`.toLowerCase();
-  return identity.includes("tui-store") || /\btui\b/.test(identity);
-}
-
 function hasBusinessTravel(items) {
   return items.some((item) => {
     const value = `${item?.id || ""} ${item?.title || ""} ${item?.label || ""} ${item?.text || ""} ${item?.description || ""}`.toLowerCase();
@@ -72,7 +67,7 @@ function businessTravelItem(site) {
 
 function serviceItems(site, sourceItems) {
   const items = Array.isArray(sourceItems) ? sourceItems : [];
-  if (isTuiSite(site) || hasBusinessTravel(items)) return items;
+  if (hasBusinessTravel(items)) return items;
   return [...items, businessTravelItem(site)];
 }
 
@@ -142,7 +137,6 @@ export {
   defaultFeaturesTitle,
   featureHref,
   hasBusinessTravel,
-  isTuiSite,
   joinCities,
   localCity,
   serviceItems,
