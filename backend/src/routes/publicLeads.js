@@ -54,7 +54,7 @@ async function loadLeadForNotification(prisma, id) {
       l."name", l."phone", l."email", l."destination", l."travelDates", l."travellers",
       l."budget", l."wishes", l."status", l."erpSyncStatus", l."notificationStatus",
       l."notificationSentAt", l."notificationMessageId", l."notificationError",
-      l."createdAt", l."updatedAt",
+      l."contactedAt", l."convertedAt", l."closedAt", l."createdAt", l."updatedAt",
       a."name" AS "agencyName", a."city" AS "agencyCity", a."email" AS "agencyEmail"
     FROM "PublicLead" l
     LEFT JOIN "Agency" a ON a."id" = l."agencyId"
@@ -158,7 +158,7 @@ function createPublicLeadsRoutes(prisma) {
           l."name", l."phone", l."email", l."destination", l."travelDates", l."travellers",
           l."budget", l."wishes", l."status", l."erpSyncStatus",
           l."notificationStatus", l."notificationSentAt", l."notificationMessageId", l."notificationError",
-          l."createdAt", l."updatedAt",
+          l."contactedAt", l."convertedAt", l."closedAt", l."createdAt", l."updatedAt",
           a."name" AS "agencyName", a."city" AS "agencyCity", a."email" AS "agencyEmail"
         FROM "PublicLead" l
         LEFT JOIN "Agency" a ON a."id" = l."agencyId"
@@ -182,6 +182,63 @@ function createPublicLeadsRoutes(prisma) {
     }
   });
 
+  router.get("/api/leads/analytics", async (req, res) => {
+    try {
+      const days = Math.min(Math.max(Number(req.query.days || 30), 1), 365);
+      const [summary] = await prisma.$queryRaw`
+        SELECT
+          COUNT(*)::int AS "total",
+          COUNT(*) FILTER (WHERE "status" = 'NEW')::int AS "new",
+          COUNT(*) FILTER (WHERE "status" = 'CONTACTED')::int AS "contacted",
+          COUNT(*) FILTER (WHERE "status" = 'CONVERTED')::int AS "converted",
+          COUNT(*) FILTER (WHERE "status" = 'CLOSED')::int AS "closed",
+          COUNT(*) FILTER (WHERE "createdAt" >= NOW() - (${days} * INTERVAL '1 day'))::int AS "periodTotal",
+          COUNT(*) FILTER (WHERE "convertedAt" >= NOW() - (${days} * INTERVAL '1 day'))::int AS "periodConverted",
+          ROUND(AVG(EXTRACT(EPOCH FROM ("contactedAt" - "createdAt")) / 3600.0) FILTER (WHERE "contactedAt" IS NOT NULL)::numeric, 1) AS "avgContactHours"
+        FROM "PublicLead"
+      `;
+
+      const agencies = await prisma.$queryRaw`
+        SELECT
+          l."agencyId",
+          COALESCE(a."name", l."siteSlug") AS "agencyName",
+          COALESCE(a."city", '') AS "agencyCity",
+          COUNT(*)::int AS "total",
+          COUNT(*) FILTER (WHERE l."status" = 'NEW')::int AS "new",
+          COUNT(*) FILTER (WHERE l."status" = 'CONVERTED')::int AS "converted"
+        FROM "PublicLead" l
+        LEFT JOIN "Agency" a ON a."id" = l."agencyId"
+        GROUP BY l."agencyId", a."name", a."city", l."siteSlug"
+        ORDER BY COUNT(*) DESC, COALESCE(a."city", '') ASC
+      `;
+
+      const periodTotal = Number(summary?.periodTotal || 0);
+      const periodConverted = Number(summary?.periodConverted || 0);
+      const conversionRate = periodTotal > 0 ? Math.round((periodConverted / periodTotal) * 1000) / 10 : 0;
+
+      return res.json({
+        ok: true,
+        days,
+        summary: {
+          ...summary,
+          total: Number(summary?.total || 0),
+          new: Number(summary?.new || 0),
+          contacted: Number(summary?.contacted || 0),
+          converted: Number(summary?.converted || 0),
+          closed: Number(summary?.closed || 0),
+          periodTotal,
+          periodConverted,
+          avgContactHours: summary?.avgContactHours === null ? null : Number(summary.avgContactHours),
+          conversionRate,
+        },
+        agencies,
+      });
+    } catch (error) {
+      console.error("[leads] analytics failed", error);
+      return res.status(500).json({ ok: false, error: "LEADS_ANALYTICS_FAILED" });
+    }
+  });
+
   router.patch("/api/leads/:id/status", async (req, res) => {
     const id = clean(req.params.id, 120);
     const status = clean(req.body?.status, 20).toUpperCase();
@@ -191,9 +248,14 @@ function createPublicLeadsRoutes(prisma) {
     try {
       const rows = await prisma.$queryRaw`
         UPDATE "PublicLead"
-        SET "status" = ${status}, "updatedAt" = NOW()
+        SET
+          "status" = ${status},
+          "contactedAt" = CASE WHEN ${status} IN ('CONTACTED','CONVERTED') AND "contactedAt" IS NULL THEN NOW() ELSE "contactedAt" END,
+          "convertedAt" = CASE WHEN ${status} = 'CONVERTED' AND "convertedAt" IS NULL THEN NOW() ELSE "convertedAt" END,
+          "closedAt" = CASE WHEN ${status} = 'CLOSED' AND "closedAt" IS NULL THEN NOW() ELSE "closedAt" END,
+          "updatedAt" = NOW()
         WHERE "id" = ${id}
-        RETURNING "id", "status", "updatedAt"
+        RETURNING "id", "status", "contactedAt", "convertedAt", "closedAt", "updatedAt"
       `;
       if (!rows[0]) return res.status(404).json({ ok: false, error: "LEAD_NOT_FOUND" });
       return res.json({ ok: true, lead: rows[0] });
