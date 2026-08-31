@@ -50,7 +50,14 @@ await getJson(
 "http://backend:4000/api/leads/analytics?days=30"
 );
 
+const leadAttention =
+await getJson(
+"http://backend:4000/api/leads/attention?hours=4"
+);
+
 const leadSummary = leadAnalytics?.summary || {};
+const overdueLeads = Array.isArray(leadAttention?.overdue) ? leadAttention.overdue : [];
+const overdueCount = Number(leadAttention?.overdueCount || 0);
 
 
 return(
@@ -91,6 +98,18 @@ p-6">
 <div className="rounded-xl bg-sky-50 p-3"><div className="text-xs text-slate-500">Nouveaux</div><div className="text-2xl font-bold">{leadSummary.new || 0}</div></div>
 <div className="rounded-xl bg-emerald-50 p-3"><div className="text-xs text-slate-500">Conversion</div><div className="text-2xl font-bold">{leadSummary.conversionRate || 0}%</div></div>
 <div className="rounded-xl bg-amber-50 p-3"><div className="text-xs text-slate-500">Délai contact</div><div className="text-2xl font-bold">{leadSummary.avgContactHours == null ? "—" : `${leadSummary.avgContactHours}h`}</div></div>
+</div>
+
+<div className={`mt-4 rounded-xl border p-3 ${overdueCount > 0 ? "border-red-200 bg-red-50" : "border-emerald-200 bg-emerald-50"}`}>
+<div className="flex items-center justify-between gap-3">
+<div><div className="text-xs text-slate-500">Sans contact depuis +4h</div><div className={`text-xl font-bold ${overdueCount > 0 ? "text-red-700" : "text-emerald-700"}`}>{overdueCount}</div></div>
+<span className="text-xs font-semibold text-slate-600">SLA commercial</span>
+</div>
+{overdueLeads.slice(0,3).map((lead)=>(
+<div key={lead.id} className="mt-2 text-xs text-slate-700 border-t border-slate-200 pt-2">
+<strong>{lead.agencyCity || lead.agencyName || lead.siteSlug}</strong> · {lead.name} · {lead.ageHours}h
+</div>
+))}
 </div>
 
 </div>
