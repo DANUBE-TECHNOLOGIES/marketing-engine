@@ -7,6 +7,7 @@ const contentFactory = require("./content-factory");
 const destinationEngine = require("./destination-engine");
 const { createSearchConsoleOAuthRoutes } = require("../routes/searchConsoleOAuth");
 const createPublicLeadsRoutes = require("../routes/publicLeads");
+const createLeadAttentionRoutes = require("../routes/leadAttention");
 const platformCore = require("./platform-core");
 const aiPlatform = require("./ai-platform");
 const seoPlatform = require("./seo-platform");
@@ -46,6 +47,7 @@ module.exports = function registerModules(app, { prisma }) {
   app.use(tenantCore.createTenantMiddleware(tenantService));
   app.use(createSearchConsoleOAuthRoutes(prisma));
   app.use(createPublicLeadsRoutes(prisma));
+  app.use(createLeadAttentionRoutes(prisma));
   if (brand.routes) app.use(brand.routes({ prisma }));
   if (miniSiteBuilder.routes) app.use(miniSiteBuilder.routes({ prisma }));
   if (siteProvisioning.routes) app.use(siteProvisioning.routes({ prisma }));
