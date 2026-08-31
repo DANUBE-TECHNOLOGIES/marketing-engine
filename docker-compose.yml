@@ -52,6 +52,16 @@ services:
       IDENTITY_HMAC_SECRET: "${IDENTITY_HMAC_SECRET}"
       IDENTITY_HMAC_MAX_AGE_MS: "${IDENTITY_HMAC_MAX_AGE_MS:-300000}"
       TRUST_IDENTITY_HEADERS: "false"
+      SMTP_HOST: "${SMTP_HOST:-}"
+      SMTP_PORT: "${SMTP_PORT:-587}"
+      SMTP_SECURE: "${SMTP_SECURE:-false}"
+      SMTP_USER: "${SMTP_USER:-}"
+      SMTP_PASS: "${SMTP_PASS:-}"
+      SMTP_FROM: "${SMTP_FROM:-}"
+      LEAD_NOTIFICATIONS_ENABLED: "${LEAD_NOTIFICATIONS_ENABLED:-true}"
+      LEAD_NOTIFICATION_FROM: "${LEAD_NOTIFICATION_FROM:-}"
+      LEAD_NOTIFICATION_CC: "${LEAD_NOTIFICATION_CC:-}"
+      LEAD_COCKPIT_URL: "${LEAD_COCKPIT_URL:-https://localengine.mondescale.com/leads}"
     depends_on:
       postgres:
         condition: service_healthy
