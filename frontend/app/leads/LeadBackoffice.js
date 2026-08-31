@@ -1,252 +1,34 @@
 "use client";
-
-import { useEffect, useMemo, useState } from "react";
-
-const STATUS_LABELS = {
-  NEW: "Nouveau",
-  CONTACTED: "Contacté",
-  CONVERTED: "Converti",
-  CLOSED: "Clos",
-};
-
-const PROJECT_LABELS = {
-  leisure: "Voyage & vacances",
-  group: "Voyage en groupe",
-  business: "Business Travel",
-};
-
-const NOTIFICATION_LABELS = {
-  NOT_SENT: "Non envoyée",
-  PENDING: "En cours",
-  SENT: "Envoyée",
-  FAILED: "Échec",
-  SKIPPED: "Non configurée",
-  DISABLED: "Désactivée",
-};
-
-function formatDate(value) {
-  try {
-    return new Intl.DateTimeFormat("fr-FR", { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
-  } catch {
-    return value || "—";
-  }
-}
-
-function statusClass(status) {
-  if (status === "NEW") return "bg-sky-100 text-sky-800";
-  if (status === "CONTACTED") return "bg-amber-100 text-amber-800";
-  if (status === "CONVERTED") return "bg-emerald-100 text-emerald-800";
-  return "bg-slate-100 text-slate-700";
-}
-
-function notificationClass(status) {
-  if (status === "SENT") return "bg-emerald-100 text-emerald-800";
-  if (status === "FAILED") return "bg-red-100 text-red-800";
-  if (status === "PENDING") return "bg-amber-100 text-amber-800";
-  return "bg-slate-100 text-slate-700";
-}
-
-export default function LeadBackoffice() {
-  const [leads, setLeads] = useState([]);
-  const [counts, setCounts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [status, setStatus] = useState("");
-  const [project, setProject] = useState("");
-  const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState(null);
-  const [saving, setSaving] = useState("");
-  const [notifying, setNotifying] = useState("");
-
-  async function load() {
-    setLoading(true);
-    setError("");
-    try {
-      const params = new URLSearchParams();
-      if (status) params.set("status", status);
-      if (project) params.set("projectType", project);
-      params.set("limit", "250");
-      const response = await fetch(`/api/leads?${params.toString()}`, { cache: "no-store" });
-      const data = await response.json();
-      if (!response.ok || !data.ok) throw new Error(data.error || "Impossible de charger les demandes");
-      const nextLeads = Array.isArray(data.leads) ? data.leads : [];
-      setLeads(nextLeads);
-      setCounts(Array.isArray(data.counts) ? data.counts : []);
-      setSelected((current) => current ? (nextLeads.find((item) => item.id === current.id) || current) : current);
-    } catch (err) {
-      setError(err.message || "Erreur de chargement");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => { load(); }, [status, project]);
-
-  const visible = useMemo(() => {
-    const needle = query.trim().toLocaleLowerCase("fr-FR");
-    if (!needle) return leads;
-    return leads.filter((lead) => [lead.name, lead.email, lead.phone, lead.destination, lead.agencyName, lead.agencyCity, lead.siteSlug]
-      .filter(Boolean)
-      .join(" ")
-      .toLocaleLowerCase("fr-FR")
-      .includes(needle));
-  }, [leads, query]);
-
-  const countMap = useMemo(() => Object.fromEntries(counts.map((item) => [item.status, Number(item.count || 0)])), [counts]);
-
-  async function changeStatus(lead, nextStatus) {
-    if (lead.status === nextStatus) return;
-    setSaving(lead.id);
-    setError("");
-    try {
-      const response = await fetch(`/api/leads/${encodeURIComponent(lead.id)}/status`, {
-        method: "PATCH",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ status: nextStatus }),
-      });
-      const data = await response.json();
-      if (!response.ok || !data.ok) throw new Error(data.error || "Mise à jour impossible");
-      setLeads((current) => current.map((item) => item.id === lead.id ? { ...item, status: nextStatus, updatedAt: data.lead?.updatedAt || item.updatedAt } : item));
-      setSelected((current) => current?.id === lead.id ? { ...current, status: nextStatus } : current);
-      await load();
-    } catch (err) {
-      setError(err.message || "Mise à jour impossible");
-    } finally {
-      setSaving("");
-    }
-  }
-
-  async function notifyAgain(lead) {
-    setNotifying(lead.id);
-    setError("");
-    try {
-      const response = await fetch(`/api/leads/${encodeURIComponent(lead.id)}/notify`, { method: "POST" });
-      const data = await response.json();
-      if (!response.ok || !data.ok) throw new Error(data.error || "Notification impossible");
-      await load();
-    } catch (err) {
-      setError(err.message || "Notification impossible");
-    } finally {
-      setNotifying("");
-    }
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {Object.entries(STATUS_LABELS).map(([key, label]) => (
-          <button key={key} type="button" onClick={() => setStatus(status === key ? "" : key)} className={`text-left rounded-2xl border p-4 transition ${status === key ? "border-[#42c7cc] bg-cyan-50" : "border-slate-200 bg-white hover:border-slate-300"}`}>
-            <span className="text-sm text-slate-500">{label}</span>
-            <strong className="block text-2xl mt-1 text-slate-900">{countMap[key] || 0}</strong>
-          </button>
-        ))}
-      </div>
-
-      <div className="bg-white rounded-2xl border border-slate-200 p-4 flex flex-col lg:flex-row gap-3 lg:items-center">
-        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Rechercher un client, une agence, une destination…" className="flex-1 rounded-xl border border-slate-300 px-4 py-3" />
-        <select value={project} onChange={(e) => setProject(e.target.value)} className="rounded-xl border border-slate-300 px-4 py-3 bg-white">
-          <option value="">Tous les projets</option>
-          <option value="leisure">Voyage & vacances</option>
-          <option value="group">Voyage en groupe</option>
-          <option value="business">Business Travel</option>
-        </select>
-        <button type="button" onClick={load} className="rounded-xl bg-[#073653] text-white px-5 py-3 font-semibold">Actualiser</button>
-      </div>
-
-      {error ? <div className="rounded-xl bg-red-50 text-red-800 px-4 py-3">{error}</div> : null}
-
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="bg-slate-50 text-slate-600">
-              <tr>
-                <th className="text-left px-4 py-3">Date</th>
-                <th className="text-left px-4 py-3">Agence</th>
-                <th className="text-left px-4 py-3">Client</th>
-                <th className="text-left px-4 py-3">Projet</th>
-                <th className="text-left px-4 py-3">Destination / besoin</th>
-                <th className="text-left px-4 py-3">Statut</th>
-                <th className="text-right px-4 py-3">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {loading ? (
-                <tr><td colSpan="7" className="px-4 py-10 text-center text-slate-500">Chargement des demandes…</td></tr>
-              ) : visible.length === 0 ? (
-                <tr><td colSpan="7" className="px-4 py-10 text-center text-slate-500">Aucune demande pour ces filtres.</td></tr>
-              ) : visible.map((lead) => (
-                <tr key={lead.id} className="hover:bg-slate-50 align-top">
-                  <td className="px-4 py-4 whitespace-nowrap">{formatDate(lead.createdAt)}</td>
-                  <td className="px-4 py-4"><strong>{lead.agencyCity || lead.agencyName || lead.siteSlug}</strong><span className="block text-xs text-slate-500 mt-1">{lead.siteSlug}</span></td>
-                  <td className="px-4 py-4"><strong>{lead.name}</strong><a className="block text-sky-700" href={`mailto:${lead.email}`}>{lead.email}</a><a className="block text-sky-700" href={`tel:${String(lead.phone || "").replace(/\s+/g, "")}`}>{lead.phone}</a></td>
-                  <td className="px-4 py-4">{PROJECT_LABELS[lead.projectType] || lead.projectType}</td>
-                  <td className="px-4 py-4 max-w-xs"><strong>{lead.destination}</strong><span className="block text-slate-500 mt-1">{lead.travelDates} · {lead.travellers}</span></td>
-                  <td className="px-4 py-4"><span className={`inline-flex rounded-full px-3 py-1 font-medium ${statusClass(lead.status)}`}>{STATUS_LABELS[lead.status] || lead.status}</span></td>
-                  <td className="px-4 py-4 text-right"><button type="button" onClick={() => setSelected(lead)} className="font-semibold text-[#073653] hover:underline">Ouvrir</button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {selected ? (
-        <div className="fixed inset-0 z-50 bg-slate-950/45 flex justify-end" onClick={() => setSelected(null)}>
-          <aside className="w-full max-w-xl h-full bg-white shadow-2xl overflow-y-auto p-6 lg:p-8" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-start justify-between gap-4">
-              <div><p className="text-sm text-slate-500">Demande {selected.id}</p><h2 className="text-2xl font-bold text-slate-900 mt-1">{selected.name}</h2></div>
-              <button type="button" className="text-2xl text-slate-500" onClick={() => setSelected(null)} aria-label="Fermer">×</button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 mt-7 text-sm">
-              <div><span className="text-slate-500">Agence</span><strong className="block mt-1">{selected.agencyName || selected.agencyCity || selected.siteSlug}</strong></div>
-              <div><span className="text-slate-500">Reçue le</span><strong className="block mt-1">{formatDate(selected.createdAt)}</strong></div>
-              <div><span className="text-slate-500">Projet</span><strong className="block mt-1">{PROJECT_LABELS[selected.projectType] || selected.projectType}</strong></div>
-              <div><span className="text-slate-500">Source</span><strong className="block mt-1">{selected.source}</strong></div>
-            </div>
-
-            <div className="mt-7 rounded-2xl bg-slate-50 p-5 space-y-4">
-              <div><span className="text-sm text-slate-500">Destination / besoin</span><p className="font-semibold mt-1">{selected.destination}</p></div>
-              <div><span className="text-sm text-slate-500">Dates / période</span><p className="mt-1">{selected.travelDates}</p></div>
-              <div><span className="text-sm text-slate-500">Voyageurs</span><p className="mt-1">{selected.travellers}</p></div>
-              <div><span className="text-sm text-slate-500">Budget</span><p className="mt-1">{selected.budget || "Non précisé"}</p></div>
-              <div><span className="text-sm text-slate-500">Précisions</span><p className="mt-1 whitespace-pre-wrap">{selected.wishes || "Aucune précision complémentaire."}</p></div>
-            </div>
-
-            <div className="mt-7 flex flex-wrap gap-2">
-              <a href={`tel:${String(selected.phone || "").replace(/\s+/g, "")}`} className="rounded-xl bg-[#073653] text-white px-4 py-3 font-semibold">Appeler</a>
-              <a href={`mailto:${selected.email}`} className="rounded-xl border border-slate-300 px-4 py-3 font-semibold">Écrire</a>
-            </div>
-
-            <div className="mt-8 border-t border-slate-200 pt-6">
-              <div className="flex items-center justify-between gap-3">
-                <p className="font-semibold">Notification agence</p>
-                <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${notificationClass(selected.notificationStatus)}`}>{NOTIFICATION_LABELS[selected.notificationStatus] || selected.notificationStatus || "Non envoyée"}</span>
-              </div>
-              <p className="text-sm text-slate-500 mt-2">Destinataire : {selected.agencyEmail || "adresse agence non disponible"}</p>
-              {selected.notificationSentAt ? <p className="text-sm text-slate-500 mt-1">Envoyée le {formatDate(selected.notificationSentAt)}</p> : null}
-              {selected.notificationError ? <p className="text-sm text-red-700 mt-2">{selected.notificationError}</p> : null}
-              <button type="button" disabled={notifying === selected.id} onClick={() => notifyAgain(selected)} className="mt-3 rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold hover:bg-slate-50 disabled:opacity-50">
-                {notifying === selected.id ? "Envoi en cours…" : selected.notificationStatus === "SENT" ? "Renvoyer la notification" : "Envoyer la notification"}
-              </button>
-            </div>
-
-            <div className="mt-8 border-t border-slate-200 pt-6">
-              <p className="font-semibold mb-3">Suivi de la demande</p>
-              <div className="grid grid-cols-2 gap-2">
-                {Object.entries(STATUS_LABELS).map(([key, label]) => (
-                  <button key={key} type="button" disabled={saving === selected.id || selected.status === key} onClick={() => changeStatus(selected, key)} className={`rounded-xl px-4 py-3 text-sm font-semibold border ${selected.status === key ? "border-[#42c7cc] bg-cyan-50 text-[#073653]" : "border-slate-300 bg-white hover:bg-slate-50"}`}>
-                    {saving === selected.id ? "Mise à jour…" : label}
-                  </button>
-                ))}
-              </div>
-              <p className="text-xs text-slate-500 mt-4">Synchronisation ERP désactivée. Le suivi reste entièrement dans Marketing Engine.</p>
-            </div>
-          </aside>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-export { NOTIFICATION_LABELS, PROJECT_LABELS, STATUS_LABELS, formatDate };
+import {useEffect,useMemo,useState} from "react";
+const STATUS_LABELS={NEW:"Nouveau",CONTACTED:"Contacté",CONVERTED:"Converti",CLOSED:"Clos"};
+const PROJECT_LABELS={leisure:"Voyage & vacances",group:"Voyage en groupe",business:"Business Travel"};
+const NOTIFICATION_LABELS={NOT_SENT:"Non envoyée",PENDING:"En cours",SENT:"Envoyée",FAILED:"Échec",SKIPPED:"Non configurée",DISABLED:"Désactivée"};
+function formatDate(v){if(!v)return"—";try{return new Intl.DateTimeFormat("fr-FR",{dateStyle:"short",timeStyle:"short"}).format(new Date(v))}catch{return v}}
+function statusClass(s){return s==="NEW"?"bg-sky-100 text-sky-800":s==="CONTACTED"?"bg-amber-100 text-amber-800":s==="CONVERTED"?"bg-emerald-100 text-emerald-800":"bg-slate-100 text-slate-700"}
+function notificationClass(s){return s==="SENT"?"bg-emerald-100 text-emerald-800":s==="FAILED"?"bg-red-100 text-red-800":s==="PENDING"?"bg-amber-100 text-amber-800":"bg-slate-100 text-slate-700"}
+export default function LeadBackoffice(){
+const[leads,setLeads]=useState([]),[counts,setCounts]=useState([]),[loading,setLoading]=useState(true),[error,setError]=useState(""),[status,setStatus]=useState(""),[project,setProject]=useState(""),[query,setQuery]=useState(""),[selected,setSelected]=useState(null),[saving,setSaving]=useState(""),[notifying,setNotifying]=useState(""),[notes,setNotes]=useState([]),[note,setNote]=useState(""),[assignedTo,setAssignedTo]=useState(""),[nextActionAt,setNextActionAt]=useState("");
+async function load(){setLoading(true);setError("");try{const p=new URLSearchParams();if(status)p.set("status",status);if(project)p.set("projectType",project);p.set("limit","250");const r=await fetch(`/api/leads?${p}`,{cache:"no-store"}),d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||"Impossible de charger les demandes");const n=Array.isArray(d.leads)?d.leads:[];setLeads(n);setCounts(Array.isArray(d.counts)?d.counts:[]);setSelected(c=>c?(n.find(x=>x.id===c.id)||c):c)}catch(e){setError(e.message||"Erreur de chargement")}finally{setLoading(false)}}
+useEffect(()=>{load()},[status,project]);
+useEffect(()=>{if(!selected)return;setAssignedTo(selected.assignedTo||"");setNextActionAt(selected.nextActionAt?new Date(selected.nextActionAt).toISOString().slice(0,16):"");fetch(`/api/leads/${encodeURIComponent(selected.id)}/notes`,{cache:"no-store"}).then(r=>r.json()).then(d=>setNotes(d.ok&&Array.isArray(d.notes)?d.notes:[])).catch(()=>setNotes([]))},[selected?.id]);
+const visible=useMemo(()=>{const n=query.trim().toLocaleLowerCase("fr-FR");if(!n)return leads;return leads.filter(l=>[l.name,l.email,l.phone,l.destination,l.agencyName,l.agencyCity,l.siteSlug,l.assignedTo,l.lastNote].filter(Boolean).join(" ").toLocaleLowerCase("fr-FR").includes(n))},[leads,query]);
+const countMap=useMemo(()=>Object.fromEntries(counts.map(i=>[i.status,Number(i.count||0)])),[counts]);
+async function changeStatus(l,s){if(l.status===s)return;setSaving(l.id);try{const r=await fetch(`/api/leads/${encodeURIComponent(l.id)}/status`,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({status:s})}),d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||"Mise à jour impossible");await load()}catch(e){setError(e.message)}finally{setSaving("")}}
+async function notifyAgain(l){setNotifying(l.id);try{const r=await fetch(`/api/leads/${encodeURIComponent(l.id)}/notify`,{method:"POST"}),d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||"Notification impossible");await load()}catch(e){setError(e.message)}finally{setNotifying("")}}
+async function saveOperations(){if(!selected)return;setSaving(selected.id);try{const r=await fetch(`/api/leads/${encodeURIComponent(selected.id)}/operations`,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({assignedTo,nextActionAt:nextActionAt?new Date(nextActionAt).toISOString():null})}),d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||"Suivi impossible");await load()}catch(e){setError(e.message)}finally{setSaving("")}}
+async function addNote(){if(!selected||note.trim().length<2)return;setSaving(selected.id);try{const r=await fetch(`/api/leads/${encodeURIComponent(selected.id)}/notes`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({content:note})}),d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||"Note impossible");setNotes(c=>[d.note,...c]);setNote("");await load()}catch(e){setError(e.message)}finally{setSaving("")}}
+return <div className="space-y-6">
+<div className="grid grid-cols-2 lg:grid-cols-4 gap-3">{Object.entries(STATUS_LABELS).map(([k,l])=><button key={k} onClick={()=>setStatus(status===k?"":k)} className={`text-left rounded-2xl border p-4 ${status===k?"border-[#42c7cc] bg-cyan-50":"border-slate-200 bg-white"}`}><span className="text-sm text-slate-500">{l}</span><strong className="block text-2xl mt-1">{countMap[k]||0}</strong></button>)}</div>
+<div className="bg-white rounded-2xl border p-4 flex flex-col lg:flex-row gap-3"><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Rechercher client, agence, destination, conseiller…" className="flex-1 rounded-xl border px-4 py-3"/><select value={project} onChange={e=>setProject(e.target.value)} className="rounded-xl border px-4 py-3"><option value="">Tous les projets</option><option value="leisure">Voyage & vacances</option><option value="group">Voyage en groupe</option><option value="business">Business Travel</option></select><button onClick={load} className="rounded-xl bg-[#073653] text-white px-5 py-3 font-semibold">Actualiser</button></div>
+{error?<div className="rounded-xl bg-red-50 text-red-800 px-4 py-3">{error}</div>:null}
+<div className="bg-white rounded-2xl border overflow-hidden"><div className="overflow-x-auto"><table className="min-w-full text-sm"><thead className="bg-slate-50"><tr><th className="text-left px-4 py-3">Date</th><th className="text-left px-4 py-3">Agence</th><th className="text-left px-4 py-3">Client</th><th className="text-left px-4 py-3">Projet</th><th className="text-left px-4 py-3">Destination / besoin</th><th className="text-left px-4 py-3">Suivi</th><th className="text-left px-4 py-3">Statut</th><th className="text-right px-4 py-3">Action</th></tr></thead><tbody className="divide-y">{loading?<tr><td colSpan="8" className="p-10 text-center">Chargement…</td></tr>:visible.length===0?<tr><td colSpan="8" className="p-10 text-center">Aucune demande.</td></tr>:visible.map(l=><tr key={l.id} className="hover:bg-slate-50 align-top"><td className="px-4 py-4 whitespace-nowrap">{formatDate(l.createdAt)}</td><td className="px-4 py-4"><strong>{l.agencyCity||l.agencyName||l.siteSlug}</strong></td><td className="px-4 py-4"><strong>{l.name}</strong><span className="block text-xs">{l.phone}</span></td><td className="px-4 py-4">{PROJECT_LABELS[l.projectType]||l.projectType}</td><td className="px-4 py-4"><strong>{l.destination}</strong><span className="block text-slate-500">{l.travelDates} · {l.travellers}</span></td><td className="px-4 py-4"><strong>{l.assignedTo||"Non attribué"}</strong>{l.nextActionAt?<span className="block text-xs text-amber-700">Relance {formatDate(l.nextActionAt)}</span>:null}</td><td className="px-4 py-4"><span className={`rounded-full px-3 py-1 ${statusClass(l.status)}`}>{STATUS_LABELS[l.status]}</span></td><td className="px-4 py-4 text-right"><button onClick={()=>setSelected(l)} className="font-semibold text-[#073653]">Ouvrir</button></td></tr>)}</tbody></table></div></div>
+{selected?<div className="fixed inset-0 z-50 bg-slate-950/45 flex justify-end" onClick={()=>setSelected(null)}><aside className="w-full max-w-2xl h-full bg-white shadow-2xl overflow-y-auto p-6 lg:p-8" onClick={e=>e.stopPropagation()}><div className="flex justify-between"><div><p className="text-sm text-slate-500">Demande {selected.id}</p><h2 className="text-2xl font-bold">{selected.name}</h2></div><button onClick={()=>setSelected(null)} className="text-2xl">×</button></div>
+<div className="grid grid-cols-2 gap-4 mt-7 text-sm"><div><span className="text-slate-500">Agence</span><strong className="block">{selected.agencyName||selected.agencyCity}</strong></div><div><span className="text-slate-500">Reçue le</span><strong className="block">{formatDate(selected.createdAt)}</strong></div><div><span className="text-slate-500">Projet</span><strong className="block">{PROJECT_LABELS[selected.projectType]}</strong></div><div><span className="text-slate-500">Source</span><strong className="block">{selected.source}</strong></div></div>
+<div className="mt-6 rounded-2xl bg-slate-50 p-5 space-y-3"><p><strong>{selected.destination}</strong></p><p>{selected.travelDates} · {selected.travellers}</p><p>Budget : {selected.budget||"Non précisé"}</p><p className="whitespace-pre-wrap">{selected.wishes||"Aucune précision complémentaire."}</p></div>
+<div className="mt-6 flex gap-2"><a href={`tel:${String(selected.phone||"").replace(/\s+/g,"")}`} className="rounded-xl bg-[#073653] text-white px-4 py-3 font-semibold">Appeler</a><a href={`mailto:${selected.email}`} className="rounded-xl border px-4 py-3 font-semibold">Écrire</a></div>
+<div className="mt-8 border-t pt-6"><h3 className="font-bold text-lg">Pilotage commercial</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4"><label className="text-sm">Attribué à<input value={assignedTo} onChange={e=>setAssignedTo(e.target.value)} placeholder="Conseiller / collaboratrice" className="block w-full mt-1 rounded-xl border px-3 py-3"/></label><label className="text-sm">Prochaine relance<input type="datetime-local" value={nextActionAt} onChange={e=>setNextActionAt(e.target.value)} className="block w-full mt-1 rounded-xl border px-3 py-3"/></label></div><button onClick={saveOperations} disabled={saving===selected.id} className="mt-3 rounded-xl bg-[#073653] text-white px-4 py-3 font-semibold">Enregistrer le suivi</button></div>
+<div className="mt-8 border-t pt-6"><h3 className="font-bold text-lg">Historique & notes</h3><textarea value={note} onChange={e=>setNote(e.target.value)} rows="3" placeholder="Ajouter une note de suivi…" className="w-full mt-3 rounded-xl border p-3"/><button onClick={addNote} disabled={note.trim().length<2||saving===selected.id} className="mt-2 rounded-xl border px-4 py-3 font-semibold">Ajouter la note</button><div className="mt-4 space-y-3">{notes.map(n=><div key={n.id} className="rounded-xl bg-slate-50 p-3"><p>{n.content}</p><span className="text-xs text-slate-500">{formatDate(n.createdAt)}{n.author?` · ${n.author}`:""}</span></div>)}{notes.length===0?<p className="text-sm text-slate-500">Aucune note.</p>:null}</div></div>
+<div className="mt-8 border-t pt-6"><div className="flex justify-between"><p className="font-semibold">Notification agence</p><span className={`rounded-full px-3 py-1 text-xs ${notificationClass(selected.notificationStatus)}`}>{NOTIFICATION_LABELS[selected.notificationStatus]||selected.notificationStatus}</span></div><p className="text-sm text-slate-500 mt-2">Destinataire : {selected.agencyEmail||"adresse agence non disponible"}</p><button onClick={()=>notifyAgain(selected)} disabled={notifying===selected.id} className="mt-3 rounded-xl border px-4 py-3 font-semibold">{notifying===selected.id?"Envoi…":"Envoyer / renvoyer"}</button></div>
+<div className="mt-8 border-t pt-6"><p className="font-semibold mb-3">Statut</p><div className="grid grid-cols-2 gap-2">{Object.entries(STATUS_LABELS).map(([k,l])=><button key={k} disabled={saving===selected.id||selected.status===k} onClick={()=>changeStatus(selected,k)} className={`rounded-xl px-4 py-3 border font-semibold ${selected.status===k?"bg-cyan-50 border-[#42c7cc]":""}`}>{l}</button>)}</div><p className="text-xs text-slate-500 mt-4">Synchronisation ERP désactivée.</p></div>
+</aside></div>:null}</div>}
+export{NOTIFICATION_LABELS,PROJECT_LABELS,STATUS_LABELS,formatDate};
