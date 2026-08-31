@@ -1,0 +1,4 @@
+const BACKEND_URL=String(process.env.BACKEND_INTERNAL_URL||process.env.MONDESCALE_BACKEND_URL||"http://backend:4000").replace(/\/+$/,'');
+async function relay(method,request,params){const {id}=await params;try{const options={method,headers:{accept:'application/json','x-tenant-slug':process.env.TENANT_SLUG||'mondescale'},cache:'no-store'};if(method==='POST'){options.headers['content-type']='application/json';options.body=await request.text();}const r=await fetch(`${BACKEND_URL}/api/leads/${encodeURIComponent(id)}/notes`,options);return new Response(await r.text(),{status:r.status,headers:{'content-type':r.headers.get('content-type')||'application/json'}});}catch{return Response.json({ok:false,error:'LEAD_NOTES_BACKEND_UNAVAILABLE'},{status:502});}}
+export async function GET(request,{params}){return relay('GET',request,params)}
+export async function POST(request,{params}){return relay('POST',request,params)}
