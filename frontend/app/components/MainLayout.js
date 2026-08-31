@@ -15,6 +15,7 @@ const sections=[
 label:"Direction",
 items:[
 ["🏠 Cockpit","/direction"],
+["📥 Demandes clients","/leads"],
 ["⚠ Alertes","/direction"],
 ["🏆 Classement","/direction"]
 ]
