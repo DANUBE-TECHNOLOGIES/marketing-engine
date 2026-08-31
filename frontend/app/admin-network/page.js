@@ -5,6 +5,7 @@ const sections = [
   {
     title: "Pilotage",
     links: [
+      ["Demandes clients", "/leads"],
       ["SEO Direction", "/seo-direction"],
       ["SEO Today", "/seo-today"],
       ["Cockpit SEO réseau", "/seo-cockpit"],
