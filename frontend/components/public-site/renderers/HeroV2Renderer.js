@@ -131,23 +131,23 @@ export default function HeroV2Renderer({ section, site, page, forcePageIntent = 
 
   const primaryCta = content.primaryCta || null;
   const secondaryCta = content.secondaryCta || null;
+  const primaryLabel = ctaLabel(primaryCta, content.primaryButton, "Demander un devis");
+  const secondaryLabel = ctaLabel(secondaryCta, content.secondaryButton, immersiveNetworkHero ? "Découvrir nos voyages" : "Nous contacter");
   const primaryShowcase = isShowcaseCta(primaryCta, content.primaryButton);
   const secondaryShowcase =
     isShowcaseCta(secondaryCta, content.secondaryButton) ||
     (!secondaryCta && !content.secondaryButton && immersiveNetworkHero);
   const primaryHref = primaryShowcase
     ? getShowcaseUrl(site)
-    : primaryCta?.href
-      ? resolvePublicCtaHref(site, primaryCta.href, "contact")
-      : sitePageHref(site, "contact");
+    : resolvePublicCtaHref(site, primaryCta?.href, "contact", { label: primaryLabel });
   const secondaryHref = secondaryShowcase
     ? getShowcaseUrl(site)
     : secondaryCta
-      ? resolvePublicCtaHref(site, secondaryCta.href, "destinations")
+      ? resolvePublicCtaHref(site, secondaryCta.href, "destinations", { label: secondaryLabel })
       : immersiveNetworkHero
         ? sitePageHref(site, "destinations")
         : content.secondaryButton
-          ? sitePageHref(site, "contact")
+          ? resolvePublicCtaHref(site, "contact", "contact", { label: secondaryLabel })
           : null;
 
   const contentStyle = { textAlign: alignment };
@@ -197,7 +197,7 @@ export default function HeroV2Renderer({ section, site, page, forcePageIntent = 
                 href={primaryHref}
                 {...(primaryShowcase ? { target: "_blank", rel: "noopener noreferrer" } : {})}
               >
-                {ctaLabel(primaryCta, content.primaryButton, "Demander un devis")}
+                {primaryLabel}
               </a>
             ) : null}
             {secondaryHref ? (
@@ -206,7 +206,7 @@ export default function HeroV2Renderer({ section, site, page, forcePageIntent = 
                 href={secondaryHref}
                 {...(secondaryShowcase ? { target: "_blank", rel: "noopener noreferrer" } : {})}
               >
-                {ctaLabel(secondaryCta, content.secondaryButton, immersiveNetworkHero ? "Découvrir nos voyages" : "Nous contacter")}
+                {secondaryLabel}
               </a>
             ) : null}
           </div>
