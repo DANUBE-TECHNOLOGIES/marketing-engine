@@ -24,6 +24,9 @@ function limited(req) {
 function validate(body = {}) {
   const data = {
     project: clean(body.project, 30), source: clean(body.source, 30) || "general", siteSlug: clean(body.siteSlug, 160),
+    sourcePage: clean(body.sourcePage, 500), sourcePath: clean(body.sourcePath, 1000), sourceReferrer: clean(body.sourceReferrer, 2000),
+    utmSource: clean(body.utmSource, 240), utmMedium: clean(body.utmMedium, 240), utmCampaign: clean(body.utmCampaign, 240),
+    utmContent: clean(body.utmContent, 240), utmTerm: clean(body.utmTerm, 240),
     name: clean(body.name, 120), phone: clean(body.phone, 50), email: clean(body.email, 180).toLowerCase(),
     destination: clean(body.destination, 240), dates: clean(body.dates, 160), travellers: clean(body.travellers, 120),
     budget: clean(body.budget, 160), wishes: clean(body.wishes, 2500),
@@ -82,8 +85,8 @@ function createPublicLeadsRoutes(prisma) {
       const site = await prisma.agencySite.findFirst({ where: { slug: checked.data.siteSlug }, select: { id: true, agencyId: true, slug: true } });
       if (!site) return res.status(404).json({ ok: false, error: "SITE_NOT_FOUND" });
       const rows = await prisma.$queryRaw`
-        INSERT INTO "PublicLead" ("id","agencyId","agencySiteId","siteSlug","projectType","source","name","phone","email","destination","travelDates","travellers","budget","wishes","status","erpSyncStatus","notificationStatus","createdAt","updatedAt")
-        VALUES (concat('lead_',replace(gen_random_uuid()::text,'-','')),${site.agencyId},${site.id},${site.slug},${checked.data.project},${checked.data.source},${checked.data.name},${checked.data.phone},${checked.data.email},${checked.data.destination},${checked.data.dates},${checked.data.travellers},${checked.data.budget || null},${checked.data.wishes || null},'NEW','DISABLED','PENDING',NOW(),NOW()) RETURNING "id","status","createdAt"`;
+        INSERT INTO "PublicLead" ("id","agencyId","agencySiteId","siteSlug","projectType","source","sourcePage","sourcePath","sourceReferrer","utmSource","utmMedium","utmCampaign","utmContent","utmTerm","name","phone","email","destination","travelDates","travellers","budget","wishes","status","erpSyncStatus","notificationStatus","createdAt","updatedAt")
+        VALUES (concat('lead_',replace(gen_random_uuid()::text,'-','')),${site.agencyId},${site.id},${site.slug},${checked.data.project},${checked.data.source},${checked.data.sourcePage || null},${checked.data.sourcePath || null},${checked.data.sourceReferrer || null},${checked.data.utmSource || null},${checked.data.utmMedium || null},${checked.data.utmCampaign || null},${checked.data.utmContent || null},${checked.data.utmTerm || null},${checked.data.name},${checked.data.phone},${checked.data.email},${checked.data.destination},${checked.data.dates},${checked.data.travellers},${checked.data.budget || null},${checked.data.wishes || null},'NEW','DISABLED','PENDING',NOW(),NOW()) RETURNING "id","status","createdAt"`;
       const notificationResult = await notifyLead(prisma, rows[0].id);
       return res.status(201).json({ ok: true, lead: rows[0], notification: notificationResult.notification || { sent: false, status: "UNKNOWN" } });
     } catch (error) { console.error("[public-leads] intake failed", error); return res.status(500).json({ ok: false, error: "LEAD_INTAKE_FAILED" }); }
