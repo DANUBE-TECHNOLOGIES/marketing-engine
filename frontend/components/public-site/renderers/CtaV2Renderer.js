@@ -9,7 +9,10 @@ import {
 function CtaButton({ cta, site, className }) {
   if (!cta?.label) return null;
   return (
-    <a className={className} href={resolvePublicCtaHref(site, cta.href, "contact")}>
+    <a
+      className={className}
+      href={resolvePublicCtaHref(site, cta.href, "contact", { label: cta.label })}
+    >
       {cta.label}
     </a>
   );
@@ -22,13 +25,6 @@ function isHomePage(page) {
 
 export default function CtaV2Renderer({ section, site, page }) {
   const content = getSectionContent(section);
-
-  /*
-   * The home already exposes a primary CTA in the hero and conversion actions
-   * in the contact block. Historical CTA PageBlocks duplicated that journey
-   * and made the page unnecessarily long, so they remain available on inner
-   * pages but are intentionally suppressed on the home.
-   */
   if (isHomePage(page)) return null;
 
   const primaryCta = content.primaryCta || (content.primaryButton
