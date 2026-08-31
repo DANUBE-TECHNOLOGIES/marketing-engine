@@ -15,6 +15,15 @@ const PROJECT_LABELS = {
   business: "Business Travel",
 };
 
+const NOTIFICATION_LABELS = {
+  NOT_SENT: "Non envoyée",
+  PENDING: "En cours",
+  SENT: "Envoyée",
+  FAILED: "Échec",
+  SKIPPED: "Non configurée",
+  DISABLED: "Désactivée",
+};
+
 function formatDate(value) {
   try {
     return new Intl.DateTimeFormat("fr-FR", { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
@@ -30,6 +39,13 @@ function statusClass(status) {
   return "bg-slate-100 text-slate-700";
 }
 
+function notificationClass(status) {
+  if (status === "SENT") return "bg-emerald-100 text-emerald-800";
+  if (status === "FAILED") return "bg-red-100 text-red-800";
+  if (status === "PENDING") return "bg-amber-100 text-amber-800";
+  return "bg-slate-100 text-slate-700";
+}
+
 export default function LeadBackoffice() {
   const [leads, setLeads] = useState([]);
   const [counts, setCounts] = useState([]);
@@ -40,6 +56,7 @@ export default function LeadBackoffice() {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(null);
   const [saving, setSaving] = useState("");
+  const [notifying, setNotifying] = useState("");
 
   async function load() {
     setLoading(true);
@@ -52,8 +69,10 @@ export default function LeadBackoffice() {
       const response = await fetch(`/api/leads?${params.toString()}`, { cache: "no-store" });
       const data = await response.json();
       if (!response.ok || !data.ok) throw new Error(data.error || "Impossible de charger les demandes");
-      setLeads(Array.isArray(data.leads) ? data.leads : []);
+      const nextLeads = Array.isArray(data.leads) ? data.leads : [];
+      setLeads(nextLeads);
       setCounts(Array.isArray(data.counts) ? data.counts : []);
+      setSelected((current) => current ? (nextLeads.find((item) => item.id === current.id) || current) : current);
     } catch (err) {
       setError(err.message || "Erreur de chargement");
     } finally {
@@ -94,6 +113,21 @@ export default function LeadBackoffice() {
       setError(err.message || "Mise à jour impossible");
     } finally {
       setSaving("");
+    }
+  }
+
+  async function notifyAgain(lead) {
+    setNotifying(lead.id);
+    setError("");
+    try {
+      const response = await fetch(`/api/leads/${encodeURIComponent(lead.id)}/notify`, { method: "POST" });
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.error || "Notification impossible");
+      await load();
+    } catch (err) {
+      setError(err.message || "Notification impossible");
+    } finally {
+      setNotifying("");
     }
   }
 
@@ -185,6 +219,19 @@ export default function LeadBackoffice() {
             </div>
 
             <div className="mt-8 border-t border-slate-200 pt-6">
+              <div className="flex items-center justify-between gap-3">
+                <p className="font-semibold">Notification agence</p>
+                <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${notificationClass(selected.notificationStatus)}`}>{NOTIFICATION_LABELS[selected.notificationStatus] || selected.notificationStatus || "Non envoyée"}</span>
+              </div>
+              <p className="text-sm text-slate-500 mt-2">Destinataire : {selected.agencyEmail || "adresse agence non disponible"}</p>
+              {selected.notificationSentAt ? <p className="text-sm text-slate-500 mt-1">Envoyée le {formatDate(selected.notificationSentAt)}</p> : null}
+              {selected.notificationError ? <p className="text-sm text-red-700 mt-2">{selected.notificationError}</p> : null}
+              <button type="button" disabled={notifying === selected.id} onClick={() => notifyAgain(selected)} className="mt-3 rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold hover:bg-slate-50 disabled:opacity-50">
+                {notifying === selected.id ? "Envoi en cours…" : selected.notificationStatus === "SENT" ? "Renvoyer la notification" : "Envoyer la notification"}
+              </button>
+            </div>
+
+            <div className="mt-8 border-t border-slate-200 pt-6">
               <p className="font-semibold mb-3">Suivi de la demande</p>
               <div className="grid grid-cols-2 gap-2">
                 {Object.entries(STATUS_LABELS).map(([key, label]) => (
@@ -202,4 +249,4 @@ export default function LeadBackoffice() {
   );
 }
 
-export { PROJECT_LABELS, STATUS_LABELS, formatDate };
+export { NOTIFICATION_LABELS, PROJECT_LABELS, STATUS_LABELS, formatDate };
