@@ -92,6 +92,15 @@ test("backend sitemap agrees that quote pages are not indexable and canonicalize
   assert.match(backendSitemap, /normalizeSlug\(value\)\.toLowerCase\(\)/);
 });
 
+test("managed indexable special routes are always emitted once per published site", () => {
+  assert.match(backendSitemap, /SPECIAL_PUBLIC_PAGE_SLUGS/);
+  assert.match(backendSitemap, /"business-travel"/);
+  assert.match(backendSitemap, /"voyages-en-groupe"/);
+  assert.match(backendSitemap, /type:\s*"managed-public-route"/);
+  assert.match(backendSitemap, /managedPublicRoutes:/);
+  assert.match(backendSitemap, /MANAGED_PAGE_SLUGS = new Set\(\[/);
+});
+
 test("quote request page is crawlable but explicitly noindex", () => {
   assert.match(quotePage, /alternates:\s*\{ canonical \}/);
   assert.match(quotePage, /index:\s*false/);
