@@ -2,65 +2,18 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-const robots = await readFile(
-  new URL("../app/robots.js", import.meta.url),
-  "utf8"
-);
-
-const sitemap = await readFile(
-  new URL("../app/sitemap.js", import.meta.url),
-  "utf8"
-);
-
-const quotePage = await readFile(
-  new URL("../app/agence/[siteSlug]/demande-devis/page.js", import.meta.url),
-  "utf8"
-);
-
-const publicPage = await readFile(
-  new URL("../app/agence/[siteSlug]/[[...pageSlug]]/page.js", import.meta.url),
-  "utf8"
-);
-
-const businessTravelPage = await readFile(
-  new URL("../app/agence/[siteSlug]/business-travel/page.js", import.meta.url),
-  "utf8"
-);
-
-const groupTravelPage = await readFile(
-  new URL("../app/agence/[siteSlug]/voyages-en-groupe/page.js", import.meta.url),
-  "utf8"
-);
-
-const legacySiteHome = await readFile(
-  new URL("../app/sites/[siteSlug]/page.js", import.meta.url),
-  "utf8"
-);
-
-const legacySitePage = await readFile(
-  new URL("../app/sites/[siteSlug]/[pageSlug]/page.js", import.meta.url),
-  "utf8"
-);
-
-const proxy = await readFile(
-  new URL("../proxy.js", import.meta.url),
-  "utf8"
-);
-
-const localContext = await readFile(
-  new URL("../components/public-site/LocalContentContext.js", import.meta.url),
-  "utf8"
-);
-
-const backendSitemap = await readFile(
-  new URL("../../backend/src/modules/minisite-structured-data/sitemap.js", import.meta.url),
-  "utf8"
-);
-
-const backendStructuredDataService = await readFile(
-  new URL("../../backend/src/modules/minisite-structured-data/service.js", import.meta.url),
-  "utf8"
-);
+const robots = await readFile(new URL("../app/robots.js", import.meta.url), "utf8");
+const sitemap = await readFile(new URL("../app/sitemap.js", import.meta.url), "utf8");
+const quotePage = await readFile(new URL("../app/agence/[siteSlug]/demande-devis/page.js", import.meta.url), "utf8");
+const publicPage = await readFile(new URL("../app/agence/[siteSlug]/[[...pageSlug]]/page.js", import.meta.url), "utf8");
+const businessTravelPage = await readFile(new URL("../app/agence/[siteSlug]/business-travel/page.js", import.meta.url), "utf8");
+const groupTravelPage = await readFile(new URL("../app/agence/[siteSlug]/voyages-en-groupe/page.js", import.meta.url), "utf8");
+const legacySiteHome = await readFile(new URL("../app/sites/[siteSlug]/page.js", import.meta.url), "utf8");
+const legacySitePage = await readFile(new URL("../app/sites/[siteSlug]/[pageSlug]/page.js", import.meta.url), "utf8");
+const proxy = await readFile(new URL("../proxy.js", import.meta.url), "utf8");
+const localContext = await readFile(new URL("../components/public-site/LocalContentContext.js", import.meta.url), "utf8");
+const backendSitemap = await readFile(new URL("../../backend/src/modules/minisite-structured-data/sitemap.js", import.meta.url), "utf8");
+const backendStructuredDataService = await readFile(new URL("../../backend/src/modules/minisite-structured-data/service.js", import.meta.url), "utf8");
 
 test("robots keeps canonicalization and noindex surfaces crawlable", () => {
   assert.match(robots, /"\/api\/"/);
