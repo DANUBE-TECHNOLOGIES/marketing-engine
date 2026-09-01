@@ -27,6 +27,11 @@ const businessTravelPage = await readFile(
   "utf8"
 );
 
+const groupTravelPage = await readFile(
+  new URL("../app/agence/[siteSlug]/voyages-en-groupe/page.js", import.meta.url),
+  "utf8"
+);
+
 const legacySiteHome = await readFile(
   new URL("../app/sites/[siteSlug]/page.js", import.meta.url),
   "utf8"
@@ -104,6 +109,10 @@ test("managed indexable special routes are always emitted once per published sit
   assert.match(backendSitemap, /type:\s*"managed-public-route"/);
   assert.match(backendSitemap, /managedPublicRoutes:/);
   assert.match(backendSitemap, /MANAGED_PAGE_SLUGS = new Set\(\[/);
+  assert.match(businessTravelPage, /robots:\s*\{ index: true, follow: true \}/);
+  assert.match(groupTravelPage, /robots:\s*\{ index: true, follow: true \}/);
+  assert.match(businessTravelPage, /alternates:\s*\{ canonical \}/);
+  assert.match(groupTravelPage, /alternates:\s*\{ canonical \}/);
 });
 
 test("business travel returns a real 404 for a missing public site", () => {
