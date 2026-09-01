@@ -29,7 +29,15 @@ const PAGE_ALIASES = new Map([
   ["inspirations", "inspiration"],
 ]);
 
-const MANAGED_PAGE_SLUGS = new Set(["inspiration"]);
+const SPECIAL_PUBLIC_PAGE_SLUGS = new Set([
+  "business-travel",
+  "voyages-en-groupe",
+]);
+
+const MANAGED_PAGE_SLUGS = new Set([
+  "inspiration",
+  ...SPECIAL_PUBLIC_PAGE_SLUGS,
+]);
 
 const DESTINATION_BLOCK_TYPES = new Set([
   "destination-grid",
@@ -77,6 +85,7 @@ function pagePriority(slug) {
   const normalized = canonicalPageSlug(slug);
   if (!normalized) return 1;
   if (["agence", "services", "destinations", "contact"].includes(normalized)) return 0.8;
+  if (["business-travel", "voyages-en-groupe"].includes(normalized)) return 0.7;
   if (["equipe", "inspiration", "engagements", "partenaires", "avis"].includes(normalized)) return 0.6;
   return 0.5;
 }
@@ -209,6 +218,19 @@ function buildPublicSitemap({ sites, inspirations, destinations, publicOrigin } 
       pageSlug: "inspiration",
       type: "inspiration-index",
     });
+
+    for (const slug of SPECIAL_PUBLIC_PAGE_SLUGS) {
+      entries.push({
+        url: pageUrl(publicOrigin, site.slug, slug),
+        lastModified: normalizeDate(site.updatedAt || site.publishedAt),
+        changeFrequency: pageChangeFrequency(slug),
+        priority: pagePriority(slug),
+        agencyId,
+        siteSlug: site.slug,
+        pageSlug: slug,
+        type: "managed-public-route",
+      });
+    }
 
     for (const page of site.pages || []) {
       const rawSlug = normalizeSlug(page.slug);
@@ -352,6 +374,7 @@ function buildPublicSitemap({ sites, inspirations, destinations, publicOrigin } 
     summary: {
       totalSites: (sites || []).length,
       publishedSites: publishedSites.length,
+      managedPublicRoutes: deduplicated.filter((entry) => entry.type === "managed-public-route").length,
       destinations: (destinations || []).length,
       indexedDestinationPages: deduplicated.filter((entry) => entry.type === "destination").length,
       editorialContents: (inspirations || []).length,
@@ -371,6 +394,7 @@ module.exports = {
   MANAGED_PAGE_SLUGS,
   NOINDEX_SLUGS,
   PAGE_ALIASES,
+  SPECIAL_PUBLIC_PAGE_SLUGS,
   buildPublicSitemap,
   canonicalPageSlug,
   destinationSlugFromItem,
