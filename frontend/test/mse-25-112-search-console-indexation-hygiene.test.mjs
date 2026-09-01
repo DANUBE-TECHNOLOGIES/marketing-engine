@@ -17,6 +17,11 @@ const quotePage = await readFile(
   "utf8"
 );
 
+const publicPage = await readFile(
+  new URL("../app/agence/[siteSlug]/[[...pageSlug]]/page.js", import.meta.url),
+  "utf8"
+);
+
 const legacySiteHome = await readFile(
   new URL("../app/sites/[siteSlug]/page.js", import.meta.url),
   "utf8"
@@ -86,6 +91,12 @@ test("quote request page is crawlable but explicitly noindex", () => {
   assert.match(quotePage, /index:\s*false/);
   assert.match(quotePage, /follow:\s*true/);
   assert.match(quotePage, /\/demande-devis/);
+});
+
+test("published public pages are not noindexed solely because content is thin", () => {
+  assert.match(publicPage, /const indexable = !legalPage;/);
+  assert.doesNotMatch(publicPage, /const indexable = !legalPage && !quality\.criticallyThin;/);
+  assert.match(publicPage, /data-content-quality=/);
 });
 
 test("thin local pages receive differentiated context across public intents", () => {
