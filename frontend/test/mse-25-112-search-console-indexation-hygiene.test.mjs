@@ -47,6 +47,11 @@ const backendSitemap = await readFile(
   "utf8"
 );
 
+const backendStructuredDataService = await readFile(
+  new URL("../../backend/src/modules/minisite-structured-data/service.js", import.meta.url),
+  "utf8"
+);
+
 test("robots keeps canonicalization and noindex surfaces crawlable", () => {
   assert.match(robots, /"\/api\/"/);
   assert.match(robots, /"\/login"/);
@@ -97,6 +102,11 @@ test("published public pages are not noindexed solely because content is thin", 
   assert.match(publicPage, /const indexable = !legalPage;/);
   assert.doesNotMatch(publicPage, /const indexable = !legalPage && !quality\.criticallyThin;/);
   assert.match(publicPage, /data-content-quality=/);
+});
+
+test("published pages are not removed from sitemap solely because content is thin", () => {
+  assert.doesNotMatch(backendStructuredDataService, /applyContentQualityIndexabilityContract/);
+  assert.match(backendStructuredDataService, /published-pages-remain-indexable-runtime-quality-enrichment/);
 });
 
 test("thin local pages receive differentiated context across public intents", () => {
