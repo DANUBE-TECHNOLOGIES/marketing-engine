@@ -106,6 +106,7 @@ test("managed indexable special routes are always emitted once per published sit
   assert.match(backendSitemap, /SPECIAL_PUBLIC_PAGE_SLUGS/);
   assert.match(backendSitemap, /"business-travel"/);
   assert.match(backendSitemap, /"voyages-en-groupe"/);
+  assert.match(backendSitemap, /for \(const slug of SPECIAL_PUBLIC_PAGE_SLUGS\)/);
   assert.match(backendSitemap, /type:\s*"managed-public-route"/);
   assert.match(backendSitemap, /managedPublicRoutes:/);
   assert.match(backendSitemap, /MANAGED_PAGE_SLUGS = new Set\(\[/);
