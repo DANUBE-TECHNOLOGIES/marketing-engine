@@ -39,7 +39,7 @@ const DESTINATION_BLOCK_TYPES = new Set([
 ]);
 
 function canonicalPageSlug(value) {
-  const slug = normalizeSlug(value);
+  const slug = normalizeSlug(value).toLowerCase();
   return PAGE_ALIASES.has(slug) ? PAGE_ALIASES.get(slug) : slug;
 }
 
