@@ -86,9 +86,10 @@ test("global sitemap excludes non-indexable pages and preserves editorial nested
   assert.match(sitemap, /parts\.length === 4/);
 });
 
-test("backend sitemap agrees that quote pages are not indexable", () => {
+test("backend sitemap agrees that quote pages are not indexable and canonicalizes page casing", () => {
   assert.match(backendSitemap, /NOINDEX_SLUGS/);
   assert.match(backendSitemap, /"demande-devis"/);
+  assert.match(backendSitemap, /normalizeSlug\(value\)\.toLowerCase\(\)/);
 });
 
 test("quote request page is crawlable but explicitly noindex", () => {
