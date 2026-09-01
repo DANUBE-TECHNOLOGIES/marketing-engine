@@ -22,6 +22,11 @@ const publicPage = await readFile(
   "utf8"
 );
 
+const businessTravelPage = await readFile(
+  new URL("../app/agence/[siteSlug]/business-travel/page.js", import.meta.url),
+  "utf8"
+);
+
 const legacySiteHome = await readFile(
   new URL("../app/sites/[siteSlug]/page.js", import.meta.url),
   "utf8"
@@ -99,6 +104,14 @@ test("managed indexable special routes are always emitted once per published sit
   assert.match(backendSitemap, /type:\s*"managed-public-route"/);
   assert.match(backendSitemap, /managedPublicRoutes:/);
   assert.match(backendSitemap, /MANAGED_PAGE_SLUGS = new Set\(\[/);
+});
+
+test("business travel returns a real 404 for a missing public site", () => {
+  assert.match(businessTravelPage, /import \{ notFound \} from "next\/navigation"/);
+  assert.match(businessTravelPage, /async function loadSite/);
+  assert.match(businessTravelPage, /error\?\.statusCode === 404/);
+  assert.match(businessTravelPage, /if \(!site\) notFound\(\)/);
+  assert.match(businessTravelPage, /robots:\s*\{ index: false, follow: false \}/);
 });
 
 test("quote request page is crawlable but explicitly noindex", () => {
