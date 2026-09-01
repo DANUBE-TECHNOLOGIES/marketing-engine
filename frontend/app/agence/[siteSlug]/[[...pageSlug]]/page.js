@@ -177,7 +177,7 @@ export async function generateMetadata({ params }) {
     const title = localSeo.title;
     const description = localSeo.description;
     const legalPage = isLegalPage(pageSlug, page);
-    const indexable = !legalPage && !quality.criticallyThin;
+    const indexable = !legalPage;
     const socialImage = absoluteMetadataImage(localSeo.image);
     const images = metadataImages(localSeo.image);
     return mergePublicMetadata({
