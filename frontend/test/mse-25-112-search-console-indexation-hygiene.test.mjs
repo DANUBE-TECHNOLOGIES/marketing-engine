@@ -17,6 +17,21 @@ const quotePage = await readFile(
   "utf8"
 );
 
+const legacySiteHome = await readFile(
+  new URL("../app/sites/[siteSlug]/page.js", import.meta.url),
+  "utf8"
+);
+
+const legacySitePage = await readFile(
+  new URL("../app/sites/[siteSlug]/[pageSlug]/page.js", import.meta.url),
+  "utf8"
+);
+
+const proxy = await readFile(
+  new URL("../proxy.js", import.meta.url),
+  "utf8"
+);
+
 const localContext = await readFile(
   new URL("../components/public-site/LocalContentContext.js", import.meta.url),
   "utf8"
@@ -27,7 +42,7 @@ const backendSitemap = await readFile(
   "utf8"
 );
 
-test("robots keeps public noindex surfaces crawlable", () => {
+test("robots keeps canonicalization and noindex surfaces crawlable", () => {
   assert.match(robots, /"\/api\/"/);
   assert.match(robots, /"\/login"/);
   assert.match(robots, /"\/actions\/"/);
@@ -35,6 +50,21 @@ test("robots keeps public noindex surfaces crawlable", () => {
   assert.doesNotMatch(robots, /"\/sites\/"/);
   assert.doesNotMatch(robots, /"\/admin\/"/);
   assert.doesNotMatch(robots, /"\/website-builder\/"/);
+});
+
+test("legacy /sites URLs remain crawlable only to reach permanent canonical redirects", () => {
+  assert.match(legacySiteHome, /permanentRedirect/);
+  assert.match(legacySiteHome, /`\/agence\/\$\{encodeURIComponent/);
+  assert.match(legacySitePage, /permanentRedirect/);
+  assert.match(legacySitePage, /pageSlug/);
+  assert.match(legacySitePage, /`\/agence\/\$\{encodeURIComponent/);
+});
+
+test("unknown technical routes cannot leak on the public mini-site hostname", () => {
+  assert.match(proxy, /requestHostname\(request\) === PUBLIC_SITE_HOST/);
+  assert.match(proxy, /status:\s*404/);
+  assert.match(proxy, /pathname === "\/sites"/);
+  assert.match(proxy, /pathname\.startsWith\("\/sites\/"\)/);
 });
 
 test("global sitemap excludes non-indexable pages and preserves editorial nested routes", () => {
