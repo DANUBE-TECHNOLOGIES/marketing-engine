@@ -19,6 +19,7 @@ const NOINDEX_SLUGS = new Set([
   "confidentialite",
   "politique-de-confidentialite",
   "privacy",
+  "demande-devis",
 ]);
 
 const PAGE_ALIASES = new Map([
