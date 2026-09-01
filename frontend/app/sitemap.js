@@ -27,6 +27,11 @@ const NON_INDEXABLE_PAGE_SLUGS = new Set([
   "demande-devis",
 ]);
 
+const INDEXABLE_NESTED_ROUTE_PREFIXES = new Set([
+  "destination",
+  "inspiration",
+]);
+
 function normalizePath(value) {
   let pathname = String(value || "").trim();
   if (!pathname) return null;
@@ -47,10 +52,26 @@ function normalizePath(value) {
 }
 
 function isIndexablePublicPath(pathname) {
-  const match = String(pathname || "").match(/^\/agence\/[^/]+(?:\/([^/]+))?$/i);
-  if (!match) return false;
-  const pageSlug = String(match[1] || "").trim().toLowerCase();
-  return !NON_INDEXABLE_PAGE_SLUGS.has(pageSlug);
+  const parts = String(pathname || "")
+    .split("/")
+    .filter(Boolean);
+
+  if (parts[0] !== "agence" || !parts[1]) return false;
+
+  if (parts.length === 2) return true;
+
+  if (parts.length === 3) {
+    const pageSlug = String(parts[2] || "").trim().toLowerCase();
+    return !NON_INDEXABLE_PAGE_SLUGS.has(pageSlug);
+  }
+
+  if (parts.length === 4) {
+    const routePrefix = String(parts[2] || "").trim().toLowerCase();
+    const nestedSlug = String(parts[3] || "").trim();
+    return INDEXABLE_NESTED_ROUTE_PREFIXES.has(routePrefix) && Boolean(nestedSlug);
+  }
+
+  return false;
 }
 
 function canonicalUrl(value) {
@@ -102,6 +123,7 @@ export default async function sitemap() {
 }
 
 export {
+  INDEXABLE_NESTED_ROUTE_PREFIXES,
   NON_INDEXABLE_PAGE_SLUGS,
   canonicalUrl,
   isIndexablePublicPath,
