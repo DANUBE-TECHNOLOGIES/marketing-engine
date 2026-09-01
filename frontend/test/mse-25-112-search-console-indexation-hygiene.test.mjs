@@ -66,7 +66,6 @@ test("robots keeps canonicalization and noindex surfaces crawlable", () => {
   assert.match(robots, /"\/api\/"/);
   assert.match(robots, /"\/login"/);
   assert.match(robots, /"\/actions\/"/);
-
   assert.doesNotMatch(robots, /"\/sites\/"/);
   assert.doesNotMatch(robots, /"\/admin\/"/);
   assert.doesNotMatch(robots, /"\/website-builder\/"/);
@@ -153,6 +152,5 @@ test("thin local pages receive differentiated context across public intents", ()
   for (const kind of ["agency", "inspirations", "commitments", "partners"]) {
     assert.match(localContext, new RegExp(`\\b${kind}:`));
   }
-
   assert.match(localContext, /kind !== "inspirations"/);
 });
