@@ -109,6 +109,13 @@ test("published pages are not removed from sitemap solely because content is thi
   assert.match(backendStructuredDataService, /published-pages-remain-indexable-runtime-quality-enrichment/);
 });
 
+test("generic public page casing redirects to its lowercase canonical route", () => {
+  assert.match(publicPage, /function isNonCanonicalPageSlug/);
+  assert.match(publicPage, /raw !== normalizePageSlug\(raw\)/);
+  assert.match(publicPage, /isAliasPage\(pageSlug\) \|\| isNonCanonicalPageSlug\(pageSlug\)/);
+  assert.match(publicPage, /permanentRedirect\(canonicalPath/);
+});
+
 test("thin local pages receive differentiated context across public intents", () => {
   for (const kind of ["agency", "inspirations", "commitments", "partners"]) {
     assert.match(localContext, new RegExp(`\\b${kind}:`));
