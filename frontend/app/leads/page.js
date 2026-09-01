@@ -1,5 +1,5 @@
 import MainLayout from "../components/MainLayout";
-import LeadBackoffice from "./LeadBackoffice";
+import LeadInbox from "./LeadInbox";
 
 export const metadata = {
   title: "Demandes clients | Marketing Engine",
@@ -10,9 +10,9 @@ export default function LeadsPage() {
   return (
     <MainLayout
       title="Demandes clients"
-      subtitle="Suivi des demandes reçues depuis les mini-sites, sans dépendance à l’ERP."
+      subtitle="Lecture rapide des demandes reçues depuis les mini-sites avant leur reprise par l’ERP."
     >
-      <LeadBackoffice />
+      <LeadInbox />
     </MainLayout>
   );
 }
