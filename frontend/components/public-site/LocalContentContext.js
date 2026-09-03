@@ -13,6 +13,12 @@ function joinCities(values) {
 }
 
 const COPY = {
+  agency: ({ city, nearby }) => ({
+    title: `Une agence de voyages ancrée à ${city}`,
+    text: nearby.length
+      ? `Notre agence de ${city} accompagne aussi les voyageurs de ${joinCities(nearby.slice(0, 2))}. Sur place, l’équipe prend le temps de comprendre le projet, de comparer les solutions et de suivre le dossier avant, pendant et après le départ.`
+      : `Notre agence de ${city} privilégie un accompagnement de proximité : compréhension du projet, comparaison des solutions et suivi du dossier avant, pendant et après le départ.`,
+  }),
   services: ({ city, nearby }) => ({
     title: `Des conseils voyage personnalisés à ${city}`,
     text: nearby.length
@@ -24,6 +30,12 @@ const COPY = {
     text: nearby.length
       ? `Pour les voyageurs de ${city} et du secteur de ${joinCities(nearby.slice(0, 2))}, nous comparons les destinations selon la saison, la durée du trajet, le rythme recherché, les formalités et le type d’hébergement. L’objectif est de retenir une destination adaptée au projet, pas seulement une offre attractive.`
       : `À ${city}, nous comparons les destinations selon la saison, la durée du trajet, le rythme recherché, les formalités et le type d’hébergement afin de retenir une solution réellement adaptée à votre projet.`,
+  }),
+  inspirations: ({ city, nearby }) => ({
+    title: `Des idées de voyage adaptées aux départs depuis ${city}`,
+    text: nearby.length
+      ? `Nos inspirations sont pensées pour les voyageurs de ${city} et du secteur de ${joinCities(nearby.slice(0, 2))}. Elles permettent de comparer les périodes de départ, les styles de séjour et les itinéraires avant d’affiner le projet avec un conseiller de l’agence.`
+      : `Nos inspirations voyage à ${city} servent de point de départ pour comparer les périodes, les styles de séjour et les itinéraires avant d’affiner votre projet avec un conseiller de l’agence.`,
   }),
   offers: ({ city, nearby }) => ({
     title: `Trouver une offre de voyage avec votre agence de ${city}`,
@@ -43,11 +55,23 @@ const COPY = {
       ? `Notre équipe de ${city} reçoit et accompagne également les voyageurs venant de ${joinCities(nearby.slice(0, 2))}. Chaque projet commence par un échange sur vos attentes afin de construire une proposition adaptée et de conserver un interlocuteur jusqu’à votre retour.`
       : `Notre équipe de ${city} prend le temps d’échanger sur vos attentes afin de construire une proposition adaptée et de rester votre interlocuteur jusqu’à votre retour.`,
   }),
+  commitments: ({ city, nearby }) => ({
+    title: `Nos engagements auprès des voyageurs de ${city}`,
+    text: nearby.length
+      ? `À ${city}, comme pour les voyageurs de ${joinCities(nearby.slice(0, 2))}, notre accompagnement repose sur l’écoute du projet, la clarté des solutions proposées et la disponibilité de l’agence lorsqu’un dossier nécessite un suivi.`
+      : `À ${city}, notre accompagnement repose sur l’écoute du projet, la clarté des solutions proposées et la disponibilité de l’agence lorsqu’un dossier nécessite un suivi.`,
+  }),
+  partners: ({ city, nearby }) => ({
+    title: `Des partenaires voyage sélectionnés par notre agence de ${city}`,
+    text: nearby.length
+      ? `Pour les voyageurs de ${city} et des communes de ${joinCities(nearby.slice(0, 2))}, l’agence s’appuie sur différents voyagistes et partenaires afin de comparer les produits, les prestations et les conditions correspondant au projet.`
+      : `Notre agence de ${city} s’appuie sur différents voyagistes et partenaires afin de comparer les produits, les prestations et les conditions correspondant à votre projet.`,
+  }),
   contact: ({ city, nearby }) => ({
     title: `Préparez votre voyage avec notre agence à ${city}`,
     text: nearby.length
       ? `Vous habitez ${city}, ${joinCities(nearby.slice(0, 2))} ou une commune voisine ? Contactez l’agence avec vos dates, votre budget, le nombre de voyageurs et vos premières envies : ces informations nous permettent d’orienter efficacement la recherche.`
-      : `Contactez notre agence de ${city} avec vos dates, votre budget, le nombre de voyageurs et vos premières envies afin que nous puissions orienter efficacement votre recherche.`,
+      : `Contactez notre agence de ${city} avec vos dates, votre budget, le nombre de voyageurs et vos premières envies afin que nous puissions orienter efficacement la recherche.`,
   }),
 };
 
@@ -80,7 +104,9 @@ export default function LocalContentContext({ site, kind, quality }) {
           {kind !== "destinations" ? (
             <Link href={`${root}/destinations`}>Destinations conseillées par notre agence à {city}</Link>
           ) : null}
-          <Link href={`${root}/inspiration`}>Conseils et inspirations voyage depuis {city}</Link>
+          {kind !== "inspirations" ? (
+            <Link href={`${root}/inspiration`}>Conseils et inspirations voyage depuis {city}</Link>
+          ) : null}
           {kind !== "contact" ? (
             <Link href={`${root}/contact`}>Contacter notre agence de voyages à {city}</Link>
           ) : null}

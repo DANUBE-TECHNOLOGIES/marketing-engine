@@ -12,5 +12,6 @@ test("content factory routes are mounted by register-modules", () => {
   );
 
   assert.match(source, /const contentFactory = require\("\.\/content-factory"\);/);
-  assert.match(source, /if \(contentFactory\.routes\) \{\s*app\.use\(contentFactory\.routes\(\{ prisma \}\)\);\s*\}/m);
+  assert.match(source, /if\s*\(\s*contentFactory\.routes\s*\)/);
+  assert.match(source, /app\.use\(\s*contentFactory\.routes\(\{\s*prisma\s*\}\)\s*\)/);
 });

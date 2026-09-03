@@ -65,6 +65,11 @@ function normalizePageSlug(value) {
   return String(value || "").trim().toLowerCase();
 }
 
+function isNonCanonicalPageSlug(value) {
+  const raw = String(value || "").trim();
+  return Boolean(raw) && raw !== normalizePageSlug(raw);
+}
+
 function canonicalPageSlug(value) {
   const slug = normalizePageSlug(value);
   return Object.prototype.hasOwnProperty.call(PAGE_ALIASES, slug)
@@ -159,7 +164,7 @@ export async function generateMetadata({ params }) {
     return { robots: { index: false, follow: false } };
   }
   const pageSlug = resolved.pageSlug?.[0] || "";
-  if (isAliasPage(pageSlug)) {
+  if (isAliasPage(pageSlug) || isNonCanonicalPageSlug(pageSlug)) {
     return {
       alternates: { canonical: canonicalUrl({ siteSlug: resolved.siteSlug, pageSlug }) },
       robots: { index: false, follow: true },
@@ -177,7 +182,7 @@ export async function generateMetadata({ params }) {
     const title = localSeo.title;
     const description = localSeo.description;
     const legalPage = isLegalPage(pageSlug, page);
-    const indexable = !legalPage && !quality.criticallyThin;
+    const indexable = !legalPage;
     const socialImage = absoluteMetadataImage(localSeo.image);
     const images = metadataImages(localSeo.image);
     return mergePublicMetadata({
@@ -221,7 +226,7 @@ export default async function AgencySitePage({ params }) {
   const resolved = await params;
   if ((resolved.pageSlug?.length || 0) > 1) notFound();
   const pageSlug = resolved.pageSlug?.[0] || "";
-  if (isAliasPage(pageSlug)) {
+  if (isAliasPage(pageSlug) || isNonCanonicalPageSlug(pageSlug)) {
     permanentRedirect(canonicalPath({ siteSlug: resolved.siteSlug, pageSlug }));
   }
 
@@ -344,6 +349,7 @@ export {
   isAliasPage,
   isHomePage,
   isLegalPage,
+  isNonCanonicalPageSlug,
   isServicesPage,
   pageHasHero,
   pageSections,

@@ -1,0 +1,28 @@
+name: MSE-25.117 Local Search
+
+on:
+  pull_request:
+    paths:
+      - "frontend/lib/seo/**"
+      - "frontend/test/mse-25-117-*.test.mjs"
+      - "frontend/scripts/mse-25-117-verdict.mjs"
+      - "frontend/scripts/audit-local-search-contract.mjs"
+      - "frontend/package.json"
+      - ".github/workflows/mse-25-117-local-search.yml"
+  workflow_dispatch:
+
+jobs:
+  local-search-verdict:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: node scripts/mse-25-117-verdict.mjs
