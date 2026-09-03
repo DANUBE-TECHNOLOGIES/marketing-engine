@@ -14,6 +14,7 @@ import {
 import {
   resolvedTargetCities,
 } from "../../../../lib/seo/local-area-config";
+import "./inspiration-index.css";
 
 const PUBLIC_ORIGIN = String(
   process.env.NEXT_PUBLIC_SITE_ORIGIN ||
@@ -186,7 +187,7 @@ export default async function InspirationIndexPage({ params }) {
       <section className="public-site-section">
         <div className="public-site-container">
           {items.length ? (
-            <div className="public-site-card-grid">
+            <div className="public-inspiration-grid">
               {items.map((item) => {
                 const slug = String(item?.slug || "").trim();
                 if (!slug) return null;
@@ -204,27 +205,38 @@ export default async function InspirationIndexPage({ params }) {
                 const published = formatPublishedDate(
                   item.publishedAt || item.createdAt
                 );
+                const articlePath = `${canonicalPath(siteSlug)}/${encodeURIComponent(slug)}`;
 
                 return (
-                  <article className="public-site-card" key={item.id || slug}>
+                  <article className="public-inspiration-card" key={item.id || slug}>
                     {image ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={image} alt={body.imageAlt || title} loading="lazy" />
+                      <div className="public-inspiration-card-media">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={image} alt={body.imageAlt || title} loading="lazy" />
+                      </div>
                     ) : null}
-                    <p className="public-site-eyebrow">Inspiration</p>
-                    <h2>{title}</h2>
-                    {published ? (
-                      <p className="public-site-content-date">
-                        Publié le{" "}
-                        <time dateTime={published.iso}>
-                          {published.label}
-                        </time>
-                      </p>
-                    ) : null}
-                    {item.excerpt ? <p>{item.excerpt}</p> : null}
-                    <Link href={`${canonicalPath(siteSlug)}/${encodeURIComponent(slug)}`}>
-                      Découvrir {title}
-                    </Link>
+                    <div className="public-inspiration-card-body">
+                      <p className="public-site-eyebrow">Inspiration</p>
+                      <h2>
+                        <Link className="public-inspiration-card-title-link" href={articlePath}>
+                          {title}
+                        </Link>
+                      </h2>
+                      {published ? (
+                        <p className="public-site-content-date">
+                          Publié le{" "}
+                          <time dateTime={published.iso}>
+                            {published.label}
+                          </time>
+                        </p>
+                      ) : null}
+                      {item.excerpt ? (
+                        <p className="public-inspiration-card-excerpt">{item.excerpt}</p>
+                      ) : null}
+                      <span className="public-inspiration-card-cta" aria-hidden="true">
+                        Lire l’article
+                      </span>
+                    </div>
                   </article>
                 );
               })}

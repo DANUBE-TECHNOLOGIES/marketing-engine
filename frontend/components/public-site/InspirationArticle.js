@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import "./inspiration-article.css";
+
 function asObject(value) {
   return value && typeof value === "object" && !Array.isArray(value)
     ? value
@@ -77,24 +79,26 @@ export default function InspirationArticle({ content, site }) {
   const nearby = localAreas(site);
 
   return (
-    <article className="public-site-section">
+    <article className="public-site-section public-inspiration-article">
       <div className="public-site-container public-site-prose">
-        <p className="public-site-eyebrow">
-          {body.category || body.theme || "Inspiration voyage"}
-        </p>
-
-        <h1>{content.title}</h1>
-
-        {content.excerpt ? (
-          <p className="public-site-section-intro">{content.excerpt}</p>
-        ) : null}
-
-        {city ? (
-          <p>
-            Cette inspiration est sélectionnée par votre agence Mondescale à {city} pour vous aider à préparer un voyage adapté à vos envies.
-            {nearby.length ? ` Notre équipe accompagne également les voyageurs de ${nearby.join(", ")}.` : ""}
+        <header className="public-inspiration-article-header">
+          <p className="public-site-eyebrow">
+            {body.category || body.theme || "Inspiration voyage"}
           </p>
-        ) : null}
+
+          <h1>{content.title}</h1>
+
+          {content.excerpt ? (
+            <p className="public-inspiration-article-lead">{content.excerpt}</p>
+          ) : null}
+
+          {city ? (
+            <p className="public-inspiration-local-note">
+              Cette inspiration est sélectionnée par votre agence Mondescale à {city} pour vous aider à préparer un voyage adapté à vos envies.
+              {nearby.length ? ` Notre équipe accompagne également les voyageurs de ${nearby.join(", ")}.` : ""}
+            </p>
+          ) : null}
+        </header>
 
         {image ? (
           <figure className="public-site-inspiration-hero">
@@ -103,17 +107,19 @@ export default function InspirationArticle({ content, site }) {
           </figure>
         ) : null}
 
-        {body.introduction ? <p>{body.introduction}</p> : null}
+        <div className="public-inspiration-article-content">
+          {body.introduction ? <p>{body.introduction}</p> : null}
 
-        {sections.map((section, index) => (
-          <section key={section.id || section.slug || index}>
-            {section.title ? <h2>{section.title}</h2> : null}
-            {sectionText(section) ? <p>{sectionText(section)}</p> : null}
-          </section>
-        ))}
+          {sections.map((section, index) => (
+            <section className="public-inspiration-section" key={section.id || section.slug || index}>
+              {section.title ? <h2>{section.title}</h2> : null}
+              {sectionText(section) ? <p>{sectionText(section)}</p> : null}
+            </section>
+          ))}
+        </div>
 
         {faq.length ? (
-          <section>
+          <section className="public-inspiration-faq">
             <h2>Questions fréquentes</h2>
             <div className="public-site-faq-list">
               {faq.map((item, index) => (
@@ -126,26 +132,28 @@ export default function InspirationArticle({ content, site }) {
           </section>
         ) : null}
 
-        <nav className="public-site-related-links" aria-label="Continuer la préparation de votre voyage">
-          <Link href={`${homeHref}/destinations`}>
-            Découvrir les destinations depuis {city || "votre agence"}
-          </Link>
-          <Link href={`${homeHref}/services`}>
-            Voir les services de votre agence
-          </Link>
-          <Link href={`${homeHref}/inspiration`}>
-            Toutes les inspirations voyage
-          </Link>
-        </nav>
+        <footer className="public-inspiration-article-footer">
+          <nav className="public-site-related-links" aria-label="Continuer la préparation de votre voyage">
+            <Link href={`${homeHref}/destinations`}>
+              Découvrir les destinations depuis {city || "votre agence"}
+            </Link>
+            <Link href={`${homeHref}/services`}>
+              Voir les services de votre agence
+            </Link>
+            <Link href={`${homeHref}/inspiration`}>
+              Toutes les inspirations voyage
+            </Link>
+          </nav>
 
-        <div className="public-site-hero-actions">
-          <Link className="public-site-button" href={`${homeHref}/contact`}>
-            Parler de ce voyage avec votre agence
-          </Link>
-          <Link className="public-site-button public-site-button-secondary" href={homeHref}>
-            Retour à l’agence
-          </Link>
-        </div>
+          <div className="public-site-hero-actions">
+            <Link className="public-site-button" href={`${homeHref}/contact`}>
+              Parler de ce voyage avec votre agence
+            </Link>
+            <Link className="public-site-button public-site-button-secondary" href={homeHref}>
+              Retour à l’agence
+            </Link>
+          </div>
+        </footer>
       </div>
     </article>
   );

@@ -122,6 +122,26 @@ class AiContentRepository {
     });
   }
 
+  publishContent(id) {
+    return this.prisma.seoContent.update({
+      where: { id: String(id) },
+      data: {
+        status: "published",
+        publishedAt: new Date(),
+      },
+    });
+  }
+
+  unpublishContent(id) {
+    return this.prisma.seoContent.update({
+      where: { id: String(id) },
+      data: {
+        status: "review",
+        publishedAt: null,
+      },
+    });
+  }
+
   async listPublishedContents(filters = {}) {
     const ids = Array.isArray(filters.ids)
       ? filters.ids.map(String).filter(Boolean).slice(0, 100)
