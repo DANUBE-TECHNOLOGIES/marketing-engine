@@ -20,24 +20,15 @@ export default function robots() {
           "/agence/",
         ],
 
+        // Keep robots.txt deliberately narrow. Public mini-sites must remain
+        // crawlable so Google can see their canonical/noindex directives.
+        // Authentication/API surfaces are the only routes that should not be
+        // crawled at all; editor/admin routes are handled with page-level
+        // noindex metadata instead of accumulating "Blocked by robots.txt".
         disallow: [
           "/api/",
-          "/website-builder/",
-          "/admin/",
-          "/admin-network/",
-          "/access-check/",
-          "/access-denied/",
-          "/actions/",
-          "/agencies/",
-          "/agency-directory/",
-          "/agency-directory-completion/",
-          "/agency-directory-fix-plan/",
-          "/agency-directory-guide/",
-          "/agency-directory-missing/",
-          "/agency-directory-quality/",
-          "/agency-directory-ready/",
           "/login",
-          "/sites/",
+          "/actions/",
         ],
       },
     ],
