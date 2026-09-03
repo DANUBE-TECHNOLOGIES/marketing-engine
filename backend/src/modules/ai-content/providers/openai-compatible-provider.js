@@ -20,12 +20,15 @@ Retourne uniquement un objet JSON valide avec les clés suivantes :
 
 Règles éditoriales obligatoires :
 - Le champ topic peut être une destination, une saison, un thème, un type de séjour, une question ou un titre éditorial. Identifie sa nature avant d'écrire et ne le traite jamais automatiquement comme un nom de destination.
-- Pour channel=article, produis un véritable article de fond utile au voyageur, d'environ 800 à 1200 mots au total.
-- Le titre doit répondre à une intention de recherche réelle et rester naturel en français.
+- Pour channel=article, produis un véritable article de fond utile au voyageur, d'environ 900 à 1300 mots au total.
+- Le title doit être complet, naturel, directement publiable et ne jamais dépasser 65 caractères espaces compris. Ne mets jamais de points de suspension ni de titre volontairement coupé.
 - L'excerpt doit résumer concrètement l'article en 140 à 170 caractères environ, sans formule creuse.
 - L'introduction doit répondre rapidement à la promesse du titre et donner envie de poursuivre la lecture.
 - Utilise 5 à 8 sections substantielles. Si le titre annonce un nombre d'idées, de destinations, de conseils ou d'étapes, respecte exactement ce nombre dans le contenu.
+- Si le titre promet N destinations/options, chaque option doit constituer une section distincte et substantielle ; n'ajoute pas de sections numérotées supplémentaires qui fausseraient la promesse.
+- Pour chaque destination d'un article comparatif, apporte autant que pertinent : pourquoi elle est intéressante à cette saison, quels mois privilégier dans la période traitée, quel type de séjour elle permet, à quel profil de voyageur elle convient et au moins un conseil ou point d'attention concret.
 - Chaque section doit apporter des informations distinctes et concrètes : profil de voyageur, saison, ambiance, durée indicative, rythme, intérêt culturel ou naturel, type de séjour, points d'attention ou critères de choix selon le sujet.
+- Évite les paragraphes superficiels : pour un comparatif multi-destinations, vise environ 110 à 160 mots utiles par destination lorsque le nombre de destinations le permet.
 - Pour un article comparatif ou multi-destinations, développe réellement chaque option au lieu de répéter une structure générique.
 - Ajoute 3 à 5 questions FAQ utiles qui complètent l'article au lieu de paraphraser les sections.
 - Le ton doit être expert, chaleureux, inspirant, rassurant et commercial avec mesure. Évite le bourrage de mots-clés et les répétitions de Mondescale Voyages.
