@@ -95,9 +95,9 @@ test("canonical hero types are routed through the optimized V2 renderer before l
   const registry = source("components/public-site/renderers/registry.js");
   const sections = source("components/public-site/PublicSiteSections.js");
   assert.match(registry, /hero:\s*HeroV2Renderer/);
-  assert.match(sections, /const RegistryRenderer = getPublicRenderer\(type\)/);
-  assert.match(sections, /if \(RegistryRenderer\) return <RegistryRenderer/);
-  assert.match(sections, /if \(type\.includes\(["']hero["']\)\) return <HeroSection/);
+  assert.match(sections, /const\s+RegistryRenderer\s*=\s*getPublicRenderer\(type\)/);
+  assert.match(sections, /if\s*\(RegistryRenderer\)\s*return\s*<RegistryRenderer/);
+  assert.match(sections, /if\s*\(type\.includes\(["']hero["']\)\)\s*return\s*<HeroSection/);
 });
 
 test("non critical public media cannot compete with the hero LCP", () => {
@@ -109,7 +109,7 @@ test("non critical public media cannot compete with the hero LCP", () => {
   const offers = source("components/public-site/renderers/OffersRenderer.js");
   const inspirations = source("components/public-site/renderers/InspirationsRenderer.js");
 
-  assert.match(logo, /fetchPriority=["']auto["']/);
+  assert.match(logo, /fetchPriority=\{\s*priority\s*\?\s*["']high["']\s*:\s*["']auto["']\s*\}/);
   for (const renderer of [destinations, gallery, imageText, team, offers, inspirations]) {
     assert.match(renderer, /loading=["']lazy["']/);
     assert.match(renderer, /decoding=["']async["']/);

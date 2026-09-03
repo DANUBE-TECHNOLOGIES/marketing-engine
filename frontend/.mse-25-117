@@ -1,0 +1,3 @@
+MSE_25_117=LOCAL_SEARCH_PERFORMANCE
+VALIDATION=node scripts/audit-local-search-contract.mjs
+ISSUE=51

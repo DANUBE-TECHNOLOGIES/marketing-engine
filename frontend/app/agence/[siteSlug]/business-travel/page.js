@@ -1,3 +1,5 @@
+import { notFound } from "next/navigation";
+
 import BusinessTravelPage from "../../../../components/public-site/BusinessTravelPage";
 import PublicBreadcrumbs from "../../../../components/public-site/PublicBreadcrumbs";
 import PublicReassuranceBand from "../../../../components/public-site/PublicReassuranceBand";
@@ -15,9 +17,25 @@ function cityName(site) {
   return String(site?.agency?.city || site?.city || "").trim();
 }
 
+async function loadSite(siteSlug) {
+  try {
+    const site = await publicSiteApi.getSite(siteSlug);
+    return site || null;
+  } catch (error) {
+    if (error?.statusCode === 404) return null;
+    throw error;
+  }
+}
+
 export async function generateMetadata({ params }) {
   const { siteSlug } = await params;
-  const site = await publicSiteApi.getSite(siteSlug);
+  const site = await loadSite(siteSlug);
+  if (!site) {
+    return {
+      robots: { index: false, follow: false },
+    };
+  }
+
   const city = cityName(site);
   const canonical = `${PUBLIC_ORIGIN}${routePath(siteSlug)}`;
   const title = city
@@ -39,7 +57,9 @@ export async function generateMetadata({ params }) {
 
 export default async function AgencyBusinessTravelRoute({ params }) {
   const { siteSlug } = await params;
-  const site = await publicSiteApi.getSite(siteSlug);
+  const site = await loadSite(siteSlug);
+  if (!site) notFound();
+
   const city = cityName(site);
   const homePath = `/agence/${siteSlug}`;
   const currentPath = routePath(siteSlug);
@@ -66,4 +86,4 @@ export default async function AgencyBusinessTravelRoute({ params }) {
   );
 }
 
-export { cityName, routePath };
+export { cityName, loadSite, routePath };
