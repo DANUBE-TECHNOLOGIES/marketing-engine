@@ -1,4 +1,4 @@
-import { searchConsoleCtr } from "./search-console-local-baseline";
+import { searchConsoleCtr } from "./search-console-local-baseline.js";
 
 function finite(value) {
   const number = Number(value);
