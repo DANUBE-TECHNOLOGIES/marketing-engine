@@ -98,15 +98,36 @@ module.exports = ({ prisma }) => {
       const editorialTargeting = patch.editorialTargeting;
       delete patch.editorialTargeting;
 
+      const existingSeo = asObject(content.seo);
+      const existingOpenGraph = asObject(existingSeo.openGraph);
+      const syncedSeo = {
+        ...existingSeo,
+        title: patch.title,
+        description: patch.excerpt || existingSeo.description || "",
+        openGraph: {
+          ...existingOpenGraph,
+          title: patch.title,
+          description: patch.excerpt || existingOpenGraph.description || existingSeo.description || "",
+        },
+      };
+
       if (editorialTargeting) {
         await assertEditorialTargetingAgenciesBelongToTenant(
           prisma,
           req.tenant.id,
           editorialTargeting
         );
-        patch.seo = {
-          ...asObject(content.seo),
-          editorialTargeting,
+        syncedSeo.editorialTargeting = editorialTargeting;
+      }
+
+      patch.seo = syncedSeo;
+
+      const existingSchema = asObject(content.schemaOrg);
+      if (Object.keys(existingSchema).length) {
+        patch.schemaOrg = {
+          ...existingSchema,
+          name: patch.title,
+          description: patch.excerpt || existingSchema.description || "",
         };
       }
 
