@@ -10,6 +10,20 @@ function slugify(value) {
     .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 120) || "contenu";
 }
 function truncate(value, max) { const text = String(value || "").trim(); return text.length <= max ? text : `${text.slice(0, max - 1).trim()}…`; }
+function compactTitle(value, max = 65) {
+  const text = String(value || "").trim().replace(/\s+/g, " ");
+  if (text.length <= max) return text;
+  const candidate = text.slice(0, max + 1);
+  const boundary = candidate.lastIndexOf(" ");
+  return (boundary >= Math.floor(max * 0.65) ? candidate.slice(0, boundary) : text.slice(0, max)).trim().replace(/[\s:;,\-–—]+$/, "");
+}
+function editorialTitle(outputTitle, data) {
+  const generated = String(outputTitle || "").trim();
+  if (generated && generated.length <= 65 && !generated.endsWith("…")) return generated;
+  const topic = String(data.topic || "").trim();
+  if (topic) return compactTitle(topic, 65);
+  return compactTitle(generated || `${data.topic} avec ${data.agencyName}`, 65);
+}
 function httpError(message, statusCode, code, details) { return Object.assign(new Error(message), { statusCode, code, details }); }
 function asObject(value) { return value && typeof value === "object" && !Array.isArray(value) ? value : {}; }
 function targeting(content) {
@@ -203,7 +217,7 @@ class AiContentService {
   normalize(output, data) {
     if (!output || typeof output !== "object") throw httpError("Le fournisseur IA n'a retourné aucun contenu.", 502, "EMPTY_AI_CONTENT_OUTPUT");
     const rawTitle = String(output.title || `${data.topic} avec ${data.agencyName}`).trim();
-    const title = rawTitle.length <= 70 ? rawTitle : truncate(rawTitle, 70);
+    const title = data.channel === "article" ? editorialTitle(rawTitle, data) : truncate(rawTitle, 70);
     const excerpt = truncate(output.excerpt || output.body?.introduction || "", 170);
     const slug = slugify(output.slug || `${data.topic}-${data.city || data.agencyName}`);
     const keywords = [...new Set([data.topic, data.city, data.tourOperator, ...data.keywords].filter(Boolean))];
