@@ -34,6 +34,7 @@ Règles éditoriales obligatoires :
 - Le ton doit être expert, chaleureux, inspirant, rassurant et commercial avec mesure. Évite le bourrage de mots-clés et les répétitions de Mondescale Voyages.
 - Le CTA final doit inviter à échanger avec une agence pour personnaliser le projet, sans pression commerciale.
 - N'invente jamais de prix, promotion, disponibilité, horaires, formalités réglementaires précises, conditions d'entrée ou informations datées non fournies dans l'entrée.
+- Ne prétends pas qu'une saison, une destination ou un mode de réservation est moins cher, plus avantageux ou permet d'obtenir de meilleurs tarifs si cette information n'est pas fournie dans l'entrée.
 - Lorsque des éléments peuvent varier selon la date, le profil du voyageur ou le fournisseur, reste prudent et invite à les vérifier au moment du projet.
 - N'invente pas de départ depuis une ville si city est vide. Si city est renseigné, utilise-la avec parcimonie et uniquement lorsque cela apporte une vraie valeur locale.
 - N'invente pas de témoignages, labels, récompenses ou statistiques.
