@@ -83,8 +83,8 @@ function editorialQualityScore(body, excerpt, data) {
   if (wordCount(body.introduction) >= 45) score += 10;
   if (sections.length >= 5) score += 15;
   if (faq.length >= 3) score += 10;
-  if (words >= 800) score += 15;
-  else if (words >= 600) score += 8;
+  if (words >= 900) score += 15;
+  else if (words >= 750) score += 8;
   const promised = data.channel === "article" ? promisedCount(data.topic) : null;
   if (promised && sections.length === promised) score += 5;
   else if (promised && sections.length !== promised) score -= 15;
