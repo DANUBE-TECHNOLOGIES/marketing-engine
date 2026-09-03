@@ -1,0 +1,30 @@
+name: MSE-25.118 Local Search Measurement
+
+on:
+  pull_request:
+    paths:
+      - "frontend/lib/seo/local-search-measurement.js"
+      - "frontend/lib/seo/local-search-performance.js"
+      - "frontend/lib/seo/local-search-index.js"
+      - "frontend/test/mse-25-118-*.test.mjs"
+      - ".github/workflows/mse-25-118-local-search-measurement.yml"
+  workflow_dispatch:
+
+jobs:
+  measurement-contract:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Run MSE-25.118 contract tests
+        run: node --test test/mse-25-118-local-search-measurement.test.mjs
+      - name: Lint MSE-25.118 surface
+        run: npx eslint lib/seo/local-search-measurement.js lib/seo/local-search-index.js test/mse-25-118-local-search-measurement.test.mjs
