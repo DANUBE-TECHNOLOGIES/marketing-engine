@@ -1,4 +1,4 @@
-import { buildAgencyLocalSearchMeasurement } from "./local-search-measurement";
+import { buildAgencyLocalSearchMeasurement } from "./local-search-measurement.js";
 
 function finite(value) {
   const number = Number(value);
