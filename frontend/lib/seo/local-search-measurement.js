@@ -1,5 +1,5 @@
-import { compareLocalSearchPerformance, localSearchPerformanceStatus } from "./local-search-performance";
-import { searchConsoleCtr } from "./search-console-local-baseline";
+import { compareLocalSearchPerformance, localSearchPerformanceStatus } from "./local-search-performance.js";
+import { searchConsoleCtr } from "./search-console-local-baseline.js";
 
 function finite(value) {
   const number = Number(value);
