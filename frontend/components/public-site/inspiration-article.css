@@ -1,0 +1,157 @@
+.public-inspiration-article {
+  padding-top: 54px;
+  padding-bottom: 72px;
+}
+
+.public-inspiration-article .public-site-prose {
+  width: min(900px, calc(100% - 40px));
+}
+
+.public-inspiration-article-header {
+  margin-bottom: 34px;
+}
+
+.public-inspiration-article-header h1 {
+  max-width: 820px;
+  margin: 10px 0 18px;
+  color: var(--public-secondary);
+  font-family: "DM Serif Display", Georgia, serif;
+  font-size: clamp(2.5rem, 5vw, 4.6rem);
+  font-weight: 400;
+  line-height: 0.98;
+  letter-spacing: -0.025em;
+}
+
+.public-inspiration-article-lead {
+  max-width: 760px;
+  margin: 0;
+  color: var(--public-text);
+  font-size: clamp(1.1rem, 1.7vw, 1.3rem);
+  line-height: 1.65;
+}
+
+.public-inspiration-local-note {
+  margin: 26px 0 0;
+  padding: 18px 22px;
+  border-left: 4px solid var(--public-primary);
+  border-radius: 0 14px 14px 0;
+  background: var(--public-soft-blue);
+  color: var(--public-text);
+  font-size: 0.94rem;
+  line-height: 1.65;
+}
+
+.public-inspiration-article .public-site-inspiration-hero {
+  margin: 34px 0 44px;
+  overflow: hidden;
+  border-radius: var(--public-radius-md);
+}
+
+.public-inspiration-article .public-site-inspiration-hero img {
+  width: 100%;
+  max-height: 520px;
+  display: block;
+  object-fit: cover;
+}
+
+.public-inspiration-article-content {
+  max-width: 780px;
+}
+
+.public-inspiration-article-content > p,
+.public-inspiration-section > p {
+  margin: 0 0 20px;
+  color: var(--public-text);
+  font-size: 1.02rem;
+  line-height: 1.82;
+}
+
+.public-inspiration-section {
+  margin: 44px 0 0;
+}
+
+.public-inspiration-section h2,
+.public-inspiration-faq h2 {
+  margin: 0 0 18px;
+  color: var(--public-secondary);
+  font-family: "DM Serif Display", Georgia, serif;
+  font-size: clamp(2rem, 3vw, 2.8rem);
+  font-weight: 400;
+  line-height: 1.08;
+}
+
+.public-inspiration-faq {
+  max-width: 780px;
+  margin-top: 54px;
+  padding-top: 38px;
+  border-top: 1px solid var(--public-border);
+}
+
+.public-inspiration-faq .public-site-faq-list {
+  display: grid;
+  gap: 12px;
+}
+
+.public-inspiration-faq details {
+  border: 1px solid var(--public-border);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.public-inspiration-faq summary {
+  padding: 18px 20px;
+  cursor: pointer;
+  color: var(--public-secondary);
+  font-weight: 750;
+  line-height: 1.4;
+}
+
+.public-inspiration-faq details p {
+  margin: 0;
+  padding: 0 20px 20px;
+  color: var(--public-text);
+  line-height: 1.7;
+}
+
+.public-inspiration-article-footer {
+  max-width: 780px;
+  margin-top: 46px;
+  padding-top: 24px;
+  border-top: 1px solid var(--public-border);
+}
+
+.public-inspiration-article-footer .public-site-related-links {
+  margin-top: 0;
+}
+
+.public-inspiration-article-footer .public-site-hero-actions {
+  margin-top: 26px;
+}
+
+@media (max-width: 640px) {
+  .public-inspiration-article {
+    padding-top: 36px;
+    padding-bottom: 52px;
+  }
+
+  .public-inspiration-article .public-site-prose {
+    width: min(100% - 28px, 900px);
+  }
+
+  .public-inspiration-article-header h1 {
+    font-size: 2.5rem;
+  }
+
+  .public-inspiration-local-note {
+    padding: 16px 18px;
+  }
+
+  .public-inspiration-section {
+    margin-top: 36px;
+  }
+
+  .public-inspiration-article-footer .public-site-hero-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
