@@ -11,4 +11,5 @@ export { normalizeLocalSearchObservation } from "./local-search-observation";
 export { buildLocalSearchReport } from "./local-search-report";
 export { LOCAL_SEARCH_MEASUREMENT_THRESHOLDS, localSearchMeasurementConfidence, classifyLocalSearchMeasurement, buildAgencyLocalSearchMeasurement } from "./local-search-measurement";
 export { buildLocalSearchSnapshot, compareLocalSearchSnapshots, buildLocalSearchNetworkReport } from "./local-search-network-measurement";
+export { buildLocalSearchRemediation, buildLocalSearchRemediationPlan } from "./local-search-remediation";
 export { SEARCH_CONSOLE_LOCAL_BASELINE_2026_09_03, searchConsoleCtr, localBaselineOpportunities } from "./search-console-local-baseline";
