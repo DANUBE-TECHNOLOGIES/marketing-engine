@@ -1,0 +1,16 @@
+const fs=require('fs');
+const path=require('path');
+const files={links:'frontend/components/public-site/renderers/ctaLinks.js',hero:'frontend/components/public-site/renderers/HeroV2Renderer.js',cta:'frontend/components/public-site/renderers/CtaV2Renderer.js',quotePage:'frontend/app/agence/[siteSlug]/demande-devis/page.js',form:'frontend/components/public-site/SmartQuoteRequest.js',business:'frontend/components/public-site/BusinessTravelPage.js',group:'frontend/components/public-site/GroupTravelPage.js'};
+let failures=0;
+const read=(p)=>fs.readFileSync(path.resolve(p),'utf8');
+const assert=(ok,msg)=>{if(!ok){console.error(`FAIL=${msg}`);failures++;}else console.log(`OK=${msg}`);};
+const links=read(files.links),hero=read(files.hero),cta=read(files.cta),quotePage=read(files.quotePage),form=read(files.form),business=read(files.business),group=read(files.group);
+assert(links.includes('isQuoteCtaLabel')&&links.includes('demande-devis')&&links.includes('quoteRequestHref'),'CENTRAL_QUOTE_RESOLVER');
+assert(hero.includes('{ label: primaryLabel }')&&hero.includes('primaryLabel'),'HERO_QUOTE_INTENT');
+assert(cta.includes('{ label: cta.label }'),'CTA_BLOCK_QUOTE_INTENT');
+assert(quotePage.includes('<SmartQuoteRequest site={site} source={source} />'),'QUOTE_PAGE_FORM');
+assert(form.includes('fetch("/api/public-leads"')&&form.includes('siteSlug:site?.slug'),'LEAD_INTAKE_FORM');
+assert(business.includes('/demande-devis?source=business'),'BUSINESS_CONTEXT');
+assert(group.includes('/demande-devis?source=group'),'GROUP_CONTEXT');
+assert(!/Demander un devis[\s\S]{0,180}mailto:/i.test(hero+cta),'NO_QUOTE_MAILTO');
+if(failures){console.error(`MSE_25_111A_QUOTE_CTA_CONVERGENCE=FAILED (${failures})`);process.exit(1);}console.log('MSE_25_111A_QUOTE_CTA_CONVERGENCE=OK');console.log('QUOTE_ROUTE=demande-devis');console.log('LEAD_INTAKE=/api/public-leads');console.log('ERP_SYNC=DISABLED');

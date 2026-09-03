@@ -1,0 +1,123 @@
+name: MSE-25 Operational SEO Engine
+
+on:
+  push:
+    branches:
+      - 'feature/mse-25-40-*'
+      - 'feature/mse-25-69-*'
+      - 'feature/mse-25-70-*'
+      - 'feature/mse-25-72-*'
+      - 'feature/mse-25-73-*'
+      - 'feature/mse-25-74-*'
+      - 'feature/mse-25-75-*'
+      - 'feature/mse-25-81-*'
+      - 'feature/mse-25-82-*'
+      - 'feature/mse-25-83-*'
+      - 'feature/runtime-cockpit-*'
+      - 'integration/mse-25-operational-cockpit-*'
+  pull_request:
+    paths:
+      - 'backend/src/modules/minisite-semantic-engine/**'
+      - 'backend/src/modules/search-console-submission/**'
+      - 'backend/src/modules/public-site-read/destination-exposure.js'
+      - 'backend/scripts/mse-25-*.js'
+      - 'backend/test/mse-25-*.test.js'
+      - 'backend/test/post-rollback-runtime-status.test.js'
+      - 'backend/src/modules/register-modules.js'
+      - 'scripts/mse-25-*.js'
+      - 'docker-compose.yml'
+      - 'frontend/app/seo-cockpit/**'
+      - 'frontend/app/components/MainLayout.js'
+      - '.github/workflows/mse-25-40.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  semantic-engine:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Install backend
+        working-directory: backend
+        run: npm ci
+
+      - name: Prisma client
+        working-directory: backend
+        run: npm run prisma:generate
+
+      - name: Load semantic module
+        working-directory: backend
+        run: node -e "require('./src/modules/minisite-semantic-engine')"
+
+      - name: MSE-25.40 tests
+        working-directory: backend
+        run: node --test test/mse-25-40-*.test.js
+
+      - name: Search Console contract tests
+        working-directory: backend
+        run: node --test test/mse-25-48-search-console-analytics.test.js test/mse-25-48-search-console-property-resolver.test.js
+
+      - name: Indexation coverage diagnostics
+        working-directory: backend
+        run: node --test test/mse-25-69-indexation-coverage.test.js
+
+      - name: Public indexability observability
+        working-directory: backend
+        run: node --test test/mse-25-70-public-indexability-observer.test.js
+
+      - name: Indexation incident queue
+        working-directory: backend
+        run: node --test test/mse-25-72-indexation-incident-queue.test.js
+
+      - name: Indexation incident lifecycle
+        working-directory: backend
+        run: node --test test/mse-25-73-indexation-incident-lifecycle.test.js
+
+      - name: Runtime indexability readiness
+        working-directory: backend
+        run: node --test test/mse-25-74-runtime-indexability-audit.test.js
+
+      - name: Production indexability handoff
+        working-directory: backend
+        run: node --test test/mse-25-75-production-indexability-handoff.test.js
+
+      - name: Destination exposure contract
+        working-directory: backend
+        run: node --test test/mse-25-81-destination-exposure-contract.test.js src/modules/public-site-read/destination-exposure.test.js
+
+      - name: Convergence guard
+        working-directory: backend
+        run: node --test test/mse-25-82-convergence-guard.test.js
+
+      - name: Post-convergence acceptance contract
+        working-directory: backend
+        run: node --test test/mse-25-83-post-convergence-acceptance.test.js
+
+      - name: Operational orchestrator tests
+        working-directory: backend
+        run: node --test test/mse-25-operational-*.test.js
+
+      - name: Post-rollback runtime tests
+        working-directory: backend
+        run: node --test test/post-rollback-runtime-status.test.js
+
+      - name: Install frontend
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build SEO cockpit frontend
+        working-directory: frontend
+        run: npm run build

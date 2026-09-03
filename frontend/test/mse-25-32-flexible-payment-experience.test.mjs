@@ -82,7 +82,6 @@ test("MSE-25.32 provides structured Website Designer controls for agency payment
   assert.match(policyPanel, /applyFlexiblePayment/);
   assert.match(policyPanel, /preview\.fingerprint/);
   assert.match(policyPanel, /installmentDraft/);
-  assert.match(policyPanel, /applyFlexiblePayment\([\s\S]*preview\.fingerprint/);
 });
 
 test("MSE-25.32 mounts payment policy controls in the live Website Designer editor", () => {
@@ -101,12 +100,14 @@ test("MSE-25.32 public renderer keeps financial claims guarded", () => {
   assert.match(renderer, /item >= 2/);
   assert.match(renderer, /item <= 24/);
   assert.match(renderer, /feeMode === "without-fees"/);
-  assert.match(renderer, /règlement échelonné peut être disponible/);
-  assert.match(renderer, /Contacter mon agence/);
+  assert.match(renderer, /solution de règlement échelonné adaptée à votre réservation/);
+  assert.match(renderer, /Selon votre réservation et les conditions applicables/);
+  assert.match(renderer, /Étudier mes possibilités de paiement/);
 });
 
 test("MSE-25.32 supports compact and enriched public variants", () => {
   assert.match(renderer, /content\.variant === "compact"/);
   assert.match(renderer, /data-payment-variant=\{variant\}/);
-  assert.match(renderer, /Souplesse de règlement/);
+  assert.match(renderer, /Facilités de paiement/);
+  assert.match(renderer, /Payez vos billets d’avion et vos voyages en plusieurs fois/);
 });

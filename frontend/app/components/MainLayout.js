@@ -15,6 +15,7 @@ const sections=[
 label:"Direction",
 items:[
 ["🏠 Cockpit","/direction"],
+["📥 Demandes clients","/leads"],
 ["⚠ Alertes","/direction"],
 ["🏆 Classement","/direction"]
 ]
@@ -31,6 +32,9 @@ items:[
 {
 label:"SEO Local",
 items:[
+["🧭 Cockpit SEO","/seo-cockpit"],
+["⚙ Opérations d'indexation","/seo-cockpit/operations"],
+["🛡 Runtime rollback","/seo-cockpit/runtime"],
 ["📍 Rankings","/rankings"],
 ["🔎 Keywords","/seo-keywords-db"],
 ["📣 Google Posts","/google-posts"]

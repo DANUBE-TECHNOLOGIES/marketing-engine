@@ -1,0 +1,13 @@
+id: MSE-000.01
+title: Prisma Migration Audit Engine
+version: 0.1.0
+description: Détection des tables utilisées avant leur création
+requires:
+  - node
+  - git
+steps:
+  - backup
+  - install-auditor
+  - validate
+  - audit
+rollback: true

@@ -5,9 +5,14 @@ const sections = [
   {
     title: "Pilotage",
     links: [
+      ["Demandes clients", "/leads"],
       ["SEO Direction", "/seo-direction"],
       ["SEO Today", "/seo-today"],
-      ["Production", "/production"]
+      ["Cockpit SEO réseau", "/seo-cockpit"],
+      ["Centre d’alertes SEO", "/seo-cockpit/alerts"],
+      ["Production", "/production"],
+      ["Mise en ligne mini-sites", "/agency-launch"],
+      ["Studio éditorial Inspirations", "/editorial-content"]
     ]
   },
   {

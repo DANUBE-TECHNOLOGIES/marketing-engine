@@ -1,0 +1,66 @@
+import Link from "next/link";
+
+function pageHref(siteSlug, page) {
+  if (!page.slug) {
+    return `/sites/${siteSlug}`;
+  }
+
+  return `/sites/${siteSlug}/${page.slug}`;
+}
+
+export default function PublicSiteHeader({
+  site,
+}) {
+  const pages = (site.navigation || []).filter(
+    (page) =>
+      page.slug !== "mentions-legales" &&
+      page.slug !== "confidentialite"
+  );
+
+  return (
+    <header className="public-site-header">
+      <div className="public-site-container public-site-header-inner">
+        <Link
+          href={`/sites/${site.slug}`}
+          className="public-site-brand"
+        >
+          <span className="public-site-brand-name">
+            {site.name}
+          </span>
+
+          {site.agency?.city ? (
+            <span className="public-site-brand-city">
+              {site.agency.city}
+            </span>
+          ) : null}
+        </Link>
+
+        <nav
+          className="public-site-navigation"
+          aria-label="Navigation principale"
+        >
+          {pages.map((page) => (
+            <Link
+              key={page.id || page.slug || page.title}
+              href={pageHref(site.slug, page)}
+            >
+              {page.title}
+            </Link>
+          ))}
+        </nav>
+
+        {site.agency?.phone ? (
+          <a
+            className="public-site-phone"
+            href={`tel:${site.agency.phone.replace(
+              /\s+/g,
+              ""
+            )}`}
+          >
+            {site.agency.phone}
+          </a>
+        ) : null}
+      </div>
+    </header>
+  );
+}

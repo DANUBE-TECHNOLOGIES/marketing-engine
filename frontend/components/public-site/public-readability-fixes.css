@@ -1,0 +1,138 @@
+/*
+ * Launch-readiness visual hardening for the public mini-sites.
+ * Keep critical contrast and navigation legibility independent from tenant theme values.
+ */
+
+.public-site-stats {
+  color: #ffffff !important;
+  background:
+    radial-gradient(
+      circle at 88% 12%,
+      color-mix(in srgb, var(--public-accent) 22%, transparent),
+      transparent 30%
+    ),
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--public-secondary) 76%, #071d30),
+      #071d30 78%
+    ) !important;
+}
+
+.public-site-stats h2,
+.public-site-stats h3,
+.public-site-stats p,
+.public-site-stats strong,
+.public-site-stats span,
+.public-site-stats .public-site-eyebrow {
+  color: #ffffff !important;
+}
+
+.public-site-stats .public-site-eyebrow,
+.public-site-stats p,
+.public-site-stats-grid span {
+  opacity: 0.92;
+}
+
+.public-site-stats-grid article {
+  border-color: rgba(255, 255, 255, 0.28) !important;
+  background: rgba(255, 255, 255, 0.14) !important;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.2) !important;
+}
+
+.public-site-stats-grid strong {
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.18);
+}
+
+.public-site-header-navrow .public-site-container {
+  scroll-padding-inline: 20px;
+}
+
+.public-site-navigation {
+  box-sizing: border-box;
+  padding-inline: clamp(14px, 2vw, 28px);
+  justify-content: safe center;
+}
+
+.public-site-navigation a {
+  flex: 0 0 auto;
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+.public-site-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  color: color-mix(in srgb, var(--public-text) 68%, transparent);
+}
+
+.public-site-breadcrumb a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+/*
+ * Les liens restent de vrais liens crawlables mais cessent de ressembler à
+ * une seconde navigation SEO sous chaque section.
+ */
+.public-site-related-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin-top: 1.35rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid color-mix(in srgb, var(--public-text) 11%, transparent);
+  color: color-mix(in srgb, var(--public-text) 64%, transparent);
+}
+
+.public-site-related-links a {
+  color: inherit;
+  font-size: 0.78rem;
+  font-weight: 650;
+  line-height: 1.45;
+  text-decoration: none;
+  text-underline-offset: 0.2em;
+}
+
+.public-site-related-links a:hover,
+.public-site-related-links a:focus-visible {
+  color: var(--public-primary);
+  text-decoration: underline;
+}
+
+.public-site-footer-address {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  font-style: normal;
+}
+
+.public-site-footer-address strong,
+.public-site-footer-address span,
+.public-site-footer-address a {
+  display: block;
+}
+
+@media (max-width: 1180px) {
+  .public-site-navigation {
+    justify-content: flex-start;
+    min-width: max-content;
+    padding-right: 34px;
+  }
+}
+
+@media (max-width: 760px) {
+  .public-site-navigation {
+    padding-inline: 14px 30px;
+  }
+
+  .public-site-related-links {
+    gap: 0.45rem 0.85rem;
+  }
+}

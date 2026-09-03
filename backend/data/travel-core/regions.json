@@ -1,0 +1,62 @@
+[
+  {
+    "name": "Rivière du Rempart",
+    "slug": "riviere-du-rempart",
+    "countrySlug": "maurice",
+    "status": "published"
+  },
+  {
+    "name": "Rivière Noire",
+    "slug": "riviere-noire",
+    "countrySlug": "maurice",
+    "status": "published"
+  },
+  {
+    "name": "Mahé",
+    "slug": "mahe",
+    "countrySlug": "seychelles",
+    "status": "published"
+  },
+  {
+    "name": "Praslin",
+    "slug": "praslin",
+    "countrySlug": "seychelles",
+    "status": "published"
+  },
+  {
+    "name": "Atoll de Malé Nord",
+    "slug": "atoll-male-nord",
+    "countrySlug": "maldives",
+    "status": "published"
+  },
+  {
+    "name": "Zanzibar",
+    "slug": "zanzibar",
+    "countrySlug": "tanzanie",
+    "status": "published"
+  },
+  {
+    "name": "Région de Tokyo",
+    "slug": "region-tokyo",
+    "countrySlug": "japon",
+    "status": "published"
+  },
+  {
+    "name": "Kansai",
+    "slug": "kansai",
+    "countrySlug": "japon",
+    "status": "published"
+  },
+  {
+    "name": "Québec",
+    "slug": "quebec",
+    "countrySlug": "canada",
+    "status": "published"
+  },
+  {
+    "name": "Ontario",
+    "slug": "ontario",
+    "countrySlug": "canada",
+    "status": "published"
+  }
+]

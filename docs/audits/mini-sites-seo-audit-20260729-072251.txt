@@ -1,0 +1,1254 @@
+AUDIT MINI-SITES SEO — MONDESCALE MARKETING ENGINE
+Date : 2026-07-29T07:22:51+00:00
+Branche : feature/mini-sites-seo-core
+Commit : 2db79fb87d6deae337a98a6912c201349e064e2f
+Dépôt : git@github.com:DANUBE-TECHNOLOGIES/marketing-engine.git
+
+
+============================================================
+1. ENVIRONNEMENT FRONTEND
+============================================================
+v22.23.1
+10.9.8
+
+--- package.json frontend ---
+{
+  "name": "frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start -H 0.0.0.0",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "google-auth-library": "10.7.0",
+    "next": "16.2.9",
+    "react": "19.2.7",
+    "react-dom": "19.2.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.9",
+    "tailwindcss": "^4"
+  }
+}
+
+--- Configurations Next.js ---
+frontend/next.config.js
+
+--- frontend/next.config.js ---
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  allowedDevOrigins: [
+    "192.168.1.101",
+    "local-engine.local",
+    "localengine.mondescale.com"
+  ]
+};
+
+module.exports = nextConfig;
+
+--- frontend/proxy.js ---
+import { NextResponse } from "next/server";
+
+export function proxy(request) {
+  const pathname =
+    request.nextUrl?.pathname || new URL(request.url).pathname;
+
+  // Mini-sites publics.
+  if (pathname === "/agence" || pathname.startsWith("/agence/")) {
+    return NextResponse.next();
+  }
+
+  // Ressources Next.js et routes publiques techniques.
+  if (
+    pathname.startsWith("/brand") ||
+    pathname.startsWith("/_next/") ||
+    pathname === "/favicon.ico" ||
+    pathname === "/api/google/callback"
+  ) {
+    return NextResponse.next();
+  }
+
+  const basicAuth = request.headers.get("authorization");
+  const username = process.env.BASIC_AUTH_USERNAME;
+  const password = process.env.BASIC_AUTH_PASSWORD;
+
+  if (!username || !password) {
+    return new NextResponse(
+      "Configuration d'authentification manquante",
+      { status: 503 }
+    );
+  }
+
+  if (basicAuth?.startsWith("Basic ")) {
+    try {
+      const authValue = basicAuth.slice(6);
+      const decoded = atob(authValue);
+      const separator = decoded.indexOf(":");
+
+      if (separator >= 0) {
+        const user = decoded.slice(0, separator);
+        const pwd = decoded.slice(separator + 1);
+
+        if (user === username && pwd === password) {
+          return NextResponse.next();
+        }
+      }
+    } catch {
+      // Une entête Basic malformée est simplement refusée.
+    }
+  }
+
+  return new NextResponse("Authentification requise", {
+    status: 401,
+    headers: {
+      "WWW-Authenticate": 'Basic realm="Mondescale Local Engine"',
+    },
+  });
+}
+
+export const config = {
+  matcher: ["/((?!agence(?:/|$)).*)"],
+};
+
+
+============================================================
+2. ROUTES PUBLIQUES MINI-SITES
+============================================================
+frontend/app/agence/[siteSlug]/destination/[destinationSlug]/page.js
+frontend/app/agence/[siteSlug]/[[...pageSlug]]/page.js
+
+--- Arborescence agence ---
+frontend/app/agence/[siteSlug]/destination/[destinationSlug]/page.js
+frontend/app/agence/[siteSlug]/[[...pageSlug]]/page.js
+
+
+============================================================
+3. MÉTADONNÉES ET SEO TECHNIQUE
+============================================================
+frontend/app/agence/[siteSlug]/[[...pageSlug]]/page.js:6:export async function generateMetadata({ params }) {
+frontend/app/agence/[siteSlug]/[[...pageSlug]]/page.js:11:  return { title: page.seoTitle || page.title, description: page.metaDescription || undefined, alternates: { canonical: page.path } };
+frontend/app/agence/[siteSlug]/destination/[destinationSlug]/page.js:4:export async function generateMetadata({ params }) {
+frontend/app/agence/[siteSlug]/destination/[destinationSlug]/page.js:12:    alternates: { canonical: data.canonicalPath },
+frontend/app/agence/[siteSlug]/destination/[destinationSlug]/page.js:13:    openGraph: { title: d.seoTitle || d.name, description: d.seoDescription || d.summary, images: d.heroImageUrl ? [d.heroImageUrl] : [] }
+frontend/app/layout.js:3:export const metadata = {
+
+
+============================================================
+4. DONNÉES STRUCTURÉES JSON-LD
+============================================================
+frontend/components/destination/DestinationPage.js:3:function JsonLd({ data }) { return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }} />; }
+frontend/components/destination/DestinationPage.js:14:  const schema = { '@context': 'https://schema.org', '@type': 'TouristDestination', name: d.name, description: d.summary, image: d.heroImageUrl, geo: d.latitude && d.longitude ? { '@type': 'GeoCoordinates', latitude: d.latitude, longitude: d.longitude } : undefined, containedInPlace: { '@type': 'Country', name: d.country } };
+
+
+============================================================
+5. MAILLAGE INTERNE ET NAVIGATION
+============================================================
+frontend/components/agency-site/SectionRenderer.js:1:import Link from "next/link";
+frontend/components/agency-site/SectionRenderer.js:7:  return external ? <a className={className} href={action.href}>{action.label}</a> : <Link className={className} href={action.href}>{action.label}</Link>;
+frontend/components/agency-site/SectionRenderer.js:22:  if (type === "contact-details" || type === "agency-details") return <section className="as-section"><div className="as-shell"><h2>{c.title}</h2><div className="as-contact"><p>{[c.address, c.postalCode, c.city].filter(Boolean).join(" ")}</p>{c.phone && <p><a href={`tel:${c.phone.replace(/\s+/g, "")}`}>{c.phone}</a></p>}{c.email && <p><a href={`mailto:${c.email}`}>{c.email}</a></p>}</div></div></section>;
+frontend/components/agency-site/SectionRenderer.js:27:  return <section className="as-section"><div className="as-shell">{c.title && <h2>{c.title}</h2>}{c.text && <p className="as-intro">{c.text}</p>}{c.paragraphs?.map((p,i)=><p key={i}>{p}</p>)}{items.length > 0 && <Cards items={items}/>} {c.link && <div className="as-section-link"><Action action={c.link} secondary/></div>}{c.url && <p><a href={c.url} target="_blank" rel="noreferrer">Consulter les avis Google</a></p>}</div></section>;
+frontend/components/agency-site/AgencySiteShell.js:1:import Link from "next/link";
+frontend/components/agency-site/AgencySiteShell.js:7:    <header className="as-header"><div className="as-shell as-header-inner"><Link className="as-brand" href={site.basePath}>{site.name}</Link><nav aria-label="Navigation principale">{nav.map(item=><Link key={item.path} href={item.path}>{item.title || item.menuTitle}</Link>)}</nav><Link className="as-btn as-header-cta" href={`${site.basePath}/contact`}>Demander un devis</Link></div></header>
+frontend/components/agency-site/AgencySiteShell.js:9:    <footer className="as-footer"><div className="as-shell as-footer-grid"><div><strong>{site.name}</strong><p>Votre agence de voyages de proximité.</p></div><nav aria-label="Navigation de pied de page">{(site.navigation?.footer || []).map(item=><Link key={item.path} href={item.path}>{item.title || item.menuTitle}</Link>)}</nav></div><div className="as-shell as-copyright">© {new Date().getFullYear()} {site.name}</div></footer>
+frontend/components/destination/DestinationPage.js:2:import Link from 'next/link';
+frontend/components/destination/DestinationPage.js:17:    <header className={styles['de-nav']}><div className={styles['de-shell']}><Link href={site.basePath} className={styles['de-brand']}>{site.name}</Link><nav><Link href={site.basePath}>Accueil</Link><Link href={`${site.basePath}/contact`} className={styles['de-nav-cta']}>Demander un devis</Link></nav></div></header>
+frontend/components/destination/DestinationPage.js:19:      <section className={styles['de-hero']} style={{ backgroundImage: `linear-gradient(90deg,rgba(9,25,37,.88),rgba(9,25,37,.28)),url("${d.heroImageUrl}")` }}><div className={styles['de-shell']}><p className={styles['de-kicker']}>{d.country} · {d.type}</p><h1>Voyage à {d.name}</h1><p>{d.tagline}</p><div className={styles['de-actions']}><Link href={data.quotePath}>Construire mon voyage</Link><a href="#decouvrir">Découvrir Budapest</a></div></div></section>
+frontend/components/destination/DestinationPage.js:24:      <section className={styles['de-final']}><div className={styles['de-shell']}><p className={styles['de-kicker']}>Un voyage conçu pour vous</p><h2>Prêt à découvrir {d.name} ?</h2><p>Votre agence {site.name} construit un séjour adapté à vos envies, à votre rythme et à votre budget.</p><Link href={data.quotePath}>Demander mon devis personnalisé</Link></div></section>
+
+
+============================================================
+6. IMAGES ET OPTIMISATION MÉDIA
+============================================================
+frontend/app/agence/[siteSlug]/destination/[destinationSlug]/page.js:13:    openGraph: { title: d.seoTitle || d.name, description: d.seoDescription || d.summary, images: d.heroImageUrl ? [d.heroImageUrl] : [] }
+frontend/components/destination/DestinationPage.js:19:      <section className={styles['de-hero']} style={{ backgroundImage: `linear-gradient(90deg,rgba(9,25,37,.88),rgba(9,25,37,.28)),url("${d.heroImageUrl}")` }}><div className={styles['de-shell']}><p className={styles['de-kicker']}>{d.country} · {d.type}</p><h1>Voyage à {d.name}</h1><p>{d.tagline}</p><div className={styles['de-actions']}><Link href={data.quotePath}>Construire mon voyage</Link><a href="#decouvrir">Découvrir Budapest</a></div></div></section>
+
+
+============================================================
+7. SOURCES DE DONNÉES DES MINI-SITES
+============================================================
+frontend/app/agence/[siteSlug]/[[...pageSlug]]/page.js:2:import AgencySiteShell from "../../../../components/agency-site/AgencySiteShell";
+frontend/app/agence/[siteSlug]/[[...pageSlug]]/page.js:3:import { getAgencyPage, getAgencySite } from "../../../../lib/agency-site-api";
+frontend/app/agence/[siteSlug]/[[...pageSlug]]/page.js:4:import "../../../../components/agency-site/agency-site.css";
+frontend/app/agence/[siteSlug]/[[...pageSlug]]/page.js:8:  const slug = resolved.pageSlug?.[0] || "";
+frontend/app/agence/[siteSlug]/[[...pageSlug]]/page.js:9:  const page = await getAgencyPage(resolved.siteSlug, slug);
+frontend/app/agence/[siteSlug]/destination/[destinationSlug]/page.js:2:import DestinationPage from '../../../../../components/destination/DestinationPage';
+frontend/app/agence/[siteSlug]/destination/[destinationSlug]/page.js:3:import { getPublicDestination } from '../../../../../lib/destination-api';
+frontend/app/agence/[siteSlug]/destination/[destinationSlug]/page.js:6:  const data = await getPublicDestination(p.siteSlug, p.destinationSlug);
+frontend/app/agence/[siteSlug]/destination/[destinationSlug]/page.js:8:  const d = data.destination;
+frontend/app/agence/[siteSlug]/destination/[destinationSlug]/page.js:18:  const data = await getPublicDestination(p.siteSlug, p.destinationSlug);
+frontend/components/agency-site/SectionRenderer.js:22:  if (type === "contact-details" || type === "agency-details") return <section className="as-section"><div className="as-shell"><h2>{c.title}</h2><div className="as-contact"><p>{[c.address, c.postalCode, c.city].filter(Boolean).join(" ")}</p>{c.phone && <p><a href={`tel:${c.phone.replace(/\s+/g, "")}`}>{c.phone}</a></p>}{c.email && <p><a href={`mailto:${c.email}`}>{c.email}</a></p>}</div></div></section>;
+frontend/components/agency-site/AgencySiteShell.js:6:  return <div className="agency-site">
+frontend/components/agency-site/agency-site.css:1:.agency-site{--as-navy:#13243a;--as-blue:#176b87;--as-sand:#f5f0e8;--as-ink:#19212b;background:#fff;color:var(--as-ink);min-height:100vh;font-family:Arial,Helvetica,sans-serif}.agency-site *{box-sizing:border-box}.as-shell{width:min(1160px,calc(100% - 40px));margin:0 auto}.as-header{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.96);border-bottom:1px solid #e8e8e8;backdrop-filter:blur(12px)}.as-header-inner{min-height:76px;display:flex;align-items:center;gap:24px}.as-brand{font-size:1.05rem;font-weight:800;color:var(--as-navy);text-decoration:none;white-space:nowrap}.as-header nav{display:flex;gap:18px;align-items:center;flex:1}.as-header nav a,.as-footer nav a{color:inherit;text-decoration:none;font-size:.92rem}.as-header nav a:hover{text-decoration:underline}.as-btn{display:inline-flex;align-items:center;justify-content:center;padding:13px 20px;border-radius:999px;background:var(--as-blue);color:#fff!important;text-decoration:none!important;font-weight:700;border:1px solid var(--as-blue)}.as-btn-secondary{background:transparent;color:var(--as-navy)!important;border-color:currentColor}.as-hero{padding:92px 0;background:linear-gradient(120deg,var(--as-navy),#215777);color:#fff}.as-hero h1{max-width:800px;font-size:clamp(2.5rem,6vw,5.1rem);line-height:1.02;margin:10px 0 22px}.as-eyebrow{text-transform:uppercase;letter-spacing:.13em;font-weight:800;font-size:.78rem}.as-lead{max-width:700px;font-size:1.2rem;line-height:1.65}.as-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:28px}.as-hero .as-btn-secondary{color:#fff!important}.as-page-head{padding:64px 0;background:var(--as-sand)}.as-page-head h1{font-size:clamp(2.2rem,5vw,4rem);margin:0 0 12px}.as-page-head p{font-size:1.1rem;max-width:760px}.as-section{padding:70px 0}.as-section:nth-of-type(even){background:#fafafa}.as-section h2,.as-cta h2{font-size:clamp(1.8rem,3vw,2.7rem);margin:0 0 20px;color:var(--as-navy)}.as-section p{line-height:1.75;max-width:820px}.as-intro{font-size:1.1rem}.as-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:28px}.as-card{padding:26px;border:1px solid #e6e8ea;border-radius:18px;background:#fff;box-shadow:0 10px 30px rgba(19,36,58,.06)}.as-card h3{margin:0 0 10px;color:var(--as-navy)}.as-card p{margin:0}.as-cta{padding:72px 0;background:var(--as-navy);color:#fff}.as-cta h2{color:#fff}.as-map{height:300px;border-radius:20px;background:repeating-linear-gradient(45deg,#e9eef0,#e9eef0 12px,#f5f7f8 12px,#f5f7f8 24px);display:grid;place-items:center;padding:30px;text-align:center}.as-warning{padding:14px 18px;border-left:4px solid #b66d00;background:#fff4dc}.as-footer{background:#0d1928;color:#fff;padding:52px 0 24px}.as-footer-grid{display:grid;grid-template-columns:2fr 1fr;gap:40px}.as-footer nav{display:flex;flex-direction:column;gap:10px}.as-copyright{margin-top:36px;padding-top:20px;border-top:1px solid rgba(255,255,255,.15);font-size:.85rem;opacity:.8}.as-section-link{margin-top:26px}@media(max-width:900px){.as-header-inner{flex-wrap:wrap;padding:16px 0}.as-header nav{order:3;width:100%;overflow:auto;padding-bottom:4px}.as-header-cta{margin-left:auto}.as-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:620px){.as-shell{width:min(100% - 28px,1160px)}.as-header nav{gap:14px}.as-header-cta{display:none}.as-hero{padding:68px 0}.as-section,.as-cta{padding:54px 0}.as-grid,.as-footer-grid{grid-template-columns:1fr}.as-page-head{padding:46px 0}}
+frontend/components/destination/DestinationPage.js:13:  const { destination: d, site } = data;
+frontend/lib/destination-api.js:1:const API_URL = process.env.BACKEND_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://backend:4000';
+frontend/lib/destination-api.js:2:export async function getPublicDestination(siteSlug, destinationSlug) {
+frontend/lib/destination-api.js:4:    const response = await fetch(`${API_URL}/public/agency-sites/${encodeURIComponent(siteSlug)}/destinations/${encodeURIComponent(destinationSlug)}`, { cache: 'no-store' });
+frontend/lib/agency-site-api.js:1:const API_BASE_URL = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://backend:4000";
+frontend/lib/agency-site-api.js:4:  const response = await fetch(`${API_BASE_URL}${path}`, { cache: "no-store" });
+frontend/lib/agency-site-api.js:11:  return api(`/public/agency-sites/${encodeURIComponent(siteSlug)}`);
+frontend/lib/agency-site-api.js:16:  return api(`/public/agency-sites/${encodeURIComponent(siteSlug)}${suffix}`);
+frontend/src/app/seo-keywords-db/page.tsx:2:  const res = await fetch(
+frontend/src/app/seo-keywords-db/page.tsx:37:              <td>{r.agency_code}</td>
+frontend/src/app/dataforseo-preview/page.jsx:11:    fetch("http://localhost:4000/dataforseo-payload-preview")
+frontend/src/app/dataforseo-preview/page.jsx:47:      {data.rows.map((agency) => (
+frontend/src/app/dataforseo-preview/page.jsx:50:          key={agency.code}
+frontend/src/app/dataforseo-preview/page.jsx:60:            {agency.agencyName}
+frontend/src/app/dataforseo-preview/page.jsx:64:            <strong>Ville :</strong> {agency.city}
+frontend/src/app/dataforseo-preview/page.jsx:68:            <strong>Monitoring :</strong> {String(agency.enabled)}
+frontend/src/app/dataforseo-preview/page.jsx:90:              {agency.payload.map((item, idx) => (
+
+
+============================================================
+8. MODÈLES PRISMA POTENTIELLEMENT CONCERNÉS
+============================================================
+./backend/backups/seo-factory-20260718-130758/schema.prisma
+./backend/node_modules/.prisma/client/schema.prisma
+./backend/prisma/schema.prisma
+
+--- ./backend/backups/seo-factory-20260718-130758/schema.prisma : modèles liés ---
+model Agency {
+  id                Int                @id @default(autoincrement())
+  name              String
+  seoLevel          String?            @default("RENFORCEMENT")
+  city              String
+  address           String
+  postalCode        String
+  phone             String
+  email             String
+  website           String?
+  googleReviewUrl   String?
+  googleLocationId  String?
+  createdAt         DateTime           @default(now())
+  networkActions    NetworkAction[]
+  realRankingChecks RealRankingCheck[]
+  reviewRequests    ReviewRequest[]
+
+  googlePosts       GooglePost[]
+  reviews           GoogleReview[]
+  keywords          RankingKeyword[]
+  directoryListings DirectoryListing[]
+  scoreHistory      AgencyScoreHistory[]
+  notifications     Notification[]
+  ReviewResponse    ReviewResponse[]
+
+  seoSite AgencySeoSite?
+
+  @@unique([name, city])
+}
+
+model AgencyScoreHistory {
+  id            Int      @id @default(autoincrement())
+  agencyId      Int
+  citationScore Int
+  globalScore   Int
+  reviewsCount  Int
+  rankingsCount Int
+  createdAt     DateTime @default(now())
+
+  agency Agency @relation(fields: [agencyId], references: [id])
+}
+
+model NetworkAction {
+  id Int @id @default(autoincrement())
+
+  agencyId Int?
+  agency   Agency? @relation(fields: [agencyId], references: [id])
+
+  lever       String
+  title       String
+  description String?
+
+  owner    String?
+  deadline DateTime?
+
+  status  String  @default("todo")
+  comment String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model KnowledgeEntity {
+  id          String    @id @default(cuid())
+  type        String
+  slug        String
+  title       String
+  summary     String?
+  status      String    @default("draft")
+  language    String    @default("fr")
+  metadata    Json?
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  outgoingRelations KnowledgeRelation[]     @relation("KnowledgeRelationSource")
+  incomingRelations KnowledgeRelation[]     @relation("KnowledgeRelationTarget")
+  contentBlocks     KnowledgeContentBlock[]
+  mediaAssets       KnowledgeMediaAsset[]
+
+  seoPages AgencySeoPage[]
+
+  @@unique([slug, language])
+  @@index([type])
+  @@index([status])
+  @@index([language])
+  @@index([publishedAt])
+}
+
+model KnowledgeRelation {
+  id           String   @id @default(cuid())
+  sourceId     String
+  targetId     String
+  relationType String
+  position     Int      @default(0)
+  metadata     Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  source KnowledgeEntity @relation("KnowledgeRelationSource", fields: [sourceId], references: [id], onDelete: Cascade)
+  target KnowledgeEntity @relation("KnowledgeRelationTarget", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceId, targetId, relationType])
+  @@index([sourceId])
+  @@index([targetId])
+  @@index([relationType])
+}
+
+model KnowledgeContentBlock {
+  id        String   @id @default(cuid())
+  entityId  String
+  type      String
+  title     String?
+  content   Json
+  position  Int      @default(0)
+  status    String   @default("draft")
+  language  String   @default("fr")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  entity KnowledgeEntity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  @@index([entityId])
+  @@index([type])
+  @@index([status])
+  @@index([language])
+  @@index([entityId, position])
+}
+
+model KnowledgeMediaAsset {
+  id        String   @id @default(cuid())
+  entityId  String
+  type      String
+  url       String
+  alt       String?
+  title     String?
+  mimeType  String?
+  width     Int?
+  height    Int?
+  position  Int      @default(0)
+  isPrimary Boolean  @default(false)
+  metadata  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  entity KnowledgeEntity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  @@index([entityId])
+  @@index([type])
+  @@index([entityId, position])
+  @@index([entityId, isPrimary])
+}
+
+model AgencySeoSite {
+  id           String   @id @default(cuid())
+  agencyId     Int      @unique
+  name         String
+  slug         String   @unique
+  domain       String?  @unique
+  subdomain    String?  @unique
+  seoCity      String
+  targetCities Json?
+  status       String   @default("draft")
+  theme        Json?
+  metadata     Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  agency Agency          @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  pages  AgencySeoPage[]
+
+  @@index([status])
+  @@index([seoCity])
+}
+
+model AgencySeoPage {
+  id                String    @id @default(cuid())
+  siteId            String
+  knowledgeEntityId String?
+  slug              String
+  title             String
+  pageType          String    @default("destination")
+  localCity         String?
+  seoTitle          String?
+  seoDescription    String?
+  introduction      String?
+  content           Json?
+  callToAction      Json?
+  status            String    @default("draft")
+  publishedAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  site            AgencySeoSite    @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  knowledgeEntity KnowledgeEntity? @relation(fields: [knowledgeEntityId], references: [id], onDelete: SetNull)
+
+  @@unique([siteId, slug])
+  @@index([siteId])
+  @@index([knowledgeEntityId])
+  @@index([status])
+  @@index([pageType])
+}
+
+model MiniSitePage {
+  id String @id @default(cuid())
+
+  miniSiteId String
+
+  title String
+  slug  String
+  type  String
+
+  seoTitle String?
+  seoDesc  String?
+
+  content Json
+
+  published Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  miniSite MiniSite @relation(fields: [miniSiteId], references: [id], onDelete: Cascade)
+
+  @@unique([miniSiteId, slug])
+  @@index([type])
+}
+
+
+--- ./backend/node_modules/.prisma/client/schema.prisma : modèles liés ---
+model Agency {
+  id                Int                @id @default(autoincrement())
+  name              String
+  seoLevel          String?            @default("RENFORCEMENT")
+  city              String
+  address           String
+  postalCode        String
+  phone             String
+  email             String
+  website           String?
+  googleReviewUrl   String?
+  googleLocationId  String?
+  createdAt         DateTime           @default(now())
+  networkActions    NetworkAction[]
+  realRankingChecks RealRankingCheck[]
+  reviewRequests    ReviewRequest[]
+
+  googlePosts       GooglePost[]
+  reviews           GoogleReview[]
+  keywords          RankingKeyword[]
+  directoryListings DirectoryListing[]
+  scoreHistory      AgencyScoreHistory[]
+  notifications     Notification[]
+  ReviewResponse    ReviewResponse[]
+
+  seoSite     AgencySeoSite?
+  agencySites AgencySite[]
+
+  @@unique([name, city])
+}
+
+model AgencyScoreHistory {
+  id            Int      @id @default(autoincrement())
+  agencyId      Int
+  citationScore Int
+  globalScore   Int
+  reviewsCount  Int
+  rankingsCount Int
+  createdAt     DateTime @default(now())
+
+  agency Agency @relation(fields: [agencyId], references: [id])
+}
+
+model NetworkAction {
+  id Int @id @default(autoincrement())
+
+  agencyId Int?
+  agency   Agency? @relation(fields: [agencyId], references: [id])
+
+  lever       String
+  title       String
+  description String?
+
+  owner    String?
+  deadline DateTime?
+
+  status  String  @default("todo")
+  comment String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model KnowledgeEntity {
+  id          String    @id @default(cuid())
+  type        String
+  slug        String
+  title       String
+  summary     String?
+  status      String    @default("draft")
+  language    String    @default("fr")
+  metadata    Json?
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  outgoingRelations KnowledgeRelation[]     @relation("KnowledgeRelationSource")
+  incomingRelations KnowledgeRelation[]     @relation("KnowledgeRelationTarget")
+  contentBlocks     KnowledgeContentBlock[]
+  mediaAssets       KnowledgeMediaAsset[]
+
+  seoPages AgencySeoPage[]
+
+  @@unique([slug, language])
+  @@index([type])
+  @@index([status])
+  @@index([language])
+  @@index([publishedAt])
+}
+
+model KnowledgeRelation {
+  id           String   @id @default(cuid())
+  sourceId     String
+  targetId     String
+  relationType String
+  position     Int      @default(0)
+  metadata     Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  source KnowledgeEntity @relation("KnowledgeRelationSource", fields: [sourceId], references: [id], onDelete: Cascade)
+  target KnowledgeEntity @relation("KnowledgeRelationTarget", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceId, targetId, relationType])
+  @@index([sourceId])
+  @@index([targetId])
+  @@index([relationType])
+}
+
+model KnowledgeContentBlock {
+  id        String   @id @default(cuid())
+  entityId  String
+  type      String
+  title     String?
+  content   Json
+  position  Int      @default(0)
+  status    String   @default("draft")
+  language  String   @default("fr")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  entity KnowledgeEntity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  @@index([entityId])
+  @@index([type])
+  @@index([status])
+  @@index([language])
+  @@index([entityId, position])
+}
+
+model KnowledgeMediaAsset {
+  id        String   @id @default(cuid())
+  entityId  String
+  type      String
+  url       String
+  alt       String?
+  title     String?
+  mimeType  String?
+  width     Int?
+  height    Int?
+  position  Int      @default(0)
+  isPrimary Boolean  @default(false)
+  metadata  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  entity KnowledgeEntity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  @@index([entityId])
+  @@index([type])
+  @@index([entityId, position])
+  @@index([entityId, isPrimary])
+}
+
+model AgencySeoSite {
+  id           String   @id @default(cuid())
+  agencyId     Int      @unique
+  name         String
+  slug         String   @unique
+  domain       String?  @unique
+  subdomain    String?  @unique
+  seoCity      String
+  targetCities Json?
+  status       String   @default("draft")
+  theme        Json?
+  metadata     Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  agency Agency          @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  pages  AgencySeoPage[]
+
+  @@index([status])
+  @@index([seoCity])
+}
+
+model AgencySeoPage {
+  id                String    @id @default(cuid())
+  siteId            String
+  knowledgeEntityId String?
+  slug              String
+  title             String
+  pageType          String    @default("destination")
+  localCity         String?
+  seoTitle          String?
+  seoDescription    String?
+  introduction      String?
+  content           Json?
+  callToAction      Json?
+  status            String    @default("draft")
+  publishedAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  site            AgencySeoSite    @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  knowledgeEntity KnowledgeEntity? @relation(fields: [knowledgeEntityId], references: [id], onDelete: SetNull)
+
+  @@unique([siteId, slug])
+  @@index([siteId])
+  @@index([knowledgeEntityId])
+  @@index([status])
+  @@index([pageType])
+}
+
+model MiniSitePage {
+  id String @id @default(cuid())
+
+  miniSiteId String
+
+  title String
+  slug  String
+  type  String
+
+  seoTitle String?
+  seoDesc  String?
+
+  content Json
+
+  published Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  miniSite MiniSite @relation(fields: [miniSiteId], references: [id], onDelete: Cascade)
+
+  @@unique([miniSiteId, slug])
+  @@index([type])
+}
+
+model AgencySite {
+  id          String    @id @default(cuid())
+  agencyId    Int       @unique
+  name        String
+  slug        String    @unique
+  basePath    String    @unique
+  status      String    @default("draft")
+  theme       String    @default("mondescale-default")
+  generatedAt DateTime?
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  agency Agency           @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  pages  AgencySitePage[]
+
+  @@index([status])
+}
+
+model AgencySitePage {
+  id              String   @id @default(cuid())
+  siteId          String
+  parentId        String?
+  title           String
+  slug            String
+  path            String   @unique
+  pageType        String
+  menuTitle       String
+  menuLocation    String
+  displayOrder    Int
+  seoTitle        String
+  metaDescription String
+  h1              String
+  schemaType      String   @default("WebPage")
+  status          String   @default("draft")
+  published       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  site     AgencySite          @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  parent   AgencySitePage?     @relation("AgencySitePageTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children AgencySitePage[]    @relation("AgencySitePageTree")
+  sections AgencySiteSection[]
+
+  @@unique([siteId, slug])
+  @@index([siteId])
+  @@index([parentId])
+  @@index([pageType])
+  @@index([menuLocation, displayOrder])
+  @@index([status])
+}
+
+model AgencySiteSection {
+  id           String   @id @default(cuid())
+  pageId       String
+  sectionType  String
+  jsonContent  Json
+  displayOrder Int
+  status       String   @default("draft")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  page AgencySitePage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, sectionType])
+  @@index([pageId, displayOrder])
+  @@index([sectionType])
+  @@index([status])
+}
+
+model Destination {
+  id             String    @id @default(cuid())
+  name           String
+  slug           String    @unique
+  country        String
+  region         String?
+  type           String    @default("destination")
+  status         String    @default("draft")
+  tagline        String?
+  summary        String?
+  heroImageUrl   String?
+  seoTitle       String?
+  seoDescription String?
+  latitude       Float?
+  longitude      Float?
+  bestTime       String?
+  idealDuration  String?
+  currency       String?
+  language       String?
+  highlights     String[]  @default([])
+  audiences      String[]  @default([])
+  metadata       Json?
+  publishedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  sections DestinationSection[]
+  faqs     DestinationFaq[]
+
+  @@index([status])
+  @@index([country])
+  @@index([type])
+}
+
+model DestinationSection {
+  id            String   @id @default(cuid())
+  destinationId String
+  key           String
+  position      Int      @default(0)
+  type          String
+  title         String?
+  content       Json
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  destination Destination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
+
+  @@unique([destinationId, key])
+  @@index([destinationId, position])
+}
+
+model DestinationFaq {
+  id            String   @id @default(cuid())
+  destinationId String
+  position      Int      @default(0)
+  question      String
+  answer        String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  destination Destination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
+
+  @@unique([destinationId, position])
+  @@index([destinationId, position])
+}
+
+
+--- ./backend/prisma/schema.prisma : modèles liés ---
+model Agency {
+  id                Int                @id @default(autoincrement())
+  name              String
+  seoLevel          String?            @default("RENFORCEMENT")
+  city              String
+  address           String
+  postalCode        String
+  phone             String
+  email             String
+  website           String?
+  googleReviewUrl   String?
+  googleLocationId  String?
+  createdAt         DateTime           @default(now())
+  networkActions    NetworkAction[]
+  realRankingChecks RealRankingCheck[]
+  reviewRequests    ReviewRequest[]
+
+  googlePosts       GooglePost[]
+  reviews           GoogleReview[]
+  keywords          RankingKeyword[]
+  directoryListings DirectoryListing[]
+  scoreHistory      AgencyScoreHistory[]
+  notifications     Notification[]
+  ReviewResponse    ReviewResponse[]
+
+  seoSite AgencySeoSite?
+
+  @@unique([name, city])
+  agencySites AgencySite[]
+}
+
+model AgencyScoreHistory {
+  id            Int      @id @default(autoincrement())
+  agencyId      Int
+  citationScore Int
+  globalScore   Int
+  reviewsCount  Int
+  rankingsCount Int
+  createdAt     DateTime @default(now())
+
+  agency Agency @relation(fields: [agencyId], references: [id])
+}
+
+model NetworkAction {
+  id Int @id @default(autoincrement())
+
+  agencyId Int?
+  agency   Agency? @relation(fields: [agencyId], references: [id])
+
+  lever       String
+  title       String
+  description String?
+
+  owner    String?
+  deadline DateTime?
+
+  status  String  @default("todo")
+  comment String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model KnowledgeEntity {
+  id          String    @id @default(cuid())
+  type        String
+  slug        String
+  title       String
+  summary     String?
+  status      String    @default("draft")
+  language    String    @default("fr")
+  metadata    Json?
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  outgoingRelations KnowledgeRelation[]     @relation("KnowledgeRelationSource")
+  incomingRelations KnowledgeRelation[]     @relation("KnowledgeRelationTarget")
+  contentBlocks     KnowledgeContentBlock[]
+  mediaAssets       KnowledgeMediaAsset[]
+
+  seoPages AgencySeoPage[]
+
+  @@unique([slug, language])
+  @@index([type])
+  @@index([status])
+  @@index([language])
+  @@index([publishedAt])
+}
+
+model KnowledgeRelation {
+  id           String   @id @default(cuid())
+  sourceId     String
+  targetId     String
+  relationType String
+  position     Int      @default(0)
+  metadata     Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  source KnowledgeEntity @relation("KnowledgeRelationSource", fields: [sourceId], references: [id], onDelete: Cascade)
+  target KnowledgeEntity @relation("KnowledgeRelationTarget", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceId, targetId, relationType])
+  @@index([sourceId])
+  @@index([targetId])
+  @@index([relationType])
+}
+
+model KnowledgeContentBlock {
+  id        String   @id @default(cuid())
+  entityId  String
+  type      String
+  title     String?
+  content   Json
+  position  Int      @default(0)
+  status    String   @default("draft")
+  language  String   @default("fr")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  entity KnowledgeEntity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  @@index([entityId])
+  @@index([type])
+  @@index([status])
+  @@index([language])
+  @@index([entityId, position])
+}
+
+model KnowledgeMediaAsset {
+  id        String   @id @default(cuid())
+  entityId  String
+  type      String
+  url       String
+  alt       String?
+  title     String?
+  mimeType  String?
+  width     Int?
+  height    Int?
+  position  Int      @default(0)
+  isPrimary Boolean  @default(false)
+  metadata  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  entity KnowledgeEntity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  @@index([entityId])
+  @@index([type])
+  @@index([entityId, position])
+  @@index([entityId, isPrimary])
+}
+
+model AgencySeoSite {
+  id           String   @id @default(cuid())
+  agencyId     Int      @unique
+  name         String
+  slug         String   @unique
+  domain       String?  @unique
+  subdomain    String?  @unique
+  seoCity      String
+  targetCities Json?
+  status       String   @default("draft")
+  theme        Json?
+  metadata     Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  agency Agency          @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  pages  AgencySeoPage[]
+
+  @@index([status])
+  @@index([seoCity])
+}
+
+model AgencySeoPage {
+  id                String    @id @default(cuid())
+  siteId            String
+  knowledgeEntityId String?
+  slug              String
+  title             String
+  pageType          String    @default("destination")
+  localCity         String?
+  seoTitle          String?
+  seoDescription    String?
+  introduction      String?
+  content           Json?
+  callToAction      Json?
+  status            String    @default("draft")
+  publishedAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  site            AgencySeoSite    @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  knowledgeEntity KnowledgeEntity? @relation(fields: [knowledgeEntityId], references: [id], onDelete: SetNull)
+
+  @@unique([siteId, slug])
+  @@index([siteId])
+  @@index([knowledgeEntityId])
+  @@index([status])
+  @@index([pageType])
+}
+
+model MiniSitePage {
+  id String @id @default(cuid())
+
+  miniSiteId String
+
+  title String
+  slug  String
+  type  String
+
+  seoTitle String?
+  seoDesc  String?
+
+  content Json
+
+  published Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  miniSite MiniSite @relation(fields: [miniSiteId], references: [id], onDelete: Cascade)
+
+  @@unique([miniSiteId, slug])
+  @@index([type])
+}
+
+model AgencySite {
+  id          String   @id @default(cuid())
+  agencyId    Int      @unique
+  name        String
+  slug        String   @unique
+  basePath    String   @unique
+  status      String   @default("draft")
+  theme       String   @default("mondescale-default")
+  generatedAt DateTime?
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  agency Agency           @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  pages  AgencySitePage[]
+
+  @@index([status])
+}
+
+model AgencySitePage {
+  id              String   @id @default(cuid())
+  siteId          String
+  parentId        String?
+  title           String
+  slug            String
+  path            String   @unique
+  pageType        String
+  menuTitle       String
+  menuLocation    String
+  displayOrder    Int
+  seoTitle        String
+  metaDescription String
+  h1              String
+  schemaType      String   @default("WebPage")
+  status          String   @default("draft")
+  published       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  site     AgencySite       @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  parent   AgencySitePage?  @relation("AgencySitePageTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children AgencySitePage[] @relation("AgencySitePageTree")
+
+  @@unique([siteId, slug])
+  @@index([siteId])
+  @@index([parentId])
+  @@index([pageType])
+  @@index([menuLocation, displayOrder])
+  @@index([status])
+  sections AgencySiteSection[]
+}
+
+model AgencySiteSection {
+  id           String   @id @default(cuid())
+  pageId       String
+  sectionType  String
+  jsonContent  Json
+  displayOrder Int
+  status       String   @default("draft")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  page AgencySitePage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, sectionType])
+  @@index([pageId, displayOrder])
+  @@index([sectionType])
+  @@index([status])
+}
+
+model Destination {
+  id             String   @id @default(cuid())
+  name           String
+  slug           String   @unique
+  country        String
+  region         String?
+  type           String   @default("destination")
+  status         String   @default("draft")
+  tagline        String?
+  summary        String?
+  heroImageUrl   String?
+  seoTitle       String?
+  seoDescription String?
+  latitude       Float?
+  longitude      Float?
+  bestTime       String?
+  idealDuration  String?
+  currency       String?
+  language       String?
+  highlights     String[] @default([])
+  audiences      String[] @default([])
+  metadata       Json?
+  publishedAt    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  sections DestinationSection[]
+  faqs     DestinationFaq[]
+
+  @@index([status])
+  @@index([country])
+  @@index([type])
+}
+
+model DestinationSection {
+  id            String   @id @default(cuid())
+  destinationId String
+  key           String
+  position      Int      @default(0)
+  type          String
+  title         String?
+  content       Json
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  destination Destination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
+
+  @@unique([destinationId, key])
+  @@index([destinationId, position])
+}
+
+model DestinationFaq {
+  id            String   @id @default(cuid())
+  destinationId String
+  position      Int      @default(0)
+  question      String
+  answer        String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  destination Destination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
+
+  @@unique([destinationId, position])
+  @@index([destinationId, position])
+}
+
+
+
+============================================================
+9. COMPOSANTS UTILISÉS PAR LES ROUTES AGENCE
+============================================================
+frontend/app/agence/[siteSlug]/destination/[destinationSlug]/page.js:1:import { notFound } from 'next/navigation';
+frontend/app/agence/[siteSlug]/destination/[destinationSlug]/page.js:2:import DestinationPage from '../../../../../components/destination/DestinationPage';
+frontend/app/agence/[siteSlug]/destination/[destinationSlug]/page.js:3:import { getPublicDestination } from '../../../../../lib/destination-api';
+frontend/app/agence/[siteSlug]/[[...pageSlug]]/page.js:1:import { notFound } from "next/navigation";
+frontend/app/agence/[siteSlug]/[[...pageSlug]]/page.js:2:import AgencySiteShell from "../../../../components/agency-site/AgencySiteShell";
+frontend/app/agence/[siteSlug]/[[...pageSlug]]/page.js:3:import { getAgencyPage, getAgencySite } from "../../../../lib/agency-site-api";
+
+
+============================================================
+10. VARIABLES D'ENVIRONNEMENT RÉFÉRENCÉES
+============================================================
+process.env.BACKEND_INTERNAL_URL
+process.env.BASIC_AUTH_PASSWORD
+process.env.BASIC_AUTH_USERNAME
+process.env.INTERNAL_API_URL
+process.env.NEXT_PUBLIC_API_URL
+
+
+============================================================
+11. FICHIERS SITEMAP, ROBOTS ET MANIFEST
+============================================================
+
+
+============================================================
+12. DÉTECTION D'ANOMALIES RAPIDES
+============================================================
+--- TODO / FIXME / HACK ---
+
+--- URLs locales ou codées en dur ---
+frontend/lib/destination-api.js:1:const API_URL = process.env.BACKEND_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://backend:4000';
+frontend/lib/agency-site-api.js:1:const API_BASE_URL = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://backend:4000";
+frontend/src/app/seo-keywords-db/page.tsx:3:    "http://backend:4000/seo/keywords",
+frontend/src/app/dataforseo-preview/page.jsx:11:    fetch("http://localhost:4000/dataforseo-payload-preview")
+
+--- Slugs et contenus de démonstration ---
+frontend/components/agency-site/SectionRenderer.js:24:  if (type === "map-placeholder") return <section className="as-section"><div className="as-shell"><h2>{c.title}</h2><div className="as-map"><span>{c.address || "Adresse à renseigner"}</span></div></div></section>;
+
+
+============================================================
+13. TAILLE ET COMPLEXITÉ DES FICHIERS MINI-SITES
+============================================================
+  139 total
+   28 frontend/components/destination/DestinationPage.js
+   28 frontend/components/agency-site/SectionRenderer.js
+   21 frontend/app/agence/[siteSlug]/[[...pageSlug]]/page.js
+   21 frontend/app/agence/[siteSlug]/destination/[destinationSlug]/page.js
+   17 frontend/lib/agency-site-api.js
+   11 frontend/lib/destination-api.js
+   11 frontend/components/agency-site/AgencySiteShell.js
+    1 frontend/components/destination/DestinationPage.module.css
+    1 frontend/components/agency-site/agency-site.css
+
+
+============================================================
+14. ÉTAT GIT
+============================================================
+?? docs/
+?? scripts/audit-mini-sites-seo.sh
+2db79fb (HEAD -> feature/mini-sites-seo-core, origin/main, origin/feature/mini-sites-seo-core, main) merge: fix Next.js Edge CSS asset failures
+d8e6baf (origin/fix/next-edge-css-500, fix/next-edge-css-500) fix(frontend): restore CSS assets and migrate middleware to proxy
+7598d88 refactor(frontend): migrate middleware to Next.js proxy
+1529245 fix(frontend): prevent middleware crash on static assets
+92e6ea2 Initial import
+c9629d7 (feat/knowledge-graph-sprint-003a, develop) feat: knowledge engine + mini-site foundation
+3a41fa2 (master) docs: define Marketing Engine constitution and domain aggregates
+b282547 docs: complete Marketing Engine architecture foundation
+5aa3bf6 docs: initialize Marketing Engine architecture
+226dd6f Restore and paginate Google review synchronization
+
+
+============================================================
+15. FIN DU RAPPORT
+============================================================
+Rapport généré : docs/audits/mini-sites-seo-audit-20260729-072251.txt

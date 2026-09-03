@@ -6,18 +6,38 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start -H 0.0.0.0",
-    "lint": "eslint"
+    "lint": "eslint",
+    "perf:probe": "node scripts/public-performance-probe.mjs",
+    "perf:lcp-probe": "node scripts/public-lcp-contract-probe.mjs",
+    "perf:js-probe": "node scripts/public-js-payload-probe.mjs",
+    "perf:origin-chain": "node scripts/public-origin-chain-probe.mjs",
+    "test:indexation": "node --test test/mse-25-17-indexation-cockpit.test.mjs test/mse-25-18-controlled-indexation-rollout.test.mjs test/mse-25-19-search-console-observability.test.mjs test/mse-25-20-search-performance-feedback-loop.test.mjs test/mse-25-21-search-opportunity-prioritization.test.mjs test/mse-25-22-seo-opportunity-work-queue.test.mjs test/mse-25-23-local-seo-intent-scoring.test.mjs test/mse-25-24-local-seo-coverage.test.mjs test/mse-25-25-local-content-uniqueness.test.mjs test/mse-25-26-local-semantic-depth.test.mjs test/mse-25-27-local-search-intent-coverage.test.mjs test/mse-25-28-local-intent-target-mapping.test.mjs test/mse-25-30-public-h1-rendering.test.mjs test/mse-25-30-commercial-links.test.mjs test/mse-25-30-destination-commercial-links.test.mjs test/mse-25-30-destination-structured-data.test.mjs test/mse-25-30-destination-hero-performance.test.mjs test/mse-25-30-destination-local-differentiation.test.mjs test/mse-25-77-indexation-observability.test.mjs test/mse-25-112-search-console-indexation-hygiene.test.mjs test/mse-25-117-local-search-performance.test.mjs",
+    "test:indexation:rollout": "node --test test/mse-25-18-controlled-indexation-rollout.test.mjs",
+    "test:indexation:status": "node --test test/mse-25-19-search-console-observability.test.mjs test/mse-25-77-indexation-observability.test.mjs",
+    "test:indexation:performance": "node --test test/mse-25-20-search-performance-feedback-loop.test.mjs test/mse-25-21-search-opportunity-prioritization.test.mjs test/mse-25-22-seo-opportunity-work-queue.test.mjs test/mse-25-23-local-seo-intent-scoring.test.mjs test/mse-25-24-local-seo-coverage.test.mjs test/mse-25-25-local-content-uniqueness.test.mjs test/mse-25-26-local-semantic-depth.test.mjs test/mse-25-27-local-search-intent-coverage.test.mjs test/mse-25-28-local-intent-target-mapping.test.mjs test/mse-25-30-public-h1-rendering.test.mjs test/mse-25-30-commercial-links.test.mjs test/mse-25-30-destination-commercial-links.test.mjs test/mse-25-30-destination-structured-data.test.mjs test/mse-25-30-destination-hero-performance.test.mjs test/mse-25-30-destination-local-differentiation.test.mjs test/mse-25-117-local-search-performance.test.mjs",
+    "test:partners": "node --test test/mse-25-partners-public-regression.test.mjs test/mse-25-partner-directory.test.mjs test/mse-25-partner-assets.test.mjs test/mse-25-partner-catalog-quality.test.mjs test/mse-25-partner-verification.test.mjs test/mse-25-partner-readiness.test.mjs test/mse-25-partner-detail-sources.test.mjs test/mse-25-partner-logo-sources.test.mjs test/mse-25-partner-logo-acquire.test.mjs test/mse-25-partner-logo-pipeline.test.mjs test/mse-25-partner-logo-finalize.test.mjs",
+    "partners:logos:audit": "node scripts/partner-logo-coverage.mjs",
+    "partners:logos:registry:audit": "node scripts/partner-logo-source-registry-audit.mjs",
+    "partners:logos:queue": "node scripts/partner-logo-work-queue.mjs",
+    "partners:logos:discover": "node scripts/partner-logo-source-discovery.mjs",
+    "partners:logos:acquire": "node scripts/partner-logo-acquire.mjs",
+    "partners:logos:catalogue:sync": "node scripts/partner-logo-catalogue-sync.mjs",
+    "partners:logos:finalize": "node scripts/partner-logo-finalize.mjs",
+    "partners:logos:discover:cruise": "node scripts/partner-cruise-logo-source-discovery.mjs",
+    "partners:logos:acquire:cruise": "node scripts/partner-cruise-logo-acquire.mjs",
+    "partners:catalog:audit": "node scripts/partner-catalog-quality.mjs",
+    "partners:details:audit": "node scripts/partner-detail-source-audit.mjs",
+    "partners:readiness": "node scripts/partner-publication-readiness.mjs",
+    "partners:readiness:strict": "node scripts/partner-publication-readiness.mjs --strict-content=true",
+    "partners:content:queue": "node scripts/partner-content-work-queue.mjs",
+    "partners:preflight": "npm run test:partners && npm run partners:details:audit && npm run partners:readiness:strict && npm run partners:logos:registry:audit && npm run partners:logos:audit && npm run partners:catalog:audit",
+    "seo:audit-public": "node scripts/audit-public-seo.mjs",
+    "seo:audit-public:strict": "node scripts/audit-public-seo.mjs --strict=true",
+    "seo:recommend-public": "node scripts/recommend-public-seo.mjs",
+    "seo:score-public": "node scripts/score-public-seo.mjs",
+    "seo:score-public:json": "node scripts/score-public-seo.mjs --json=true",
+    "seo:score-public:gate": "node scripts/score-public-seo.mjs --gate=true --minimum-site-score=70"
   },
-  "dependencies": {
-    "google-auth-library": "10.7.0",
-    "next": "16.2.9",
-    "react": "19.2.7",
-    "react-dom": "19.2.7"
-  },
-  "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.9",
-    "tailwindcss": "^4"
-  }
+  "dependencies": { "google-auth-library": "10.7.0", "next": "16.2.9", "react": "19.2.7", "react-dom": "19.2.7" },
+  "devDependencies": { "@tailwindcss/postcss": "^4", "eslint": "^9", "eslint-config-next": "16.2.9", "tailwindcss": "^4" }
 }

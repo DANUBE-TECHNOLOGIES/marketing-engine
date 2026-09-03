@@ -1,0 +1,175 @@
+/*
+ * MSE-25.3 — Operational Website Studio
+ *
+ * Pont unique entre le contrat Brand Studio V2 et le design system public.
+ * Les variables sont définies sur .public-site-shell afin de surcharger
+ * proprement les valeurs historiques déclarées dans :root sans modifier
+ * les composants du renderer un par un.
+ */
+.public-site-shell {
+  --public-primary: var(--brand-primary, #0b5fff);
+  --public-secondary: var(--brand-secondary, #102a43);
+  --public-accent: var(--brand-accent, #ff9f1c);
+  --public-background: var(--brand-background, #ffffff);
+  --public-text: var(--brand-text, #17324d);
+
+  background: var(--public-background);
+  color: var(--public-text);
+  font-family: var(--brand-body-font, Inter, Arial, sans-serif);
+}
+
+.public-site-shell h1,
+.public-site-shell h2,
+.public-site-shell h3,
+.public-site-shell h4,
+.public-site-shell h5,
+.public-site-shell h6,
+.public-site-shell .public-site-brand-copy strong,
+.public-site-shell .public-site-footer-brand strong {
+  font-family: var(--brand-heading-font, Inter, Arial, sans-serif);
+}
+
+.public-site-shell .public-site-header-cta,
+.public-site-shell .public-site-button,
+.public-site-shell button {
+  border-radius: var(--brand-button-radius, 999px);
+}
+
+.public-site-shell .public-site-card,
+.public-site-shell .public-site-contact-grid,
+.public-site-shell .public-site-map-frame {
+  color: var(--public-text);
+}
+
+.public-site-prose {
+  max-width: 880px;
+}
+
+.public-site-prose p {
+  line-height: 1.75;
+}
+
+.public-site-image-text-grid,
+.public-site-agency-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(28px, 5vw, 72px);
+  align-items: center;
+}
+
+.public-site-image-text-grid[data-image-position="right"] .public-site-image-text-media {
+  order: 2;
+}
+
+.public-site-image-text-media,
+.public-site-gallery-item {
+  overflow: hidden;
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--public-secondary) 8%, var(--public-background));
+}
+
+.public-site-image-text-media img {
+  display: block;
+  width: 100%;
+  min-height: 360px;
+  max-height: 560px;
+  object-fit: cover;
+}
+
+.public-site-image-placeholder {
+  min-height: 300px;
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--public-primary) 16%, var(--public-background)),
+      color-mix(in srgb, var(--public-secondary) 10%, var(--public-background))
+    );
+}
+
+.public-site-image-text-copy > p:not(.public-site-eyebrow),
+.public-site-section-intro,
+.public-site-agency-grid > div > p {
+  line-height: 1.7;
+}
+
+.public-site-feature-card {
+  position: relative;
+}
+
+.public-site-feature-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  margin-bottom: 18px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--public-accent) 18%, transparent);
+  color: var(--public-secondary);
+  font-size: 20px;
+}
+
+.public-site-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 28px;
+}
+
+.public-site-gallery-item {
+  margin: 0;
+}
+
+.public-site-gallery-item img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+
+.public-site-gallery-item figcaption {
+  padding: 13px 16px 16px;
+  color: var(--public-text);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.public-site-agency-details {
+  padding: 26px;
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--public-primary) 7%, var(--public-background));
+}
+
+.public-site-agency-details p {
+  margin: 0 0 18px;
+  line-height: 1.6;
+}
+
+.public-site-agency-details p:last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 900px) {
+  .public-site-image-text-grid,
+  .public-site-agency-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .public-site-image-text-grid[data-image-position="right"] .public-site-image-text-media {
+    order: 0;
+  }
+
+  .public-site-gallery-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .public-site-image-text-media img {
+    min-height: 260px;
+  }
+
+  .public-site-gallery-grid {
+    grid-template-columns: 1fr;
+  }
+}

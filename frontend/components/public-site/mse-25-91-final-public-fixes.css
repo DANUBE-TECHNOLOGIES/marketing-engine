@@ -1,0 +1,112 @@
+/*
+ * MSE-25.91 final public locks.
+ *
+ * The bundled Mondescale PNG contains internal whitespace. We enlarge its
+ * visible mark only enough to make it prominent, and — critically — reserve
+ * the corresponding footprint in the header. The logo must never overlap the
+ * agency name, phone or CTAs.
+ */
+
+.public-site-header-main,
+.public-site-header-identity,
+.public-site-header-logo-wrap {
+  overflow: visible !important;
+}
+
+.public-site-header-identity {
+  gap: 18px !important;
+}
+
+.public-site-header-logo-wrap {
+  position: relative !important;
+  z-index: 2 !important;
+  flex: 0 0 310px !important;
+  width: 310px !important;
+  min-width: 310px !important;
+  height: 92px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+}
+
+.public-site-header-logo-wrap .public-brand-logo,
+.public-site-header__brand-logo {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  width: 180px !important;
+  height: auto !important;
+  max-width: none !important;
+  max-height: none !important;
+  object-fit: contain !important;
+  object-position: left center !important;
+  transform: scale(1.9) !important;
+  transform-origin: left center !important;
+}
+
+.public-site-header .public-site-brand-copy {
+  position: relative;
+  z-index: 3;
+  flex: 0 1 235px;
+  width: 235px;
+  max-width: 235px !important;
+  margin-left: 0 !important;
+}
+
+.public-site-header .public-site-brand-copy strong,
+.public-site-header .public-site-brand-copy small {
+  position: relative;
+  z-index: 3;
+}
+
+@media (max-width: 1200px) {
+  .public-site-header-logo-wrap {
+    flex-basis: 260px !important;
+    width: 260px !important;
+    min-width: 260px !important;
+    height: 84px !important;
+  }
+
+  .public-site-header-logo-wrap .public-brand-logo,
+  .public-site-header__brand-logo {
+    width: 170px !important;
+    transform: scale(1.7) !important;
+  }
+
+  .public-site-header .public-site-brand-copy {
+    flex-basis: 205px;
+    width: 205px;
+    max-width: 205px !important;
+  }
+}
+
+@media (max-width: 1050px) {
+  .public-site-header-logo-wrap {
+    flex-basis: 230px !important;
+    width: 230px !important;
+    min-width: 230px !important;
+    height: 78px !important;
+  }
+
+  .public-site-header-logo-wrap .public-brand-logo,
+  .public-site-header__brand-logo {
+    width: 160px !important;
+    transform: scale(1.55) !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .public-site-header-logo-wrap {
+    flex-basis: 176px !important;
+    width: 176px !important;
+    min-width: 176px !important;
+    height: 68px !important;
+  }
+
+  .public-site-header-logo-wrap .public-brand-logo,
+  .public-site-header__brand-logo {
+    width: 146px !important;
+    transform: scale(1.25) !important;
+    transform-origin: left center !important;
+  }
+}

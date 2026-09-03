@@ -1,17 +1,94 @@
 const express = require("express");
 const AgencySiteService = require("./service");
+const { auditDraft, proposeLocalRewrite } = require("./local-rewrite-service");
+
 module.exports = ({ prisma }) => {
-  const router = express.Router(); const service = new AgencySiteService(prisma);
-  router.post("/agencies/:id/site/generate", async (req,res,next) => { try { res.status(201).json(await service.generate(req.params.id, req.body || {})); } catch(e) { next(e); } });
-  router.post("/agencies/:id/site/compose", async (req,res,next) => { try { res.json(await service.compose(req.params.id)); } catch(e) { next(e); } });
-  router.post("/agencies/:id/site/rebuild", async (req,res,next) => { try { res.json(await service.rebuild(req.params.id, req.body || {})); } catch(e) { next(e); } });
-  router.get("/agencies/:id/site", async (req,res,next) => { try { res.json(await service.get(req.params.id)); } catch(e) { next(e); } });
-  router.get("/agencies/:id/site/pages/home", async (req,res,next) => { try { res.json(await service.page(req.params.id, "")); } catch(e) { next(e); } });
-  router.get("/agencies/:id/site/pages/:slug", async (req,res,next) => { try { res.json(await service.page(req.params.id, req.params.slug)); } catch(e) { next(e); } });
-  router.get("/public/agency-sites/:siteSlug", async (req,res,next) => { try { res.json(await service.publicSite(req.params.siteSlug)); } catch(e) { next(e); } });
-  router.get("/public/agency-sites/:siteSlug/pages/home", async (req,res,next) => { try { res.json(await service.publicPage(req.params.siteSlug, "")); } catch(e) { next(e); } });
-  router.get("/public/agency-sites/:siteSlug/pages/:slug", async (req,res,next) => { try { res.json(await service.publicPage(req.params.siteSlug, req.params.slug)); } catch(e) { next(e); } });
-  router.get("/agencies/:id/site/sitemap.xml", async (req,res,next) => { try { res.type("application/xml").send(await service.sitemap(req.params.id, req.query.origin)); } catch(e) { next(e); } });
-  router.get("/agencies/:id/site/robots.txt", async (req,res,next) => { try { res.type("text/plain").send(await service.robots(req.params.id, req.query.origin)); } catch(e) { next(e); } });
+  const router = express.Router();
+  const serviceFor = (req) => new AgencySiteService(prisma, req.tenantId);
+  const rewriteArgs = (req, slug) => ({
+    prisma,
+    tenantId: req.tenantId,
+    agencyId: req.params.id,
+    slug,
+    draftPage: req.body?.page || null,
+    blockId: req.body?.blockId || null,
+  });
+  const publicPagePayload = (page) => {
+    if (!page || typeof page !== "object") return page;
+    if (Array.isArray(page.blocks) && page.blocks.length) {
+      return { ...page, sections: page.blocks };
+    }
+    return page;
+  };
+
+  router.get("/agency-sites", async (req, res, next) => {
+    try { res.json(await serviceFor(req).listSites()); } catch (e) { next(e); }
+  });
+  router.post("/agencies/:id/site/generate", async (req, res, next) => {
+    try { res.status(201).json(await serviceFor(req).generate(req.params.id, req.body || {})); } catch (e) { next(e); }
+  });
+  router.post("/agencies/:id/site/compose", async (req, res, next) => {
+    try { res.json(await serviceFor(req).compose(req.params.id)); } catch (e) { next(e); }
+  });
+  router.post("/agencies/:id/site/rebuild", async (req, res, next) => {
+    try { res.json(await serviceFor(req).rebuild(req.params.id, req.body || {})); } catch (e) { next(e); }
+  });
+  router.post("/agencies/:id/site/seo-draft-pages", async (req, res, next) => {
+    try {
+      const result = await serviceFor(req).createSeoDraftPage(req.params.id, req.body || {});
+      res.status(result.created ? 201 : 200).json(result);
+    } catch (e) { next(e); }
+  });
+  router.get("/agencies/:id/site", async (req, res, next) => {
+    try { res.json(await serviceFor(req).get(req.params.id)); } catch (e) { next(e); }
+  });
+
+  router.get("/agencies/:id/site/pages/home/uniqueness", async (req, res, next) => {
+    try { res.json(await serviceFor(req).uniqueness(req.params.id, "home")); } catch (e) { next(e); }
+  });
+  router.get("/agencies/:id/site/pages/:slug/uniqueness", async (req, res, next) => {
+    try { res.json(await serviceFor(req).uniqueness(req.params.id, req.params.slug)); } catch (e) { next(e); }
+  });
+  router.post("/agencies/:id/site/pages/home/uniqueness", async (req, res, next) => {
+    try {
+      const args = rewriteArgs(req, "home");
+      res.json(req.body?.action === "rewrite" ? await proposeLocalRewrite(args) : await auditDraft(args));
+    } catch (e) { next(e); }
+  });
+  router.post("/agencies/:id/site/pages/:slug/uniqueness", async (req, res, next) => {
+    try {
+      const args = rewriteArgs(req, req.params.slug);
+      res.json(req.body?.action === "rewrite" ? await proposeLocalRewrite(args) : await auditDraft(args));
+    } catch (e) { next(e); }
+  });
+
+  router.get("/agencies/:id/site/pages/home", async (req, res, next) => {
+    try { res.json(await serviceFor(req).page(req.params.id, "home")); } catch (e) { next(e); }
+  });
+  router.get("/agencies/:id/site/pages/:slug", async (req, res, next) => {
+    try { res.json(await serviceFor(req).page(req.params.id, req.params.slug)); } catch (e) { next(e); }
+  });
+  router.put("/agencies/:id/site/pages/home/sections", async (req, res, next) => {
+    try { res.json(await serviceFor(req).replacePageSections(req.params.id, "home", req.body || {})); } catch (e) { next(e); }
+  });
+  router.put("/agencies/:id/site/pages/:slug/sections", async (req, res, next) => {
+    try { res.json(await serviceFor(req).replacePageSections(req.params.id, req.params.slug, req.body || {})); } catch (e) { next(e); }
+  });
+  router.get("/public/agency-sites/:siteSlug", async (req, res, next) => {
+    try { res.json(await serviceFor(req).publicSite(req.params.siteSlug)); } catch (e) { next(e); }
+  });
+  router.get("/public/agency-sites/:siteSlug/pages/home", async (req, res, next) => {
+    try { res.json(publicPagePayload(await serviceFor(req).publicPage(req.params.siteSlug, "home"))); } catch (e) { next(e); }
+  });
+  router.get("/public/agency-sites/:siteSlug/pages/:slug", async (req, res, next) => {
+    try { res.json(publicPagePayload(await serviceFor(req).publicPage(req.params.siteSlug, req.params.slug))); } catch (e) { next(e); }
+  });
+  router.get("/agencies/:id/site/sitemap.xml", async (req, res, next) => {
+    try { res.type("application/xml").send(await serviceFor(req).sitemap(req.params.id, req.query.origin)); } catch (e) { next(e); }
+  });
+  router.get("/agencies/:id/site/robots.txt", async (req, res, next) => {
+    try { res.type("text/plain").send(await serviceFor(req).robots(req.params.id, req.query.origin)); } catch (e) { next(e); }
+  });
+
   return router;
 };

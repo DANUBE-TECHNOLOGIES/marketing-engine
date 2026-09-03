@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Mondescale SEO health snapshot daily
+
+[Timer]
+OnCalendar=*-*-* 04:20:00
+Persistent=true
+RandomizedDelaySec=600
+Unit=mondescale-seo-health-snapshot.service
+
+[Install]
+WantedBy=timers.target

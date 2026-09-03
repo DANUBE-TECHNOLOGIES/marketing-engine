@@ -1,0 +1,12 @@
+"use strict";
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const { buildPlan } = require("../src/modules/content-factory/planner");
+const { composePage, sectionsFor } = require("../src/modules/content-factory/composer");
+const { validateInput } = require("../src/modules/content-factory/validation");
+const destination = { id:"d1", name:"Budapest", slug:"budapest", country:"Hongrie", summary:"Capitale culturelle traversée par le Danube.", highlights:["Parlement","Thermes"], bestTime:"Printemps", idealDuration:"4 jours", sections:[], faqs:[{question:"Combien de jours ?",answer:"Quatre jours."}] };
+test("buildPlan crée une page pilier et des pages support", () => { const p=buildPlan(destination,{limit:4}); assert.equal(p.pages.length,4); assert.equal(p.pages[0].role,"pillar"); assert.equal(p.pages[1].parentSlug,"budapest"); });
+test("composePage produit SEO, chemin et sections", () => { const plan=buildPlan(destination,{limit:1}); const page=composePage(plan.pages[0],destination,{basePath:"/agence-ozoir"}); assert.equal(page.path,"/agence-ozoir/budapest"); assert.match(page.seoTitle,/Budapest/); assert.ok(page.sections.length>=4); assert.equal(page.contentHash.length,64); });
+test("les sections ont des types uniques", () => { const sections=sectionsFor({title:"Voyage à Budapest"},destination); assert.equal(new Set(sections.map(x=>x.sectionType)).size,sections.length); });
+test("validateInput refuse une persistance sans site", () => { assert.throws(()=>validateInput({destinationSlug:"budapest",persist:true}),/siteId ou siteSlug/); });
+test("validateInput borne la limite", () => { assert.equal(validateInput({destinationSlug:"budapest",limit:999}).limit,20); });

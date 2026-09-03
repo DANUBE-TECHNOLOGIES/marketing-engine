@@ -1,0 +1,40 @@
+FROM node:22-alpine AS deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+
+FROM node:22-alpine AS builder
+WORKDIR /app
+ENV NODE_ENV=production
+ARG NEXT_PUBLIC_SITE_URL
+ARG NEXT_PUBLIC_SITE_ORIGIN
+ARG NEXT_PUBLIC_TENANT_SLUG
+ARG NEXT_PUBLIC_SHOWCASE_URL
+ENV NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
+ENV NEXT_PUBLIC_SITE_ORIGIN=${NEXT_PUBLIC_SITE_ORIGIN}
+ENV NEXT_PUBLIC_TENANT_SLUG=${NEXT_PUBLIC_TENANT_SLUG}
+ENV NEXT_PUBLIC_SHOWCASE_URL=${NEXT_PUBLIC_SHOWCASE_URL}
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+ARG BASIC_AUTH_USERNAME
+ARG BASIC_AUTH_PASSWORD
+
+ENV BASIC_AUTH_USERNAME=${BASIC_AUTH_USERNAME}
+ENV BASIC_AUTH_PASSWORD=${BASIC_AUTH_PASSWORD}
+
+RUN npm run build
+
+FROM node:22-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+ENV HOSTNAME=0.0.0.0
+ENV PORT=3000
+
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/package-lock.json ./package-lock.json
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+
+EXPOSE 3000
+CMD ["npm", "run", "start"]

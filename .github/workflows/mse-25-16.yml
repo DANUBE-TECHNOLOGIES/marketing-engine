@@ -1,0 +1,109 @@
+name: MSE-25 Search Console and indexation checks
+
+on:
+  push:
+    branches:
+      - 'feature/mse-25-*'
+  pull_request:
+    paths:
+      - 'backend/src/modules/search-console-submission/**'
+      - 'backend/src/modules/minisite-structured-data/**'
+      - 'backend/src/modules/minisite-seo-enrichment/**'
+      - 'backend/src/modules/agency-seo/**'
+      - 'backend/scripts/search-console-readiness-check.js'
+      - 'backend/test/search-console-*.test.js'
+      - 'backend/test/minisite-local-*.test.js'
+      - 'backend/test/minisite-seo-*.test.js'
+      - 'backend/test/mse-25-30-*.test.js'
+      - 'backend/test/mse-25-31-*.test.js'
+      - 'backend/test/agency-seo-*.test.js'
+      - 'frontend/app/agence/[siteSlug]/sitemap.xml/route.js'
+      - 'frontend/app/api/indexation/**'
+      - 'frontend/app/indexation/**'
+      - 'frontend/lib/indexation-api.js'
+      - 'frontend/test/mse-25-*.test.mjs'
+      - 'frontend/package.json'
+      - '.github/workflows/mse-25-16.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend-search-console:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        run: npm ci
+
+      - name: Run Search Console, local SEO and optimizer backend tests
+        env:
+          SEARCH_CONSOLE_ENABLED: 'false'
+        run: node --test test/search-console-*.test.js test/minisite-local-*.test.js test/minisite-seo-*.test.js test/mse-25-30-*.test.js test/mse-25-31-*.test.js test/agency-seo-*.test.js
+
+      - name: Verify Search Console module loads with provider disabled
+        env:
+          SEARCH_CONSOLE_ENABLED: 'false'
+        run: node -e "const m=require('./src/modules/search-console-submission'); const p=m.createConfiguredSearchConsoleProvider(); if(p.name!=='disabled') process.exit(1); console.log('Search Console provider safely disabled')"
+
+      - name: Verify real minisite SEO optimizer modules load
+        run: node -e "const e=require('./src/modules/minisite-seo-enrichment/optimizer-executor'); const g=require('./src/modules/minisite-seo-enrichment/generator'); if(typeof e.applyOptimizedSeoItems!=='function'||typeof g.generateSeoMetadata!=='function') process.exit(1); console.log('Real minisite SEO optimizer loaded')"
+
+  frontend-indexation:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Run indexation contract tests
+        run: npm run test:indexation
+
+      - name: Lint sitemap and indexation API
+        run: npx eslint "app/agence/[siteSlug]/sitemap.xml/route.js" "app/api/indexation/route.js" "lib/indexation-api.js"
+
+      - name: Lint indexation cockpit helpers
+        run: npx eslint "app/indexation/IndexationRolloutPlanner.js" "app/indexation/page.js"
+
+      - name: Lint indexation cockpit client
+        run: npx eslint "app/indexation/IndexationCockpitClient.js"
+
+      - name: Lint indexation rollout
+        run: npx eslint "app/indexation/rollout/**/*.js"
+
+      - name: Lint indexation status
+        run: npx eslint "app/indexation/status/**/*.js"
+
+      - name: Lint indexation performance
+        run: npx eslint "app/indexation/performance/**/*.js"
+
+      - name: Lint local SEO coverage
+        run: npx eslint "app/indexation/local-seo/**/*.js"
+
+      - name: Lint local content uniqueness
+        run: npx eslint "app/indexation/local-content/**/*.js"

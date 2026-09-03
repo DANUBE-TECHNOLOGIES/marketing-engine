@@ -1,0 +1,293 @@
+"use strict";
+
+const crypto = require("node:crypto");
+const { buildLocalSeoQualityUpliftPlan } = require("./quality-uplift-planner");
+
+function clone(value) { return JSON.parse(JSON.stringify(value)); }
+function findPage(site, slug) { return (site.pages || []).find((page) => String(page?.slug || "") === String(slug || "")) || null; }
+function sha256Text(value) { return crypto.createHash("sha256").update(String(value ?? ""), "utf8").digest("hex"); }
+function normalizedBlockType(block = {}) { return String(block.blockType || block.type || "").trim().toLowerCase().replace(/[_\s]+/g, "-"); }
+function sourceFingerprintMatches(value, operation = {}) {
+  return /^[0-9a-f]{64}$/i.test(String(operation.sourceValueFingerprint || ""))
+    && sha256Text(value) === String(operation.sourceValueFingerprint).toLowerCase();
+}
+
+function appendBodyPreview(page, copyPreview) {
+  if (!page || !copyPreview?.html) return false;
+  page.blocks = Array.isArray(page.blocks) ? page.blocks : [];
+  page.blocks.push({
+    blockType: "rich_text",
+    status: "published",
+    content: { title: copyPreview.title || "", html: copyPreview.html },
+    seo: { generatedBy: "mse-25.31-impact-preview", purpose: "local-seo-quality-uplift-simulation" },
+  });
+  return true;
+}
+
+function appendInternalLink(site, proposal, operation) {
+  const sourceSlug = (operation?.suggestedSourceSlugs || [])[0];
+  const source = sourceSlug ? findPage(site, sourceSlug) : null;
+  const targetPath = proposal?.diagnostics?.internalLink?.path || null;
+  if (!source || !targetPath) return false;
+  source.blocks = Array.isArray(source.blocks) ? source.blocks : [];
+  source.blocks.push({
+    blockType: "rich_text",
+    status: "published",
+    content: {
+      html: `<p><a href="${targetPath}">Découvrir cette page</a></p>`,
+    },
+    seo: { generatedBy: "mse-25.31-impact-preview", purpose: "editorial-internal-link-simulation" },
+  });
+  return true;
+}
+
+function applyExactInternalLinkOperation(site, operation = {}) {
+  if (!site || !operationSimulationReady(operation, { operations: [operation] })) return false;
+  const sourcePage = findPage(site, operation.target?.pageSlug);
+  if (!sourcePage) return false;
+  const block = (sourcePage.blocks || []).find((item) => String(item?.id) === String(operation.target?.blockId));
+  if (!block || normalizedBlockType(block) !== "rich-text" || String(operation.target?.field || "") !== "content.html") return false;
+  const currentHtml = String(block.content?.html || "");
+  if (!sourceFingerprintMatches(currentHtml, operation)) return false;
+
+  block.content = {
+    ...(block.content || {}),
+    html: operation.finalValue,
+  };
+  return true;
+}
+
+function applyExactSeoOperation(page, operation = {}) {
+  if (!page || !String(operation.finalValue || "").trim() || !operationSimulationReady(operation, { operations: [operation] })) return false;
+  if (operation.type === "strengthen-title") {
+    const current = String(page.seoTitle ?? "");
+    if (!sourceFingerprintMatches(current, operation)) return false;
+    page.seoTitle = operation.finalValue;
+    return true;
+  }
+  if (operation.type === "strengthen-meta-description") {
+    const current = String(page.metaDescription ?? page.seoDescription ?? "");
+    if (!sourceFingerprintMatches(current, operation)) return false;
+    page.metaDescription = operation.finalValue;
+    page.seoDescription = operation.finalValue;
+    return true;
+  }
+  if (operation.type === "strengthen-h1") {
+    const block = (page.blocks || []).find((item) => String(item?.id) === String(operation.target.blockId));
+    if (!block || normalizedBlockType(block) !== "hero" || String(operation.target?.field || "") !== "title") return false;
+    const current = String(block.content?.title ?? "");
+    if (!sourceFingerprintMatches(current, operation)) return false;
+    block.content = { ...(block.content || {}), title: operation.finalValue };
+    return true;
+  }
+  return false;
+}
+
+function operationSimulationReady(operation = {}, proposal = {}) {
+  if (operation.type === "enrich-body") {
+    return Boolean(String(proposal.bodyCopyPreview?.html || "").trim());
+  }
+  if (operation.type === "add-internal-link") {
+    return Boolean(
+      operation.target?.scope === "block"
+      && String(operation.target?.pageSlug || "").trim()
+      && operation.target?.blockType === "rich_text"
+      && operation.target?.blockId !== null
+      && operation.target?.blockId !== undefined
+      && operation.target?.field === "content.html"
+      && /^[0-9a-f]{64}$/i.test(String(operation.sourceValueFingerprint || ""))
+      && String(operation.link?.href || "").trim()
+      && String(operation.link?.label || "").trim()
+      && String(operation.finalValue || "").trim()
+    );
+  }
+  if (operation.type === "strengthen-title") {
+    return Boolean(
+      String(operation.finalValue || "").trim()
+      && operation.target?.scope === "page"
+      && operation.target?.field === "seoTitle"
+      && /^[0-9a-f]{64}$/i.test(String(operation.sourceValueFingerprint || ""))
+    );
+  }
+  if (operation.type === "strengthen-meta-description") {
+    return Boolean(
+      String(operation.finalValue || "").trim()
+      && operation.target?.scope === "page"
+      && operation.target?.field === "metaDescription"
+      && /^[0-9a-f]{64}$/i.test(String(operation.sourceValueFingerprint || ""))
+    );
+  }
+  if (operation.type === "strengthen-h1") {
+    return Boolean(
+      String(operation.finalValue || "").trim()
+      && operation.target?.scope === "block"
+      && operation.target?.blockType === "hero"
+      && operation.target?.blockId !== null
+      && operation.target?.blockId !== undefined
+      && operation.target?.field === "title"
+      && /^[0-9a-f]{64}$/i.test(String(operation.sourceValueFingerprint || ""))
+    );
+  }
+  return false;
+}
+
+function counts(plan = {}) {
+  return {
+    intent: Number(plan.summary?.intentOpportunityCount || 0),
+    thinContent: Number(plan.summary?.thinContentOpportunityCount || 0),
+    internalLink: Number(plan.summary?.internalLinkOpportunityCount || 0),
+    total: Number(plan.summary?.totalOpportunityCount || 0),
+  };
+}
+
+function reduction(before, after) {
+  return {
+    intent: Math.max(0, before.intent - after.intent),
+    thinContent: Math.max(0, before.thinContent - after.thinContent),
+    internalLink: Math.max(0, before.internalLink - after.internalLink),
+    total: Math.max(0, before.total - after.total),
+  };
+}
+
+function warningRows(plan = {}) {
+  return [
+    ...(plan.intentOpportunities || []).map((item) => ({ kind: "intent-quality", pageSlug: item.pageSlug, discriminator: item.intent || item.label || "" })),
+    ...(plan.thinContentOpportunities || []).map((item) => ({ kind: "thin-content", pageSlug: item.pageSlug, discriminator: "" })),
+    ...(plan.internalLinkOpportunities || []).map((item) => ({ kind: "internal-link", pageSlug: item.pageSlug, discriminator: item.path || "" })),
+  ];
+}
+
+function warningKey(row = {}) {
+  return [row.kind, row.pageSlug, row.discriminator].map((value) => String(value || "")).join(":");
+}
+
+function pageWarningCounts(plan = {}) {
+  const map = new Map();
+  for (const row of warningRows(plan)) {
+    const slug = String(row.pageSlug || "home");
+    const current = map.get(slug) || { total: 0, kinds: [] };
+    current.total += 1;
+    if (!current.kinds.includes(row.kind)) current.kinds.push(row.kind);
+    map.set(slug, current);
+  }
+  return map;
+}
+
+function projectedPageImpact(currentPlan = {}, projectedPlan = {}, proposals = []) {
+  const beforeRows = warningRows(currentPlan);
+  const afterRows = warningRows(projectedPlan);
+  const afterKeys = new Set(afterRows.map(warningKey));
+  const beforeByPage = pageWarningCounts(currentPlan);
+  const afterByPage = pageWarningCounts(projectedPlan);
+  const proposalByPage = new Map((proposals || []).map((proposal) => [String(proposal.pageSlug || "home"), proposal]));
+  const slugs = new Set([...beforeByPage.keys(), ...afterByPage.keys(), ...proposalByPage.keys()]);
+
+  return Array.from(slugs)
+    .sort((left, right) => left.localeCompare(right, "fr"))
+    .map((pageSlug) => {
+      const before = beforeByPage.get(pageSlug) || { total: 0, kinds: [] };
+      const after = afterByPage.get(pageSlug) || { total: 0, kinds: [] };
+      const resolvedRows = beforeRows.filter((row) => String(row.pageSlug || "home") === pageSlug && !afterKeys.has(warningKey(row)));
+      const resolvedKinds = Array.from(new Set(resolvedRows.map((row) => row.kind)));
+      const resolvedWarnings = resolvedRows.map((row) => ({ kind: row.kind, discriminator: row.discriminator || null }));
+      const proposal = proposalByPage.get(pageSlug) || null;
+      const nonSimulatedOperationTypes = Array.from(new Set(
+        (proposal?.operations || [])
+          .filter((operation) => !operationSimulationReady(operation, proposal))
+          .map((operation) => operation.type)
+      ));
+
+      return {
+        pageSlug,
+        beforeWarnings: before.total,
+        projectedWarnings: after.total,
+        projectedReduction: Math.max(0, before.total - after.total),
+        beforeKinds: before.kinds,
+        projectedKinds: after.kinds,
+        resolvedKinds,
+        resolvedWarnings,
+        projectionComplete: nonSimulatedOperationTypes.length === 0,
+        nonSimulatedOperationTypes,
+      };
+    });
+}
+
+function projectQualityUpliftImpact({ site = {}, currentPlan = {}, proposals = [], minimumWords = 120 } = {}) {
+  const projectedSite = clone(site);
+  let simulatedBodyOperations = 0;
+  let simulatedInternalLinkOperations = 0;
+  let simulatedMetadataOperations = 0;
+  let nonSimulatedOperations = 0;
+  const nonSimulatedOperationTypes = [];
+
+  for (const proposal of proposals || []) {
+    const targetPage = findPage(projectedSite, proposal.pageSlug);
+    for (const operation of proposal.operations || []) {
+      if (operation.type === "enrich-body") {
+        if (appendBodyPreview(targetPage, proposal.bodyCopyPreview)) simulatedBodyOperations += 1;
+        else {
+          nonSimulatedOperations += 1;
+          if (!nonSimulatedOperationTypes.includes(operation.type)) nonSimulatedOperationTypes.push(operation.type);
+        }
+      } else if (operation.type === "add-internal-link") {
+        if (applyExactInternalLinkOperation(projectedSite, operation)) simulatedInternalLinkOperations += 1;
+        else {
+          nonSimulatedOperations += 1;
+          if (!nonSimulatedOperationTypes.includes(operation.type)) nonSimulatedOperationTypes.push(operation.type);
+        }
+      } else if (["strengthen-title", "strengthen-meta-description", "strengthen-h1"].includes(operation.type)) {
+        if (applyExactSeoOperation(targetPage, operation)) simulatedMetadataOperations += 1;
+        else {
+          nonSimulatedOperations += 1;
+          if (!nonSimulatedOperationTypes.includes(operation.type)) nonSimulatedOperationTypes.push(operation.type);
+        }
+      } else {
+        nonSimulatedOperations += 1;
+        if (!nonSimulatedOperationTypes.includes(operation.type)) nonSimulatedOperationTypes.push(operation.type);
+      }
+    }
+  }
+
+  const projectedPlan = buildLocalSeoQualityUpliftPlan(projectedSite, { minimumWords });
+  const before = counts(currentPlan);
+  const after = counts(projectedPlan);
+  const pages = projectedPageImpact(currentPlan, projectedPlan, proposals);
+
+  return {
+    version: "mse-25.31",
+    operation: "preview-quality-uplift-impact",
+    readOnly: true,
+    writes: false,
+    destructive: false,
+    projectionComplete: nonSimulatedOperations === 0,
+    simulation: {
+      simulatedBodyOperations,
+      simulatedInternalLinkOperations,
+      simulatedMetadataOperations,
+      nonSimulatedOperations,
+      nonSimulatedOperationTypes,
+    },
+    before,
+    projected: after,
+    projectedReduction: reduction(before, after),
+    pages,
+  };
+}
+
+module.exports = {
+  appendBodyPreview,
+  appendInternalLink,
+  applyExactInternalLinkOperation,
+  applyExactSeoOperation,
+  counts,
+  normalizedBlockType,
+  operationSimulationReady,
+  pageWarningCounts,
+  projectQualityUpliftImpact,
+  projectedPageImpact,
+  reduction,
+  sha256Text,
+  sourceFingerprintMatches,
+  warningKey,
+  warningRows,
+};

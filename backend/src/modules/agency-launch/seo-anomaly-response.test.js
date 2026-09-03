@@ -1,0 +1,5 @@
+"use strict";
+const test=require("node:test");const assert=require("node:assert/strict");const{responseForAnomaly,applyAnomalyResponses}=require("./seo-anomaly-response");
+test("top10 loss requires diagnosis before edits",()=>{const r=responseForAnomaly({type:"top10_lost",severity:"critical"});assert.equal(r.urgency,"immediate");assert.equal(r.automationSafe,false);assert.match(r.firstAction,/Contrôler la page cible/);assert.ok(r.checks.length>=3)});
+test("ranking drop asks for confirmation measurement",()=>{const r=responseForAnomaly({type:"ranking_drop",severity:"warning"});assert.match(r.firstAction,/Confirmer le recul/);assert.equal(r.urgency,"review")});
+test("enriches anomaly summaries without changing detection",()=>{const s=applyAnomalyResponses({total:1,alerts:[{type:"health_drop",severity:"warning",title:"Baisse"}]});assert.equal(s.total,1);assert.equal(s.alerts[0].response.owner,"Marketing Engine");assert.equal(s.version,"1.1")});

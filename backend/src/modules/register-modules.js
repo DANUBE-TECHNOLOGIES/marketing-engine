@@ -3,55 +3,91 @@ const createAgencySeoModule = require("./agency-seo");
 const miniSite = require("./mini-site");
 const seoFactory = require("./seo-factory");
 const contentComposer = require("./content-composer");
+const contentFactory = require("./content-factory");
 const destinationEngine = require("./destination-engine");
-
+const { createSearchConsoleOAuthRoutes } = require("../routes/searchConsoleOAuth");
+const createPublicLeadsRoutes = require("../routes/publicLeads");
+const createLeadAttentionRoutes = require("../routes/leadAttention");
 const platformCore = require("./platform-core");
 const aiPlatform = require("./ai-platform");
 const seoPlatform = require("./seo-platform");
-
 const knowledgeGraph = require("./knowledge-graph");
 const agencySite = require("./agency-site");
+const agencyProfile = require("./agency-profile");
+const googleBusinessPhotos = require("./google-business-photos");
+const contentQuality = require("./content-quality");
+const marketingAutomation = require("./marketing-automation");
+const editorialCalendar = require("./editorial-calendar");
+const editorialAi = require("./editorial-ai");
+const networkSiteProvisioning = require("./network-site-provisioning");
+const publishers = require("./publishers");
+const seoBrain = require("./seo-brain");
+const seoAutopilot = require("./seo-autopilot");
+const tenantCore = require("./tenant-core");
+const brand = require("./brand");
+const miniSiteBuilder = require("./mini-site-builder");
+const siteProvisioning = require("./site-provisioning");
+const campaignManager = require("./campaign-manager");
+const contentGeneration = require("./content-generation");
+const travelCore = require("./travel-core");
+const aiSeoGenerator = require("./ai-seo-generator");
+const aiContent = require("./ai-content");
+const pageBuilderPersistence = require("./page-builder-persistence");
+const minisiteBlueprint = require("./minisite-blueprint");
+const minisiteBlueprintPersistence = require("./minisite-blueprint-persistence");
+const minisiteSeoEnrichment = require("./minisite-seo-enrichment");
+const minisiteSemanticEngine = require("./minisite-semantic-engine");
+const minisiteStructuredData = require("./minisite-structured-data");
+const searchConsoleSubmission = require("./search-console-submission");
+const flexiblePaymentExperience = require("./flexible-payment-experience");
+
 module.exports = function registerModules(app, { prisma }) {
-  if (destinationEngine.routes) {
-    app.use(destinationEngine.routes({ prisma }));
-  }
-
+  if (tenantCore.routes) app.use(tenantCore.routes({ prisma }));
+  const tenantService = new tenantCore.TenantService(new tenantCore.TenantRepository(prisma));
+  app.use(tenantCore.createTenantMiddleware(tenantService));
+  app.use(createSearchConsoleOAuthRoutes(prisma));
+  app.use(createPublicLeadsRoutes(prisma));
+  app.use(createLeadAttentionRoutes(prisma));
+  if (brand.routes) app.use(brand.routes({ prisma }));
+  if (miniSiteBuilder.routes) app.use(miniSiteBuilder.routes({ prisma }));
+  if (siteProvisioning.routes) app.use(siteProvisioning.routes({ prisma }));
+  if (campaignManager.routes) app.use(campaignManager.routes({ prisma }));
+  if (contentGeneration.routes) app.use(contentGeneration.routes({ prisma }));
+  if (travelCore.routes) app.use(travelCore.routes({ prisma }));
+  if (aiSeoGenerator.routes) app.use(aiSeoGenerator.routes({ prisma }));
+  if (aiContent.routes) app.use(aiContent.routes({ prisma }));
+  if (destinationEngine.routes) app.use(destinationEngine.routes({ prisma }));
   if (seoPlatform.routes) app.use(seoPlatform.routes({ prisma }));
-
   if (aiPlatform.routes) app.use(aiPlatform.routes({ prisma }));
-
-  if (platformCore.routes) {
-    app.use(platformCore.routes({ prisma }));
-  }
-
-  if (assetEngine.routes) {
-    app.use(assetEngine.routes({ prisma }));
-  }
-
-  // agency-seo exporte une factory et non un objet { routes }.
+  if (platformCore.routes) app.use(platformCore.routes({ prisma }));
+  if (assetEngine.routes) app.use(assetEngine.routes({ prisma }));
   const agencySeo = createAgencySeoModule(prisma);
-  if (agencySeo.routes) {
-    app.use(agencySeo.routes);
+  if (agencySeo.routes) app.use(agencySeo.routes);
+  if (miniSite.routes) app.use(miniSite.routes({ prisma }));
+  if (seoFactory.routes) app.use(seoFactory.routes({ prisma }));
+  if (contentComposer.routes) app.use(contentComposer.routes({ prisma }));
+  if (contentFactory.routes) app.use(contentFactory.routes({ prisma }));
+  if (knowledgeGraph.routes) app.use(knowledgeGraph.routes({ prisma }));
+  if (contentQuality.routes) app.use(contentQuality.routes({ prisma }));
+  if (marketingAutomation.routes) app.use(marketingAutomation.routes({ prisma }));
+  if (editorialCalendar.routes) app.use(editorialCalendar.routes({ prisma }));
+  if (editorialAi.routes) app.use(editorialAi.routes({ prisma }));
+  if (networkSiteProvisioning.routes) app.use(networkSiteProvisioning.routes({ prisma }));
+  if (publishers.googleBusiness?.routes) app.use(publishers.googleBusiness.routes({ prisma }));
+  if (seoBrain.routes) app.use(seoBrain.routes({ prisma }));
+  if (seoAutopilot.routes) app.use(seoAutopilot.routes({ prisma }));
+  if (agencyProfile.routes) app.use(agencyProfile.routes({ prisma }));
+  if (googleBusinessPhotos.routes) app.use(googleBusinessPhotos.routes({ prisma }));
+  if (pageBuilderPersistence.routes) app.use(pageBuilderPersistence.routes({ prisma }));
+  if (agencySite.routes) app.use(agencySite.routes({ prisma }));
+  if (minisiteBlueprint.routes) app.use(minisiteBlueprint.routes({ prisma }));
+  if (minisiteBlueprintPersistence.routes) app.use(minisiteBlueprintPersistence.routes({ prisma }));
+  if (minisiteSeoEnrichment.routes) app.use(minisiteSeoEnrichment.routes({ prisma }));
+  if (minisiteSemanticEngine.routes) app.use(minisiteSemanticEngine.routes({ prisma }));
+  if (minisiteStructuredData.routes) app.use(minisiteStructuredData.routes({ prisma }));
+  if (searchConsoleSubmission.routes) {
+    const provider = searchConsoleSubmission.createConfiguredSearchConsoleProvider({ prisma });
+    app.use(searchConsoleSubmission.routes({ prisma, provider }));
   }
-
-  if (miniSite.routes) {
-    app.use(miniSite.routes({ prisma }));
-  }
-
-  if (seoFactory.routes) {
-    app.use(seoFactory.routes({ prisma }));
-  }
-
-  if (contentComposer.routes) {
-    app.use(contentComposer.routes({ prisma }));
-  }
-  // Knowledge Graph — Sprint 006
-  if (knowledgeGraph.routes) {
-    app.use(knowledgeGraph.routes({ prisma }));
-  }
-
-
-  if (agencySite.routes) {
-    app.use(agencySite.routes({ prisma }));
-  }
+  if (flexiblePaymentExperience.routes) app.use(flexiblePaymentExperience.routes({ prisma }));
 };

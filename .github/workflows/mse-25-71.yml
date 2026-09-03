@@ -1,0 +1,272 @@
+name: MSE-25.71 Public Performance P0
+
+on:
+  push:
+    branches:
+      - 'feature/mse-25-71-*'
+    paths:
+      - 'docker-compose.yml'
+      - 'scripts/mse-25-71-origin-readiness.sh'
+      - 'frontend/app/healthz/**'
+      - 'frontend/app/agence/**'
+      - 'frontend/app/api/public-sites/**'
+      - 'frontend/components/public-site/**'
+      - 'frontend/lib/public-site-api.js'
+      - 'frontend/lib/public-brand-legal-runtime.js'
+      - 'frontend/scripts/public-origin-chain-probe.mjs'
+      - 'frontend/scripts/public-performance-probe.mjs'
+      - 'frontend/scripts/public-lcp-contract-probe.mjs'
+      - 'frontend/scripts/public-js-payload-probe.mjs'
+      - 'frontend/test/mse-25-71-*.test.mjs'
+      - 'frontend/package.json'
+      - 'frontend/package-lock.json'
+      - '.github/workflows/mse-25-71.yml'
+  pull_request:
+    paths:
+      - 'docker-compose.yml'
+      - 'scripts/mse-25-71-origin-readiness.sh'
+      - 'frontend/app/healthz/**'
+      - 'frontend/app/agence/**'
+      - 'frontend/app/api/public-sites/**'
+      - 'frontend/components/public-site/**'
+      - 'frontend/lib/public-site-api.js'
+      - 'frontend/lib/public-brand-legal-runtime.js'
+      - 'frontend/scripts/public-origin-chain-probe.mjs'
+      - 'frontend/scripts/public-performance-probe.mjs'
+      - 'frontend/scripts/public-lcp-contract-probe.mjs'
+      - 'frontend/scripts/public-js-payload-probe.mjs'
+      - 'frontend/test/mse-25-71-*.test.mjs'
+      - 'frontend/package.json'
+      - 'frontend/package-lock.json'
+      - '.github/workflows/mse-25-71.yml'
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: 'Explicit deployed public agency URL (overrides base URL + slug)'
+        required: false
+        type: string
+      public_base_url:
+        description: 'Public mini-site origin used when target_url is empty'
+        required: false
+        default: 'https://agences.mondescale.com'
+        type: string
+      site_slug:
+        description: 'Agency slug used when target_url is empty'
+        required: false
+        default: 'ambassade-fram-mondescale-gien'
+        type: string
+      samples:
+        description: 'Number of route samples (1-7)'
+        required: false
+        default: '3'
+        type: string
+      max_ttfb_ms:
+        description: 'Median TTFB gate in milliseconds'
+        required: false
+        default: '1200'
+        type: string
+      max_hero_bytes:
+        description: 'Hero image budget in bytes'
+        required: false
+        default: '1000000'
+        type: string
+      max_single_image_bytes:
+        description: 'Largest inspected image budget in bytes'
+        required: false
+        default: '1500000'
+        type: string
+      max_total_image_bytes:
+        description: 'Total inspected image payload budget in bytes'
+        required: false
+        default: '5000000'
+        type: string
+      max_decoded_js_bytes:
+        description: 'Total decoded JavaScript budget in bytes'
+        required: false
+        default: '900000'
+        type: string
+      max_script_count:
+        description: 'Maximum external script count in initial HTML'
+        required: false
+        default: '20'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  public-performance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate MSE-25.71 origin readiness contracts
+        run: |
+          set -euo pipefail
+          bash -n scripts/mse-25-71-origin-readiness.sh
+          grep -q '^#!/usr/bin/env bash' scripts/mse-25-71-origin-readiness.sh
+          grep -q 'FRONTEND_LIVENESS_HTTP=' scripts/mse-25-71-origin-readiness.sh
+          grep -q 'PUBLIC_LIVENESS_HTTP=' scripts/mse-25-71-origin-readiness.sh
+          grep -q 'LOCAL_PROXY_LIVENESS_HTTP=' scripts/mse-25-71-origin-readiness.sh
+          grep -q -- '--resolve "${PUBLIC_HOST}:${PUBLIC_PORT}:127.0.0.1"' scripts/mse-25-71-origin-readiness.sh
+          grep -q 'ORIGIN_STATE=PUBLIC_READY' scripts/mse-25-71-origin-readiness.sh
+          grep -q 'ORIGIN_STATE=PUBLIC_PROXY_READY_ROUTE_FAILURE' scripts/mse-25-71-origin-readiness.sh
+          grep -q 'ORIGIN_STATE=PUBLIC_EDGE_OR_DNS_PATH_FAILURE' scripts/mse-25-71-origin-readiness.sh
+          grep -q 'ORIGIN_STATE=REVERSE_PROXY_UPSTREAM_FAILURE' scripts/mse-25-71-origin-readiness.sh
+          grep -q 'ORIGIN_STATE=REVERSE_PROXY_UNREACHABLE_LOCALLY' scripts/mse-25-71-origin-readiness.sh
+          grep -q 'ORIGIN_STATE=FRONTEND_ROUTE_FAILURE' scripts/mse-25-71-origin-readiness.sh
+          grep -q 'ORIGIN_STATE=FRONTEND_FAILURE' scripts/mse-25-71-origin-readiness.sh
+          grep -q 'ORIGIN_STATE=BACKEND_OR_STACK_FAILURE' scripts/mse-25-71-origin-readiness.sh
+          grep -q "http://127.0.0.1:4000/health" docker-compose.yml
+          grep -q "http://127.0.0.1:3000/healthz" docker-compose.yml
+          grep -q 'service: "marketing-engine-frontend"' frontend/app/healthz/route.js
+          grep -q '"cache-control": "no-store, max-age=0"' frontend/app/healthz/route.js
+          grep -q 'PUBLIC_API_UPSTREAM_FAILURE' frontend/scripts/public-origin-chain-probe.mjs
+          grep -q 'P0_ORIGIN_READY=' frontend/scripts/public-origin-chain-probe.mjs
+          docker compose config --quiet
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend
+        working-directory: frontend
+        run: npm ci
+
+      - name: MSE-25.71 performance contracts
+        working-directory: frontend
+        run: node --test test/mse-25-71-*.test.mjs
+
+      - name: Build public frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Capture current Gien production baseline
+        if: ${{ github.event_name == 'push' }}
+        continue-on-error: true
+        working-directory: frontend
+        env:
+          TARGET_URL: 'https://agences.mondescale.com/agence/ambassade-fram-mondescale-gien'
+        run: |
+          set +e
+          node scripts/public-origin-chain-probe.mjs --url="$TARGET_URL" > /tmp/mse-25-71-baseline-origin-chain.txt 2>&1
+          origin_status=$?
+          node scripts/public-performance-probe.mjs --url="$TARGET_URL" --samples=3 --gate=false > /tmp/mse-25-71-baseline-performance.txt 2>&1
+          perf_status=$?
+          node scripts/public-lcp-contract-probe.mjs --url="$TARGET_URL" --gate=false > /tmp/mse-25-71-baseline-lcp.txt 2>&1
+          lcp_status=$?
+          node scripts/public-js-payload-probe.mjs --url="$TARGET_URL" --gate=false > /tmp/mse-25-71-baseline-js.txt 2>&1
+          js_status=$?
+          {
+            echo '### MSE-25.71 current production baseline (pre-deployment)'
+            echo
+            echo "Target: \`$TARGET_URL\`"
+            echo
+            echo "Probe exit codes: origin-chain=$origin_status performance=$perf_status lcp=$lcp_status js=$js_status"
+            echo
+            echo '#### Public origin chain'
+            echo '```text'
+            cat /tmp/mse-25-71-baseline-origin-chain.txt
+            echo '```'
+            echo
+            echo '#### Performance / media'
+            echo '```text'
+            cat /tmp/mse-25-71-baseline-performance.txt
+            echo '```'
+            echo
+            echo '#### LCP contract'
+            echo '```text'
+            cat /tmp/mse-25-71-baseline-lcp.txt
+            echo '```'
+            echo
+            echo '#### JavaScript payload'
+            echo '```text'
+            cat /tmp/mse-25-71-baseline-js.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat /tmp/mse-25-71-baseline-origin-chain.txt
+          cat /tmp/mse-25-71-baseline-performance.txt
+          cat /tmp/mse-25-71-baseline-lcp.txt
+          cat /tmp/mse-25-71-baseline-js.txt
+          exit 0
+
+      - name: Resolve deployed pilot URL
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        id: pilot
+        env:
+          EXPLICIT_TARGET_URL: ${{ inputs.target_url }}
+          PUBLIC_BASE_URL: ${{ inputs.public_base_url }}
+          SITE_SLUG: ${{ inputs.site_slug }}
+        run: |
+          set -eu
+          if [ -n "$EXPLICIT_TARGET_URL" ]; then
+            target="$EXPLICIT_TARGET_URL"
+          else
+            base="${PUBLIC_BASE_URL%/}"
+            slug="${SITE_SLUG#/}"
+            slug="${slug%/}"
+            target="$base/agence/$slug"
+          fi
+          case "$target" in
+            http://*|https://*) ;;
+            *) echo "Resolved pilot URL must be absolute: $target" >&2; exit 2 ;;
+          esac
+          echo "target_url=$target" >> "$GITHUB_OUTPUT"
+          echo "Resolved MSE-25.71 pilot: $target"
+
+      - name: Gate deployed pilot origin chain
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        working-directory: frontend
+        env:
+          TARGET_URL: ${{ steps.pilot.outputs.target_url }}
+        run: |
+          set -o pipefail
+          node scripts/public-origin-chain-probe.mjs --url="$TARGET_URL" --gate=true | tee /tmp/mse-25-71-origin-chain.txt
+          {
+            echo '### MSE-25.71 public origin chain'
+            echo '```text'
+            cat /tmp/mse-25-71-origin-chain.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Probe deployed pilot performance
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        working-directory: frontend
+        env:
+          TARGET_URL: ${{ steps.pilot.outputs.target_url }}
+          SAMPLES: ${{ inputs.samples }}
+          MAX_TTFB_MS: ${{ inputs.max_ttfb_ms }}
+          MAX_HERO_BYTES: ${{ inputs.max_hero_bytes }}
+          MAX_SINGLE_IMAGE_BYTES: ${{ inputs.max_single_image_bytes }}
+          MAX_TOTAL_IMAGE_BYTES: ${{ inputs.max_total_image_bytes }}
+          MAX_DECODED_JS_BYTES: ${{ inputs.max_decoded_js_bytes }}
+          MAX_SCRIPT_COUNT: ${{ inputs.max_script_count }}
+        run: |
+          set -o pipefail
+          node scripts/public-performance-probe.mjs --url="$TARGET_URL" --samples="$SAMPLES" --gate=true --max-ttfb-ms="$MAX_TTFB_MS" --max-hero-bytes="$MAX_HERO_BYTES" --max-single-image-bytes="$MAX_SINGLE_IMAGE_BYTES" --max-total-image-bytes="$MAX_TOTAL_IMAGE_BYTES" | tee /tmp/mse-25-71-live-probe.txt
+          node scripts/public-lcp-contract-probe.mjs --url="$TARGET_URL" --gate=true | tee /tmp/mse-25-71-lcp-probe.txt
+          node scripts/public-js-payload-probe.mjs --url="$TARGET_URL" --gate=true --max-decoded-js-bytes="$MAX_DECODED_JS_BYTES" --max-script-count="$MAX_SCRIPT_COUNT" | tee /tmp/mse-25-71-js-probe.txt
+          {
+            echo '### MSE-25.71 live pilot performance'
+            echo
+            echo "Target: \`$TARGET_URL\`"
+            echo
+            echo '#### Performance / media'
+            echo '```text'
+            cat /tmp/mse-25-71-live-probe.txt
+            echo '```'
+            echo
+            echo '#### LCP contract'
+            echo '```text'
+            cat /tmp/mse-25-71-lcp-probe.txt
+            echo '```'
+            echo
+            echo '#### JavaScript payload'
+            echo '```text'
+            cat /tmp/mse-25-71-js-probe.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

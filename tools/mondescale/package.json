@@ -1,0 +1,13 @@
+{
+  "name": "@mondescale/patch-manager",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Mondescale internal patch manager",
+  "type": "commonjs",
+  "bin": {
+    "mondescale": "./cli.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

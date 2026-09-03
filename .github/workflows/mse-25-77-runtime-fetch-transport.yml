@@ -1,0 +1,28 @@
+name: MSE-25.77 Runtime Fetch Transport
+
+on:
+  pull_request:
+    paths:
+      - 'backend/src/modules/search-console-submission/runtime-fetch-transport.js'
+      - 'backend/src/modules/search-console-submission/routes.js'
+      - 'backend/test/mse-25-77-runtime-fetch-transport.test.js'
+      - 'docker-compose.yml'
+  push:
+    branches:
+      - 'feature/mse-25-77-internal-runtime-audit-transport'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: node --test test/mse-25-70-public-indexability-observer.test.js test/mse-25-74-runtime-indexability-audit.test.js test/mse-25-77-runtime-fetch-transport.test.js

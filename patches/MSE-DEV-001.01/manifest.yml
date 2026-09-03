@@ -1,0 +1,15 @@
+id: MSE-DEV-001.01
+title: Fondation du Patch Manager
+version: 0.1.0
+description: CLI, doctor, catalogue de manifestes et journalisation
+requires:
+  - node
+  - git
+  - docker
+  - docker-compose
+steps:
+  - backup
+  - install
+  - syntax-check
+  - doctor
+rollback: true

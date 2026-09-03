@@ -1,0 +1,11 @@
+[Unit]
+Description=Mondescale daily SEO health snapshot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/mondescale-local-engine
+Environment=API_BASE_URL=http://localhost:4000
+Environment=TENANT_SLUG=mondescale
+ExecStart=/usr/bin/env bash /opt/mondescale-local-engine/scripts/seo-health-daily-snapshot.sh

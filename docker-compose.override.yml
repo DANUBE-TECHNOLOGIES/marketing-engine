@@ -1,0 +1,4 @@
+services:
+  backend:
+    environment:
+      SITE_PUBLICATION_FORCE_TOKEN: ${SITE_PUBLICATION_FORCE_TOKEN}

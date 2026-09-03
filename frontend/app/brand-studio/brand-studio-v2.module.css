@@ -1,0 +1,392 @@
+.page {
+  min-height: 100vh;
+  padding: 32px;
+  background:
+    #f4f7fb;
+  color:
+    #172033;
+}
+
+.header {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(280px, 420px);
+  gap: 24px;
+  max-width: 1500px;
+  margin: 0 auto 24px;
+}
+
+.header > div:first-child,
+.scopeCard,
+.content {
+  border: 1px solid
+    #dfe6ef;
+  border-radius: 18px;
+  background:
+    #ffffff;
+  box-shadow:
+    0 12px 35px
+    rgba(22, 37, 58, 0.07);
+}
+
+.header > div:first-child {
+  padding: 30px;
+}
+
+.header h1 {
+  margin: 6px 0 10px;
+  font-size:
+    clamp(2rem, 5vw, 3.2rem);
+  line-height: 1;
+}
+
+.eyebrow {
+  margin: 0;
+  color:
+    #315f87;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing:
+    0.12em;
+  text-transform:
+    uppercase;
+}
+
+.introduction {
+  max-width: 750px;
+  margin: 0;
+  color:
+    #5b6778;
+  line-height: 1.6;
+}
+
+.scopeCard {
+  display: grid;
+  gap: 16px;
+  padding: 22px;
+}
+
+.scopeCard label,
+.content label {
+  display: grid;
+  gap: 7px;
+  color:
+    #334155;
+  font-weight: 700;
+}
+
+.scopeCard select,
+.content input,
+.content select,
+.content textarea {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid
+    #cbd5e1;
+  border-radius: 10px;
+  background:
+    #ffffff;
+  color:
+    #172033;
+  font: inherit;
+}
+
+.scopeSummary {
+  margin: 0;
+  color:
+    #64748b;
+  font-size: 0.9rem;
+}
+
+.error {
+  color:
+    #b42318;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 1500px;
+  margin: 0 auto 18px;
+}
+
+.tab,
+.activeTab,
+.kind,
+.activeKind {
+  border: 1px solid
+    #cbd5e1;
+  border-radius: 999px;
+  padding: 10px 16px;
+  background:
+    #ffffff;
+  color:
+    #334155;
+  cursor: pointer;
+  font-weight: 750;
+}
+
+.activeTab,
+.activeKind {
+  border-color:
+    #0b3b60;
+  background:
+    #0b3b60;
+  color:
+    #ffffff;
+}
+
+.content {
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 26px;
+}
+
+.content form {
+  display: grid;
+  gap: 18px;
+}
+
+.content button {
+  min-height: 42px;
+}
+
+.content form > button[type="submit"] {
+  justify-self: start;
+  border: 0;
+  border-radius: 10px;
+  padding: 0 22px;
+  background:
+    #0b3b60;
+  color:
+    #ffffff;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.mediaSection {
+  display: grid;
+  grid-template-columns:
+    240px
+    minmax(0, 1fr);
+  gap: 24px;
+}
+
+.mediaKinds {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.mediaKinds h2 {
+  margin-top: 0;
+}
+
+.kind,
+.activeKind {
+  width: 100%;
+  border-radius: 10px;
+  text-align: left;
+}
+
+.mediaContent {
+  min-width: 0;
+}
+
+.mediaContent > * + * {
+  margin-top: 28px;
+}
+
+.content :global(.brand-studio-asset-grid) {
+  display: grid;
+  grid-template-columns:
+    repeat(
+      auto-fill,
+      minmax(190px, 1fr)
+    );
+  gap: 16px;
+}
+
+.content :global(.brand-studio-asset-grid article) {
+  padding: 14px;
+  border: 1px solid
+    #dfe6ef;
+  border-radius: 14px;
+  background:
+    #ffffff;
+}
+
+.content :global(.brand-studio-asset-grid img) {
+  width: 100%;
+  height: 140px;
+  border-radius: 9px;
+  object-fit: contain;
+  background:
+    #f7f9fc;
+}
+
+.content :global(.brand-studio-inheritance-notice) {
+  display: flex;
+  align-items: center;
+  justify-content:
+    space-between;
+  gap: 20px;
+  padding: 16px;
+  border: 1px solid
+    #b9d2e7;
+  border-radius: 12px;
+  background:
+    #eff7fd;
+}
+
+@media (
+  max-width: 900px
+) {
+  .page {
+    padding: 18px;
+  }
+
+  .header {
+    grid-template-columns:
+      1fr;
+  }
+
+  .mediaSection {
+    grid-template-columns:
+      1fr;
+  }
+
+  .mediaKinds {
+    grid-template-columns:
+      repeat(
+        2,
+        minmax(0, 1fr)
+      );
+  }
+
+  .mediaKinds h2 {
+    grid-column:
+      1 / -1;
+  }
+}
+
+.content :global(.brand-studio-diagnostic) {
+  display: grid;
+  gap: 22px;
+}
+
+.content :global(.brand-studio-diagnostic-header) {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.content :global(.brand-studio-diagnostic-header h2) {
+  margin: 0 0 8px;
+}
+
+.content :global(.brand-studio-diagnostic-header p) {
+  margin: 0;
+  color: #64748b;
+}
+
+.content :global(.brand-studio-diagnostic-actions) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.content :global(.brand-studio-diagnostic-actions button) {
+  border: 1px solid #0b3b60;
+  border-radius: 10px;
+  padding: 0 18px;
+  background: #0b3b60;
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 750;
+}
+
+.content :global(.brand-studio-diagnostic-actions button + button) {
+  background: #ffffff;
+  color: #0b3b60;
+}
+
+.content :global(.brand-studio-diagnostic-summary-ok),
+.content :global(.brand-studio-diagnostic-summary-error) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  padding: 16px 18px;
+  border-radius: 12px;
+}
+
+.content :global(.brand-studio-diagnostic-summary-ok) {
+  border: 1px solid #86d2a1;
+  background: #edfdf3;
+  color: #166534;
+}
+
+.content :global(.brand-studio-diagnostic-summary-error) {
+  border: 1px solid #f4a8a8;
+  background: #fff1f1;
+  color: #991b1b;
+}
+
+.content :global(.brand-studio-diagnostic-table-wrapper) {
+  overflow-x: auto;
+}
+
+.content :global(.brand-studio-diagnostic table) {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.content :global(.brand-studio-diagnostic th),
+.content :global(.brand-studio-diagnostic td) {
+  padding: 13px;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+  vertical-align: top;
+}
+
+.content :global(.brand-studio-diagnostic td small) {
+  display: block;
+  margin-top: 4px;
+  color: #64748b;
+}
+
+.content :global(.brand-studio-diagnostic-status-ok),
+.content :global(.brand-studio-diagnostic-status-error) {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 5px 9px;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.content :global(.brand-studio-diagnostic-status-ok) {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.content :global(.brand-studio-diagnostic-status-error) {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.content :global(.brand-studio-diagnostic pre) {
+  overflow-x: auto;
+  padding: 16px;
+  border-radius: 10px;
+  background: #111827;
+  color: #e5e7eb;
+}
+
+@media (max-width: 760px) {
+  .content :global(.brand-studio-diagnostic-header) {
+    flex-direction: column;
+  }
+}

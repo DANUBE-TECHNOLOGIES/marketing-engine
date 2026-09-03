@@ -1,0 +1,15 @@
+"use strict";
+const test=require("node:test");const assert=require("node:assert/strict");
+const {buildInternalLinkWriteIntent}=require("../src/modules/minisite-semantic-engine/internal-link-write-intent");
+const {executeInternalLinkWriteIntent}=require("../src/modules/minisite-semantic-engine/internal-link-executor");
+
+function page(){return {title:"Services",slug:"services",status:"published",blocks:[{type:"rich_text",status:"published",position:0,content:{title:"Nos services",html:"<p>Notre équipe vous accompagne.</p>"},settings:{},visibleDesktop:true,visibleMobile:true}]};}
+function proof(p){const {fingerprint}=require("../src/modules/minisite-semantic-engine/internal-link-proof");return {linkProofFingerprint:"a".repeat(64),readOnly:true,writes:false,policy:{antiDuplicationRequired:true,sourceSnapshotRequired:true},items:[{siteSlug:"gien",agencyId:4,city:"Gien",sourcePageSlug:"services",targetPageSlug:"engagements",targetHref:"/engagements",anchorText:"Découvrir nos engagements",sentence:"Découvrez également nos engagements pour un accompagnement clair et responsable tout au long de votre projet de voyage.",sourceSnapshotFingerprint:fingerprint(p),preferredBlock:{index:0,type:"rich_text"},decision:"sealed-link-candidate"}]};}
+
+test("write intent adds one sealed contextual link",()=>{const p=page();const intent=buildInternalLinkWriteIntent({proof:proof(p),currentPages:[{siteSlug:"gien",pageSlug:"services",page:p}]});assert.equal(intent.summary.touchedPageCount,1);const html=intent.intents[0].snapshot.after.blocks[0].content.html;assert.match(html,/href="\/engagements"/);assert.equal((html.match(/\/engagements/g)||[]).length,1);});
+
+test("direct persisted snapshot resolves source slug from page payload",()=>{const p=page();const intent=buildInternalLinkWriteIntent({proof:proof(p),currentPages:[{siteSlug:"gien",agencyId:4,page:p}]});assert.equal(intent.summary.touchedPageCount,1);assert.equal(intent.intents[0].pageSlug,"services");});
+
+test("dry run performs no write",async()=>{const p=page();const intent=buildInternalLinkWriteIntent({proof:proof(p),currentPages:[{siteSlug:"gien",pageSlug:"services",page:p}]});let saves=0;const service={get:async()=>p,save:async()=>{saves++},versions:async()=>({items:[]}),rollback:async()=>{}};const result=await executeInternalLinkWriteIntent({writeIntent:intent,service,dryRun:true,approvedWriteIntentFingerprint:intent.writeIntentFingerprint});assert.equal(result.pagesWritten,0);assert.equal(saves,0);});
+
+test("real rollout versions before writing",async()=>{const p=page();const intent=buildInternalLinkWriteIntent({proof:proof(p),currentPages:[{siteSlug:"gien",pageSlug:"services",page:p}]});let saves=0;const service={get:async()=>p,save:async()=>{saves++},versions:async()=>({items:[{id:"v1",version:2}]}),rollback:async()=>{}};const result=await executeInternalLinkWriteIntent({writeIntent:intent,service,dryRun:false,confirm:true,approvedWriteIntentFingerprint:intent.writeIntentFingerprint});assert.equal(result.pagesWritten,1);assert.equal(result.rollbackSnapshots,1);assert.equal(result.rollbackReady,true);assert.equal(saves,2);});

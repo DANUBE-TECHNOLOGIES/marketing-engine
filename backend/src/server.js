@@ -1,5 +1,14 @@
+const { createSitePublicationRoutes } = require("./modules/site-publication");
 const express = require("express");
 const createAutomationLogsRoutes = require("./routes/automationLogs");
+const createKnowledgeGraphRoutes = require("./routes/knowledgeGraph");
+const createPageBuilderRoutes = require("./routes/pageBuilder");
+const createDestinationKnowledgeRoutes = require("./routes/destinationKnowledge");
+const createRecommendationRoutes = require("./modules/recommendation/routes");
+const createContentEngineRoutes = require("./modules/content-engine/routes");
+const createPublicationRoutes = require("./modules/publication-engine/routes");
+const createJobsRoutes = require("./modules/jobs-engine/routes");
+const createSearchRoutes = require("./modules/search-engine/routes");
 const createSeoEmailRoutes = require("./routes/seoEmail");
 const createSeoReportRoutes = require("./routes/seoReport");
 const createDailyAutomationRoutes = require("./routes/dailyAutomation");
@@ -38,6 +47,7 @@ const createGooglePostsQueueRoutes = require("./routes/googlePostsQueue");
 const createGooglePostsEditorialRoutes = require("./routes/googlePostsEditorial");
 const createNetworkActionsRoutes = require("./routes/networkActions");
 const createNetworkAutomationRoutes = require("./routes/networkAutomation");
+const createPublicCatalogRoutes = require("./routes/publicCatalog");
 const cors = require("cors");
 const { PrismaClient } = require("@prisma/client");
 const cron = require("node-cron");
@@ -53,6 +63,32 @@ const pool = new Pool({
 
 const registerModules = require("./modules/register-modules");
 const { errorMiddleware } = require("./core/errors");
+const path = require("node:path");
+const {
+  createBrandAssetRouter,
+} = require("./modules/brand-assets/routes");
+const {
+  createBrandProfileRouter,
+} = require("./modules/brand-profile/routes");
+const { createLegalProfileRouter } = require("./modules/legal-profile/routes");
+const {
+  createPublicBrandLegalRouter,
+} = require("./modules/public-brand-legal/routes");
+const { createPublicSiteReadRouter } = require("./modules/public-site-read/routes");
+const { createAgencyLaunchRouter } = require("./modules/agency-launch/routes");
+
+const {
+  createTemplateLibraryRouter,
+} = require("./modules/template-library/api-router");
+
+const {
+  createContentComposerRouter,
+} = require("./modules/content-composer");
+
+
+
+
+
 const app = express();
 const prisma = new PrismaClient();
 const getGoogleAccessToken = () => refreshGoogleAccessToken(prisma);
@@ -65,7 +101,16 @@ app.use(express.json());
  * Runtimes modulaires Mondescale.
  */
 registerModules(app, { prisma });
+app.use(createPublicCatalogRoutes(prisma));
 app.use(createAutomationLogsRoutes());
+app.use(createKnowledgeGraphRoutes(prisma));
+app.use(createPageBuilderRoutes(prisma));
+app.use(createDestinationKnowledgeRoutes(prisma));
+app.use(createRecommendationRoutes(prisma));
+app.use(createContentEngineRoutes(prisma));
+app.use(createPublicationRoutes(prisma));
+app.use(createJobsRoutes(prisma));
+app.use(createSearchRoutes(prisma));
 app.use(createSeoEmailRoutes(prisma));
 app.use(createSeoReportRoutes(prisma));
 app.use(createDailyAutomationRoutes(prisma, process.env.PORT || 4000));
@@ -4652,7 +4697,7 @@ app.post("/google/import-locations", async (req,res)=>{
           where:{city: agencyCode},
           data:{
             googleLocationId:loc.name,
-            
+
             phone:
               loc.phoneNumbers?.primaryPhone || null,
             website:
@@ -6456,12 +6501,112 @@ res.status(500)
  *
  * Ce middleware doit rester après toutes les routes.
  */
+
+/*
+ * Asset Engine — médias publics.
+ */
+app.use(
+  "/media/assets",
+  express.static(
+    path.resolve(
+      process.env.ASSET_MEDIA_STORAGE_ROOT ||
+      "/app/storage/asset-media"
+    ),
+    {
+      fallthrough: false,
+      immutable: true,
+      maxAge: "30d",
+      index: false,
+    }
+  )
+);
+
+/*
+ * Brand Studio V2 — médiathèque et upload.
+ */
+app.use(
+  "/media/brand-assets",
+  express.static(
+    path.resolve(
+      process.env.BRAND_ASSET_STORAGE_ROOT ||
+      "/app/storage/brand-assets"
+    ),
+    {
+      fallthrough:
+        false,
+
+      immutable:
+        true,
+
+      maxAge:
+        "30d",
+
+      index:
+        false,
+    }
+  )
+);
+
+app.use(
+  "/api/brand-assets",
+  createBrandAssetRouter()
+);
+
+app.use(
+  "/api/brand-profile",
+  createBrandProfileRouter()
+);
+
+
+app.use(
+  "/api/legal-profile",
+  createLegalProfileRouter()
+);
+app.use(
+  "/api/public-brand-legal",
+  createPublicBrandLegalRouter()
+);
+
+
+
+
 app.use(errorMiddleware);
 
 /**
  * Démarrage unique du backend.
  */
-const server = app.listen(PORT, "0.0.0.0", () => {
+
+app.use("/api/site-publication", createSitePublicationRoutes(prisma));
+
+const server =
+app.use(
+  "/api/public-site-read",
+  createPublicSiteReadRouter()
+);
+
+app.use(
+  "/api/agency-launch",
+  createAgencyLaunchRouter({
+    prisma,
+  })
+);
+
+
+app.use(
+  "/api/template-library",
+  createTemplateLibraryRouter({
+    prisma,
+  })
+);
+
+app.use(
+  "/api/content-composer",
+  createContentComposerRouter({
+    prisma,
+  })
+);
+
+app.listen(PORT, "0.0.0.0", () => {
   console.log(
     `[MONDESCALE PLATFORM] Backend démarré sur le port ${PORT}`
   );

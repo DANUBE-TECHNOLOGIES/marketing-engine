@@ -540,5 +540,145 @@ Merci beaucoup pour votre confiance.`;
     res.send(csv);
   });
 
+  router.get(
+    "/public/agency-sites/:siteSlug/reviews",
+    async (req, res, next) => {
+      try {
+        const limit = Math.min(
+          Math.max(
+            Number(req.query.limit) || 6,
+            1
+          ),
+          20
+        );
+
+        const tenantSlug = String(
+          req.headers["x-tenant-slug"] ||
+          "mondescale"
+        )
+          .trim()
+          .toLowerCase();
+
+        const site =
+          await prisma.agencySite.findFirst({
+            where: {
+              slug: String(
+                req.params.siteSlug || ""
+              ).trim(),
+
+              tenant: {
+                is: {
+                  slug: tenantSlug,
+                },
+              },
+            },
+            include: {
+              agency: {
+                select: {
+                  id: true,
+                  name: true,
+                  city: true,
+                  googleReviewUrl: true,
+                },
+              },
+            },
+          });
+
+        if (!site?.agency) {
+          return res.status(404).json({
+            error: "Mini-site agence introuvable.",
+            code: "PUBLIC_AGENCY_SITE_NOT_FOUND",
+          });
+        }
+
+        const where = {
+          agencyId: site.agency.id,
+          rating: {
+            gte: 1,
+          },
+        };
+
+        const [
+          aggregate,
+          reviews,
+        ] = await Promise.all([
+          prisma.googleReview.aggregate({
+            where,
+            _count: {
+              _all: true,
+            },
+            _avg: {
+              rating: true,
+            },
+          }),
+
+          prisma.googleReview.findMany({
+            where,
+            orderBy: [
+              {
+                publishedAt: "desc",
+              },
+              {
+                createdAt: "desc",
+              },
+            ],
+            take: limit,
+            select: {
+              id: true,
+              authorName: true,
+              rating: true,
+              comment: true,
+              reply: true,
+              publishedAt: true,
+              createdAt: true,
+              source: true,
+            },
+          }),
+        ]);
+
+        res.set(
+          "Cache-Control",
+          "public, max-age=300, stale-while-revalidate=1800"
+        );
+
+        res.json({
+          agency: {
+            id: site.agency.id,
+            name: site.agency.name,
+            city: site.agency.city,
+          },
+
+          summary: {
+            averageRating:
+              aggregate._avg.rating
+                ? Math.round(
+                    aggregate._avg.rating * 10
+                  ) / 10
+                : 0,
+
+            total:
+              aggregate._count._all || 0,
+          },
+
+          reviewUrl:
+            site.agency.googleReviewUrl ||
+            null,
+
+          reviews: reviews.map(
+            (review) => ({
+              ...review,
+              publishedAt:
+                review.publishedAt ||
+                review.createdAt,
+            })
+          ),
+        });
+      } catch (error) {
+        next(error);
+      }
+    }
+  );
+
+
   return router;
 };

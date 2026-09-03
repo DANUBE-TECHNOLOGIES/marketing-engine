@@ -1,0 +1,55 @@
+name: MSE-25.13E checks
+
+on:
+  push:
+    branches:
+      - feature/mse-25-13-local-content-differentiation
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend-local-rewrite:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        run: npm ci
+
+      - name: Run MSE-25.13 backend tests
+        run: node --test test/local-rewrite.test.js test/premium-home-blueprint.test.js test/public-site-read.test.js
+
+  frontend-local-rewrite:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Lint MSE-25.13 frontend files
+        run: npx eslint app/api/website-builder/agencies/'[agencyId]'/pages/'[pageSlug]'/uniqueness/route.js components/page-builder-v2/NetworkUniquenessAudit.js lib/page-builder-v2/local-rewrite-api.js components/public-site/renderers/registry.js components/website-builder/WebsiteBuilderLauncher.js app/website-builder/page.js lib/page-builder-v2/page-builder-api.js lib/page-builder-v2/page-builder-state.js

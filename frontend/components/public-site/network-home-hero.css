@@ -1,0 +1,198 @@
+/*
+ * MSE-25.91 — Canonical contained network home hero.
+ * Keep the visual inside the page frame and guarantee that copy + CTAs fit
+ * completely inside the hero at desktop widths.
+ */
+.public-site-hero--home.public-site-hero--immersive {
+  position: relative;
+  width: min(1480px, calc(100% - 48px));
+  min-height: 460px;
+  height: 460px;
+  margin: 18px auto 0;
+  overflow: hidden;
+  border-radius: 26px;
+  background: #082947;
+  color: #fff;
+  box-shadow: 0 18px 52px rgba(7,29,48,.12);
+}
+
+.public-site-hero--home.public-site-hero--immersive::before,
+.public-site-hero--home.public-site-hero--immersive::after {
+  display: none;
+}
+
+.public-site-hero--home .public-site-hero-media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.public-site-hero--home .public-site-hero-media img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center;
+}
+
+.public-site-hero--home .public-site-hero-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.public-site-hero--home .public-site-hero-fade {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  background:
+    radial-gradient(circle at 26% 46%, rgba(4,24,42,.16), transparent 40%),
+    linear-gradient(180deg, rgba(5,25,43,.03) 0%, rgba(5,25,43,.02) 62%, rgba(5,25,43,.13) 100%);
+  pointer-events: none;
+}
+
+.public-site-hero--home > .public-site-container {
+  position: relative;
+  z-index: 3;
+  width: min(1320px, calc(100% - 64px));
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  padding: 26px 0;
+  box-sizing: border-box;
+}
+
+.public-site-hero--home .public-site-hero-copy {
+  width: min(620px, 54%);
+  max-height: none;
+  overflow: visible;
+  padding: 26px 30px;
+  box-sizing: border-box;
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 22px;
+  background: linear-gradient(135deg, rgba(5,29,50,.76), rgba(5,29,50,.48));
+  box-shadow: 0 24px 64px rgba(0,0,0,.18);
+  backdrop-filter: blur(7px);
+}
+
+.public-site-hero--home .public-site-eyebrow {
+  margin: 0 0 10px;
+  color: #fff;
+}
+
+.public-site-hero--home h1 {
+  max-width: 560px;
+  margin: 0;
+  color: #fff;
+  font-family: var(--public-heading-font, "DM Serif Display", serif);
+  font-size: clamp(2.2rem, 2.65vw, 3.15rem);
+  line-height: .98;
+  letter-spacing: -.035em;
+  text-wrap: balance;
+}
+
+.public-site-hero--home .public-site-hero-text {
+  max-width: 540px;
+  margin: 12px 0 0;
+  color: rgba(255,255,255,.93);
+  font-size: clamp(.92rem, .95vw, 1rem);
+  line-height: 1.45;
+}
+
+.public-site-hero--home .public-site-hero-actions {
+  margin-top: 15px;
+  gap: 10px;
+}
+
+.public-site-hero--home .public-site-button {
+  min-height: 42px;
+  padding: 10px 17px;
+}
+
+.public-site-hero--home .public-site-button-secondary {
+  border-color: rgba(255,255,255,.78);
+  background: rgba(5,29,50,.28);
+}
+
+.public-site-hero--home.public-site-hero--immersive:not([data-page-slug="home"]) {
+  min-height: 380px;
+  height: 380px;
+}
+
+.public-site-hero--home:not([data-page-slug="home"]) .public-site-hero-copy {
+  width: min(580px, 58%);
+  padding: 24px 28px;
+}
+
+.public-site-hero--home:not([data-page-slug="home"]) h1 {
+  font-size: clamp(2.05rem, 2.45vw, 3rem);
+}
+
+@media (max-width: 1100px) {
+  .public-site-hero--home.public-site-hero--immersive {
+    width: min(100% - 32px, 1480px);
+    height: 440px;
+    min-height: 440px;
+  }
+
+  .public-site-hero--home > .public-site-container {
+    width: min(100% - 40px, 1320px);
+  }
+
+  .public-site-hero--home .public-site-hero-copy {
+    width: min(600px, 68%);
+    padding: 25px 28px;
+  }
+
+  .public-site-hero--home h1 {
+    font-size: clamp(2.15rem, 3.5vw, 3rem);
+  }
+}
+
+@media (max-width: 760px) {
+  .public-site-hero--home.public-site-hero--immersive,
+  .public-site-hero--home.public-site-hero--immersive:not([data-page-slug="home"]) {
+    width: calc(100% - 24px);
+    height: auto;
+    min-height: 500px;
+    margin-top: 12px;
+    border-radius: 20px;
+  }
+
+  .public-site-hero--home > .public-site-container,
+  .public-site-hero--home:not([data-page-slug="home"]) > .public-site-container {
+    width: calc(100% - 28px);
+    min-height: 500px;
+    align-items: flex-end;
+    padding: 46px 0 24px;
+  }
+
+  .public-site-hero--home .public-site-hero-copy,
+  .public-site-hero--home:not([data-page-slug="home"]) .public-site-hero-copy {
+    width: 100%;
+    max-height: none;
+    padding: 23px 21px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, rgba(5,29,50,.84), rgba(5,29,50,.62));
+    backdrop-filter: none;
+  }
+
+  .public-site-hero--home h1,
+  .public-site-hero--home:not([data-page-slug="home"]) h1 {
+    font-size: clamp(2.05rem, 10vw, 2.85rem);
+  }
+
+  .public-site-hero--home .public-site-hero-actions {
+    gap: 9px;
+  }
+
+  .public-site-hero--home .public-site-button {
+    min-height: 42px;
+    padding-inline: 14px;
+    font-size: .8rem;
+  }
+}
