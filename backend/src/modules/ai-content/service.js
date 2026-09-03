@@ -159,7 +159,7 @@ class AiContentService {
     await this.repo.updateJob(job.id, { status: "running", attempts, startedAt: job.startedAt || new Date(), lastAttemptAt: new Date(), error: null });
     try {
       const output = await this.generatePayload(job.input);
-      const revision = Number(job.output?.revision || 0) + 1;
+      const revision = await this.repo.nextRevision(job.channel, output.slug);
       const content = await this.repo.createContent({
         campaignId: job.campaignId,
         generationJobId: job.id,
