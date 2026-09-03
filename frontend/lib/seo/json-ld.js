@@ -2,6 +2,7 @@ import { absoluteUrl } from "./site-url";
 import { resolvedTargetCities } from "./local-area-config";
 import {
   buildGoogleMapsSearchUrl,
+  physicalAgencyAddress,
 } from "../public-agency-location";
 
 export function compactJsonLd(value) {
@@ -183,6 +184,12 @@ function uniqueUrls(values) {
 
 export function buildTravelAgencySchema(site) {
   const agency = site?.agency || site;
+  const physicalAddress = physicalAgencyAddress({
+    address: agency.address || site.address,
+    postalCode: agency.postalCode || site.postalCode,
+    city: agency.city || site.city,
+    region: agency.region || site.region,
+  });
   const latitude = agency?.latitude ?? site?.latitude;
   const longitude = agency?.longitude ?? site?.longitude;
   const phone = internationalPhone(agency.phone || site.phone);
@@ -194,12 +201,12 @@ export function buildTravelAgencySchema(site) {
     site.heroImageUrl;
   const hasMap =
     agency.googleMapsUrl ||
-    buildGoogleMapsSearchUrl({
-      name: site.name || agency.name,
-      address: agency.address || site.address,
-      postalCode: agency.postalCode || site.postalCode,
-      city: agency.city || site.city,
-    });
+    (physicalAddress
+      ? buildGoogleMapsSearchUrl({
+          name: site.name || agency.name,
+          ...physicalAddress,
+        })
+      : undefined);
   const sameAs = uniqueUrls([
     agency.website,
     agency.googleBusinessUrl,
@@ -220,16 +227,18 @@ export function buildTravelAgencySchema(site) {
     logo: logo ? absoluteUrl(logo) : undefined,
     image: image ? absoluteUrl(image) : undefined,
     description: agency.description || site.description,
-    address: {
-      "@type": "PostalAddress",
-      streetAddress: agency.address || site.address,
-      postalCode: agency.postalCode || site.postalCode,
-      addressLocality: agency.city || site.city,
-      addressRegion: agency.region || site.region,
-      addressCountry: "FR",
-    },
+    address: physicalAddress
+      ? {
+          "@type": "PostalAddress",
+          streetAddress: physicalAddress.address,
+          postalCode: physicalAddress.postalCode,
+          addressLocality: physicalAddress.city,
+          addressRegion: physicalAddress.region,
+          addressCountry: "FR",
+        }
+      : undefined,
     geo:
-      latitude != null && longitude != null
+      physicalAddress && latitude != null && longitude != null
         ? {
             "@type": "GeoCoordinates",
             latitude,
