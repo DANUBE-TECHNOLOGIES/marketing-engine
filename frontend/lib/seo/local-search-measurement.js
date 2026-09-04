@@ -19,7 +19,12 @@ export function localSearchMeasurementConfidence(row, thresholds = LOCAL_SEARCH_
   return "usable";
 }
 
-export function classifyLocalSearchMeasurement({ baseline = null, current = null, thresholds = LOCAL_SEARCH_MEASUREMENT_THRESHOLDS } = {}) {
+export function classifyLocalSearchMeasurement({
+  baseline = null,
+  current = null,
+  thresholds = LOCAL_SEARCH_MEASUREMENT_THRESHOLDS,
+  comparisonAllowed = true,
+} = {}) {
   if (!current) return { status: "no-data", confidence: "none", recommendation: "collect-data" };
 
   const impressions = finite(current.impressions) ?? 0;
@@ -27,8 +32,12 @@ export function classifyLocalSearchMeasurement({ baseline = null, current = null
   const position = finite(current.position);
   const ctr = searchConsoleCtr({ clicks, impressions });
   const confidence = localSearchMeasurementConfidence(current, thresholds);
-  const comparison = baseline ? compareLocalSearchPerformance({ baseline, current }) : null;
-  const trend = comparison ? localSearchPerformanceStatus(comparison) : "unknown";
+  const comparison = baseline && comparisonAllowed ? compareLocalSearchPerformance({ baseline, current }) : null;
+  const trend = baseline && !comparisonAllowed
+    ? "not-comparable"
+    : comparison
+      ? localSearchPerformanceStatus(comparison)
+      : "unknown";
   const cannibalisation = Array.isArray(current.cannibalisation) ? current.cannibalisation : [];
 
   if (impressions === 0) {
@@ -55,13 +64,21 @@ export function classifyLocalSearchMeasurement({ baseline = null, current = null
   return { status: "healthy", confidence, ctr, position, trend, comparison, recommendation: "monitor" };
 }
 
-export function buildAgencyLocalSearchMeasurement({ agencyKey = null, baseline = null, current = null, period = null } = {}) {
+export function buildAgencyLocalSearchMeasurement({
+  agencyKey = null,
+  baseline = null,
+  current = null,
+  period = null,
+  periodComparison = null,
+  comparisonAllowed = true,
+} = {}) {
   return {
     agencyKey,
     period,
+    periodComparison,
     baseline,
     current,
-    assessment: classifyLocalSearchMeasurement({ baseline, current }),
+    assessment: classifyLocalSearchMeasurement({ baseline, current, comparisonAllowed }),
     automatedPublicChangeAllowed: false,
     googleWriteAllowed: false,
   };
