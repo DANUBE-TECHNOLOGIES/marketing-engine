@@ -79,7 +79,16 @@ log "target migration applied: $TARGET_APPLIED"
 log "ranking grid tables present: $TABLE_COUNT/2"
 
 log "Prisma migration status (read-only)"
-docker exec "$BACKEND_CONTAINER" npx prisma migrate status --schema=/app/prisma/schema.prisma
+PRISMA_STATUS_RC=0
+docker exec "$BACKEND_CONTAINER" npx prisma migrate status --schema=/app/prisma/schema.prisma || PRISMA_STATUS_RC=$?
+
+if [[ "$PRISMA_STATUS_RC" -ne 0 ]]; then
+  if [[ "$TARGET_APPLIED" == "false" ]]; then
+    log "Prisma migrate status returned $PRISMA_STATUS_RC because target migration is pending; continuing after targeted safety checks"
+  else
+    fail "Prisma migrate status failed unexpectedly with exit code $PRISMA_STATUS_RC"
+  fi
+fi
 
 if [[ "$APPLY" != "true" ]]; then
   log "inspection complete; no database write performed"
