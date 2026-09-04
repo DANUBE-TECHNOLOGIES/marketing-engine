@@ -5,6 +5,7 @@ BASE_URL="${MSE_25_125_BASE_URL:-http://127.0.0.1:4000}"
 TENANT_SLUG="${MSE_25_125_TENANT_SLUG:-mondescale}"
 BACKEND_CONTAINER="${MSE_25_125_BACKEND_CONTAINER:-mle_backend}"
 EXPECTED_PAID_ACK="RUN-25-POINT-DATAFORSEO"
+MIN_BALANCE_USD="${MSE_25_125_MIN_BALANCE_USD:-0.01}"
 CREATE=false
 RUN_PAID=false
 CAMPAIGN_ID="${MSE_25_125_CAMPAIGN_ID:-}"
@@ -32,6 +33,7 @@ Optional: MSE_25_125_SPACING_KM (default 1)
 --run-paid triggers the DataForSEO 5x5 campaign and requires:
   MSE_25_125_PAID_ACK=RUN-25-POINT-DATAFORSEO
   RANKING_GRID_DATAFORSEO_ENABLED=true inside the running backend container
+  a DataForSEO account balance >= MSE_25_125_MIN_BALANCE_USD (default 0.01)
   and either --create or MSE_25_125_CAMPAIGN_ID.
 
 This script never enables the paid provider itself.
@@ -138,6 +140,45 @@ command -v docker >/dev/null 2>&1 || fail "docker is required for provider-state
 docker ps --format '{{.Names}}' | grep -Fxq "$BACKEND_CONTAINER" || fail "backend container $BACKEND_CONTAINER is not running"
 PROVIDER_ENABLED="$(docker exec "$BACKEND_CONTAINER" sh -lc 'printf %s "${RANKING_GRID_DATAFORSEO_ENABLED:-false}"' | tr '[:upper:]' '[:lower:]')"
 [[ "$PROVIDER_ENABLED" == "true" ]] || fail "paid provider is not explicitly enabled inside backend; script will not enable it automatically"
+
+BALANCE_OUTPUT="$(docker exec -e MSE_25_125_MIN_BALANCE_USD="$MIN_BALANCE_USD" "$BACKEND_CONTAINER" sh -lc 'node <<'"'"'NODE'"'"'
+const login = process.env.DATAFORSEO_LOGIN;
+const password = process.env.DATAFORSEO_PASSWORD;
+const minimum = Number(process.env.MSE_25_125_MIN_BALANCE_USD || 0.01);
+if (!login || !password) {
+  console.error("CREDENTIALS_MISSING");
+  process.exit(20);
+}
+if (!Number.isFinite(minimum) || minimum < 0) {
+  console.error("INVALID_MINIMUM_BALANCE");
+  process.exit(21);
+}
+const auth = Buffer.from(`${login}:${password}`, "utf8").toString("base64");
+fetch("https://api.dataforseo.com/v3/appendix/user_data", {
+  headers: { Authorization: `Basic ${auth}` },
+})
+  .then(async (response) => {
+    if (!response.ok) {
+      console.error(`PREFLIGHT_HTTP_${response.status}`);
+      process.exit(22);
+    }
+    const payload = await response.json();
+    const result = payload?.tasks?.[0]?.result?.[0] ?? payload?.tasks?.[0]?.result ?? null;
+    const balance = Number(result?.money?.balance);
+    if (!Number.isFinite(balance)) {
+      console.error("BALANCE_UNAVAILABLE");
+      process.exit(23);
+    }
+    console.log(`balance=${balance.toFixed(6)} minimum=${minimum.toFixed(6)}`);
+    if (balance < minimum) process.exit(24);
+  })
+  .catch((error) => {
+    console.error(`PREFLIGHT_FETCH_ERROR=${error.message}`);
+    process.exit(25);
+  });
+NODE
+')" || fail "DataForSEO balance preflight failed or balance is below required minimum $MIN_BALANCE_USD USD"
+log "PASS: DataForSEO balance preflight ($BALANCE_OUTPUT)"
 
 log "PAID ACTION: running campaign id=$CAMPAIGN_ID; a fresh 5x5 campaign can issue up to 25 DataForSEO measurements"
 RUN_FILE="$TMP_DIR/run.json"
