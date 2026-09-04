@@ -56,7 +56,11 @@ function isIndexablePublicPath(pathname) {
     .split("/")
     .filter(Boolean);
 
-  if (parts[0] !== "agence" || !parts[1]) return false;
+  if (parts[0] !== "agence") return false;
+
+  if (parts.length === 1) return true;
+
+  if (!parts[1]) return false;
 
   if (parts.length === 2) return true;
 
@@ -98,6 +102,15 @@ export default async function sitemap() {
 
   const entries = Array.isArray(payload?.entries) ? payload.entries : [];
   const unique = new Map();
+  const agencyHubUrl = canonicalUrl("/agence");
+
+  if (agencyHubUrl) {
+    unique.set(agencyHubUrl, {
+      url: agencyHubUrl,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    });
+  }
 
   for (const entry of entries) {
     const url = canonicalUrl(entry?.url || entry?.path);
