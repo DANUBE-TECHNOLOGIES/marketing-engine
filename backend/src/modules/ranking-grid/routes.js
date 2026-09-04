@@ -26,6 +26,33 @@ function profileIdentity(profile) {
   };
 }
 
+function placeIdFromGoogleReviewUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+
+  try {
+    const url = new URL(raw);
+    for (const key of ["placeid", "place_id", "query_place_id"]) {
+      const candidate = url.searchParams.get(key);
+      if (candidate) return candidate.trim() || null;
+    }
+  } catch {
+    // Keep a conservative string fallback for stored legacy URLs.
+  }
+
+  const queryMatch = raw.match(/[?&](?:placeid|place_id|query_place_id)=([^&#]+)/i);
+  if (queryMatch?.[1]) {
+    try {
+      return decodeURIComponent(queryMatch[1]).trim() || null;
+    } catch {
+      return queryMatch[1].trim() || null;
+    }
+  }
+
+  const placeIdMatch = raw.match(/(?:place_id:|placeid:)(ChI[A-Za-z0-9_-]+)/i);
+  return placeIdMatch?.[1] || null;
+}
+
 function createDataForSeoProvider(prisma) {
   return new DataForSeoMapsRankingGridProvider({
     targetResolver: async (agencyId) => {
@@ -36,16 +63,19 @@ function createDataForSeoProvider(prisma) {
           address: true,
           postalCode: true,
           website: true,
+          googleReviewUrl: true,
           profile: { select: { googleLocationData: true } },
         },
       });
       if (!agency) return null;
+      const profile = profileIdentity(agency.profile);
       return {
         name: agency.name,
         address: agency.address,
         postalCode: agency.postalCode,
         website: agency.website,
-        ...profileIdentity(agency.profile),
+        placeId: profile.placeId || placeIdFromGoogleReviewUrl(agency.googleReviewUrl),
+        cid: profile.cid,
       };
     },
   });
@@ -207,4 +237,5 @@ module.exports = function createRankingGridRoutes({ prisma, provider }) {
 
 module.exports.gridProviderEnabled = gridProviderEnabled;
 module.exports.profileIdentity = profileIdentity;
+module.exports.placeIdFromGoogleReviewUrl = placeIdFromGoogleReviewUrl;
 module.exports.createDataForSeoProvider = createDataForSeoProvider;
