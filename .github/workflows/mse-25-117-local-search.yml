@@ -7,6 +7,9 @@ on:
       - "frontend/test/mse-25-117-*.test.mjs"
       - "frontend/scripts/mse-25-117-verdict.mjs"
       - "frontend/scripts/audit-local-search-contract.mjs"
+      - "frontend/app/agence/**"
+      - "frontend/app/sitemap.js"
+      - "backend/src/modules/public-site-read/**"
       - "frontend/package.json"
       - ".github/workflows/mse-25-117-local-search.yml"
   workflow_dispatch:

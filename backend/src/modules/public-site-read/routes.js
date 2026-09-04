@@ -297,6 +297,40 @@ async function hydrateContract({ database, contract }) {
   };
 }
 
+async function listPublishedAgencySites(database, tenantId) {
+  const sites = await database.agencySite.findMany({
+    where: {
+      tenantId: String(tenantId),
+      OR: [
+        { status: "published" },
+        { publishedAt: { not: null } },
+      ],
+      pages: {
+        some: {
+          OR: [
+            { published: true },
+            { status: "published" },
+          ],
+        },
+      },
+    },
+    select: {
+      slug: true,
+      name: true,
+      publishedAt: true,
+      agency: { select: { city: true } },
+    },
+    orderBy: [{ agency: { city: "asc" } }, { name: "asc" }],
+  });
+
+  return sites.map((site) => ({
+    slug: site.slug,
+    name: site.name,
+    city: site.agency?.city || null,
+    publishedAt: site.publishedAt,
+  }));
+}
+
 function createPublicSiteReadRouter({ prisma } = {}) {
   const database = prisma || new PrismaClient();
   const service = new SectionAwarePublicSiteReadService({ prisma: database });
@@ -306,7 +340,7 @@ function createPublicSiteReadRouter({ prisma } = {}) {
     response.json({
       ok: true,
       capability: "public-site-read",
-      version: "1.9",
+      version: "1.10",
       contentSource: "website-designer-v2-blocks",
       fallbackContentSource: "agency-site-sections",
       dynamicHydration: "single-pipeline",
@@ -315,6 +349,17 @@ function createPublicSiteReadRouter({ prisma } = {}) {
       stableJsonErrors: true,
       writeOperations: false,
     });
+  });
+
+  router.get("/sites", async (request, response) => {
+    try {
+      const tenantId = await resolvePublicTenantId(database, request);
+      const sites = await listPublishedAgencySites(database, tenantId);
+      response.set("Cache-Control", "public, max-age=60, s-maxage=300, stale-while-revalidate=600");
+      response.json({ sites });
+    } catch (error) {
+      sendPublicSiteError(response, error);
+    }
   });
 
   router.post("/sites/:siteSlug/preview-hydrate", async (request, response) => {
@@ -359,4 +404,5 @@ module.exports = {
   inspirationIds,
   resolvePublicTenantId,
   sendPublicSiteError,
+  listPublishedAgencySites,
 };
