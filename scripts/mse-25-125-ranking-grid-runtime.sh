@@ -50,10 +50,8 @@ done
 command -v curl >/dev/null 2>&1 || fail "curl is required"
 command -v node >/dev/null 2>&1 || fail "node is required"
 
-tmp_files=()
-cleanup() { rm -f "${tmp_files[@]:-}" 2>/dev/null || true; }
-trap cleanup EXIT
-new_tmp() { local f; f="$(mktemp)"; tmp_files+=("$f"); printf '%s' "$f"; }
+TMP_DIR="$(mktemp -d)"
+trap 'rm -rf "$TMP_DIR"' EXIT
 
 request() {
   local method="$1" url="$2" output="$3" body="${4:-}"
@@ -65,7 +63,7 @@ request() {
 }
 
 log "read-only API validation: $BASE_URL tenant=$TENANT_SLUG"
-LIST_FILE="$(new_tmp)"
+LIST_FILE="$TMP_DIR/list.json"
 LIST_CODE="$(request GET "$BASE_URL/rankings/grid/campaigns?limit=6" "$LIST_FILE")"
 [[ "$LIST_CODE" == "200" ]] || { cat "$LIST_FILE" >&2; fail "campaign listing returned HTTP $LIST_CODE"; }
 node - "$LIST_FILE" <<'NODE'
@@ -88,7 +86,6 @@ if [[ "$CREATE" == "true" ]]; then
   : "${MSE_25_125_KEYWORD_ID:?MSE_25_125_KEYWORD_ID is required with --create}"
   : "${MSE_25_125_CENTER_LAT:?MSE_25_125_CENTER_LAT is required with --create}"
   : "${MSE_25_125_CENTER_LNG:?MSE_25_125_CENTER_LNG is required with --create}"
-  SPACING_KM="${MSE_25_125_SPACING_KM:-1}"
 
   CREATE_BODY="$(node - <<'NODE'
 const values = {
@@ -106,7 +103,7 @@ process.stdout.write(JSON.stringify(values));
 NODE
 )"
 
-  CREATE_FILE="$(new_tmp)"
+  CREATE_FILE="$TMP_DIR/create.json"
   CREATE_CODE="$(request POST "$BASE_URL/rankings/grid/campaigns" "$CREATE_FILE" "$CREATE_BODY")"
   [[ "$CREATE_CODE" == "201" ]] || { cat "$CREATE_FILE" >&2; fail "campaign creation returned HTTP $CREATE_CODE"; }
   CAMPAIGN_ID="$(node - "$CREATE_FILE" <<'NODE'
@@ -143,7 +140,7 @@ PROVIDER_ENABLED="$(docker exec "$BACKEND_CONTAINER" sh -lc 'printf %s "${RANKIN
 [[ "$PROVIDER_ENABLED" == "true" ]] || fail "paid provider is not explicitly enabled inside backend; script will not enable it automatically"
 
 log "PAID ACTION: running campaign id=$CAMPAIGN_ID; a fresh 5x5 campaign can issue up to 25 DataForSEO measurements"
-RUN_FILE="$(new_tmp)"
+RUN_FILE="$TMP_DIR/run.json"
 RUN_CODE="$(request POST "$BASE_URL/rankings/grid/campaigns/$CAMPAIGN_ID/run" "$RUN_FILE" '{}')"
 [[ "$RUN_CODE" == "200" ]] || { cat "$RUN_FILE" >&2; fail "paid campaign run returned HTTP $RUN_CODE"; }
 
