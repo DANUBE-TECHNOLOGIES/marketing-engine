@@ -89,6 +89,25 @@ function internationalPhone(value) {
   return raw;
 }
 
+function physicalPostalAddress(site, agency) {
+  const streetAddress = String(agency?.address || site?.address || "").trim();
+  const postalCode = String(agency?.postalCode || site?.postalCode || "").trim();
+  const addressLocality = String(agency?.city || site?.city || "").trim();
+
+  if (!streetAddress || !postalCode || !addressLocality) {
+    return null;
+  }
+
+  return {
+    "@type": "PostalAddress",
+    streetAddress,
+    postalCode,
+    addressLocality,
+    addressRegion: agency?.region || site?.region,
+    addressCountry: "FR",
+  };
+}
+
 function sectionContent(section) {
   const candidates = [
     section?.content,
@@ -183,6 +202,8 @@ function uniqueUrls(values) {
 
 export function buildTravelAgencySchema(site) {
   const agency = site?.agency || site;
+  const address = physicalPostalAddress(site, agency);
+  const isPhysicalAgency = Boolean(address);
   const latitude = agency?.latitude ?? site?.latitude;
   const longitude = agency?.longitude ?? site?.longitude;
   const phone = internationalPhone(agency.phone || site.phone);
@@ -192,14 +213,15 @@ export function buildTravelAgencySchema(site) {
     agency.imageUrl ||
     logo ||
     site.heroImageUrl;
-  const hasMap =
-    agency.googleMapsUrl ||
-    buildGoogleMapsSearchUrl({
-      name: site.name || agency.name,
-      address: agency.address || site.address,
-      postalCode: agency.postalCode || site.postalCode,
-      city: agency.city || site.city,
-    });
+  const hasMap = isPhysicalAgency
+    ? agency.googleMapsUrl ||
+      buildGoogleMapsSearchUrl({
+        name: site.name || agency.name,
+        address: address.streetAddress,
+        postalCode: address.postalCode,
+        city: address.addressLocality,
+      })
+    : undefined;
   const sameAs = uniqueUrls([
     agency.website,
     agency.googleBusinessUrl,
@@ -211,7 +233,7 @@ export function buildTravelAgencySchema(site) {
 
   return compactJsonLd({
     "@context": "https://schema.org",
-    "@type": ["TravelAgency", "LocalBusiness"],
+    "@type": isPhysicalAgency ? ["TravelAgency", "LocalBusiness"] : "TravelAgency",
     "@id": `${absoluteUrl(site.basePath)}#travel-agency`,
     name: site.name || agency.name,
     url: absoluteUrl(site.basePath),
@@ -220,16 +242,9 @@ export function buildTravelAgencySchema(site) {
     logo: logo ? absoluteUrl(logo) : undefined,
     image: image ? absoluteUrl(image) : undefined,
     description: agency.description || site.description,
-    address: {
-      "@type": "PostalAddress",
-      streetAddress: agency.address || site.address,
-      postalCode: agency.postalCode || site.postalCode,
-      addressLocality: agency.city || site.city,
-      addressRegion: agency.region || site.region,
-      addressCountry: "FR",
-    },
+    address: address || undefined,
     geo:
-      latitude != null && longitude != null
+      isPhysicalAgency && latitude != null && longitude != null
         ? {
             "@type": "GeoCoordinates",
             latitude,
@@ -433,6 +448,7 @@ export function buildDestinationWebPageSchema(data) {
 export {
   internationalPhone,
   openingHoursSpecification,
+  physicalPostalAddress,
   schemaImage,
   servedAreas,
   uniqueUrls,
