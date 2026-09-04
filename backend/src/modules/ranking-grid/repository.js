@@ -73,6 +73,40 @@ class RankingGridRepository {
     }));
   }
 
+  async listCampaignHistory({ tenantId, agencyId, keywordId, limit = 12 }) {
+    const safeLimit = Math.min(52, Math.max(1, Number(limit) || 12));
+    const filters = [Prisma.sql`a."tenantId" = ${tenantId}`];
+    if (Number.isInteger(Number(agencyId)) && Number(agencyId) > 0) {
+      filters.push(Prisma.sql`c."agencyId" = ${Number(agencyId)}`);
+    }
+    if (Number.isInteger(Number(keywordId)) && Number(keywordId) > 0) {
+      filters.push(Prisma.sql`c."keywordId" = ${Number(keywordId)}`);
+    }
+
+    return this.prisma.$queryRaw(Prisma.sql`
+      SELECT
+        c.id,
+        c."agencyId",
+        a."name" AS "agencyName",
+        c."keywordId",
+        c."keyword",
+        c."city",
+        c."gridSize",
+        c."spacingKm",
+        c."provider",
+        c."status",
+        c."summary",
+        c."startedAt",
+        c."completedAt",
+        c."createdAt"
+      FROM "RankingGridCampaign" c
+      INNER JOIN "Agency" a ON a.id = c."agencyId"
+      WHERE ${Prisma.join(filters, " AND ")}
+      ORDER BY COALESCE(c."completedAt", c."createdAt") DESC, c.id DESC
+      LIMIT ${safeLimit}
+    `);
+  }
+
   async createCampaignWithPoints(input) {
     const {
       tenantId, agencyId, keywordId, keyword, city, centerLat, centerLng,
