@@ -104,6 +104,21 @@ test("MSE-25.121 rendered shared hero H1 follows the same intent ownership", () 
   assert.doesNotMatch(heroSource, /Avis clients de votre agence de voyages à \$\{city\}/);
 });
 
+test("MSE-25.121 internal linking sends the generic local anchor back to the home", () => {
+  const contextSource = fs.readFileSync(
+    new URL("../components/public-site/LocalContentContext.js", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(contextSource, /<Link href=\{root\}>Agence de voyages à \{city\}<\/Link>/);
+  assert.match(contextSource, /Services voyage et billetterie à \{city\}/);
+  assert.match(contextSource, /Destinations et voyages depuis \{city\}/);
+  assert.match(contextSource, /Inspirations voyage depuis \{city\}/);
+  assert.match(contextSource, /Nous contacter à \{city\}/);
+  assert.doesNotMatch(contextSource, /Services de notre agence de voyages à \{city\}/);
+  assert.doesNotMatch(contextSource, /Contacter notre agence de voyages à \{city\}/);
+});
+
 test("MSE-25.121 keeps valid local SEO overrides", () => {
   const currentSite = site("Bois-Colombes");
   const seo = buildLocalPageSeo({
