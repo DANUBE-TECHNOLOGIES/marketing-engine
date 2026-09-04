@@ -109,13 +109,13 @@ function titleForKind({ kind, city, brand, pageTitle }) {
 
   switch (kind) {
     case "home":
-      return `Agence de voyage à ${city} | ${brand}`;
+      return `Agence de voyages à ${city} | ${brand}`;
     case "agency":
-      return `Votre agence de voyages à ${city} | ${brand}`;
+      return `Présentation de ${brand} à ${city} | ${brand}`;
     case "team":
-      return `Équipe de votre agence de voyages à ${city} | ${brand}`;
+      return `Conseillers voyage à ${city} | ${brand}`;
     case "services":
-      return `Services de voyage à ${city} | ${brand}`;
+      return `Services voyage & billetterie à ${city} | ${brand}`;
     case "destinations":
       return `Destinations & voyages depuis ${city} | ${brand}`;
     case "inspirations":
@@ -123,17 +123,17 @@ function titleForKind({ kind, city, brand, pageTitle }) {
     case "offers":
       return `Offres de voyages à ${city} | ${brand}`;
     case "reviews":
-      return `Avis clients de votre agence à ${city} | ${brand}`;
+      return `Avis clients à ${city} | ${brand}`;
     case "commitments":
-      return `Nos engagements voyage à ${city} | ${brand}`;
+      return `Accompagnement voyage à ${city} | ${brand}`;
     case "partners":
-      return `Partenaires voyage de votre agence à ${city} | ${brand}`;
+      return `Partenaires voyage à ${city} | ${brand}`;
     case "contact":
-      return `Agence de voyages à ${city} : contact | ${brand}`;
+      return `Contacter ${brand} à ${city} | ${brand}`;
     default:
       return pageTitle
         ? `${pageTitle} à ${city} | ${brand}`
-        : `Agence de voyages à ${city} | ${brand}`;
+        : `Conseils voyage à ${city} | ${brand}`;
   }
 }
 
@@ -144,11 +144,11 @@ function headingForKind({ kind, city, pageTitle }) {
     case "home":
       return `Agence de voyages à ${city}`;
     case "agency":
-      return `Votre agence de voyages à ${city}`;
+      return `Découvrez ${brandlessAgencyLabel()} à ${city}`;
     case "team":
-      return `Votre équipe de conseillers voyage à ${city}`;
+      return `Vos conseillers voyage à ${city}`;
     case "services":
-      return `Services de votre agence de voyages à ${city}`;
+      return `Services voyage et billetterie à ${city}`;
     case "destinations":
       return `Destinations et voyages depuis ${city}`;
     case "inspirations":
@@ -156,16 +156,20 @@ function headingForKind({ kind, city, pageTitle }) {
     case "offers":
       return `Offres de voyages à ${city}`;
     case "reviews":
-      return `Avis clients de votre agence de voyages à ${city}`;
+      return `Avis de nos voyageurs à ${city}`;
     case "commitments":
-      return `Les engagements de votre agence à ${city}`;
+      return `Notre accompagnement voyage à ${city}`;
     case "partners":
-      return `Les partenaires de votre agence de voyages à ${city}`;
+      return `Nos partenaires voyage à ${city}`;
     case "contact":
-      return `Contacter votre agence de voyages à ${city}`;
+      return `Nous contacter à ${city}`;
     default:
-      return pageTitle ? `${pageTitle} à ${city}` : `Agence de voyages à ${city}`;
+      return pageTitle ? `${pageTitle} à ${city}` : `Conseils voyage à ${city}`;
   }
+}
+
+function brandlessAgencyLabel() {
+  return "notre agence";
 }
 
 function descriptionForKind({ kind, site, page }) {
@@ -177,13 +181,13 @@ function descriptionForKind({ kind, site, page }) {
 
   switch (kind) {
     case "agency":
-      lead = `Découvrez ${brand}${where}, votre agence de voyages locale : équipe, expertise et accompagnement personnalisé pour construire votre projet.`;
+      lead = `Découvrez ${brand}${where} : son implantation, son équipe, son expertise et son fonctionnement pour accompagner votre projet de voyage.`;
       break;
     case "team":
       lead = `Rencontrez l’équipe ${brand}${where} : des conseillers voyage à votre écoute pour préparer séjours, circuits, croisières et sur mesure.`;
       break;
     case "services":
-      lead = `${brand}, agence de voyages${where} : conseil personnalisé, séjours, circuits, croisières et voyages sur mesure selon votre projet.`;
+      lead = `Découvrez les services voyage et billetterie de ${brand}${where} : conseil personnalisé, séjours, circuits, croisières et sur mesure.`;
       break;
     case "destinations":
       lead = `Découvrez des idées de destinations avec ${brand}${where} et préparez un voyage adapté à vos envies avec l’accompagnement de votre agence.`;
@@ -192,13 +196,13 @@ function descriptionForKind({ kind, site, page }) {
       lead = `Inspirez votre prochain départ avec ${brand}${where} : conseils locaux, idées de séjours, circuits, escapades et voyages sur mesure.`;
       break;
     case "offers":
-      lead = `Découvrez les offres de voyages sélectionnées par ${brand}${where} et bénéficiez des conseils de votre agence pour choisir le séjour adapté.`;
+      lead = `Découvrez les offres de voyages sélectionnées par ${brand}${where} et bénéficiez de conseils pour choisir le séjour adapté.`;
       break;
     case "reviews":
       lead = `Consultez les avis clients de ${brand}${where} et découvrez l’expérience des voyageurs accompagnés par notre équipe pour leurs projets.`;
       break;
     case "commitments":
-      lead = `Découvrez les engagements de ${brand}${where} : écoute, conseil, expertise et accompagnement avant, pendant et après votre voyage.`;
+      lead = `Découvrez l’accompagnement proposé par ${brand}${where} : écoute, conseil, expertise et suivi avant, pendant et après votre voyage.`;
       break;
     case "partners":
       lead = `Découvrez les partenaires voyage sélectionnés par ${brand}${where} pour construire des séjours, circuits et expériences adaptés à vos envies.`;
@@ -207,7 +211,7 @@ function descriptionForKind({ kind, site, page }) {
       lead = `Contactez ${brand}${where} pour préparer votre voyage : conseils personnalisés, devis, séjours, circuits, croisières et sur mesure.`;
       break;
     case "generic":
-      lead = `${pageTitle || "Conseils voyage"} avec ${brand}${where}. Bénéficiez de l’accompagnement d’une agence locale pour construire votre prochain voyage.`;
+      lead = `${pageTitle || "Conseils voyage"} avec ${brand}${where}. Bénéficiez d’un accompagnement local pour construire votre prochain voyage.`;
       break;
     default:
       lead = `${brand}, agence de voyages${where} : conseils personnalisés, séjours, circuits, croisières et voyages sur mesure.`;
