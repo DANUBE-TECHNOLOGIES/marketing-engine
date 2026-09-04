@@ -170,9 +170,18 @@ async function listPublishedAgencySites(database, tenantId) {
   const sites = await database.agencySite.findMany({
     where: {
       tenantId: String(tenantId),
-      status: "published",
-      publishedAt: { not: null },
-      pages: { some: { published: true, status: "published" } },
+      OR: [
+        { status: "published" },
+        { publishedAt: { not: null } },
+      ],
+      pages: {
+        some: {
+          OR: [
+            { published: true },
+            { status: "published" },
+          ],
+        },
+      },
     },
     select: {
       slug: true,
