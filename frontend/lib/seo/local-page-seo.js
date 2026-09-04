@@ -1,4 +1,4 @@
-import { resolvedTargetCities } from "./local-area-config";
+import { resolvedTargetCities } from "./local-area-config.js";
 
 const DEFAULT_BRAND = "Mondescale";
 const MAX_DESCRIPTION_LENGTH = 165;
