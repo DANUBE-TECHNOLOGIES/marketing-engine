@@ -21,16 +21,47 @@ function normalizeAgencyKey(value) {
   return String(value || "").trim().toLowerCase();
 }
 
-export function buildLocalSearchRemediation({ agencyKey = null, measurement = null } = {}) {
+function publicationState(publication) {
+  if (publication == null) return "unknown";
+
+  const explicitState = String(publication?.state || "").trim().toLowerCase();
+  if (["no-site", "missing", "absent"].includes(explicitState) || publication?.hasSite === false) {
+    return "no-site";
+  }
+
+  const site = Object.prototype.hasOwnProperty.call(publication || {}, "site")
+    ? publication.site
+    : publication;
+
+  if (site == null) return "no-site";
+
+  const status = String(site?.status || publication?.status || "").trim().toLowerCase();
+  const publishedAt = site?.publishedAt ?? publication?.publishedAt ?? null;
+  const published = site?.published ?? publication?.published;
+
+  if (status === "published" || publishedAt || published === true) return "published";
+  if (["draft", "unpublished", "inactive"].includes(status) || published === false) return "unpublished";
+
+  return "unknown";
+}
+
+export function buildLocalSearchRemediation({ agencyKey = null, measurement = null, publication = null } = {}) {
   const key = normalizeAgencyKey(agencyKey);
   const assessment = measurement?.assessment || measurement || {};
   const status = assessment.status || "no-data";
   const confidence = assessment.confidence || "none";
+  const sitePublicationState = publicationState(publication);
 
   let actionType = "collect-data";
   let recommendation = assessment.recommendation || "collect-data";
 
-  if (confidence === "usable") {
+  if (sitePublicationState === "no-site") {
+    actionType = "site-provisioning-check";
+    recommendation = "provision-mini-site-before-seo-remediation";
+  } else if (sitePublicationState === "unpublished") {
+    actionType = "site-publication-check";
+    recommendation = "publish-or-confirm-intent-before-seo-remediation";
+  } else if (confidence === "usable") {
     if (status === "visibility-no-clicks" || status === "low-ctr") {
       actionType = "serp-snippet-review";
     } else if (status === "weak-position") {
@@ -52,6 +83,7 @@ export function buildLocalSearchRemediation({ agencyKey = null, measurement = nu
     agencyKey: key || null,
     status,
     confidence,
+    publicationState: sitePublicationState,
     priorityGuidance: PRIORITY_GUIDANCE[key] || null,
     actionType,
     recommendation,
