@@ -5,6 +5,8 @@ on:
     paths:
       - 'backend/src/modules/ranking-grid/**'
       - 'backend/test/mse-25-125-ranking-grid.test.js'
+      - 'backend/test/mse-25-125-dataforseo-provider.test.js'
+      - 'backend/prisma/schema.prisma'
       - 'backend/prisma/migrations/20260904131500_ranking_grid/**'
       - 'backend/src/modules/register-modules.js'
       - '.github/workflows/mse-25-125-ranking-grid.yml'
@@ -14,6 +16,8 @@ on:
     paths:
       - 'backend/src/modules/ranking-grid/**'
       - 'backend/test/mse-25-125-ranking-grid.test.js'
+      - 'backend/test/mse-25-125-dataforseo-provider.test.js'
+      - 'backend/prisma/schema.prisma'
       - 'backend/prisma/migrations/20260904131500_ranking_grid/**'
       - 'backend/src/modules/register-modules.js'
       - '.github/workflows/mse-25-125-ranking-grid.yml'
@@ -40,19 +44,24 @@ jobs:
         working-directory: backend
         run: npm ci
 
-      - name: Prisma client
+      - name: Prisma validate and client
         working-directory: backend
-        run: npx prisma generate
+        run: |
+          npx prisma validate
+          npx prisma generate
 
       - name: Ranking grid contract tests
         working-directory: backend
-        run: node --test test/mse-25-125-ranking-grid.test.js
+        run: |
+          node --test test/mse-25-125-ranking-grid.test.js
+          node --test test/mse-25-125-dataforseo-provider.test.js
 
       - name: Syntax guard
         run: |
           node --check backend/src/modules/ranking-grid/grid.js
           node --check backend/src/modules/ranking-grid/aggregate.js
           node --check backend/src/modules/ranking-grid/provider.js
+          node --check backend/src/modules/ranking-grid/dataforseo-provider.js
           node --check backend/src/modules/ranking-grid/repository.js
           node --check backend/src/modules/ranking-grid/service.js
           node --check backend/src/modules/ranking-grid/routes.js
