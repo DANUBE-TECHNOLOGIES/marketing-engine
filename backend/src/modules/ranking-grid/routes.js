@@ -3,6 +3,7 @@
 const express = require("express");
 const { RankingGridRepository } = require("./repository");
 const { RankingGridService } = require("./service");
+const { buildHeatmap } = require("./heatmap");
 const { UnconfiguredRankingGridProvider } = require("./provider");
 const { DataForSeoMapsRankingGridProvider } = require("./dataforseo-provider");
 
@@ -99,6 +100,19 @@ module.exports = function createRankingGridRoutes({ prisma, provider }) {
       res.status(201).json(campaign);
     } catch (error) {
       if (error.code === "RANKING_GRID_SCOPE_NOT_FOUND") error.status = 404;
+      next(error);
+    }
+  });
+
+  router.get("/rankings/grid/campaigns/:campaignId/heatmap", async (req, res, next) => {
+    try {
+      const campaign = await repository.getCampaign({
+        tenantId: await tenantId(req),
+        campaignId: Number(req.params.campaignId),
+      });
+      if (!campaign) return res.status(404).json({ error: "ranking_grid_campaign_not_found" });
+      res.json(buildHeatmap(campaign));
+    } catch (error) {
       next(error);
     }
   });
