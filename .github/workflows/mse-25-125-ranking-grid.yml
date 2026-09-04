@@ -6,9 +6,13 @@ on:
       - 'backend/src/modules/ranking-grid/**'
       - 'backend/test/mse-25-125-ranking-grid.test.js'
       - 'backend/test/mse-25-125-dataforseo-provider.test.js'
+      - 'backend/test/mse-25-125-runtime-guard.test.js'
       - 'backend/prisma/schema.prisma'
       - 'backend/prisma/migrations/20260904131500_ranking_grid/**'
       - 'backend/src/modules/register-modules.js'
+      - 'scripts/mse-25-125-ranking-grid-migrate.sh'
+      - 'scripts/mse-25-125-ranking-grid-runtime.sh'
+      - 'docker-compose.yml'
       - '.github/workflows/mse-25-125-ranking-grid.yml'
   push:
     branches:
@@ -17,9 +21,13 @@ on:
       - 'backend/src/modules/ranking-grid/**'
       - 'backend/test/mse-25-125-ranking-grid.test.js'
       - 'backend/test/mse-25-125-dataforseo-provider.test.js'
+      - 'backend/test/mse-25-125-runtime-guard.test.js'
       - 'backend/prisma/schema.prisma'
       - 'backend/prisma/migrations/20260904131500_ranking_grid/**'
       - 'backend/src/modules/register-modules.js'
+      - 'scripts/mse-25-125-ranking-grid-migrate.sh'
+      - 'scripts/mse-25-125-ranking-grid-runtime.sh'
+      - 'docker-compose.yml'
       - '.github/workflows/mse-25-125-ranking-grid.yml'
 
 permissions:
@@ -57,6 +65,12 @@ jobs:
         run: |
           node --test test/mse-25-125-ranking-grid.test.js
           node --test test/mse-25-125-dataforseo-provider.test.js
+          node --test test/mse-25-125-runtime-guard.test.js
+
+      - name: Runtime helper syntax guards
+        run: |
+          bash -n scripts/mse-25-125-ranking-grid-migrate.sh
+          bash -n scripts/mse-25-125-ranking-grid-runtime.sh
 
       - name: Syntax guard
         run: |
