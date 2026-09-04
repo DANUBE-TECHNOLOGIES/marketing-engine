@@ -14,6 +14,7 @@ on:
       - 'scripts/mse-25-91-post-validation-cleanup.sh'
       - 'scripts/mse-25-91-public-contract-preflight.js'
       - 'scripts/mse-25-91-canonical-drift-check.js'
+      - 'scripts/mse-25-124-runtime-verify.js'
       - '.github/workflows/mse-25-91.yml'
 
 permissions:
@@ -92,3 +93,4 @@ jobs:
           bash -n scripts/mse-25-91-post-validation-cleanup.sh
           node --check scripts/mse-25-91-public-contract-preflight.js
           node --check scripts/mse-25-91-canonical-drift-check.js
+          node --check scripts/mse-25-124-runtime-verify.js
