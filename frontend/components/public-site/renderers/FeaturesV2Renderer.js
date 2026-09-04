@@ -45,6 +45,14 @@ function featureHref(root, value) {
   return `${root}/${href.replace(/^\/+|\/+$/g, "")}`;
 }
 
+function featureAction(root, item) {
+  const configuredHref = featureHref(root, item?.href || item?.url || item?.link);
+  return {
+    href: configuredHref || `${root}/contact`,
+    label: String(item?.ctaLabel || item?.linkLabel || item?.actionLabel || "").trim() || (configuredHref ? "En savoir plus" : "Parler de votre projet"),
+  };
+}
+
 function hasBusinessTravel(items) {
   return items.some((item) => {
     const value = `${item?.id || ""} ${item?.title || ""} ${item?.label || ""} ${item?.text || ""} ${item?.description || ""}`.toLowerCase();
@@ -114,14 +122,17 @@ export default function FeaturesV2Renderer({ section, site }) {
         {items.length ? (
           <div className="public-site-card-grid" data-columns={columns} style={{ gridTemplateColumns: `repeat(auto-fit, minmax(min(100%, ${minimum}px), 1fr))` }}>
             {items.map((item, index) => {
-              const href = featureHref(root, item.href);
+              const action = featureAction(root, item);
               const heading = item.title || item.label;
-              return <article className="public-site-card public-site-feature-card" key={item.id || item.title || index}>
-                {item.icon ? <span className="public-site-feature-icon" aria-hidden="true">{item.icon}</span> : null}
-                <h3>{href ? <Link href={href}>{heading}</Link> : heading}</h3>
-                {item.text ? <p>{item.text}</p> : null}
-                {item.description ? <p>{item.description}</p> : null}
-              </article>;
+              return (
+                <article className="public-site-card public-site-feature-card" key={item.id || item.title || index}>
+                  {item.icon ? <span className="public-site-feature-icon" aria-hidden="true">{item.icon}</span> : null}
+                  <h3>{heading}</h3>
+                  {item.text ? <p>{item.text}</p> : null}
+                  {item.description ? <p>{item.description}</p> : null}
+                  <Link className="public-site-feature-action" href={action.href}>{action.label} <span aria-hidden="true">→</span></Link>
+                </article>
+              );
             })}
           </div>
         ) : null}
@@ -141,6 +152,7 @@ export {
   businessTravelItem,
   defaultFeaturesIntroduction,
   defaultFeaturesTitle,
+  featureAction,
   featureHref,
   hasBusinessTravel,
   isGroupTravelItem,
