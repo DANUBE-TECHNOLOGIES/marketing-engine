@@ -41,12 +41,18 @@ function trendBadge(trend) {
   return <span className="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded">→</span>;
 }
 
+function finiteNumber(value) {
+  if (value == null || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
 function gridCellClasses(point) {
   if (point?.status === "error") return "bg-red-50 text-red-800 border-red-200";
   if (point?.status !== "success") return "bg-gray-100 text-gray-500 border-gray-200";
-  if (!point?.found || !Number.isFinite(Number(point?.position))) return "bg-red-100 text-red-900 border-red-200";
+  const position = finiteNumber(point?.position);
+  if (!point?.found || position == null) return "bg-red-100 text-red-900 border-red-200";
 
-  const position = Number(point.position);
   if (position <= 3) return "bg-green-100 text-green-900 border-green-200";
   if (position <= 10) return "bg-lime-100 text-lime-900 border-lime-200";
   if (position <= 20) return "bg-amber-100 text-amber-900 border-amber-200";
@@ -57,8 +63,9 @@ function gridCellLabel(point) {
   if (!point) return "—";
   if (point.status === "error") return "!";
   if (point.status !== "success") return "…";
-  if (!point.found || !Number.isFinite(Number(point.position))) return "N/T";
-  return `#${Number(point.position)}`;
+  const position = finiteNumber(point.position);
+  if (!point.found || position == null) return "N/T";
+  return `#${position}`;
 }
 
 function formatCampaignDate(value) {
@@ -79,8 +86,13 @@ function campaignStatusLabel(status) {
   return "En attente";
 }
 
+function percentLabel(value) {
+  const number = finiteNumber(value);
+  return number == null ? "—" : `${Math.round(number * 100)} %`;
+}
+
 function RankingGridCard({ campaign }) {
-  const gridSize = Number(campaign.gridSize) || 5;
+  const gridSize = finiteNumber(campaign.gridSize) || 5;
   const center = Math.floor(gridSize / 2);
   const byCell = new Map(
     (Array.isArray(campaign.points) ? campaign.points : []).map((point) => [
@@ -112,6 +124,7 @@ function RankingGridCard({ campaign }) {
   }
 
   const summary = campaign.summary && typeof campaign.summary === "object" ? campaign.summary : {};
+  const averagePosition = finiteNumber(summary.averagePosition);
 
   return (
     <article className="rounded-xl border bg-white p-5 shadow-sm">
@@ -146,19 +159,19 @@ function RankingGridCard({ campaign }) {
       <div className="grid grid-cols-2 gap-2 border-t pt-4 text-sm sm:grid-cols-4">
         <div>
           <div className="text-gray-500">Présence</div>
-          <div className="font-bold">{Number.isFinite(Number(summary.presenceRate)) ? `${Math.round(Number(summary.presenceRate) * 100)} %` : "—"}</div>
+          <div className="font-bold">{percentLabel(summary.presenceRate)}</div>
         </div>
         <div>
           <div className="text-gray-500">Top 3</div>
-          <div className="font-bold">{Number.isFinite(Number(summary.top3Rate)) ? `${Math.round(Number(summary.top3Rate) * 100)} %` : "—"}</div>
+          <div className="font-bold">{percentLabel(summary.top3Rate)}</div>
         </div>
         <div>
           <div className="text-gray-500">Top 10</div>
-          <div className="font-bold">{Number.isFinite(Number(summary.top10Rate)) ? `${Math.round(Number(summary.top10Rate) * 100)} %` : "—"}</div>
+          <div className="font-bold">{percentLabel(summary.top10Rate)}</div>
         </div>
         <div>
           <div className="text-gray-500">Position moy.</div>
-          <div className="font-bold">{Number.isFinite(Number(summary.averagePosition)) ? `#${Number(summary.averagePosition)}` : "—"}</div>
+          <div className="font-bold">{averagePosition == null ? "—" : `#${averagePosition}`}</div>
         </div>
       </div>
     </article>
