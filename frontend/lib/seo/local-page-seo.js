@@ -109,7 +109,7 @@ function titleForKind({ kind, city, brand, pageTitle }) {
 
   switch (kind) {
     case "home":
-      return `Agence de voyages à ${city} | ${brand}`;
+      return `Agence de voyage à ${city} | ${brand}`;
     case "agency":
       return `Votre agence de voyages à ${city} | ${brand}`;
     case "team":
