@@ -5,6 +5,7 @@ on:
     paths:
       - "frontend/lib/seo/**"
       - "frontend/test/mse-25-117-*.test.mjs"
+      - "frontend/test/mse-25-121-*.test.mjs"
       - "frontend/scripts/mse-25-117-verdict.mjs"
       - "frontend/scripts/audit-local-search-contract.mjs"
       - "frontend/app/agence/**"
@@ -29,3 +30,4 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - run: node scripts/mse-25-117-verdict.mjs
+      - run: node --test test/mse-25-121-*.test.mjs

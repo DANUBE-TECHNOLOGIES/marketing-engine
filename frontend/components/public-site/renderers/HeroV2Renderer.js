@@ -56,13 +56,15 @@ function intentHeroTitle({ page, site }) {
 
   if (!city) return String(page?.title || "").trim() || null;
   if (!slug || ["home", "accueil", "index"].includes(slug)) return `Agence de voyages à ${city}`;
-  if (slug === "services") return `Services de votre agence de voyages à ${city}`;
+  if (["agence", "notre-agence"].includes(slug)) return `Découvrez notre agence à ${city}`;
+  if (slug === "services") return `Services voyage et billetterie à ${city}`;
   if (["destinations", "destination"].includes(slug)) return `Destinations et voyages depuis ${city}`;
   if (["inspiration", "inspirations"].includes(slug)) return `Inspirations voyage depuis ${city}`;
-  if (["equipe", "team", "notre-equipe"].includes(slug)) return `Votre équipe de conseillers voyage à ${city}`;
+  if (["equipe", "team", "notre-equipe"].includes(slug)) return `Vos conseillers voyage à ${city}`;
   if (["partenaires", "partners", "nos-partenaires"].includes(slug)) return `Nos partenaires voyage à ${city}`;
-  if (["contact", "nous-contacter"].includes(slug)) return `Contacter votre agence de voyages à ${city}`;
-  if (["avis", "reviews", "avis-clients"].includes(slug)) return `Avis clients de votre agence de voyages à ${city}`;
+  if (["contact", "nous-contacter"].includes(slug)) return `Nous contacter à ${city}`;
+  if (["avis", "reviews", "avis-clients"].includes(slug)) return `Avis de nos voyageurs à ${city}`;
+  if (["engagements", "commitments"].includes(slug)) return `Notre accompagnement voyage à ${city}`;
   return String(page?.title || "").trim() || null;
 }
 
