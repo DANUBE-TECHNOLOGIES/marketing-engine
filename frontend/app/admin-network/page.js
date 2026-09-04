@@ -20,6 +20,7 @@ const sections = [
     links: [
       ["Keywords DB", "/seo-keywords-db"],
       ["Historique positions", "/rankings-history"],
+      ["Visibilité locale Maps", "/ranking-grid"],
       ["Clusters SEO", "/seo-keyword-clusters"],
       ["Calendrier SEO", "/seo-cluster-calendar"]
     ]
