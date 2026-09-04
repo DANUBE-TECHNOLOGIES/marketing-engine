@@ -56,13 +56,14 @@ model Agency {
   realRankingChecks RealRankingCheck[]
   reviewRequests    ReviewRequest[]
 
-  googlePosts       GooglePost[]
-  reviews           GoogleReview[]
-  keywords          RankingKeyword[]
-  directoryListings DirectoryListing[]
-  scoreHistory      AgencyScoreHistory[]
-  notifications     Notification[]
-  ReviewResponse    ReviewResponse[]
+  googlePosts          GooglePost[]
+  reviews              GoogleReview[]
+  keywords             RankingKeyword[]
+  rankingGridCampaigns RankingGridCampaign[]
+  directoryListings   DirectoryListing[]
+  scoreHistory         AgencyScoreHistory[]
+  notifications        Notification[]
+  ReviewResponse       ReviewResponse[]
 
   seoSite              AgencySeoSite?
   profile              AgencyProfile?
@@ -131,8 +132,9 @@ model RankingKeyword {
   dataforseoTaskId String?
   lastCheckStatus  String?
 
-  agency  Agency          @relation(fields: [agencyId], references: [id])
-  results RankingResult[]
+  agency        Agency                @relation(fields: [agencyId], references: [id])
+  results       RankingResult[]
+  gridCampaigns RankingGridCampaign[]
 }
 
 model RankingResult {
@@ -143,6 +145,64 @@ model RankingResult {
   checkedAt DateTime @default(now())
 
   keyword RankingKeyword @relation(fields: [keywordId], references: [id])
+}
+
+model RankingGridCampaign {
+  id          Int      @id @default(autoincrement())
+  agencyId    Int
+  keywordId   Int
+  keyword     String
+  city        String
+  key         String   @unique
+  centerLat   Float
+  centerLng   Float
+  gridSize    Int      @default(5)
+  spacingKm   Float    @default(1)
+  provider    String
+  status      String   @default("pending")
+  summary     Json?
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  agency  Agency            @relation(fields: [agencyId], references: [id], onDelete: Restrict)
+  keywordRef RankingKeyword @relation(fields: [keywordId], references: [id], onDelete: Restrict)
+  points  RankingGridPoint[]
+
+  @@index([agencyId, createdAt])
+  @@index([keywordId, createdAt])
+}
+
+model RankingGridPoint {
+  id               Int      @id @default(autoincrement())
+  campaignId       Int
+  row              Int
+  col              Int
+  latitude         Float
+  longitude        Float
+  northKm          Float    @default(0)
+  eastKm           Float    @default(0)
+  status           String   @default("pending")
+  found            Boolean  @default(false)
+  position         Int?
+  absolutePosition Int?
+  title            String?
+  url              String?
+  rating           Float?
+  reviews          Int?
+  cost             Float?
+  providerMetadata Json?
+  errorCode        String?
+  errorMessage     String?
+  checkedAt        DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  campaign RankingGridCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, row, col])
+  @@index([campaignId, status])
 }
 
 model LocalDirectory {
@@ -1225,7 +1285,7 @@ model SeoAutopilotAction {
   title            String
   priority         String    @default("medium")
   executionMode    String    @default("simulation")
-  status           String    @default("planned")
+  status            String    @default("planned")
   recommendationId String?
   targetPageId     String?
   destinationSlug  String?
