@@ -29,12 +29,16 @@ export function classifyLocalSearchMeasurement({ baseline = null, current = null
   const confidence = localSearchMeasurementConfidence(current, thresholds);
   const comparison = baseline ? compareLocalSearchPerformance({ baseline, current }) : null;
   const trend = comparison ? localSearchPerformanceStatus(comparison) : "unknown";
+  const cannibalisation = Array.isArray(current.cannibalisation) ? current.cannibalisation : [];
 
   if (impressions === 0) {
     return { status: "no-impressions", confidence, ctr, position, trend, comparison, recommendation: "verify-indexation-and-query-target" };
   }
   if (confidence === "low") {
     return { status: "low-volume", confidence, ctr, position, trend, comparison, recommendation: "collect-more-data" };
+  }
+  if (cannibalisation.length > 0) {
+    return { status: "cannibalization", confidence, ctr, position, trend, comparison, cannibalisation, recommendation: "consolidate-existing-page-intent" };
   }
   if (clicks === 0) {
     return { status: "visibility-no-clicks", confidence, ctr, position, trend, comparison, recommendation: "review-serp-snippet-and-position" };
