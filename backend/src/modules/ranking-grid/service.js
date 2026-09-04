@@ -51,7 +51,11 @@ class RankingGridService {
       throw error;
     }
 
-    await this.repository.markCampaignRunning({ tenantId, campaignId });
+    await this.repository.markCampaignRunning({
+      tenantId,
+      campaignId,
+      provider: this.provider.name,
+    });
     const pending = campaign.points.filter((point) => point.status !== "success");
 
     for (let offset = 0; offset < pending.length; offset += this.concurrency) {

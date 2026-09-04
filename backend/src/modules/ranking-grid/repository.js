@@ -130,12 +130,16 @@ class RankingGridRepository {
     return { ...campaigns[0], points };
   }
 
-  async markCampaignRunning({ tenantId, campaignId }) {
+  async markCampaignRunning({ tenantId, campaignId, provider }) {
     const campaign = await this.getCampaign({ tenantId, campaignId });
     if (!campaign) return null;
     await this.prisma.$executeRaw(Prisma.sql`
       UPDATE "RankingGridCampaign"
-      SET "status" = 'running', "startedAt" = COALESCE("startedAt", NOW()), "updatedAt" = NOW()
+      SET
+        "status" = 'running',
+        "provider" = ${String(provider)},
+        "startedAt" = COALESCE("startedAt", NOW()),
+        "updatedAt" = NOW()
       WHERE id = ${campaign.id}
     `);
     return this.getCampaign({ tenantId, campaignId });
