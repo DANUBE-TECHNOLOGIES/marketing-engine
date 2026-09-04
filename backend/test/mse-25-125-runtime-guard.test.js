@@ -22,7 +22,8 @@ test("migration helper is inspect-only by default and requires explicit apply ac
   assert.match(script, /--apply\) APPLY=true/);
   assert.match(script, /MSE_25_125_MIGRATION_ACK/);
   assert.match(script, /APPLY-RANKING-GRID-MIGRATION/);
-  assert.match(script, /bash scripts\/backup-db\.sh/);
+  assert.match(script, /pg_dump/);
+  assert.match(script, /database backup is empty/);
   assert.match(script, /prisma migrate deploy/);
   assert.match(script, /refusing migrate deploy because MSE-25\.125 is not the only pending repository migration/);
 });
