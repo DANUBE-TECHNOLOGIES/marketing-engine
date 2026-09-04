@@ -14,6 +14,13 @@ function roundedDelta(from, to) {
   return Math.round((to - from) * 100) / 100;
 }
 
+function sameGeometry(fromCampaign, toCampaign) {
+  return Number(fromCampaign.gridSize) === Number(toCampaign.gridSize)
+    && Number(fromCampaign.spacingKm) === Number(toCampaign.spacingKm)
+    && Number(fromCampaign.centerLat).toFixed(7) === Number(toCampaign.centerLat).toFixed(7)
+    && Number(fromCampaign.centerLng).toFixed(7) === Number(toCampaign.centerLng).toFixed(7);
+}
+
 function compareCampaigns(fromCampaign, toCampaign) {
   if (!fromCampaign || !toCampaign) throw new TypeError("two campaigns are required");
   if (Number(fromCampaign.agencyId) !== Number(toCampaign.agencyId) || Number(fromCampaign.keywordId) !== Number(toCampaign.keywordId)) {
@@ -21,8 +28,8 @@ function compareCampaigns(fromCampaign, toCampaign) {
     error.code = "RANKING_GRID_COMPARISON_SCOPE_MISMATCH";
     throw error;
   }
-  if (Number(fromCampaign.gridSize) !== Number(toCampaign.gridSize)) {
-    const error = new Error("ranking grid campaign sizes differ");
+  if (!sameGeometry(fromCampaign, toCampaign)) {
+    const error = new Error("ranking grid campaign geometry differs");
     error.code = "RANKING_GRID_COMPARISON_GEOMETRY_MISMATCH";
     throw error;
   }
@@ -94,4 +101,4 @@ function compareCampaigns(fromCampaign, toCampaign) {
   };
 }
 
-module.exports = { compareCampaigns, roundedDelta };
+module.exports = { compareCampaigns, roundedDelta, sameGeometry };
