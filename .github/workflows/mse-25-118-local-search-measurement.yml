@@ -9,6 +9,8 @@ on:
       - "frontend/lib/seo/local-search-agency-attribution.js"
       - "frontend/lib/seo/local-search-performance.js"
       - "frontend/lib/seo/local-search-index.js"
+      - "frontend/lib/seo/local-search-snapshot-history.js"
+      - "frontend/scripts/mse-25-118-local-search-report.mjs"
       - "frontend/test/mse-25-118-*.test.mjs"
       - ".github/workflows/mse-25-118-local-search-measurement.yml"
   workflow_dispatch:
@@ -30,4 +32,4 @@ jobs:
       - name: Run MSE-25.118 contract tests
         run: node --test test/mse-25-118-*.test.mjs
       - name: Lint MSE-25.118 surface
-        run: npx eslint lib/seo/local-search-measurement.js lib/seo/local-search-network-measurement.js lib/seo/local-search-remediation.js lib/seo/local-search-agency-attribution.js lib/seo/local-search-index.js test/mse-25-118-*.test.mjs
+        run: npx eslint lib/seo/local-search-measurement.js lib/seo/local-search-network-measurement.js lib/seo/local-search-remediation.js lib/seo/local-search-agency-attribution.js lib/seo/local-search-index.js lib/seo/local-search-snapshot-history.js scripts/mse-25-118-local-search-report.mjs test/mse-25-118-*.test.mjs
