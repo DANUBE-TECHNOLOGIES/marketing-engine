@@ -6,6 +6,12 @@ function jsonValue(value) {
   return value == null ? Prisma.JsonNull : value;
 }
 
+function optionalNumber(value) {
+  if (value == null || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
 class RankingGridRepository {
   constructor(prisma) {
     this.prisma = prisma;
@@ -149,11 +155,11 @@ class RankingGridRepository {
     const campaign = await this.getCampaign({ tenantId, campaignId });
     if (!campaign || !campaign.points.some((point) => Number(point.id) === Number(pointId))) return null;
 
-    const position = Number.isFinite(Number(result.position)) ? Number(result.position) : null;
-    const absolutePosition = Number.isFinite(Number(result.absolutePosition)) ? Number(result.absolutePosition) : null;
-    const rating = Number.isFinite(Number(result.rating)) ? Number(result.rating) : null;
-    const reviews = Number.isFinite(Number(result.reviews)) ? Number(result.reviews) : null;
-    const cost = Number.isFinite(Number(result.cost)) ? Number(result.cost) : null;
+    const position = optionalNumber(result.position);
+    const absolutePosition = optionalNumber(result.absolutePosition);
+    const rating = optionalNumber(result.rating);
+    const reviews = optionalNumber(result.reviews);
+    const cost = optionalNumber(result.cost);
     const metadata = result.providerMetadata == null ? null : JSON.stringify(result.providerMetadata);
 
     await this.prisma.$executeRaw(Prisma.sql`
@@ -190,4 +196,4 @@ class RankingGridRepository {
   }
 }
 
-module.exports = { RankingGridRepository };
+module.exports = { RankingGridRepository, optionalNumber };
