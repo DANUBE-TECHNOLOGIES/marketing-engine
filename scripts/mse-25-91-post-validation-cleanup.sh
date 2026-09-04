@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-EXPECTED_BRANCH="integration/mse-25-91-canonical-public-reconvergence-20260829"
+EXPECTED_BRANCH="${MSE_25_91_EXPECTED_BRANCH:-main}"
 EXPECTED_ACK="VISUAL-BASELINE-VALIDATED"
 ACK="${MSE_25_91_VISUAL_ACK:-}"
 FRONTEND_CONTAINER="${MSE_25_91_FRONTEND_CONTAINER_NAME:-mle_frontend}"
