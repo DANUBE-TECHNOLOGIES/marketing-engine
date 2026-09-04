@@ -1,4 +1,5 @@
 import { buildAgencyLocalSearchMeasurement } from "./local-search-measurement.js";
+import { compareLocalSearchPeriods } from "./local-search-period-comparison.js";
 
 function finite(value) {
   const number = Number(value);
@@ -36,11 +37,17 @@ export function compareLocalSearchSnapshots({ baseline = null, current = null } 
   return currentAgencies.map((item) => {
     const previous = baselineByAgency.get(item.agencyKey) || null;
     const baselineRow = previous?.current ?? previous?.baseline ?? null;
+    const baselinePeriod = previous?.period ?? baseline?.period ?? null;
+    const currentPeriod = item?.period ?? current?.period ?? null;
+    const periodComparison = compareLocalSearchPeriods(baselinePeriod, currentPeriod);
+
     return buildAgencyLocalSearchMeasurement({
       agencyKey: item.agencyKey,
       baseline: baselineRow,
       current: item.current,
-      period: item.period ?? current?.period ?? null,
+      period: currentPeriod,
+      periodComparison,
+      comparisonAllowed: periodComparison.comparable,
     });
   });
 }
