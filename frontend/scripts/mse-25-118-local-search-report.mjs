@@ -10,9 +10,11 @@ function argument(name) {
   return match ? match.slice(prefix.length) : null;
 }
 
-function readJson(filePath, fallback = null) {
+function readJson(filePath, fallback = null, { allowMissing = false } = {}) {
   if (!filePath) return fallback;
-  return JSON.parse(fs.readFileSync(path.resolve(filePath), "utf8"));
+  const resolved = path.resolve(filePath);
+  if (allowMissing && !fs.existsSync(resolved)) return fallback;
+  return JSON.parse(fs.readFileSync(resolved, "utf8"));
 }
 
 function writeJson(filePath, value) {
@@ -31,7 +33,7 @@ if (!currentPath) {
 const baselineSnapshot = readJson(argument("baseline"), null);
 const currentSnapshot = readJson(currentPath);
 const historyPath = argument("history");
-const existingHistory = readJson(historyPath, []);
+const existingHistory = readJson(historyPath, [], { allowMissing: true });
 const history = appendLocalSearchSnapshotHistory(existingHistory, currentSnapshot);
 const report = buildLocalSearchNetworkReport({ baselineSnapshot, currentSnapshot });
 
