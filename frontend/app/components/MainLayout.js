@@ -36,6 +36,7 @@ items:[
 ["⚙ Opérations d'indexation","/seo-cockpit/operations"],
 ["🛡 Runtime rollback","/seo-cockpit/runtime"],
 ["📍 Rankings","/rankings"],
+["🗺 Visibilité Maps","/ranking-grid"],
 ["🔎 Keywords","/seo-keywords-db"],
 ["📣 Google Posts","/google-posts"]
 ]
