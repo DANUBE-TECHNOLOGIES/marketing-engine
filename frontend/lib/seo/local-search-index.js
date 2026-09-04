@@ -11,6 +11,7 @@ export { normalizeLocalSearchObservation } from "./local-search-observation";
 export { buildLocalSearchReport } from "./local-search-report";
 export { LOCAL_SEARCH_MEASUREMENT_THRESHOLDS, localSearchMeasurementConfidence, classifyLocalSearchMeasurement, buildAgencyLocalSearchMeasurement } from "./local-search-measurement";
 export { buildLocalSearchSnapshot, compareLocalSearchSnapshots, buildLocalSearchNetworkReport } from "./local-search-network-measurement";
+export { localSearchPeriodDays, compareLocalSearchPeriods } from "./local-search-period-comparison";
 export { buildLocalSearchRemediation, buildLocalSearchRemediationPlan } from "./local-search-remediation";
 export { ATTRIBUTABLE_INTENTS, attributeSearchConsoleRow, attributeSearchConsoleRows, buildAgencyAttributionAudit } from "./local-search-agency-attribution";
 export { LOCAL_SEARCH_CANNIBALISATION_THRESHOLDS, detectObservedLocalSearchCannibalisation } from "./local-search-cannibalisation";
