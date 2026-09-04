@@ -72,6 +72,19 @@ module.exports = function createRankingGridRoutes({ prisma, provider }) {
     return tenant.id;
   }
 
+  router.get("/rankings/grid/campaigns", async (req, res, next) => {
+    try {
+      const limit = Math.min(20, Math.max(1, Number(req.query?.limit) || 6));
+      const campaigns = await repository.listCampaigns({
+        tenantId: await tenantId(req),
+        limit,
+      });
+      res.json({ campaigns });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   router.post("/rankings/grid/campaigns", async (req, res, next) => {
     try {
       const campaign = await service.createCampaign({
