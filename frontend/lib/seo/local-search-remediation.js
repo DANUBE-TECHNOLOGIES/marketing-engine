@@ -62,7 +62,10 @@ export function buildLocalSearchRemediation({ agencyKey = null, measurement = nu
     actionType = "site-publication-check";
     recommendation = "publish-or-confirm-intent-before-seo-remediation";
   } else if (confidence === "usable") {
-    if (status === "visibility-no-clicks" || status === "low-ctr") {
+    if (status === "cannibalization") {
+      actionType = "query-page-consolidation";
+      recommendation = "consolidate-existing-page-intent";
+    } else if (status === "visibility-no-clicks" || status === "low-ctr") {
       actionType = "serp-snippet-review";
     } else if (status === "weak-position") {
       actionType = "existing-page-relevance";

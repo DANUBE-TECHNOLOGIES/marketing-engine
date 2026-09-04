@@ -1,4 +1,5 @@
 import { buildAgencyAttributionAudit } from "./local-search-agency-attribution.js";
+import { detectObservedLocalSearchCannibalisation } from "./local-search-cannibalisation.js";
 import { buildLocalSearchSnapshot } from "./local-search-network-measurement.js";
 
 function finite(value) {
@@ -26,11 +27,14 @@ export function buildLocalSearchSnapshotFromSearchConsoleExport({
   period = null,
 } = {}) {
   const audit = buildAgencyAttributionAudit(rows, agencies);
+  const attributedRows = audit.agencies.flatMap((agency) => agency.queryRows || []);
+  const cannibalisation = detectObservedLocalSearchCannibalisation(attributedRows);
 
   const agencyRows = audit.agencies.map((agency) => {
     const impressions = finite(agency.impressions);
     const clicks = finite(agency.clicks);
     const position = weightedPosition(agency.queryRows);
+    const agencyCannibalisation = cannibalisation.filter((item) => item.agencyKey === agency.agencyKey);
 
     return {
       agencyKey: agency.agencyKey,
@@ -40,6 +44,7 @@ export function buildLocalSearchSnapshotFromSearchConsoleExport({
         ctr: impressions > 0 ? clicks / impressions : 0,
         position,
         queryCount: agency.queryCount,
+        cannibalisation: agencyCannibalisation,
       },
       period,
     };
@@ -52,6 +57,7 @@ export function buildLocalSearchSnapshotFromSearchConsoleExport({
       agencies: agencyRows,
     }),
     attributionAudit: audit,
+    cannibalisation,
     automatedPublicChangeAllowed: false,
     googleWriteAllowed: false,
   };
