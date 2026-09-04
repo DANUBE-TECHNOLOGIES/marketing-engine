@@ -3,13 +3,14 @@ name: MSE-25.91 canonical public reconvergence
 on:
   push:
     branches:
-      - integration/mse-25-91-canonical-public-reconvergence-20260829
+      - main
   pull_request:
     paths:
       - 'frontend/**'
       - 'backend/**'
       - 'docker-compose.yml'
       - 'scripts/mse-25-91-vm-deploy.sh'
+      - 'scripts/mse-25-119-vm-deploy-main.test.mjs'
       - 'scripts/mse-25-91-post-validation-cleanup.sh'
       - 'scripts/mse-25-91-public-contract-preflight.js'
       - 'scripts/mse-25-91-canonical-drift-check.js'
@@ -35,6 +36,9 @@ jobs:
 
       - name: Canonical public drift guard
         run: node scripts/mse-25-91-canonical-drift-check.js
+
+      - name: MSE-25.119 canonical deploy branch contract
+        run: node --test scripts/mse-25-119-vm-deploy-main.test.mjs
 
       - name: Install frontend dependencies
         working-directory: frontend
