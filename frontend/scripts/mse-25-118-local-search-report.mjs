@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
-import { buildLocalSearchNetworkReport } from "../lib/seo/local-search-network-measurement.js";
+import { buildLocalSearchNetworkReport, buildLocalSearchSnapshot } from "../lib/seo/local-search-network-measurement.js";
 import { appendLocalSearchSnapshotHistory } from "../lib/seo/local-search-snapshot-history.js";
 
 function argument(name) {
@@ -24,14 +24,26 @@ function writeJson(filePath, value) {
   fs.writeFileSync(resolved, `${JSON.stringify(value, null, 2)}\n`, "utf8");
 }
 
+function normalizeSnapshot(snapshot) {
+  if (!snapshot || typeof snapshot !== "object") return null;
+  const agencies = Array.isArray(snapshot.agencies) ? snapshot.agencies : [];
+  const alreadyMeasured = agencies.every((item) => item && typeof item === "object" && item.assessment);
+  if (alreadyMeasured) return snapshot;
+  return buildLocalSearchSnapshot({
+    capturedAt: snapshot.capturedAt ?? null,
+    period: snapshot.period ?? null,
+    agencies,
+  });
+}
+
 const currentPath = argument("current");
 if (!currentPath) {
   console.error("Usage: node scripts/mse-25-118-local-search-report.mjs --current=snapshot.json [--baseline=snapshot.json] [--history=history.json] [--output=report.json]");
   process.exit(2);
 }
 
-const baselineSnapshot = readJson(argument("baseline"), null);
-const currentSnapshot = readJson(currentPath);
+const baselineSnapshot = normalizeSnapshot(readJson(argument("baseline"), null));
+const currentSnapshot = normalizeSnapshot(readJson(currentPath));
 const historyPath = argument("history");
 const existingHistory = readJson(historyPath, [], { allowMissing: true });
 const history = appendLocalSearchSnapshotHistory(existingHistory, currentSnapshot);
