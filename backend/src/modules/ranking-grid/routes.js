@@ -4,6 +4,7 @@ const express = require("express");
 const { RankingGridRepository } = require("./repository");
 const { RankingGridService } = require("./service");
 const { buildHeatmap } = require("./heatmap");
+const { compareCampaigns } = require("./comparison");
 const { UnconfiguredRankingGridProvider } = require("./provider");
 const { DataForSeoMapsRankingGridProvider } = require("./dataforseo-provider");
 
@@ -86,6 +87,43 @@ module.exports = function createRankingGridRoutes({ prisma, provider }) {
     }
   });
 
+  router.get("/rankings/grid/history", async (req, res, next) => {
+    try {
+      const history = await repository.listCampaignHistory({
+        tenantId: await tenantId(req),
+        agencyId: req.query?.agencyId,
+        keywordId: req.query?.keywordId,
+        limit: req.query?.limit,
+      });
+      res.json({ history });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.get("/rankings/grid/compare", async (req, res, next) => {
+    try {
+      const scope = await tenantId(req);
+      const fromCampaign = await repository.getCampaign({
+        tenantId: scope,
+        campaignId: Number(req.query?.fromCampaignId),
+      });
+      const toCampaign = await repository.getCampaign({
+        tenantId: scope,
+        campaignId: Number(req.query?.toCampaignId),
+      });
+      if (!fromCampaign || !toCampaign) {
+        return res.status(404).json({ error: "ranking_grid_campaign_not_found" });
+      }
+      res.json(compareCampaigns(fromCampaign, toCampaign));
+    } catch (error) {
+      if (error.code === "RANKING_GRID_COMPARISON_SCOPE_MISMATCH" || error.code === "RANKING_GRID_COMPARISON_GEOMETRY_MISMATCH") {
+        error.status = 400;
+      }
+      next(error);
+    }
+  });
+
   router.post("/rankings/grid/campaigns", async (req, res, next) => {
     try {
       const campaign = await service.createCampaign({
@@ -100,6 +138,21 @@ module.exports = function createRankingGridRoutes({ prisma, provider }) {
       res.status(201).json(campaign);
     } catch (error) {
       if (error.code === "RANKING_GRID_SCOPE_NOT_FOUND") error.status = 404;
+      next(error);
+    }
+  });
+
+  router.post("/rankings/grid/campaigns/:campaignId/snapshots", async (req, res, next) => {
+    try {
+      const campaign = await service.createSnapshot({
+        tenantId: await tenantId(req),
+        sourceCampaignId: Number(req.params.campaignId),
+        snapshotDate: req.body?.snapshotDate,
+      });
+      res.status(201).json(campaign);
+    } catch (error) {
+      if (error.code === "RANKING_GRID_CAMPAIGN_NOT_FOUND") error.status = 404;
+      if (error.code === "RANKING_GRID_SNAPSHOT_DATE_INVALID") error.status = 400;
       next(error);
     }
   });
