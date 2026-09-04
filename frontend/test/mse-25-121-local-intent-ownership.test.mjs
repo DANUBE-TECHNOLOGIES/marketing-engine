@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import test from "node:test";
 
 import { buildLocalPageSeo } from "../lib/seo/local-page-seo.js";
@@ -82,6 +83,25 @@ test("MSE-25.121 secondary pages expose deterministic intent-specific titles and
     assert.equal(seo.title, expectedTitle);
     assert.equal(seo.heading, expectedHeading);
   }
+});
+
+test("MSE-25.121 rendered shared hero H1 follows the same intent ownership", () => {
+  const heroSource = fs.readFileSync(
+    new URL("../components/public-site/renderers/HeroV2Renderer.js", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(heroSource, /return `Agence de voyages à \$\{city\}`/);
+  assert.match(heroSource, /return `Découvrez notre agence à \$\{city\}`/);
+  assert.match(heroSource, /return `Vos conseillers voyage à \$\{city\}`/);
+  assert.match(heroSource, /return `Services voyage et billetterie à \$\{city\}`/);
+  assert.match(heroSource, /return `Avis de nos voyageurs à \$\{city\}`/);
+  assert.match(heroSource, /return `Notre accompagnement voyage à \$\{city\}`/);
+  assert.match(heroSource, /return `Nous contacter à \$\{city\}`/);
+
+  assert.doesNotMatch(heroSource, /Services de votre agence de voyages à \$\{city\}/);
+  assert.doesNotMatch(heroSource, /Contacter votre agence de voyages à \$\{city\}/);
+  assert.doesNotMatch(heroSource, /Avis clients de votre agence de voyages à \$\{city\}/);
 });
 
 test("MSE-25.121 keeps valid local SEO overrides", () => {
