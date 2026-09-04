@@ -99,8 +99,14 @@ if [[ "$TARGET_APPLIED" == "true" ]]; then
   exit 0
 fi
 
-log "creating mandatory PostgreSQL backup"
-bash scripts/backup-db.sh
+BACKUP_DIR="${MSE_25_125_BACKUP_DIR:-backups/migrations}"
+BACKUP_STAMP="$(date +%Y%m%d-%H%M%S)"
+BACKUP_FILE="$BACKUP_DIR/mse-25-125-before-$BACKUP_STAMP.dump"
+mkdir -p "$BACKUP_DIR"
+log "creating mandatory PostgreSQL backup: $BACKUP_FILE"
+docker exec "$POSTGRES_CONTAINER" sh -lc 'PGPASSWORD="$POSTGRES_PASSWORD" pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > "$BACKUP_FILE"
+[[ -s "$BACKUP_FILE" ]] || fail "database backup is empty"
+log "backup verified: $(du -h "$BACKUP_FILE" | awk '{print $1}')"
 
 log "applying the single allowed pending migration through Prisma migrate deploy"
 docker exec "$BACKEND_CONTAINER" npx prisma migrate deploy --schema=/app/prisma/schema.prisma
@@ -110,3 +116,4 @@ TABLE_COUNT="$(psql_scalar "SELECT COUNT(*) FROM information_schema.tables WHERE
 [[ "$TABLE_COUNT" == "2" ]] || fail "expected RankingGridCampaign and RankingGridPoint tables after migration"
 
 log "PASS: $TARGET_MIGRATION applied and both ranking grid tables verified"
+log "rollback backup retained at $BACKUP_FILE"
