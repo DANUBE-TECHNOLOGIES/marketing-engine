@@ -6,6 +6,7 @@ const {
   DataForSeoMapsRankingGridProvider,
   selectAgencyItem,
   extractResult,
+  dataForSeoHttpError,
 } = require("../src/modules/ranking-grid/dataforseo-provider");
 
 test("selectAgencyItem prefers exact place id over a similar business name", () => {
@@ -97,4 +98,42 @@ test("provider never performs a request without credentials", async () => {
     (error) => error.code === "DATAFORSEO_CREDENTIALS_MISSING"
   );
   assert.equal(called, false);
+});
+
+test("HTTP DataForSEO errors preserve provider status details", async () => {
+  const response = new Response(JSON.stringify({
+    status_code: 40200,
+    status_message: "Payment required",
+    tasks: [{ status_code: 40210, status_message: "Insufficient balance" }],
+  }), { status: 402, headers: { "content-type": "application/json" } });
+
+  const error = await dataForSeoHttpError(response);
+  assert.equal(error.code, "DATAFORSEO_HTTP_402_STATUS_40210");
+  assert.equal(error.httpStatus, 402);
+  assert.equal(error.providerStatusCode, 40210);
+  assert.equal(error.providerStatusMessage, "Insufficient balance");
+  assert.match(error.message, /DataForSEO HTTP 402: Insufficient balance/);
+});
+
+test("measurePoint surfaces detailed HTTP error without losing provider code", async () => {
+  const provider = new DataForSeoMapsRankingGridProvider({
+    login: "user",
+    password: "pass",
+    targetResolver: async () => ({ name: "Mondescale Bois-Colombes" }),
+    fetchImpl: async () => new Response(JSON.stringify({
+      status_code: 40200,
+      status_message: "Payment required",
+      tasks: [{ status_code: 40210, status_message: "Insufficient balance" }],
+    }), { status: 402, headers: { "content-type": "application/json" } }),
+  });
+
+  await assert.rejects(
+    provider.measurePoint({ keyword: "agence de voyage", latitude: 48.91398, longitude: 2.273679, agencyId: 6 }),
+    (error) => {
+      assert.equal(error.code, "DATAFORSEO_HTTP_402_STATUS_40210");
+      assert.equal(error.providerStatusCode, 40210);
+      assert.match(error.message, /Insufficient balance/);
+      return true;
+    },
+  );
 });
