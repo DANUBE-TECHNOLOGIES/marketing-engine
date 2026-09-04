@@ -70,6 +70,10 @@ jobs:
         working-directory: backend
         run: npm ci
 
+      - name: MSE-25.124 Google review sync contract tests
+        working-directory: backend
+        run: node --test test/mse-25-124-google-business-reviews.test.js
+
       - name: MSE-25.91 public media contract tests
         working-directory: backend
         run: node --test test/mse-25-91-team-media-public-contract.test.js
