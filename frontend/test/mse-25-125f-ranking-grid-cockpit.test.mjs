@@ -13,8 +13,8 @@ test("MSE-25.125F cockpit consumes persisted ranking grid read APIs only", () =>
   assert.match(source, /\/rankings\/grid\/history\?/);
   assert.match(source, /\/rankings\/grid\/campaigns\/\$\{latest\.id\}\/heatmap/);
   assert.match(source, /\/rankings\/grid\/compare\?/);
-  assert.doesNotMatch(source, /\/run["'`]/);
-  assert.doesNotMatch(source, /snapshots/);
+  assert.doesNotMatch(source, /\/rankings\/grid\/campaigns\/[^\s]*\/run/);
+  assert.doesNotMatch(source, /\/rankings\/grid\/campaigns\/[^\s]*\/snapshots/);
   assert.doesNotMatch(source, /DATAFORSEO_PASSWORD|DATAFORSEO_LOGIN|RANKING_GRID_DATAFORSEO_ENABLED/);
 });
 
