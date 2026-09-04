@@ -10,6 +10,7 @@ test("MSE-25.118c prioritises Dax as a SERP review when visibility exists withou
   });
   assert.equal(result.actionType, "serp-snippet-review");
   assert.equal(result.priorityGuidance, "visibility-no-clicks");
+  assert.equal(result.publicationState, "unknown");
 });
 
 test("MSE-25.118c keeps low-volume Bois-Colombes and Maurepas in observation mode", () => {
@@ -37,6 +38,52 @@ test("MSE-25.118c preserves relative positive signals for Nevers and Gien", () =
     measurement: { assessment: { status: "healthy", confidence: "usable", recommendation: "monitor" } },
   })));
   assert.deepEqual(plan.map((item) => item.actionType), ["preserve-and-monitor", "preserve-and-monitor"]);
+});
+
+test("MSE-25.118e prioritises provisioning before SEO when the agency has no mini-site", () => {
+  const result = buildLocalSearchRemediation({
+    agencyKey: "maurepas",
+    measurement: { assessment: { status: "low-volume", confidence: "low" } },
+    publication: { state: "no-site" },
+  });
+
+  assert.equal(result.publicationState, "no-site");
+  assert.equal(result.actionType, "site-provisioning-check");
+  assert.equal(result.recommendation, "provision-mini-site-before-seo-remediation");
+});
+
+test("MSE-25.118e prioritises publication before SEO for a draft mini-site", () => {
+  const result = buildLocalSearchRemediation({
+    agencyKey: "lamorlaye",
+    measurement: { assessment: { status: "no-data", confidence: "none" } },
+    publication: { site: { status: "draft", publishedAt: null } },
+  });
+
+  assert.equal(result.publicationState, "unpublished");
+  assert.equal(result.actionType, "site-publication-check");
+  assert.equal(result.recommendation, "publish-or-confirm-intent-before-seo-remediation");
+});
+
+test("MSE-25.118e keeps existing SEO remediation when the mini-site is published", () => {
+  const result = buildLocalSearchRemediation({
+    agencyKey: "dax",
+    measurement: { assessment: { status: "visibility-no-clicks", confidence: "usable" } },
+    publication: { site: { status: "published", publishedAt: "2026-09-01T00:00:00.000Z" } },
+  });
+
+  assert.equal(result.publicationState, "published");
+  assert.equal(result.actionType, "serp-snippet-review");
+});
+
+test("MSE-25.118e treats publishedAt as authoritative for sitemap-compatible publication", () => {
+  const result = buildLocalSearchRemediation({
+    agencyKey: "ozoir",
+    measurement: null,
+    publication: { site: { status: "draft", publishedAt: "2026-08-01T00:00:00.000Z" } },
+  });
+
+  assert.equal(result.publicationState, "published");
+  assert.equal(result.actionType, "indexation-and-intent-check");
 });
 
 test("MSE-25.118c never authorizes doorway pages or automatic public/Google writes", () => {
