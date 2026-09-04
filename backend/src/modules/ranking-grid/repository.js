@@ -35,6 +35,38 @@ class RankingGridRepository {
     return this.getCampaign({ tenantId, campaignId: rows[0].id });
   }
 
+  async listCampaigns({ tenantId, limit = 6 }) {
+    const safeLimit = Math.min(20, Math.max(1, Number(limit) || 6));
+    const campaigns = await this.prisma.$queryRaw(Prisma.sql`
+      SELECT c.*, a."name" AS "agencyName"
+      FROM "RankingGridCampaign" c
+      INNER JOIN "Agency" a ON a.id = c."agencyId"
+      WHERE a."tenantId" = ${tenantId}
+      ORDER BY c."createdAt" DESC, c.id DESC
+      LIMIT ${safeLimit}
+    `);
+
+    if (!campaigns.length) return [];
+
+    const campaignIds = campaigns.map((campaign) => Number(campaign.id));
+    const points = await this.prisma.$queryRaw(Prisma.sql`
+      SELECT * FROM "RankingGridPoint"
+      WHERE "campaignId" IN (${Prisma.join(campaignIds)})
+      ORDER BY "campaignId" ASC, "row" ASC, "col" ASC
+    `);
+    const pointsByCampaign = new Map();
+    for (const point of points) {
+      const campaignId = Number(point.campaignId);
+      if (!pointsByCampaign.has(campaignId)) pointsByCampaign.set(campaignId, []);
+      pointsByCampaign.get(campaignId).push(point);
+    }
+
+    return campaigns.map((campaign) => ({
+      ...campaign,
+      points: pointsByCampaign.get(Number(campaign.id)) || [],
+    }));
+  }
+
   async createCampaignWithPoints(input) {
     const {
       tenantId, agencyId, keywordId, keyword, city, centerLat, centerLng,
