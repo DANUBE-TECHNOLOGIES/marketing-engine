@@ -133,8 +133,8 @@ async function dataForSeoHttpError(response) {
 class DataForSeoMapsRankingGridProvider extends RankingGridProvider {
   constructor({ login, password, fetchImpl = global.fetch, targetResolver, endpoint = DEFAULT_ENDPOINT, zoom = 15 } = {}) {
     super("dataforseo-google-maps-live");
-    this.login = login || process.env.DATAFORSEO_LOGIN;
-    this.password = password || process.env.DATAFORSEO_PASSWORD;
+    this.login = login ?? process.env.DATAFORSEO_LOGIN;
+    this.password = password ?? process.env.DATAFORSEO_PASSWORD;
     this.fetchImpl = fetchImpl;
     this.targetResolver = targetResolver;
     this.endpoint = endpoint;
