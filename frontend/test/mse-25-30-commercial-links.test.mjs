@@ -9,10 +9,12 @@ const renderer = fs.readFileSync(
   "utf8"
 );
 
-test("MSE-25.30 renders feature item hrefs as crawlable internal links", () => {
+test("MSE-25.30 renders feature item hrefs as crawlable links", () => {
   assert.match(renderer, /function featureHref/);
-  assert.match(renderer, /const href = featureHref\(root, item\.href\)/);
-  assert.match(renderer, /<Link href=\{href\}>\{heading\}<\/Link>/);
+  assert.match(renderer, /function featureAction/);
+  assert.match(renderer, /const configuredHref = featureHref\(root, item\?\.href \|\| item\?\.url \|\| item\?\.link\)/);
+  assert.match(renderer, /href: configuredHref \|\| `\$\{root\}\/contact`/);
+  assert.match(renderer, /<Link className="public-site-feature-action" href=\{action\.href\}>\{action\.label\}/);
 });
 
 test("MSE-25.30 resolves relative Website Designer page slugs under the agency root", () => {
