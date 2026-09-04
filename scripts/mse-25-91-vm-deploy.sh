@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-EXPECTED_BRANCH="integration/mse-25-91-canonical-public-reconvergence-20260829"
+EXPECTED_BRANCH="${MSE_25_91_EXPECTED_BRANCH:-main}"
 EXPECTED_ACK="CANONICAL-PUBLIC-RECONVERGENCE"
 DEPLOY_ACK="${MSE_25_91_DEPLOY_ACK:-}"
 REMOTE="${MSE_25_91_REMOTE:-origin}"
@@ -95,13 +95,13 @@ CANONICAL_BACKEND_SOURCE="$(readlink -f "$REPO_ROOT/backend")"
 CURRENT_BRANCH="$(git branch --show-current)"
 [[ "$CURRENT_BRANCH" == "$EXPECTED_BRANCH" ]] || fail "expected branch $EXPECTED_BRANCH, got ${CURRENT_BRANCH:-detached}"
 
-log "fetching canonical branch"
+log "fetching canonical branch $EXPECTED_BRANCH from $REMOTE"
 git fetch "$REMOTE" "$EXPECTED_BRANCH"
 REMOTE_HEAD="$(git rev-parse "$REMOTE/$EXPECTED_BRANCH")"
 git merge-base --is-ancestor HEAD "$REMOTE_HEAD" || fail "local HEAD is not an ancestor of remote canonical branch"
 git merge --ff-only "$REMOTE_HEAD"
 DEPLOY_HEAD="$(git rev-parse HEAD)"
-log "deploying $DEPLOY_HEAD"
+log "deploying $DEPLOY_HEAD from $EXPECTED_BRANCH"
 
 log "validating canonical public stack drift guard"
 node scripts/mse-25-91-canonical-drift-check.js
