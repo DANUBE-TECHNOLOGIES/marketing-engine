@@ -15,6 +15,7 @@ const knowledgeGraph = require("./knowledge-graph");
 const agencySite = require("./agency-site");
 const agencyProfile = require("./agency-profile");
 const googleBusinessPhotos = require("./google-business-photos");
+const googleBusinessReviews = require("./google-business-reviews");
 const contentQuality = require("./content-quality");
 const marketingAutomation = require("./marketing-automation");
 const editorialCalendar = require("./editorial-calendar");
@@ -78,6 +79,7 @@ module.exports = function registerModules(app, { prisma }) {
   if (seoAutopilot.routes) app.use(seoAutopilot.routes({ prisma }));
   if (agencyProfile.routes) app.use(agencyProfile.routes({ prisma }));
   if (googleBusinessPhotos.routes) app.use(googleBusinessPhotos.routes({ prisma }));
+  if (googleBusinessReviews.routes) app.use(googleBusinessReviews.routes({ prisma }));
   if (pageBuilderPersistence.routes) app.use(pageBuilderPersistence.routes({ prisma }));
   if (agencySite.routes) app.use(agencySite.routes({ prisma }));
   if (minisiteBlueprint.routes) app.use(minisiteBlueprint.routes({ prisma }));
