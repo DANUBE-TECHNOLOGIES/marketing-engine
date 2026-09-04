@@ -31,6 +31,21 @@ test("MSE-25.119 preserves manual ACK, clean worktree and no migration write pat
   assert.doesNotMatch(deployScript, /prisma migrate deploy/);
 });
 
+test("MSE-25.122 gives slow production backend startup configurable grace", () => {
+  assert.match(
+    deployScript,
+    /BACKEND_HEALTH_ATTEMPTS="\$\{MSE_25_91_BACKEND_HEALTH_ATTEMPTS:-180\}"/,
+  );
+  assert.match(
+    deployScript,
+    /BACKEND_HEALTH_SLEEP_SECONDS="\$\{MSE_25_91_BACKEND_HEALTH_SLEEP_SECONDS:-2\}"/,
+  );
+  assert.match(deployScript, /seq 1 "\$BACKEND_HEALTH_ATTEMPTS"/);
+  assert.match(deployScript, /sleep "\$BACKEND_HEALTH_SLEEP_SECONDS"/);
+  assert.match(deployScript, /http:\/\/127\.0\.0\.1:4000\/health/);
+  assert.match(deployScript, /canonical backend did not become healthy/);
+});
+
 test("MSE-25.120 cleanup targets canonical main by default", () => {
   assert.match(cleanupScript, /EXPECTED_BRANCH="\$\{MSE_25_91_EXPECTED_BRANCH:-main\}"/);
   assert.doesNotMatch(

@@ -6,6 +6,8 @@ EXPECTED_ACK="CANONICAL-PUBLIC-RECONVERGENCE"
 DEPLOY_ACK="${MSE_25_91_DEPLOY_ACK:-}"
 REMOTE="${MSE_25_91_REMOTE:-origin}"
 MIN_FREE_MB="${MSE_25_91_MIN_FREE_MB:-3200}"
+BACKEND_HEALTH_ATTEMPTS="${MSE_25_91_BACKEND_HEALTH_ATTEMPTS:-180}"
+BACKEND_HEALTH_SLEEP_SECONDS="${MSE_25_91_BACKEND_HEALTH_SLEEP_SECONDS:-2}"
 FRONTEND_CONTAINER_NAME="${MSE_25_91_FRONTEND_CONTAINER_NAME:-mle_frontend}"
 BACKEND_CONTAINER_NAME="${MSE_25_91_BACKEND_CONTAINER_NAME:-mle_backend}"
 FRONTEND_ROLLBACK_NAME="${MSE_25_91_ROLLBACK_CONTAINER_NAME:-mle_frontend_mse_25_91_rollback}"
@@ -86,6 +88,8 @@ command -v docker >/dev/null 2>&1 || fail "docker is required"
 command -v curl >/dev/null 2>&1 || fail "curl is required"
 command -v node >/dev/null 2>&1 || fail "node is required"
 docker compose version >/dev/null 2>&1 || fail "docker compose plugin is required"
+[[ "$BACKEND_HEALTH_ATTEMPTS" =~ ^[1-9][0-9]*$ ]] || fail "MSE_25_91_BACKEND_HEALTH_ATTEMPTS must be a positive integer"
+[[ "$BACKEND_HEALTH_SLEEP_SECONDS" =~ ^[1-9][0-9]*$ ]] || fail "MSE_25_91_BACKEND_HEALTH_SLEEP_SECONDS must be a positive integer"
 
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || fail "run from marketing-engine repository"
 cd "$REPO_ROOT"
@@ -134,16 +138,16 @@ else
   docker restart "$BACKEND_CONTAINER_NAME" >/dev/null
 fi
 
-log "waiting for canonical backend"
+log "waiting for canonical backend (up to ${BACKEND_HEALTH_ATTEMPTS} attempts, ${BACKEND_HEALTH_SLEEP_SECONDS}s between attempts)"
 BACKEND_READY=false
-for attempt in $(seq 1 60); do
+for attempt in $(seq 1 "$BACKEND_HEALTH_ATTEMPTS"); do
   BACKEND_CODE="$(curl --silent --show-error --connect-timeout 3 --max-time 8 --output /dev/null --write-out '%{http_code}' http://127.0.0.1:4000/health 2>/dev/null || true)"
   log "backend attempt $attempt: HTTP ${BACKEND_CODE:-000}"
   if [[ "$BACKEND_CODE" == "200" ]]; then
     BACKEND_READY=true
     break
   fi
-  sleep 2
+  sleep "$BACKEND_HEALTH_SLEEP_SECONDS"
 done
 [[ "$BACKEND_READY" == "true" ]] || fail "canonical backend did not become healthy"
 
