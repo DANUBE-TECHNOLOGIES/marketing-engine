@@ -75,7 +75,7 @@ function memberDestinations(member) {
     member?.destinations,
     member?.favoriteDestinations,
     member?.favouriteDestinations,
-    member?.destinationsFavorites,
+    member?.destinationFavorites,
     member?.destinationsFavorites,
   );
 }
