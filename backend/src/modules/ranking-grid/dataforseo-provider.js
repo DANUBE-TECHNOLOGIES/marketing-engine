@@ -103,6 +103,33 @@ function extractResult(payload, target) {
   };
 }
 
+async function dataForSeoHttpError(response) {
+  let payload = null;
+  let raw = "";
+  try {
+    raw = await response.text();
+    if (raw) payload = JSON.parse(raw);
+  } catch {
+    payload = null;
+  }
+
+  const task = Array.isArray(payload?.tasks) ? payload.tasks[0] : null;
+  const providerStatusCode = task?.status_code ?? payload?.status_code ?? null;
+  const providerStatusMessage = task?.status_message ?? payload?.status_message ?? null;
+  const suffix = providerStatusCode == null ? "" : `_STATUS_${providerStatusCode}`;
+  const detail = providerStatusMessage || (raw ? raw.slice(0, 500) : null);
+  const message = detail
+    ? `DataForSEO HTTP ${response.status}: ${detail}`
+    : `DataForSEO HTTP ${response.status}`;
+
+  const error = new Error(message);
+  error.code = `DATAFORSEO_HTTP_${response.status}${suffix}`;
+  error.httpStatus = response.status;
+  error.providerStatusCode = providerStatusCode;
+  error.providerStatusMessage = providerStatusMessage;
+  return error;
+}
+
 class DataForSeoMapsRankingGridProvider extends RankingGridProvider {
   constructor({ login, password, fetchImpl = global.fetch, targetResolver, endpoint = DEFAULT_ENDPOINT, zoom = 15 } = {}) {
     super("dataforseo-google-maps-live");
@@ -155,11 +182,7 @@ class DataForSeoMapsRankingGridProvider extends RankingGridProvider {
       }]),
     });
 
-    if (!response.ok) {
-      const error = new Error(`DataForSEO HTTP ${response.status}`);
-      error.code = `DATAFORSEO_HTTP_${response.status}`;
-      throw error;
-    }
+    if (!response.ok) throw await dataForSeoHttpError(response);
 
     const payload = await response.json();
     return extractResult(payload, target);
@@ -173,4 +196,5 @@ module.exports = {
   scoreCandidate,
   selectAgencyItem,
   extractResult,
+  dataForSeoHttpError,
 };
