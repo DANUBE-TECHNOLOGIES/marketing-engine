@@ -6,6 +6,7 @@ on:
       - "frontend/lib/seo/local-search-measurement.js"
       - "frontend/lib/seo/local-search-network-measurement.js"
       - "frontend/lib/seo/local-search-remediation.js"
+      - "frontend/lib/seo/local-search-agency-attribution.js"
       - "frontend/lib/seo/local-search-performance.js"
       - "frontend/lib/seo/local-search-index.js"
       - "frontend/test/mse-25-118-*.test.mjs"
@@ -29,4 +30,4 @@ jobs:
       - name: Run MSE-25.118 contract tests
         run: node --test test/mse-25-118-*.test.mjs
       - name: Lint MSE-25.118 surface
-        run: npx eslint lib/seo/local-search-measurement.js lib/seo/local-search-network-measurement.js lib/seo/local-search-remediation.js lib/seo/local-search-index.js test/mse-25-118-*.test.mjs
+        run: npx eslint lib/seo/local-search-measurement.js lib/seo/local-search-network-measurement.js lib/seo/local-search-remediation.js lib/seo/local-search-agency-attribution.js lib/seo/local-search-index.js test/mse-25-118-*.test.mjs
