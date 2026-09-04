@@ -14,7 +14,7 @@ function joinCities(values) {
 
 const COPY = {
   agency: ({ city, nearby }) => ({
-    title: `Une agence de voyages ancrée à ${city}`,
+    title: `Notre implantation et notre accompagnement à ${city}`,
     text: nearby.length
       ? `Notre agence de ${city} accompagne aussi les voyageurs de ${joinCities(nearby.slice(0, 2))}. Sur place, l’équipe prend le temps de comprendre le projet, de comparer les solutions et de suivre le dossier avant, pendant et après le départ.`
       : `Notre agence de ${city} privilégie un accompagnement de proximité : compréhension du projet, comparaison des solutions et suivi du dossier avant, pendant et après le départ.`,
@@ -26,7 +26,7 @@ const COPY = {
       : `À ${city}, notre équipe vous accompagne pour comparer séjours, circuits, croisières, autotours et voyages sur mesure selon vos dates, votre budget et votre façon de voyager.`,
   }),
   destinations: ({ city, nearby }) => ({
-    title: `Choisir votre prochaine destination avec votre agence de ${city}`,
+    title: `Choisir votre prochaine destination depuis ${city}`,
     text: nearby.length
       ? `Pour les voyageurs de ${city} et du secteur de ${joinCities(nearby.slice(0, 2))}, nous comparons les destinations selon la saison, la durée du trajet, le rythme recherché, les formalités et le type d’hébergement. L’objectif est de retenir une destination adaptée au projet, pas seulement une offre attractive.`
       : `À ${city}, nous comparons les destinations selon la saison, la durée du trajet, le rythme recherché, les formalités et le type d’hébergement afin de retenir une solution réellement adaptée à votre projet.`,
@@ -38,13 +38,13 @@ const COPY = {
       : `Nos inspirations voyage à ${city} servent de point de départ pour comparer les périodes, les styles de séjour et les itinéraires avant d’affiner votre projet avec un conseiller de l’agence.`,
   }),
   offers: ({ city, nearby }) => ({
-    title: `Trouver une offre de voyage avec votre agence de ${city}`,
+    title: `Trouver une offre de voyage à ${city}`,
     text: nearby.length
       ? `Notre agence de ${city} recherche pour les voyageurs du secteur, notamment ${joinCities(nearby.slice(0, 2))}, des solutions correspondant à leurs dates et à leur budget. Les offres publiées servent de point de départ : votre conseiller peut contrôler les disponibilités et comparer d’autres possibilités.`
       : `Notre agence de ${city} vérifie les disponibilités et compare les prestations selon vos dates, votre budget et vos préférences ; les offres publiées constituent un point de départ pour votre recherche.`,
   }),
   reviews: ({ city, nearby }) => ({
-    title: `Pourquoi confier votre voyage à une agence locale à ${city} ?`,
+    title: `Les avis de nos voyageurs à ${city}`,
     text: nearby.length
       ? `Les voyageurs de ${city}, ${joinCities(nearby.slice(0, 2))} et des communes voisines peuvent compter sur un interlocuteur de proximité pour préparer leur dossier. Les avis clients témoignent notamment de l’écoute, du conseil et du suivi apportés avant, pendant et après le voyage.`
       : `À ${city}, les avis de nos voyageurs témoignent de l’importance d’un interlocuteur de proximité pour le conseil, la préparation du dossier et le suivi avant, pendant et après le voyage.`,
@@ -62,13 +62,13 @@ const COPY = {
       : `À ${city}, notre accompagnement repose sur l’écoute du projet, la clarté des solutions proposées et la disponibilité de l’agence lorsqu’un dossier nécessite un suivi.`,
   }),
   partners: ({ city, nearby }) => ({
-    title: `Des partenaires voyage sélectionnés par notre agence de ${city}`,
+    title: `Des partenaires voyage sélectionnés à ${city}`,
     text: nearby.length
       ? `Pour les voyageurs de ${city} et des communes de ${joinCities(nearby.slice(0, 2))}, l’agence s’appuie sur différents voyagistes et partenaires afin de comparer les produits, les prestations et les conditions correspondant au projet.`
       : `Notre agence de ${city} s’appuie sur différents voyagistes et partenaires afin de comparer les produits, les prestations et les conditions correspondant à votre projet.`,
   }),
   contact: ({ city, nearby }) => ({
-    title: `Préparez votre voyage avec notre agence à ${city}`,
+    title: `Préparez votre voyage avec notre équipe à ${city}`,
     text: nearby.length
       ? `Vous habitez ${city}, ${joinCities(nearby.slice(0, 2))} ou une commune voisine ? Contactez l’agence avec vos dates, votre budget, le nombre de voyageurs et vos premières envies : ces informations nous permettent d’orienter efficacement la recherche.`
       : `Contactez notre agence de ${city} avec vos dates, votre budget, le nombre de voyageurs et vos premières envies afin que nous puissions orienter efficacement la recherche.`,
@@ -97,18 +97,19 @@ export default function LocalContentContext({ site, kind, quality }) {
             Notre zone de proximité comprend également {joinCities(nearby.slice(2))}.
           </p>
         ) : null}
-        <div className="public-site-related-links" aria-label={`Poursuivre votre projet avec l’agence de voyages de ${city}`}>
+        <div className="public-site-related-links" aria-label={`Navigation locale autour de ${city}`}>
+          <Link href={root}>Agence de voyages à {city}</Link>
           {kind !== "services" ? (
-            <Link href={`${root}/services`}>Services de notre agence de voyages à {city}</Link>
+            <Link href={`${root}/services`}>Services voyage et billetterie à {city}</Link>
           ) : null}
           {kind !== "destinations" ? (
-            <Link href={`${root}/destinations`}>Destinations conseillées par notre agence à {city}</Link>
+            <Link href={`${root}/destinations`}>Destinations et voyages depuis {city}</Link>
           ) : null}
           {kind !== "inspirations" ? (
-            <Link href={`${root}/inspiration`}>Conseils et inspirations voyage depuis {city}</Link>
+            <Link href={`${root}/inspiration`}>Inspirations voyage depuis {city}</Link>
           ) : null}
           {kind !== "contact" ? (
-            <Link href={`${root}/contact`}>Contacter notre agence de voyages à {city}</Link>
+            <Link href={`${root}/contact`}>Nous contacter à {city}</Link>
           ) : null}
         </div>
       </div>
