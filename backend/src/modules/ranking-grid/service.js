@@ -7,6 +7,34 @@ function campaignKey({ agencyId, keywordId, centerLat, centerLng, gridSize, spac
   return [agencyId, keywordId, Number(centerLat).toFixed(7), Number(centerLng).toFixed(7), gridSize, Number(spacingKm).toFixed(3)].join(":");
 }
 
+function normalizeSnapshotDate(value) {
+  const text = String(value || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+    const error = new Error("snapshotDate must use YYYY-MM-DD");
+    error.code = "RANKING_GRID_SNAPSHOT_DATE_INVALID";
+    throw error;
+  }
+  const parsed = new Date(`${text}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== text) {
+    const error = new Error("snapshotDate is not a valid calendar date");
+    error.code = "RANKING_GRID_SNAPSHOT_DATE_INVALID";
+    throw error;
+  }
+  return text;
+}
+
+function snapshotKey(campaign, snapshotDate) {
+  const base = campaignKey({
+    agencyId: campaign.agencyId,
+    keywordId: campaign.keywordId,
+    centerLat: campaign.centerLat,
+    centerLng: campaign.centerLng,
+    gridSize: campaign.gridSize,
+    spacingKm: campaign.spacingKm,
+  });
+  return `${base}:snapshot:${normalizeSnapshotDate(snapshotDate)}`;
+}
+
 class RankingGridService {
   constructor({ repository, provider, concurrency = 3 }) {
     this.repository = repository;
@@ -37,6 +65,44 @@ class RankingGridService {
       centerLng: Number(centerLng),
       gridSize: Number(gridSize),
       spacingKm: Number(spacingKm),
+      provider: this.provider.name,
+      key,
+      points,
+    });
+  }
+
+  async createSnapshot({ tenantId, sourceCampaignId, snapshotDate }) {
+    const source = await this.repository.getCampaign({ tenantId, campaignId: sourceCampaignId });
+    if (!source) {
+      const error = new Error("Ranking grid source campaign not found");
+      error.code = "RANKING_GRID_CAMPAIGN_NOT_FOUND";
+      throw error;
+    }
+
+    const date = normalizeSnapshotDate(snapshotDate);
+    const key = snapshotKey(source, date);
+    const existing = await this.repository.findCampaignByKey({ tenantId, key });
+    if (existing) return existing;
+
+    const points = (source.points || []).map((point) => ({
+      row: Number(point.row),
+      col: Number(point.col),
+      latitude: Number(point.latitude),
+      longitude: Number(point.longitude),
+      northKm: Number(point.northKm),
+      eastKm: Number(point.eastKm),
+    }));
+
+    return this.repository.createCampaignWithPoints({
+      tenantId,
+      agencyId: Number(source.agencyId),
+      keywordId: Number(source.keywordId),
+      keyword: source.keyword,
+      city: source.city,
+      centerLat: Number(source.centerLat),
+      centerLng: Number(source.centerLng),
+      gridSize: Number(source.gridSize),
+      spacingKm: Number(source.spacingKm),
       provider: this.provider.name,
       key,
       points,
@@ -99,4 +165,6 @@ class RankingGridService {
 module.exports = {
   RankingGridService,
   campaignKey,
+  normalizeSnapshotDate,
+  snapshotKey,
 };
