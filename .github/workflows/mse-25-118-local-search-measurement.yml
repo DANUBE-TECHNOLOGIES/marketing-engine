@@ -13,7 +13,7 @@ on:
       - "frontend/lib/seo/local-search-export-ingestion.js"
       - "frontend/lib/seo/local-search-cannibalisation.js"
       - "frontend/scripts/mse-25-118-local-search-report.mjs"
-      - "frontend/test/mse-25-118-*.test.mjs"
+      - "frontend/test/mse-25-118*.test.mjs"
       - ".github/workflows/mse-25-118-local-search-measurement.yml"
   workflow_dispatch:
 
@@ -32,6 +32,6 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - name: Run MSE-25.118 contract tests
-        run: node --test test/mse-25-118-*.test.mjs
+        run: node --test test/mse-25-118*.test.mjs
       - name: Lint MSE-25.118 surface
-        run: npx eslint lib/seo/local-search-measurement.js lib/seo/local-search-network-measurement.js lib/seo/local-search-remediation.js lib/seo/local-search-agency-attribution.js lib/seo/local-search-index.js lib/seo/local-search-snapshot-history.js lib/seo/local-search-export-ingestion.js lib/seo/local-search-cannibalisation.js scripts/mse-25-118-local-search-report.mjs test/mse-25-118-*.test.mjs
+        run: npx eslint lib/seo/local-search-measurement.js lib/seo/local-search-network-measurement.js lib/seo/local-search-remediation.js lib/seo/local-search-agency-attribution.js lib/seo/local-search-index.js lib/seo/local-search-snapshot-history.js lib/seo/local-search-export-ingestion.js lib/seo/local-search-cannibalisation.js scripts/mse-25-118-local-search-report.mjs test/mse-25-118*.test.mjs
