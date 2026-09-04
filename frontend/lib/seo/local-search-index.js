@@ -13,5 +13,6 @@ export { LOCAL_SEARCH_MEASUREMENT_THRESHOLDS, localSearchMeasurementConfidence, 
 export { buildLocalSearchSnapshot, compareLocalSearchSnapshots, buildLocalSearchNetworkReport } from "./local-search-network-measurement";
 export { buildLocalSearchRemediation, buildLocalSearchRemediationPlan } from "./local-search-remediation";
 export { ATTRIBUTABLE_INTENTS, attributeSearchConsoleRow, attributeSearchConsoleRows, buildAgencyAttributionAudit } from "./local-search-agency-attribution";
+export { LOCAL_SEARCH_CANNIBALISATION_THRESHOLDS, detectObservedLocalSearchCannibalisation } from "./local-search-cannibalisation";
 export { buildLocalSearchSnapshotFromSearchConsoleExport } from "./local-search-export-ingestion";
 export { SEARCH_CONSOLE_LOCAL_BASELINE_2026_09_03, searchConsoleCtr, localBaselineOpportunities } from "./search-console-local-baseline";
