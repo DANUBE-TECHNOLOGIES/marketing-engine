@@ -1,0 +1,70 @@
+name: MSE-25.125 ranking grid
+
+on:
+  pull_request:
+    paths:
+      - 'backend/src/modules/ranking-grid/**'
+      - 'backend/test/mse-25-125-ranking-grid.test.js'
+      - 'backend/test/mse-25-125-dataforseo-provider.test.js'
+      - 'backend/prisma/schema.prisma'
+      - 'backend/prisma/migrations/20260904131500_ranking_grid/**'
+      - 'backend/src/modules/register-modules.js'
+      - '.github/workflows/mse-25-125-ranking-grid.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/src/modules/ranking-grid/**'
+      - 'backend/test/mse-25-125-ranking-grid.test.js'
+      - 'backend/test/mse-25-125-dataforseo-provider.test.js'
+      - 'backend/prisma/schema.prisma'
+      - 'backend/prisma/migrations/20260904131500_ranking_grid/**'
+      - 'backend/src/modules/register-modules.js'
+      - '.github/workflows/mse-25-125-ranking-grid.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  ranking-grid:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DATABASE_URL: postgresql://mle_user:mle_ci_password@127.0.0.1:5432/mondescale_local_engine_ci
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend
+        working-directory: backend
+        run: npm ci
+
+      - name: Prisma validate and client
+        working-directory: backend
+        run: |
+          npx prisma validate
+          npx prisma generate
+
+      - name: Ranking grid contract tests
+        working-directory: backend
+        run: |
+          node --test test/mse-25-125-ranking-grid.test.js
+          node --test test/mse-25-125-dataforseo-provider.test.js
+
+      - name: Syntax guard
+        run: |
+          node --check backend/src/modules/ranking-grid/grid.js
+          node --check backend/src/modules/ranking-grid/aggregate.js
+          node --check backend/src/modules/ranking-grid/provider.js
+          node --check backend/src/modules/ranking-grid/dataforseo-provider.js
+          node --check backend/src/modules/ranking-grid/repository.js
+          node --check backend/src/modules/ranking-grid/service.js
+          node --check backend/src/modules/ranking-grid/routes.js
+          node --check backend/src/modules/ranking-grid/index.js
