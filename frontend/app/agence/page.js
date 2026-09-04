@@ -7,6 +7,7 @@ const BACKEND_URL = String(
     "http://backend:4000"
 ).replace(/\/+$/g, "");
 
+export const dynamic = "force-dynamic";
 export const revalidate = 300;
 
 export const metadata = {
