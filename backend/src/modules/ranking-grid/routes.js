@@ -6,6 +6,7 @@ const { RankingGridService } = require("./service");
 const { buildHeatmap } = require("./heatmap");
 const { compareCampaigns } = require("./comparison");
 const { auditAgencyIdentity, summarizeIdentityAudit } = require("./identity-audit");
+const { auditAgencyRollout, summarizeRolloutReadiness } = require("./rollout-readiness");
 const { UnconfiguredRankingGridProvider } = require("./provider");
 const { DataForSeoMapsRankingGridProvider } = require("./dataforseo-provider");
 
@@ -153,6 +154,49 @@ module.exports = function createRankingGridRoutes({ prisma, provider }) {
       }));
       res.json({
         summary: summarizeIdentityAudit(audited),
+        agencies: audited,
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.get("/rankings/grid/rollout-readiness", async (req, res, next) => {
+    try {
+      const scope = await tenantId(req);
+      const agencies = await prisma.agency.findMany({
+        where: { tenantId: scope },
+        orderBy: [{ city: "asc" }, { name: "asc" }],
+        select: {
+          id: true,
+          name: true,
+          city: true,
+          googleReviewUrl: true,
+          googleLocationId: true,
+          profile: { select: { googleLocationData: true } },
+          keywords: {
+            where: { active: true },
+            orderBy: [{ id: "asc" }],
+            select: { id: true, keyword: true, city: true, active: true },
+          },
+          rankingGridCampaigns: {
+            orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+            take: 1,
+            select: { id: true, centerLat: true, centerLng: true },
+          },
+        },
+      });
+
+      const audited = agencies.map((agency) => {
+        const identity = auditAgencyIdentity(agency, {
+          profileIdentity,
+          placeIdFromGoogleReviewUrl,
+        });
+        return auditAgencyRollout(agency, identity);
+      });
+
+      res.json({
+        summary: summarizeRolloutReadiness(audited),
         agencies: audited,
       });
     } catch (error) {
