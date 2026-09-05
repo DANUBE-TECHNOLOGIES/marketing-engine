@@ -3,8 +3,33 @@
 const { generateGrid } = require("./grid");
 const { summarizePoints } = require("./aggregate");
 
-function campaignKey({ agencyId, keywordId, centerLat, centerLng, gridSize, spacingKm }) {
-  return [agencyId, keywordId, Number(centerLat).toFixed(7), Number(centerLng).toFixed(7), gridSize, Number(spacingKm).toFixed(3)].join(":");
+function methodologyKey(methodology) {
+  if (!methodology || typeof methodology !== "object") return null;
+  const version = String(methodology.version || "").trim();
+  const zoom = Number(methodology.zoom);
+  const depth = Number(methodology.depth);
+  if (!version || !Number.isFinite(zoom) || !Number.isFinite(depth)) return null;
+  return [
+    version,
+    `z${zoom}`,
+    `d${depth}`,
+    `sp${methodology.searchPlaces === true ? 1 : 0}`,
+    `sta${methodology.searchThisArea === true ? 1 : 0}`,
+  ].join(":");
+}
+
+function campaignKey({ agencyId, keywordId, centerLat, centerLng, gridSize, spacingKm, methodology }) {
+  const parts = [
+    agencyId,
+    keywordId,
+    Number(centerLat).toFixed(7),
+    Number(centerLng).toFixed(7),
+    gridSize,
+    Number(spacingKm).toFixed(3),
+  ];
+  const methodKey = methodologyKey(methodology);
+  if (methodKey) parts.push("method", methodKey);
+  return parts.join(":");
 }
 
 function normalizeSnapshotDate(value) {
@@ -23,7 +48,7 @@ function normalizeSnapshotDate(value) {
   return text;
 }
 
-function snapshotKey(campaign, snapshotDate) {
+function snapshotKey(campaign, snapshotDate, methodology) {
   const base = campaignKey({
     agencyId: campaign.agencyId,
     keywordId: campaign.keywordId,
@@ -31,6 +56,7 @@ function snapshotKey(campaign, snapshotDate) {
     centerLng: campaign.centerLng,
     gridSize: campaign.gridSize,
     spacingKm: campaign.spacingKm,
+    methodology,
   });
   return `${base}:snapshot:${normalizeSnapshotDate(snapshotDate)}`;
 }
@@ -50,7 +76,15 @@ class RankingGridService {
       throw error;
     }
 
-    const key = campaignKey({ agencyId, keywordId, centerLat, centerLng, gridSize, spacingKm });
+    const key = campaignKey({
+      agencyId,
+      keywordId,
+      centerLat,
+      centerLng,
+      gridSize,
+      spacingKm,
+      methodology: this.provider?.methodology,
+    });
     const existing = await this.repository.findCampaignByKey({ tenantId, key });
     if (existing) return existing;
 
@@ -80,7 +114,7 @@ class RankingGridService {
     }
 
     const date = normalizeSnapshotDate(snapshotDate);
-    const key = snapshotKey(source, date);
+    const key = snapshotKey(source, date, this.provider?.methodology);
     const existing = await this.repository.findCampaignByKey({ tenantId, key });
     if (existing) return existing;
 
@@ -164,6 +198,7 @@ class RankingGridService {
 
 module.exports = {
   RankingGridService,
+  methodologyKey,
   campaignKey,
   normalizeSnapshotDate,
   snapshotKey,
