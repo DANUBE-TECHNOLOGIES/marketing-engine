@@ -10,6 +10,7 @@ async function prepareNetworkBaselines({
   agencies,
   repository,
   service,
+  methodology = service?.provider?.methodology || null,
   gridSize = DEFAULT_GRID_SIZE,
   spacingKm = DEFAULT_SPACING_KM,
 }) {
@@ -43,7 +44,7 @@ async function prepareNetworkBaselines({
         spacingKm: Number(spacingKm),
       };
 
-      const key = campaignKey(input);
+      const key = campaignKey({ ...input, methodology });
       const existing = await repository.findCampaignByKey({ tenantId, key });
       if (existing) {
         results.push({
@@ -56,6 +57,7 @@ async function prepareNetworkBaselines({
           status: "existing",
           campaignStatus: existing.status,
           points: Array.isArray(existing.points) ? existing.points.length : null,
+          methodology,
           center: {
             latitude: Number(existing.centerLat),
             longitude: Number(existing.centerLng),
@@ -75,6 +77,7 @@ async function prepareNetworkBaselines({
         status: "created",
         campaignStatus: campaign.status,
         points: Array.isArray(campaign.points) ? campaign.points.length : null,
+        methodology,
         center: {
           latitude: Number(campaign.centerLat),
           longitude: Number(campaign.centerLng),
@@ -84,6 +87,7 @@ async function prepareNetworkBaselines({
   }
 
   return {
+    methodology,
     summary: {
       created: results.filter((row) => row.status === "created").length,
       existing: results.filter((row) => row.status === "existing").length,
