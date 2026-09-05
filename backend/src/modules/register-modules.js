@@ -82,6 +82,7 @@ module.exports = function registerModules(app, { prisma }) {
   if (googleBusinessPhotos.routes) app.use(googleBusinessPhotos.routes({ prisma }));
   if (googleBusinessReviews.routes) app.use(googleBusinessReviews.routes({ prisma }));
   if (rankingGrid.routes) app.use(rankingGrid.routes({ prisma }));
+  if (rankingGrid.baselineRoutes) app.use(rankingGrid.baselineRoutes({ prisma }));
   if (pageBuilderPersistence.routes) app.use(pageBuilderPersistence.routes({ prisma }));
   if (agencySite.routes) app.use(agencySite.routes({ prisma }));
   if (minisiteBlueprint.routes) app.use(minisiteBlueprint.routes({ prisma }));
