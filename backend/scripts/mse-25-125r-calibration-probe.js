@@ -38,6 +38,21 @@ function placeIdFromGoogleReviewUrl(value) {
   try { return decodeURIComponent(match[1]).trim() || null; } catch { return match[1].trim() || null; }
 }
 
+async function dataForSeoBalance({ login, password, fetchImpl = global.fetch } = {}) {
+  if (!login || !password) throw new Error("DataForSEO credentials are not configured");
+  const auth = Buffer.from(`${login}:${password}`, "utf8").toString("base64");
+  const response = await fetchImpl("https://api.dataforseo.com/v3/appendix/user_data", {
+    headers: { Authorization: `Basic ${auth}` },
+  });
+  if (!response.ok) throw new Error(`DataForSEO balance preflight HTTP ${response.status}`);
+  const payload = await response.json();
+  const task = Array.isArray(payload?.tasks) ? payload.tasks[0] : null;
+  const result = Array.isArray(task?.result) ? task.result[0] : null;
+  const balance = Number(result?.money?.balance ?? result?.balance ?? NaN);
+  if (!Number.isFinite(balance)) throw new Error("DataForSEO balance preflight returned no finite balance");
+  return balance;
+}
+
 async function main() {
   if (String(process.env.MSE_25_125R_PAID_ACK || "") !== EXPECTED_ACK) {
     throw new Error(`set MSE_25_125R_PAID_ACK=${EXPECTED_ACK}`);
@@ -56,6 +71,13 @@ async function main() {
   const estimate = calls * OBSERVED_UNIT_COST_USD;
   if (!Number.isFinite(maxCost) || maxCost <= 0) throw new Error("invalid max cost");
   if (estimate > maxCost + 1e-9) throw new Error(`estimated cost ${estimate.toFixed(3)} exceeds max ${maxCost.toFixed(3)}`);
+
+  const minBalance = Number(process.env.MSE_25_125R_MIN_BALANCE_USD || 0.10);
+  if (!Number.isFinite(minBalance) || minBalance < 0) throw new Error("invalid minimum balance");
+  const balance = await dataForSeoBalance({ login: process.env.DATAFORSEO_LOGIN, password: process.env.DATAFORSEO_PASSWORD });
+  if (balance < minBalance + estimate) {
+    throw new Error(`DataForSEO balance ${balance.toFixed(6)} is below required ${(minBalance + estimate).toFixed(6)}`);
+  }
 
   const prisma = new PrismaClient();
   try {
@@ -97,22 +119,32 @@ async function main() {
       calls,
       estimatedCostUsd: estimate,
       maxCostUsd: maxCost,
+      balanceUsd: balance,
       historicalZoom15: historical,
     }));
 
     const results = [];
+    let actualCostUsd = 0;
     for (const zoom of zooms) {
       const provider = new DataForSeoMapsRankingGridProvider({
         zoom,
         targetResolver: async () => target,
       });
       for (const base of historical) {
+        if (actualCostUsd + OBSERVED_UNIT_COST_USD > maxCost + 1e-9) {
+          throw new Error(`runtime cost guard would exceed max ${maxCost.toFixed(3)}`);
+        }
         const result = await provider.measurePoint({
           keyword: campaign.keyword,
           latitude: base.latitude,
           longitude: base.longitude,
           agencyId: campaign.agencyId,
         });
+        const cost = Number(result.cost || 0);
+        actualCostUsd += Number.isFinite(cost) ? cost : 0;
+        if (actualCostUsd > maxCost + 1e-9) {
+          throw new Error(`actual cost ${actualCostUsd.toFixed(6)} exceeded max ${maxCost.toFixed(3)}`);
+        }
         results.push({
           zoom,
           row: base.row,
@@ -120,12 +152,11 @@ async function main() {
           found: result.found === true,
           position: result.position == null ? null : Number(result.position),
           noSearchResults: result.providerMetadata?.noSearchResults === true,
-          cost: Number(result.cost || 0),
+          cost: Number.isFinite(cost) ? cost : 0,
         });
       }
     }
 
-    const actualCostUsd = results.reduce((sum, r) => sum + (Number.isFinite(r.cost) ? r.cost : 0), 0);
     const byZoom = zooms.map((zoom) => {
       const subset = results.filter((r) => r.zoom === zoom);
       const found = subset.filter((r) => r.found);
@@ -153,7 +184,21 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(`[MSE-25.125R] ERROR: ${error.message}`);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((error) => {
+    console.error(`[MSE-25.125R] ERROR: ${error.message}`);
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  EXPECTED_ACK,
+  SENTINEL_CELLS,
+  DEFAULT_ZOOMS,
+  MAX_CALLS,
+  OBSERVED_UNIT_COST_USD,
+  parseZooms,
+  placeIdFromGoogleReviewUrl,
+  dataForSeoBalance,
+  main,
+};
