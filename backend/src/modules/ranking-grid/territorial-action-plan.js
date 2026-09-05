@@ -1,5 +1,7 @@
 "use strict";
 
+const { buildTerritorialExecutionPlan } = require("./territorial-execution-plan");
+
 function round(value, digits = 2) {
   if (!Number.isFinite(value)) return null;
   const factor = 10 ** digits;
@@ -137,7 +139,7 @@ function buildTerritorialActionPlan({ campaignId, agencyId, city, byCity = {}, c
       || (b.averageRank ?? 0) - (a.averageRank ?? 0)
       || a.city.localeCompare(b.city));
 
-  return {
+  const plan = {
     mode: "read_only",
     databaseWrites: 0,
     providerCalls: 0,
@@ -155,6 +157,11 @@ function buildTerritorialActionPlan({ campaignId, agencyId, city, byCity = {}, c
       topPriorityCity: territories[0]?.city || null,
     },
     territories,
+  };
+
+  return {
+    ...plan,
+    executionPlan: buildTerritorialExecutionPlan(plan),
   };
 }
 
