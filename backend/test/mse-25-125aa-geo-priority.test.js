@@ -65,8 +65,17 @@ test("Bois-Colombes priorities surface south and east weak cells", () => {
   assert.equal(result.summary.cells, 25);
   assert.ok(result.summary.actionableCells > 0);
   assert.ok(result.summary.p1 >= 2);
-  assert.equal(result.priorityCells[0].rank, 63);
+
+  // Priority is intentionally score-based, not raw-rank-only: the rank-59
+  // cell is farther from the agency than rank 63 and therefore scores higher.
+  assert.equal(result.priorityCells[0].rank, 59);
   assert.equal(result.priorityCells[0].direction, "south");
+  assert.ok(result.priorityCells[0].score > result.priorityCells[1].score);
+  assert.deepEqual(
+    new Set(result.priorityCells.slice(0, 2).map((cell) => cell.rank)),
+    new Set([59, 63]),
+  );
+
   assert.ok(["south", "east"].includes(result.summary.dominantPriorityDirection));
   assert.ok(result.byDirection.south.averageRank > result.byDirection.north.averageRank);
 });
