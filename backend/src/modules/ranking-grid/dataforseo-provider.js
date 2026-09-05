@@ -3,6 +3,7 @@
 const { RankingGridProvider } = require("./provider");
 
 const DEFAULT_ENDPOINT = "https://api.dataforseo.com/v3/serp/google/maps/live/advanced";
+const NO_SEARCH_RESULTS_TASK_CODE = 40102;
 
 function normalizeText(value) {
   return String(value || "")
@@ -52,6 +53,23 @@ function selectAgencyItem(items, target) {
   return ranked[0].item;
 }
 
+function noSearchResult({ task, payload }) {
+  const cost = Number(task?.cost || payload?.cost || 0);
+  return {
+    found: false,
+    position: null,
+    absolutePosition: null,
+    cost: Number.isFinite(cost) ? cost : 0,
+    providerMetadata: {
+      provider: "dataforseo-google-maps-live",
+      noSearchResults: true,
+      taskStatusCode: Number(task?.status_code) || null,
+      taskStatusMessage: task?.status_message || null,
+      itemsCount: 0,
+    },
+  };
+}
+
 function extractResult(payload, target) {
   if (!payload || Number(payload.status_code) !== 20000) {
     const error = new Error(payload?.status_message || "DataForSEO request failed");
@@ -60,6 +78,10 @@ function extractResult(payload, target) {
   }
 
   const task = Array.isArray(payload.tasks) ? payload.tasks[0] : null;
+  if (task && Number(task.status_code) === NO_SEARCH_RESULTS_TASK_CODE) {
+    return noSearchResult({ task, payload });
+  }
+
   if (!task || Number(task.status_code) !== 20000) {
     const error = new Error(task?.status_message || "DataForSEO task failed");
     error.code = `DATAFORSEO_TASK_${task?.status_code || "INVALID_RESPONSE"}`;
@@ -191,10 +213,12 @@ class DataForSeoMapsRankingGridProvider extends RankingGridProvider {
 
 module.exports = {
   DEFAULT_ENDPOINT,
+  NO_SEARCH_RESULTS_TASK_CODE,
   DataForSeoMapsRankingGridProvider,
   normalizeText,
   scoreCandidate,
   selectAgencyItem,
+  noSearchResult,
   extractResult,
   dataForSeoHttpError,
 };
