@@ -1,6 +1,7 @@
 "use strict";
 
 const { PrismaClient } = require("@prisma/client");
+const { RankingGridRepository } = require("../src/modules/ranking-grid/repository");
 const { DataForSeoMapsRankingGridProvider } = require("../src/modules/ranking-grid/dataforseo-provider");
 
 const EXPECTED_ACK = "RUN-RANKING-GRID-CALIBRATION-PROBE";
@@ -81,14 +82,24 @@ async function main() {
 
   const prisma = new PrismaClient();
   try {
-    const campaign = await prisma.rankingGridCampaign.findUnique({
-      where: { id: campaignId },
-      include: { points: true, agency: { include: { profile: true } } },
+    const tenantSlug = String(process.env.MSE_25_125R_TENANT_SLUG || "mondescale").trim().toLowerCase();
+    const tenant = await prisma.tenant.findUnique({
+      where: { slug: tenantSlug },
+      select: { id: true },
     });
+    if (!tenant) throw new Error(`tenant not found: ${tenantSlug}`);
+
+    const repository = new RankingGridRepository(prisma);
+    const campaign = await repository.getCampaign({ tenantId: tenant.id, campaignId });
     if (!campaign) throw new Error("campaign not found");
     if (Number(campaign.gridSize) !== 5) throw new Error("calibration probe requires a 5x5 campaign");
 
-    const agency = campaign.agency;
+    const agency = await prisma.agency.findFirst({
+      where: { id: Number(campaign.agencyId), tenantId: tenant.id },
+      include: { profile: true },
+    });
+    if (!agency) throw new Error("campaign agency not found");
+
     const googleData = agency?.profile?.googleLocationData && typeof agency.profile.googleLocationData === "object"
       ? agency.profile.googleLocationData
       : {};
