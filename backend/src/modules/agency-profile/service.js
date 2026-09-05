@@ -75,10 +75,18 @@ class AgencyProfileService {
       throw error;
     }
 
+    const storedGoogleLocationData =
+      agency.profile?.googleLocationData && typeof agency.profile.googleLocationData === "object"
+        ? agency.profile.googleLocationData
+        : {};
+
     return this.repository.upsert(agency.id, {
       regularHours: normalizeRegularHours(body.regularHours),
       specialHours: normalizeSpecialHours(body.specialHours),
-      googleLocationData: body,
+      googleLocationData: {
+        ...storedGoogleLocationData,
+        ...body,
+      },
       hoursSource: "google-business-profile",
       googleSyncedAt: new Date(),
     });
