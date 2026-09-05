@@ -21,6 +21,39 @@ function sameGeometry(fromCampaign, toCampaign) {
     && Number(fromCampaign.centerLng).toFixed(7) === Number(toCampaign.centerLng).toFixed(7);
 }
 
+function pointMethodology(point) {
+  const metadata = point?.providerMetadata;
+  const methodology = metadata && typeof metadata === "object" ? metadata.methodology : null;
+  if (!methodology || typeof methodology !== "object") return null;
+  const zoom = Number(methodology.zoom);
+  const depth = Number(methodology.depth);
+  if (!Number.isFinite(zoom) || !Number.isFinite(depth)) return null;
+  return {
+    version: String(methodology.version || ""),
+    zoom,
+    depth,
+    searchPlaces: Boolean(methodology.searchPlaces),
+    searchThisArea: Boolean(methodology.searchThisArea),
+  };
+}
+
+function campaignMethodology(campaign) {
+  const measured = (campaign?.points || []).filter((point) => point?.status === "success");
+  if (!measured.length) return null;
+  const methods = measured.map(pointMethodology);
+  if (methods.some((method) => method == null)) return null;
+  const first = methods[0];
+  const signature = JSON.stringify(first);
+  return methods.every((method) => JSON.stringify(method) === signature) ? first : null;
+}
+
+function sameMethodology(fromCampaign, toCampaign) {
+  const from = campaignMethodology(fromCampaign);
+  const to = campaignMethodology(toCampaign);
+  if (!from || !to) return false;
+  return JSON.stringify(from) === JSON.stringify(to);
+}
+
 function compareCampaigns(fromCampaign, toCampaign) {
   if (!fromCampaign || !toCampaign) throw new TypeError("two campaigns are required");
   if (Number(fromCampaign.agencyId) !== Number(toCampaign.agencyId) || Number(fromCampaign.keywordId) !== Number(toCampaign.keywordId)) {
@@ -31,6 +64,13 @@ function compareCampaigns(fromCampaign, toCampaign) {
   if (!sameGeometry(fromCampaign, toCampaign)) {
     const error = new Error("ranking grid campaign geometry differs");
     error.code = "RANKING_GRID_COMPARISON_GEOMETRY_MISMATCH";
+    throw error;
+  }
+  if (!sameMethodology(fromCampaign, toCampaign)) {
+    const error = new Error("ranking grid campaign methodology differs or is unknown");
+    error.code = "RANKING_GRID_COMPARISON_METHODOLOGY_MISMATCH";
+    error.fromMethodology = campaignMethodology(fromCampaign);
+    error.toMethodology = campaignMethodology(toCampaign);
     throw error;
   }
 
@@ -84,6 +124,7 @@ function compareCampaigns(fromCampaign, toCampaign) {
     keywordId: Number(toCampaign.keywordId),
     keyword: toCampaign.keyword,
     city: toCampaign.city,
+    methodology: campaignMethodology(toCampaign),
     fromCampaignId: Number(fromCampaign.id),
     toCampaignId: Number(toCampaign.id),
     fromCompletedAt: fromCampaign.completedAt || null,
@@ -101,4 +142,11 @@ function compareCampaigns(fromCampaign, toCampaign) {
   };
 }
 
-module.exports = { compareCampaigns, roundedDelta, sameGeometry };
+module.exports = {
+  compareCampaigns,
+  roundedDelta,
+  sameGeometry,
+  pointMethodology,
+  campaignMethodology,
+  sameMethodology,
+};
