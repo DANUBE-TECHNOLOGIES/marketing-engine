@@ -19,7 +19,11 @@ function weightedPriority(bucket = {}) {
   const p3 = Number(bucket.p3) || 0;
   const averageRank = Number(bucket.averageRank);
   const rankWeight = Number.isFinite(averageRank) ? Math.min(10, averageRank / 10) : 0;
-  return round((p1 * 5) + (p2 * 3) + p3 + rankWeight, 2);
+  return round((p1 * 10) + (p2 * 3) + p3 + rankWeight, 2);
+}
+
+function urgencyWeight(urgency) {
+  return ({ critical: 4, high: 3, medium: 2, monitor: 1 })[urgency] || 0;
 }
 
 function objectivesFor(bucket = {}) {
@@ -120,7 +124,10 @@ function buildTerritorialActionPlan({ campaignId, agencyId, city, byCity = {}, c
         actions: actionsFor(name, bucket),
       };
     })
-    .sort((a, b) => b.score - a.score || (b.averageRank ?? 0) - (a.averageRank ?? 0) || a.city.localeCompare(b.city));
+    .sort((a, b) => urgencyWeight(b.urgency) - urgencyWeight(a.urgency)
+      || b.score - a.score
+      || (b.averageRank ?? 0) - (a.averageRank ?? 0)
+      || a.city.localeCompare(b.city));
 
   return {
     mode: "read_only",
@@ -146,6 +153,7 @@ function buildTerritorialActionPlan({ campaignId, agencyId, city, byCity = {}, c
 module.exports = {
   urgencyFor,
   weightedPriority,
+  urgencyWeight,
   objectivesFor,
   actionsFor,
   buildTerritorialActionPlan,
