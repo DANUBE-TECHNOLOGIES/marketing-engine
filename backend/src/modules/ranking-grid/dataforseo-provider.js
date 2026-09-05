@@ -4,6 +4,11 @@ const { RankingGridProvider } = require("./provider");
 
 const DEFAULT_ENDPOINT = "https://api.dataforseo.com/v3/serp/google/maps/live/advanced";
 const NO_SEARCH_RESULTS_TASK_CODE = 40102;
+const DEFAULT_ZOOM = 14;
+const DEFAULT_DEPTH = 100;
+const DEFAULT_SEARCH_PLACES = false;
+const DEFAULT_SEARCH_THIS_AREA = true;
+const METHODOLOGY_VERSION = "mse-25.125u-z14-v1";
 
 function normalizeText(value) {
   return String(value || "")
@@ -53,9 +58,29 @@ function selectAgencyItem(items, target) {
   return ranked[0].item;
 }
 
-function noSearchResult({ task, payload }) {
-  const cost = Number(task?.cost || payload?.cost || 0);
+function methodologyMetadata({ zoom = DEFAULT_ZOOM } = {}) {
   return {
+    version: METHODOLOGY_VERSION,
+    zoom: Number(zoom),
+    depth: DEFAULT_DEPTH,
+    searchPlaces: DEFAULT_SEARCH_PLACES,
+    searchThisArea: DEFAULT_SEARCH_THIS_AREA,
+  };
+}
+
+function withMethodology(result, zoom) {
+  return {
+    ...result,
+    providerMetadata: {
+      ...(result.providerMetadata || {}),
+      methodology: methodologyMetadata({ zoom }),
+    },
+  };
+}
+
+function noSearchResult({ task, payload, zoom = DEFAULT_ZOOM }) {
+  const cost = Number(task?.cost || payload?.cost || 0);
+  return withMethodology({
     found: false,
     position: null,
     absolutePosition: null,
@@ -67,10 +92,10 @@ function noSearchResult({ task, payload }) {
       taskStatusMessage: task?.status_message || null,
       itemsCount: 0,
     },
-  };
+  }, zoom);
 }
 
-function extractResult(payload, target) {
+function extractResult(payload, target, { zoom = DEFAULT_ZOOM } = {}) {
   if (!payload || Number(payload.status_code) !== 20000) {
     const error = new Error(payload?.status_message || "DataForSEO request failed");
     error.code = `DATAFORSEO_${payload?.status_code || "INVALID_RESPONSE"}`;
@@ -79,7 +104,7 @@ function extractResult(payload, target) {
 
   const task = Array.isArray(payload.tasks) ? payload.tasks[0] : null;
   if (task && Number(task.status_code) === NO_SEARCH_RESULTS_TASK_CODE) {
-    return noSearchResult({ task, payload });
+    return noSearchResult({ task, payload, zoom });
   }
 
   if (!task || Number(task.status_code) !== 20000) {
@@ -93,7 +118,7 @@ function extractResult(payload, target) {
   const cost = Number(task.cost || payload.cost || 0);
 
   if (!item) {
-    return {
+    return withMethodology({
       found: false,
       position: null,
       absolutePosition: null,
@@ -102,10 +127,10 @@ function extractResult(payload, target) {
         provider: "dataforseo-google-maps-live",
         itemsCount: Number(result?.items_count || 0),
       },
-    };
+    }, zoom);
   }
 
-  return {
+  return withMethodology({
     found: true,
     position: Number.isFinite(Number(item.rank_group)) ? Number(item.rank_group) : null,
     absolutePosition: Number.isFinite(Number(item.rank_absolute)) ? Number(item.rank_absolute) : null,
@@ -122,7 +147,7 @@ function extractResult(payload, target) {
       resultLongitude: item.longitude ?? null,
       category: item.category || null,
     },
-  };
+  }, zoom);
 }
 
 async function dataForSeoHttpError(response) {
@@ -153,14 +178,15 @@ async function dataForSeoHttpError(response) {
 }
 
 class DataForSeoMapsRankingGridProvider extends RankingGridProvider {
-  constructor({ login, password, fetchImpl = global.fetch, targetResolver, endpoint = DEFAULT_ENDPOINT, zoom = 15 } = {}) {
+  constructor({ login, password, fetchImpl = global.fetch, targetResolver, endpoint = DEFAULT_ENDPOINT, zoom = DEFAULT_ZOOM } = {}) {
     super("dataforseo-google-maps-live");
     this.login = login ?? process.env.DATAFORSEO_LOGIN;
     this.password = password ?? process.env.DATAFORSEO_PASSWORD;
     this.fetchImpl = fetchImpl;
     this.targetResolver = targetResolver;
     this.endpoint = endpoint;
-    this.zoom = Math.max(4, Math.min(21, Number(zoom) || 15));
+    this.zoom = Math.max(4, Math.min(21, Number(zoom) || DEFAULT_ZOOM));
+    this.methodology = methodologyMetadata({ zoom: this.zoom });
   }
 
   async measurePoint({ keyword, latitude, longitude, agencyId }) {
@@ -198,26 +224,32 @@ class DataForSeoMapsRankingGridProvider extends RankingGridProvider {
         keyword,
         language_code: "fr",
         location_coordinate: `${Number(latitude).toFixed(7)},${Number(longitude).toFixed(7)},${this.zoom}z`,
-        search_places: false,
-        search_this_area: true,
-        depth: 100,
+        search_places: DEFAULT_SEARCH_PLACES,
+        search_this_area: DEFAULT_SEARCH_THIS_AREA,
+        depth: DEFAULT_DEPTH,
       }]),
     });
 
     if (!response.ok) throw await dataForSeoHttpError(response);
 
     const payload = await response.json();
-    return extractResult(payload, target);
+    return extractResult(payload, target, { zoom: this.zoom });
   }
 }
 
 module.exports = {
   DEFAULT_ENDPOINT,
   NO_SEARCH_RESULTS_TASK_CODE,
+  DEFAULT_ZOOM,
+  DEFAULT_DEPTH,
+  DEFAULT_SEARCH_PLACES,
+  DEFAULT_SEARCH_THIS_AREA,
+  METHODOLOGY_VERSION,
   DataForSeoMapsRankingGridProvider,
   normalizeText,
   scoreCandidate,
   selectAgencyItem,
+  methodologyMetadata,
   noSearchResult,
   extractResult,
   dataForSeoHttpError,
