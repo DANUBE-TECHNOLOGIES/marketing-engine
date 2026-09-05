@@ -8,6 +8,7 @@ const { methodologyKey } = require("./service");
 const { buildSpatialReport } = require("./spatial-analysis");
 const { analyzeGeoPriorities } = require("./geo-priority");
 const { enrichPriorityCells } = require("./territory-resolver");
+const { buildTerritorialActionPlan } = require("./territorial-action-plan");
 
 function tenantSlugFrom(req) {
   return String(req.headers["x-tenant-slug"] || "mondescale").trim().toLowerCase();
@@ -94,6 +95,16 @@ module.exports = function createRankingGridSpatialRoutes({ prisma }) {
     return campaigns;
   }
 
+  async function enrichedCampaignPriority(scope, rows, requestedCampaignId, levels) {
+    const campaigns = await loadSelectedCampaigns(scope, rows, requestedCampaignId);
+    const priority = analyzeGeoPriorities(campaigns[0]);
+    const territories = await enrichPriorityCells(priority.cells, {
+      levels,
+      maxCalls: 25,
+    });
+    return { priority, territories };
+  }
+
   router.get("/rankings/grid/spatial-audit", async (req, res, next) => {
     try {
       const scope = await tenantId(req);
@@ -150,12 +161,7 @@ module.exports = function createRankingGridSpatialRoutes({ prisma }) {
 
       const levels = requestedPriorityLevels(req.query?.levels);
       const { methodology, key, rows } = await latestCalibratedCampaignRows(scope);
-      const campaigns = await loadSelectedCampaigns(scope, rows, requestedCampaignId);
-      const priority = analyzeGeoPriorities(campaigns[0]);
-      const territories = await enrichPriorityCells(priority.cells, {
-        levels,
-        maxCalls: 25,
-      });
+      const { priority, territories } = await enrichedCampaignPriority(scope, rows, requestedCampaignId, levels);
 
       res.json({
         mode: "read_only",
@@ -170,6 +176,40 @@ module.exports = function createRankingGridSpatialRoutes({ prisma }) {
         requestedLevels: levels,
         prioritySummary: priority.summary,
         ...territories,
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.get("/rankings/grid/spatial-priorities/action-plan", async (req, res, next) => {
+    try {
+      const scope = await tenantId(req);
+      const requestedCampaignId = Number(req.query?.campaignId);
+      if (!Number.isInteger(requestedCampaignId) || requestedCampaignId <= 0) {
+        return res.status(400).json({ error: "ranking_grid_campaign_id_required" });
+      }
+
+      const levels = requestedPriorityLevels(req.query?.levels);
+      const { methodology, key, rows } = await latestCalibratedCampaignRows(scope);
+      const { priority, territories } = await enrichedCampaignPriority(scope, rows, requestedCampaignId, levels);
+      const plan = buildTerritorialActionPlan({
+        campaignId: priority.campaignId,
+        agencyId: priority.agencyId,
+        city: priority.city,
+        byCity: territories.byCity,
+        cells: territories.cells,
+      });
+
+      res.json({
+        methodology,
+        methodologyKey: key,
+        requestedLevels: levels,
+        territorialSource: territories.source,
+        externalCalls: territories.externalCalls,
+        resolved: territories.resolved,
+        unresolved: territories.unresolved,
+        ...plan,
       });
     } catch (error) {
       next(error);
