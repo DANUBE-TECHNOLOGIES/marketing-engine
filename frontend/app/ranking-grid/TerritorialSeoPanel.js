@@ -1,4 +1,5 @@
 import Link from "next/link";
+import TerritorialActionTracker from "./TerritorialActionTracker";
 
 const BACKEND_URL = process.env.BACKEND_INTERNAL_URL || "http://backend:4000";
 const TENANT_SLUG = process.env.TENANT_SLUG || process.env.NEXT_PUBLIC_TENANT_SLUG || "mondescale";
@@ -40,7 +41,10 @@ function planHref({ agencyId, keywordId, loadPlan }) {
 }
 
 export default async function TerritorialSeoPanel({ campaignId, agencyId, keywordId, loadPlan = false }) {
-  const priorityPayload = await getJsonOrNull(`/rankings/grid/spatial-priorities?campaignId=${campaignId}`);
+  const [priorityPayload, trackingPayload] = await Promise.all([
+    getJsonOrNull(`/rankings/grid/spatial-priorities?campaignId=${campaignId}`),
+    getJsonOrNull(`/rankings/grid/territorial-actions?agencyId=${agencyId}&keywordId=${keywordId}`),
+  ]);
   const priority = priorityPayload?.campaigns?.[0] || null;
 
   if (!priority) {
@@ -67,7 +71,7 @@ export default async function TerritorialSeoPanel({ campaignId, agencyId, keywor
         <div>
           <h2 className="text-xl font-bold text-slate-900">Recommandations SEO territoriales</h2>
           <p className="mt-1 max-w-3xl text-sm text-slate-500">
-            Priorités calculées sur la grille calibrée actuelle. Le diagnostic P1/P2/P3 est local et sans appel externe ; le rattachement aux communes IGN n’est chargé qu’à la demande.
+            Priorités calculées sur la grille calibrée actuelle. Le diagnostic P1/P2/P3 et le suivi sont locaux ; le rattachement aux communes IGN n’est chargé qu’à la demande.
           </p>
         </div>
         <div className="flex flex-wrap gap-2 text-xs font-bold">
@@ -87,8 +91,11 @@ export default async function TerritorialSeoPanel({ campaignId, agencyId, keywor
           <div className="mt-1 text-xl font-black capitalize text-[#0f2e46]">{summary.dominantPriorityDirection || "—"}</div>
         </div>
         <div className="rounded-xl bg-slate-50 p-4">
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Statut</div>
-          <div className="mt-1 text-xl font-black text-[#0f2e46]">{hasUrgentTerritories ? "Action requise" : "Surveillance"}</div>
+          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Actions suivies</div>
+          <div className="mt-1 text-xl font-black text-[#0f2e46]">{trackingPayload?.summary?.actions || 0}</div>
+          <div className="mt-1 text-xs text-slate-500">
+            {trackingPayload?.summary?.inProgress || 0} en cours · {trackingPayload?.summary?.done || 0} terminée(s)
+          </div>
         </div>
       </div>
 
@@ -97,7 +104,7 @@ export default async function TerritorialSeoPanel({ campaignId, agencyId, keywor
           <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-5">
             <div className="font-bold text-slate-900">Des zones P1/P2 nécessitent un plan territorial.</div>
             <p className="mt-1 text-sm text-slate-600">
-              Le chargement suivant effectue uniquement le géocodage inverse IGN des cellules prioritaires. Il ne déclenche aucun appel DataForSEO et n’écrit rien en base.
+              Le chargement suivant effectue uniquement le géocodage inverse IGN des cellules prioritaires. Il ne déclenche aucun appel DataForSEO et n’écrit rien en base tant qu’aucune recommandation n’est ajoutée au suivi.
             </p>
             <Link
               href={planHref({ agencyId, keywordId, loadPlan: true })}
@@ -128,38 +135,20 @@ export default async function TerritorialSeoPanel({ campaignId, agencyId, keywor
             </Link>
           </div>
 
-          <div className="space-y-4">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {(plan.territories || []).map((territory) => (
-              <article key={territory.city} className="rounded-xl border border-slate-200 p-5">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-lg font-black text-slate-900">{territory.city}</h3>
-                      <span className={`rounded-full border px-2.5 py-1 text-xs font-bold uppercase ${urgencyClasses(territory.urgency)}`}>
-                        {territory.urgency}
-                      </span>
-                    </div>
-                    <div className="mt-1 text-sm text-slate-500">
-                      P1 {territory.p1} · P2 {territory.p2} · position moyenne #{territory.averageRank ?? "—"} · pire #{territory.worstRank ?? "—"}
-                    </div>
-                  </div>
-                  <div className="rounded-lg bg-slate-50 px-3 py-2 text-right">
-                    <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">score</div>
-                    <div className="text-lg font-black text-[#0f2e46]">{territory.score}</div>
-                  </div>
+              <article key={territory.city} className="rounded-xl border border-slate-200 p-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="font-black text-slate-900">{territory.city}</h3>
+                  <span className={`rounded-full border px-2 py-1 text-[10px] font-bold uppercase ${urgencyClasses(territory.urgency)}`}>
+                    {territory.urgency}
+                  </span>
                 </div>
-
-                <div className="mt-4 rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
+                <div className="mt-2 text-xs text-slate-500">
+                  P1 {territory.p1} · P2 {territory.p2} · moyenne #{territory.averageRank ?? "—"} · pire #{territory.worstRank ?? "—"}
+                </div>
+                <div className="mt-3 text-xs text-slate-700">
                   <strong>Objectif :</strong> {territory.objectives?.primary || "—"}
-                </div>
-
-                <div className="mt-4 grid gap-2 lg:grid-cols-2">
-                  {(territory.actions || []).map((action) => (
-                    <div key={action.code} className="rounded-lg border border-slate-200 p-3 text-sm">
-                      <div className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{action.type}</div>
-                      <div className="mt-1 text-slate-800">{action.action}</div>
-                    </div>
-                  ))}
                 </div>
               </article>
             ))}
@@ -172,6 +161,14 @@ export default async function TerritorialSeoPanel({ campaignId, agencyId, keywor
           ) : null}
         </div>
       ) : null}
+
+      <TerritorialActionTracker
+        campaignId={campaignId}
+        agencyId={agencyId}
+        keywordId={keywordId}
+        initialActions={trackingPayload?.actions || []}
+        plan={plan}
+      />
 
       {!hasUrgentTerritories ? (
         <div className="border-t p-6 text-sm text-slate-600">
