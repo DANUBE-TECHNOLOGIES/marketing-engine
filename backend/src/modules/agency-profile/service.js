@@ -51,6 +51,7 @@ class AgencyProfileService {
       "storefrontAddress",
       "phoneNumbers",
       "websiteUri",
+      "latlng",
     ].join(",");
 
     const response = await fetch(
