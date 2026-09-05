@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireRole } from "../lib/access";
 import MainLayout from "../components/MainLayout";
+import TerritorialSeoPanel from "./TerritorialSeoPanel";
 
 const BACKEND_URL = process.env.BACKEND_INTERNAL_URL || "http://backend:4000";
 const TENANT_SLUG = process.env.TENANT_SLUG || process.env.NEXT_PUBLIC_TENANT_SLUG || "mondescale";
@@ -12,6 +13,14 @@ async function getJson(path) {
   });
   if (!response.ok) throw new Error(`Ranking grid API ${response.status} for ${path}`);
   return response.json();
+}
+
+async function getJsonOrNull(path) {
+  try {
+    return await getJson(path);
+  } catch {
+    return null;
+  }
 }
 
 function numberOrNull(value) {
@@ -113,7 +122,9 @@ function Comparison({ comparison }) {
     return (
       <section className="rounded-2xl border border-dashed border-slate-300 bg-white p-6">
         <h2 className="text-xl font-bold">Évolution</h2>
-        <p className="mt-2 text-sm text-slate-600">Le premier relevé sert de référence. La comparaison apparaîtra dès qu’un second snapshot aura été mesuré.</p>
+        <p className="mt-2 text-sm text-slate-600">
+          Aucun relevé précédent avec une méthodologie strictement comparable n’est disponible. Les anciens relevés restent conservés mais ne sont pas mélangés au référentiel calibré actuel.
+        </p>
       </section>
     );
   }
@@ -145,6 +156,7 @@ export default async function RankingGridPage({ searchParams }) {
   const params = await searchParams;
   const agencyId = Number(params?.agencyId) > 0 ? Number(params.agencyId) : 6;
   const keywordId = Number(params?.keywordId) > 0 ? Number(params.keywordId) : 2;
+  const loadTerritorialPlan = String(params?.territorialPlan || "") === "1";
 
   const historyPayload = await getJson(`/rankings/grid/history?agencyId=${agencyId}&keywordId=${keywordId}&limit=12`);
   const history = Array.isArray(historyPayload.history) ? historyPayload.history : [];
@@ -155,7 +167,8 @@ export default async function RankingGridPage({ searchParams }) {
   let comparison = null;
   if (latest) heatmap = await getJson(`/rankings/grid/campaigns/${latest.id}/heatmap`);
   if (completed.length >= 2) {
-    comparison = await getJson(`/rankings/grid/compare?fromCampaignId=${completed[1].id}&toCampaignId=${completed[0].id}`);
+    // Legacy 15z and calibrated 14z campaigns are intentionally non-comparable.
+    comparison = await getJsonOrNull(`/rankings/grid/compare?fromCampaignId=${completed[1].id}&toCampaignId=${completed[0].id}`);
   }
 
   if (!latest || !heatmap) {
@@ -199,6 +212,13 @@ export default async function RankingGridPage({ searchParams }) {
         <Heatmap heatmap={heatmap} />
         <Comparison comparison={comparison} />
       </div>
+
+      <TerritorialSeoPanel
+        campaignId={latest.id}
+        agencyId={agencyId}
+        keywordId={keywordId}
+        loadPlan={loadTerritorialPlan}
+      />
 
       <section className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="border-b p-5">
