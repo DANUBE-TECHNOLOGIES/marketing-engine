@@ -75,7 +75,9 @@ test("weak campaign exposes distance decay and weakest cells", () => {
   const result = analyzeSpatialCampaign(campaign(11, "Bois-Colombes", positions));
   assert.equal(result.overall.averagePosition, 21.2);
   assert.equal(result.overall.top3Rate, 0.04);
-  assert.equal(result.overall.top10Rate, 0.12);
+  // Top 10 is cumulative (rank <= 10), consistent with aggregate.js:
+  // ranks 10, 8, 7 and 2 => 4 / 25 = 0.16.
+  assert.equal(result.overall.top10Rate, 0.16);
   assert.equal(result.decay.centerRank, 2);
   assert.ok(result.decay.outerMinusCenter > 20);
   assert.equal(result.weakestCells[0].rank, 63);
