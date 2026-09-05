@@ -3,8 +3,11 @@
 const express = require("express");
 const { RankingGridRepository } = require("./repository");
 const { RankingGridService } = require("./service");
-const { UnconfiguredRankingGridProvider } = require("./provider");
 const { prepareNetworkBaselines } = require("./network-baselines");
+const {
+  DataForSeoMapsRankingGridProvider,
+  methodologyMetadata,
+} = require("./dataforseo-provider");
 const rankingGridRoutes = require("./routes");
 
 const NETWORK_BASELINE_ACK = "CREATE-NETWORK-BASELINES";
@@ -16,9 +19,20 @@ function tenantSlugFrom(req) {
 module.exports = function createRankingGridBaselineRoutes({ prisma }) {
   const router = express.Router();
   const repository = new RankingGridRepository(prisma);
+  const methodology = methodologyMetadata();
+  const methodologyOnlyProvider = new DataForSeoMapsRankingGridProvider({
+    login: "disabled-during-baseline-preparation",
+    password: "disabled-during-baseline-preparation",
+    fetchImpl: async () => {
+      const error = new Error("provider calls are forbidden during baseline preparation");
+      error.code = "RANKING_GRID_BASELINE_PROVIDER_CALL_FORBIDDEN";
+      throw error;
+    },
+    targetResolver: async () => null,
+  });
   const service = new RankingGridService({
     repository,
-    provider: new UnconfiguredRankingGridProvider(),
+    provider: methodologyOnlyProvider,
   });
 
   async function tenantId(req) {
@@ -71,6 +85,7 @@ module.exports = function createRankingGridBaselineRoutes({ prisma }) {
         agencies: audited,
         repository,
         service,
+        methodology,
         gridSize: 5,
         spacingKm: 1,
       });
@@ -78,6 +93,7 @@ module.exports = function createRankingGridBaselineRoutes({ prisma }) {
       res.json({
         gridSize: 5,
         spacingKm: 1,
+        methodology,
         providerCalls: 0,
         ...result,
       });
