@@ -1,6 +1,7 @@
 "use strict";
 
 const express = require("express");
+const { Prisma } = require("@prisma/client");
 const { RankingGridRepository } = require("./repository");
 const { RankingGridService } = require("./service");
 const { buildHeatmap } = require("./heatmap");
@@ -84,6 +85,12 @@ function createDataForSeoProvider(prisma) {
 }
 
 async function loadRolloutAgencies(prisma, tenantId) {
+  if (!prisma?.agency?.findMany || typeof prisma.$queryRaw !== "function") {
+    const error = new Error("Ranking grid rollout requires agency and raw-query Prisma capabilities");
+    error.code = "RANKING_GRID_ROLLOUT_PRISMA_UNAVAILABLE";
+    throw error;
+  }
+
   const agencies = await prisma.agency.findMany({
     where: { tenantId },
     orderBy: [{ city: "asc" }, { name: "asc" }],
@@ -99,41 +106,64 @@ async function loadRolloutAgencies(prisma, tenantId) {
 
   if (!agencies.length) return agencies;
 
-  const agencyIds = agencies.map((agency) => agency.id);
+  const agencyIds = agencies.map((agency) => Number(agency.id));
   const [keywords, campaigns] = await Promise.all([
-    prisma.rankingKeyword.findMany({
-      where: {
-        agencyId: { in: agencyIds },
-        active: true,
-      },
-      orderBy: [{ id: "asc" }],
-      select: { id: true, agencyId: true, keyword: true, city: true, active: true },
-    }),
-    prisma.rankingGridCampaign.findMany({
-      where: { agencyId: { in: agencyIds } },
-      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-      select: { id: true, agencyId: true, centerLat: true, centerLng: true },
-    }),
+    prisma.$queryRaw(Prisma.sql`
+      SELECT
+        k.id,
+        k."agencyId",
+        k."keyword",
+        k."city",
+        k."active"
+      FROM "RankingKeyword" k
+      INNER JOIN "Agency" a ON a.id = k."agencyId"
+      WHERE a."tenantId" = ${tenantId}
+        AND k."active" = true
+        AND k."agencyId" IN (${Prisma.join(agencyIds)})
+      ORDER BY k.id ASC
+    `),
+    prisma.$queryRaw(Prisma.sql`
+      SELECT
+        c.id,
+        c."agencyId",
+        c."centerLat",
+        c."centerLng"
+      FROM "RankingGridCampaign" c
+      INNER JOIN "Agency" a ON a.id = c."agencyId"
+      WHERE a."tenantId" = ${tenantId}
+        AND c."agencyId" IN (${Prisma.join(agencyIds)})
+      ORDER BY c."createdAt" DESC, c.id DESC
+    `),
   ]);
 
   const keywordsByAgency = new Map();
   for (const keyword of keywords) {
-    if (!keywordsByAgency.has(keyword.agencyId)) keywordsByAgency.set(keyword.agencyId, []);
-    keywordsByAgency.get(keyword.agencyId).push(keyword);
+    const agencyId = Number(keyword.agencyId);
+    if (!keywordsByAgency.has(agencyId)) keywordsByAgency.set(agencyId, []);
+    keywordsByAgency.get(agencyId).push({
+      ...keyword,
+      id: Number(keyword.id),
+      agencyId,
+    });
   }
 
   const latestCampaignByAgency = new Map();
   for (const campaign of campaigns) {
-    if (!latestCampaignByAgency.has(campaign.agencyId)) {
-      latestCampaignByAgency.set(campaign.agencyId, campaign);
+    const agencyId = Number(campaign.agencyId);
+    if (!latestCampaignByAgency.has(agencyId)) {
+      latestCampaignByAgency.set(agencyId, {
+        ...campaign,
+        id: Number(campaign.id),
+        agencyId,
+      });
     }
   }
 
   return agencies.map((agency) => ({
     ...agency,
-    keywords: keywordsByAgency.get(agency.id) || [],
-    rankingGridCampaigns: latestCampaignByAgency.has(agency.id)
-      ? [latestCampaignByAgency.get(agency.id)]
+    keywords: keywordsByAgency.get(Number(agency.id)) || [],
+    rankingGridCampaigns: latestCampaignByAgency.has(Number(agency.id))
+      ? [latestCampaignByAgency.get(Number(agency.id))]
       : [],
   }));
 }
