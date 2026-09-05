@@ -69,6 +69,7 @@ function compareCampaigns(fromCampaign, toCampaign) {
   if (!sameMethodology(fromCampaign, toCampaign)) {
     const error = new Error("ranking grid campaign methodology differs or is unknown");
     error.code = "RANKING_GRID_COMPARISON_METHODOLOGY_MISMATCH";
+    error.status = 400;
     error.fromMethodology = campaignMethodology(fromCampaign);
     error.toMethodology = campaignMethodology(toCampaign);
     throw error;
