@@ -19,7 +19,8 @@ test("calibration probe is hard-bounded to 18 calls and $0.036 observed estimate
   assert.equal(SENTINEL_CELLS.length, 9);
   assert.deepEqual(DEFAULT_ZOOMS, [14, 16]);
   assert.equal(SENTINEL_CELLS.length * DEFAULT_ZOOMS.length, MAX_CALLS);
-  assert.equal(MAX_CALLS * OBSERVED_UNIT_COST_USD, 0.036);
+  const estimate = MAX_CALLS * OBSERVED_UNIT_COST_USD;
+  assert.ok(Math.abs(estimate - 0.036) < 1e-12, `expected ~0.036, got ${estimate}`);
 });
 
 test("zoom parser only accepts unique integer Google Maps zoom levels", () => {
