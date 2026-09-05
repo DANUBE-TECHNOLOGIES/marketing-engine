@@ -22,6 +22,20 @@ function maskForCampaign(campaign) {
   return rows.join("/");
 }
 
+function foundMaskForCampaign(campaign) {
+  const size = Number(campaign.gridSize);
+  const byCell = new Map((campaign.points || []).map((p) => [`${Number(p.row)}:${Number(p.col)}`, p]));
+  const rows = [];
+  for (let row = 0; row < size; row += 1) {
+    let line = "";
+    for (let col = 0; col < size; col += 1) {
+      line += pointClass(byCell.get(`${row}:${col}`)) === "found" ? "F" : "-";
+    }
+    rows.push(line);
+  }
+  return rows.join("/");
+}
+
 function summarizeCalibrationCampaign(campaign) {
   const points = Array.isArray(campaign.points) ? campaign.points : [];
   const counts = { found: 0, noSearch: 0, notFound: 0, errors: 0 };
@@ -48,6 +62,7 @@ function summarizeCalibrationCampaign(campaign) {
     spacingKm: Number(campaign.spacingKm),
     provider: campaign.provider,
     mask: maskForCampaign(campaign),
+    foundMask: foundMaskForCampaign(campaign),
     ...counts,
     rowFound,
     colFound,
@@ -57,37 +72,56 @@ function summarizeCalibrationCampaign(campaign) {
   };
 }
 
-function buildCalibrationReport(campaigns = []) {
-  const rows = campaigns.map(summarizeCalibrationCampaign);
-  const maskGroups = new Map();
+function groupsFor(rows, key) {
+  const grouped = new Map();
   for (const row of rows) {
-    if (!maskGroups.has(row.mask)) maskGroups.set(row.mask, []);
-    maskGroups.get(row.mask).push(row.campaignId);
+    const value = row[key];
+    if (!grouped.has(value)) grouped.set(value, []);
+    grouped.get(value).push(row.campaignId);
   }
-  const groups = [...maskGroups.entries()]
+  return [...grouped.entries()]
     .map(([mask, campaignIds]) => ({ mask, campaignIds, count: campaignIds.length }))
     .sort((a, b) => b.count - a.count || a.mask.localeCompare(b.mask));
-  const dominant = groups[0] || null;
+}
+
+function buildCalibrationReport(campaigns = []) {
+  const rows = campaigns.map(summarizeCalibrationCampaign);
+  const maskGroups = groupsFor(rows, "mask");
+  const foundMaskGroups = groupsFor(rows, "foundMask");
+  const dominant = maskGroups[0] || null;
+  const dominantFound = foundMaskGroups[0] || null;
   const identicalMaskRate = rows.length && dominant ? Math.round((dominant.count / rows.length) * 1000) / 1000 : 0;
-  const geometryWarning = rows.length >= 2 && identicalMaskRate >= 0.75;
+  const identicalFoundMaskRate = rows.length && dominantFound ? Math.round((dominantFound.count / rows.length) * 1000) / 1000 : 0;
+  const geometryWarning = rows.length >= 2 && identicalFoundMaskRate >= 0.75;
   return {
     mode: "read_only",
     providerCalls: 0,
     executionTriggered: false,
     summary: {
       campaigns: rows.length,
-      distinctMasks: groups.length,
+      distinctMasks: maskGroups.length,
       dominantMask: dominant?.mask || null,
       dominantMaskCampaigns: dominant?.count || 0,
       identicalMaskRate,
+      distinctFoundMasks: foundMaskGroups.length,
+      dominantFoundMask: dominantFound?.mask || null,
+      dominantFoundMaskCampaigns: dominantFound?.count || 0,
+      identicalFoundMaskRate,
       geometryWarning,
       interpretation: geometryWarning
-        ? "A dominant found/not-found footprint is shared by at least 75% of campaigns. Treat presenceRate as geometry-sensitive until zoom/viewport calibration is completed."
-        : "No dominant shared footprint detected at the 75% threshold.",
+        ? "A dominant found-only footprint is shared by at least 75% of campaigns. Presence rate is geometry-sensitive until zoom/viewport calibration is completed."
+        : "No dominant shared found-only footprint detected at the 75% threshold.",
     },
-    maskGroups: groups,
+    maskGroups,
+    foundMaskGroups,
     campaigns: rows,
   };
 }
 
-module.exports = { pointClass, maskForCampaign, summarizeCalibrationCampaign, buildCalibrationReport };
+module.exports = {
+  pointClass,
+  maskForCampaign,
+  foundMaskForCampaign,
+  summarizeCalibrationCampaign,
+  buildCalibrationReport,
+};
