@@ -36,6 +36,6 @@ test("tracked actions measure next comparable grid and never trigger DataForSEO"
 test("recommendation tracking remains explicit user action", () => {
   const tracker = read("app/ranking-grid/TerritorialActionTracker.js");
   assert.match(tracker, /onClick=\{\(\) => create\(territory, recommendation\)\}/);
-  assert.match(tracker, />Suivre</);
+  assert.match(tracker, /"Suivre"/);
   assert.doesNotMatch(tracker, /useEffect\([^]*create\(/);
 });
