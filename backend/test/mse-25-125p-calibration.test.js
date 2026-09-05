@@ -2,7 +2,12 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { pointClass, maskForCampaign, buildCalibrationReport } = require("../src/modules/ranking-grid/calibration");
+const {
+  pointClass,
+  maskForCampaign,
+  foundMaskForCampaign,
+  buildCalibrationReport,
+} = require("../src/modules/ranking-grid/calibration");
 
 function campaign(id, mask) {
   const rows = mask.split("/");
@@ -25,21 +30,28 @@ test("calibration classifies found, no-search and ordinary not-found points", ()
   assert.equal(pointClass({ status: "error" }), "error");
 });
 
-test("mask preserves the spatial footprint and no-search distinction", () => {
+test("diagnostic mask preserves no-search while found mask ignores absence reason", () => {
   const c = campaign(1, "NNNNN/FFFFN/FFFFN/FFFFN/NNNNN");
   assert.equal(maskForCampaign(c), "NNNNN/FFFFN/FFFFN/FFFFN/NNNNN");
+  assert.equal(foundMaskForCampaign(c), "-----/FFFF-/FFFF-/FFFF-/-----");
 });
 
-test("network audit warns when at least 75 percent share the same footprint", () => {
-  const dominant = "NNNNN/FFFFN/FFFFN/FFFFN/NNNNN";
+test("network audit warns when found footprint is shared even if no-search masks differ", () => {
   const report = buildCalibrationReport([
-    campaign(1, dominant), campaign(2, dominant), campaign(3, dominant), campaign(4, "NNNNN/FFFFN/FFFFN/FFFNN/NNNNN"),
+    campaign(1, "-----/FFFF-/FFFF-/FFFF-/-----"),
+    campaign(2, "----N/FFFFN/FFFF-/FFFF-/-----"),
+    campaign(3, "-----/FFFF-/FFFF-/FFFF-/NNNN-"),
+    campaign(4, "----N/FFFF-/FFFF-/FFFFN/----N"),
   ]);
   assert.equal(report.mode, "read_only");
   assert.equal(report.providerCalls, 0);
   assert.equal(report.executionTriggered, false);
   assert.equal(report.summary.campaigns, 4);
-  assert.equal(report.summary.dominantMaskCampaigns, 3);
-  assert.equal(report.summary.identicalMaskRate, 0.75);
+  assert.equal(report.summary.distinctMasks, 4);
+  assert.equal(report.summary.distinctFoundMasks, 1);
+  assert.equal(report.summary.dominantFoundMaskCampaigns, 4);
+  assert.equal(report.summary.identicalFoundMaskRate, 1);
   assert.equal(report.summary.geometryWarning, true);
+  assert.equal(report.summary.dominantFoundMask, "-----/FFFF-/FFFF-/FFFF-/-----");
+  assert.equal(report.foundMaskGroups.length, 1);
 });
