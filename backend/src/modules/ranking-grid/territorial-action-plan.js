@@ -120,6 +120,14 @@ function buildTerritorialActionPlan({ campaignId, agencyId, city, byCity = {}, c
         worstRank: matchingCells.length
           ? Math.max(...matchingCells.map((cell) => Number(cell.rank)).filter(Number.isFinite))
           : null,
+        gridCells: matchingCells.map((cell) => ({
+          row: Number(cell.row),
+          col: Number(cell.col),
+          rank: Number.isFinite(Number(cell.rank)) ? Number(cell.rank) : null,
+          priority: cell.priority || null,
+          latitude: Number.isFinite(Number(cell.latitude)) ? Number(cell.latitude) : null,
+          longitude: Number.isFinite(Number(cell.longitude)) ? Number(cell.longitude) : null,
+        })),
         objectives: objectivesFor(bucket),
         actions: actionsFor(name, bucket),
       };
