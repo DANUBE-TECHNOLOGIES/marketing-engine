@@ -5,6 +5,7 @@ const { RankingGridRepository } = require("./repository");
 const { RankingGridService } = require("./service");
 const { buildHeatmap } = require("./heatmap");
 const { compareCampaigns } = require("./comparison");
+const { auditAgencyIdentity, summarizeIdentityAudit } = require("./identity-audit");
 const { UnconfiguredRankingGridProvider } = require("./provider");
 const { DataForSeoMapsRankingGridProvider } = require("./dataforseo-provider");
 
@@ -126,6 +127,34 @@ module.exports = function createRankingGridRoutes({ prisma, provider }) {
         limit: req.query?.limit,
       });
       res.json({ history });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.get("/rankings/grid/identity-audit", async (req, res, next) => {
+    try {
+      const scope = await tenantId(req);
+      const agencies = await prisma.agency.findMany({
+        where: { tenantId: scope },
+        orderBy: [{ city: "asc" }, { name: "asc" }],
+        select: {
+          id: true,
+          name: true,
+          city: true,
+          googleReviewUrl: true,
+          googleLocationId: true,
+          profile: { select: { googleLocationData: true } },
+        },
+      });
+      const audited = agencies.map((agency) => auditAgencyIdentity(agency, {
+        profileIdentity,
+        placeIdFromGoogleReviewUrl,
+      }));
+      res.json({
+        summary: summarizeIdentityAudit(audited),
+        agencies: audited,
+      });
     } catch (error) {
       next(error);
     }
