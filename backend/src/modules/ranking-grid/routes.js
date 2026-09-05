@@ -2,12 +2,19 @@
 
 const express = require("express");
 const { Prisma } = require("@prisma/client");
+const AgencyProfileRepository = require("../agency-profile/repository");
+const AgencyProfileService = require("../agency-profile/service");
 const { RankingGridRepository } = require("./repository");
 const { RankingGridService } = require("./service");
 const { buildHeatmap } = require("./heatmap");
 const { compareCampaigns } = require("./comparison");
 const { auditAgencyIdentity, summarizeIdentityAudit } = require("./identity-audit");
 const { auditAgencyRollout, summarizeRolloutReadiness } = require("./rollout-readiness");
+const {
+  ROLLOUT_PREPARATION_ACK,
+  ensureMissingRankingKeywords,
+  syncMissingGoogleCoordinates,
+} = require("./rollout-preparation");
 const { UnconfiguredRankingGridProvider } = require("./provider");
 const { DataForSeoMapsRankingGridProvider } = require("./dataforseo-provider");
 
@@ -168,9 +175,21 @@ async function loadRolloutAgencies(prisma, tenantId) {
   }));
 }
 
+function auditRolloutAgencies(agencies) {
+  return agencies.map((agency) => {
+    const identity = auditAgencyIdentity(agency, {
+      profileIdentity,
+      placeIdFromGoogleReviewUrl,
+    });
+    return auditAgencyRollout(agency, identity);
+  });
+}
+
 module.exports = function createRankingGridRoutes({ prisma, provider }) {
   const router = express.Router();
   const repository = new RankingGridRepository(prisma);
+  const agencyProfileRepository = new AgencyProfileRepository(prisma);
+  const agencyProfileService = new AgencyProfileService(prisma, agencyProfileRepository);
   const rankingProvider = provider || (
     gridProviderEnabled()
       ? createDataForSeoProvider(prisma)
@@ -249,19 +268,63 @@ module.exports = function createRankingGridRoutes({ prisma, provider }) {
   router.get("/rankings/grid/rollout-readiness", async (req, res, next) => {
     try {
       const scope = await tenantId(req);
-      const agencies = await loadRolloutAgencies(prisma, scope);
-
-      const audited = agencies.map((agency) => {
-        const identity = auditAgencyIdentity(agency, {
-          profileIdentity,
-          placeIdFromGoogleReviewUrl,
-        });
-        return auditAgencyRollout(agency, identity);
-      });
-
+      const audited = auditRolloutAgencies(await loadRolloutAgencies(prisma, scope));
       res.json({
         summary: summarizeRolloutReadiness(audited),
         agencies: audited,
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post("/rankings/grid/rollout-prerequisites/prepare", async (req, res, next) => {
+    try {
+      if (String(req.body?.ack || "") !== ROLLOUT_PREPARATION_ACK) {
+        return res.status(400).json({
+          error: "ranking_grid_rollout_prepare_ack_required",
+          requiredAck: ROLLOUT_PREPARATION_ACK,
+        });
+      }
+
+      if (gridProviderEnabled()) {
+        return res.status(409).json({
+          error: "ranking_grid_rollout_prepare_requires_provider_off",
+          hint: "Set RANKING_GRID_DATAFORSEO_ENABLED=false before preparing network prerequisites",
+        });
+      }
+
+      const scope = await tenantId(req);
+      const beforeAgencies = await loadRolloutAgencies(prisma, scope);
+      const beforeAudited = auditRolloutAgencies(beforeAgencies);
+      const beforeByAgency = new Map(beforeAudited.map((row) => [Number(row.agencyId), row]));
+
+      const googleSync = await syncMissingGoogleCoordinates({
+        agencies: beforeAgencies,
+        auditAgency: (agency) => beforeByAgency.get(Number(agency.id)),
+        syncGoogleProfile: (agencyId) => agencyProfileService.syncGoogleHours(agencyId),
+      });
+
+      const keywordsCreated = await ensureMissingRankingKeywords(
+        prisma,
+        scope,
+        beforeAgencies,
+      );
+
+      const afterAudited = auditRolloutAgencies(await loadRolloutAgencies(prisma, scope));
+
+      res.json({
+        before: summarizeRolloutReadiness(beforeAudited),
+        actions: {
+          googleSync,
+          keywordsCreated: keywordsCreated.map((row) => ({
+            ...row,
+            id: Number(row.id),
+            agencyId: Number(row.agencyId),
+          })),
+        },
+        after: summarizeRolloutReadiness(afterAudited),
+        agencies: afterAudited,
       });
     } catch (error) {
       next(error);
@@ -377,3 +440,4 @@ module.exports.profileIdentity = profileIdentity;
 module.exports.placeIdFromGoogleReviewUrl = placeIdFromGoogleReviewUrl;
 module.exports.createDataForSeoProvider = createDataForSeoProvider;
 module.exports.loadRolloutAgencies = loadRolloutAgencies;
+module.exports.auditRolloutAgencies = auditRolloutAgencies;
