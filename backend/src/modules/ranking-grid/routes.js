@@ -83,6 +83,61 @@ function createDataForSeoProvider(prisma) {
   });
 }
 
+async function loadRolloutAgencies(prisma, tenantId) {
+  const agencies = await prisma.agency.findMany({
+    where: { tenantId },
+    orderBy: [{ city: "asc" }, { name: "asc" }],
+    select: {
+      id: true,
+      name: true,
+      city: true,
+      googleReviewUrl: true,
+      googleLocationId: true,
+      profile: { select: { googleLocationData: true } },
+    },
+  });
+
+  if (!agencies.length) return agencies;
+
+  const agencyIds = agencies.map((agency) => agency.id);
+  const [keywords, campaigns] = await Promise.all([
+    prisma.rankingKeyword.findMany({
+      where: {
+        agencyId: { in: agencyIds },
+        active: true,
+      },
+      orderBy: [{ id: "asc" }],
+      select: { id: true, agencyId: true, keyword: true, city: true, active: true },
+    }),
+    prisma.rankingGridCampaign.findMany({
+      where: { agencyId: { in: agencyIds } },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      select: { id: true, agencyId: true, centerLat: true, centerLng: true },
+    }),
+  ]);
+
+  const keywordsByAgency = new Map();
+  for (const keyword of keywords) {
+    if (!keywordsByAgency.has(keyword.agencyId)) keywordsByAgency.set(keyword.agencyId, []);
+    keywordsByAgency.get(keyword.agencyId).push(keyword);
+  }
+
+  const latestCampaignByAgency = new Map();
+  for (const campaign of campaigns) {
+    if (!latestCampaignByAgency.has(campaign.agencyId)) {
+      latestCampaignByAgency.set(campaign.agencyId, campaign);
+    }
+  }
+
+  return agencies.map((agency) => ({
+    ...agency,
+    keywords: keywordsByAgency.get(agency.id) || [],
+    rankingGridCampaigns: latestCampaignByAgency.has(agency.id)
+      ? [latestCampaignByAgency.get(agency.id)]
+      : [],
+  }));
+}
+
 module.exports = function createRankingGridRoutes({ prisma, provider }) {
   const router = express.Router();
   const repository = new RankingGridRepository(prisma);
@@ -164,28 +219,7 @@ module.exports = function createRankingGridRoutes({ prisma, provider }) {
   router.get("/rankings/grid/rollout-readiness", async (req, res, next) => {
     try {
       const scope = await tenantId(req);
-      const agencies = await prisma.agency.findMany({
-        where: { tenantId: scope },
-        orderBy: [{ city: "asc" }, { name: "asc" }],
-        select: {
-          id: true,
-          name: true,
-          city: true,
-          googleReviewUrl: true,
-          googleLocationId: true,
-          profile: { select: { googleLocationData: true } },
-          keywords: {
-            where: { active: true },
-            orderBy: [{ id: "asc" }],
-            select: { id: true, keyword: true, city: true, active: true },
-          },
-          rankingGridCampaigns: {
-            orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-            take: 1,
-            select: { id: true, centerLat: true, centerLng: true },
-          },
-        },
-      });
+      const agencies = await loadRolloutAgencies(prisma, scope);
 
       const audited = agencies.map((agency) => {
         const identity = auditAgencyIdentity(agency, {
@@ -312,3 +346,4 @@ module.exports.gridProviderEnabled = gridProviderEnabled;
 module.exports.profileIdentity = profileIdentity;
 module.exports.placeIdFromGoogleReviewUrl = placeIdFromGoogleReviewUrl;
 module.exports.createDataForSeoProvider = createDataForSeoProvider;
+module.exports.loadRolloutAgencies = loadRolloutAgencies;
