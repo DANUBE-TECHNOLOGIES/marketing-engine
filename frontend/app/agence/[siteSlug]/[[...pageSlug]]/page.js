@@ -292,7 +292,7 @@ export default async function AgencySitePage({ params }) {
         data-public-page-kind={legalPage ? "legal" : "content"}
         data-content-quality={quality.criticallyThin ? "critical" : quality.thin ? "thin" : quality.strong ? "strong" : "standard"}
       >
-        {sharedHero ? (
+        {!legalPage && sharedHero ? (
           <HeroV2Renderer
             section={sharedHero}
             site={site}
