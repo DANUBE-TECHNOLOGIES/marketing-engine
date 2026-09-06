@@ -71,6 +71,101 @@ function inspirationIntroduction(site) {
     : local;
 }
 
+function inspirationCmsEditorial(site, page) {
+  const blocks =
+    (Array.isArray(page?.contentBlocks) &&
+      page.contentBlocks) ||
+    (Array.isArray(page?.sections) &&
+      page.sections) ||
+    (Array.isArray(page?.blocks) &&
+      page.blocks) ||
+    [];
+
+  const block = blocks.find((item) => {
+    const content =
+      item?.jsonContent &&
+      typeof item.jsonContent === "object"
+        ? item.jsonContent
+        : item?.content &&
+            typeof item.content === "object"
+          ? item.content
+          : {};
+
+    const type = String(
+      content?.__builderType ||
+        item?.blockType ||
+        item?.type ||
+        item?.sectionType ||
+        ""
+    )
+      .trim()
+      .toLowerCase();
+
+    const status = String(
+      item?.status || ""
+    )
+      .trim()
+      .toLowerCase();
+
+    return (
+      ["text", "rich_text", "rich-text"].includes(type) &&
+      status === "published"
+    );
+  });
+
+  if (!block) return null;
+
+  const content =
+    block?.jsonContent &&
+    typeof block.jsonContent === "object"
+      ? block.jsonContent
+      : block?.content &&
+          typeof block.content === "object"
+        ? block.content
+        : {};
+
+  const text = String(
+    content.text ||
+      content.body ||
+      content.description ||
+      ""
+  )
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!text) return null;
+
+  /*
+   * Refuse the historic Website Designer seed copy.
+   * Activating CMS rendering must never expose this
+   * generic placeholder across the network.
+   */
+  const legacySeed =
+    /accompagne ses clients avec conseil, expertise et suivi personnalisé avant, pendant et après leur voyage\.?$/i;
+
+  if (legacySeed.test(text)) {
+    return null;
+  }
+
+  const cmsTitle = String(
+    content.title || ""
+  )
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return {
+    title:
+      cmsTitle &&
+      cmsTitle.toLowerCase() !==
+        "inspirations voyage"
+        ? cmsTitle
+        : inspirationHeading(site),
+
+    text,
+  };
+}
+
+
 export async function generateMetadata({ params }) {
   const { siteSlug } = await params;
 
@@ -158,6 +253,12 @@ export default async function InspirationIndexPage({ params }) {
   const servicesPath = `${homePath}/services`;
   const destinationsPath = `${homePath}/destinations`;
   const seo = inspirationSeo(site, inspirationPage);
+
+  const cmsEditorial =
+    inspirationCmsEditorial(
+      site,
+      inspirationPage
+    );
   const breadcrumb = buildBreadcrumbSchema([
     { name: "Accueil", path: site.basePath },
     { name: "Inspirations voyage", path: canonical },
@@ -188,8 +289,14 @@ export default async function InspirationIndexPage({ params }) {
           </nav>
 
           <p className="public-site-eyebrow">Idées & conseils</p>
-          <h1>{inspirationHeading(site)}</h1>
-          <p>{inspirationIntroduction(site)}</p>
+          <h1>
+            {cmsEditorial?.title ||
+              inspirationHeading(site)}
+          </h1>
+          <p>
+            {cmsEditorial?.text ||
+              inspirationIntroduction(site)}
+          </p>
         </div>
       </section>
 
@@ -280,5 +387,6 @@ export {
   formatPublishedDate,
   inspirationHeading,
   inspirationIntroduction,
+  inspirationCmsEditorial,
   inspirationSeo,
 };
