@@ -3,6 +3,13 @@ function clean(value) {
 }
 
 const LOCAL_AREA_BY_SITE_SLUG = Object.freeze({
+  "tui-store-amilly": [
+    "Montargis",
+    "Villemandeur",
+    "Châlette-sur-Loing",
+    "Pannes",
+    "Cepoy",
+  ],
   "ambassade-fram-mondescale-bois-colombes": [
     "Colombes",
     "Asnières-sur-Seine",

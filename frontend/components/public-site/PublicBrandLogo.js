@@ -1,4 +1,5 @@
 const MONDESCALE_FALLBACK_LOGO = "/brand/logo-mondescale.png";
+const TUI_FALLBACK_LOGO = "/partners/tui-official.webp";
 
 function assetPublicUrl(asset) {
   if (!asset) return null;
@@ -59,6 +60,21 @@ function isMondescaleIdentity({ brand, site, agency }) {
   return identity.includes("mondescale");
 }
 
+function isTuiIdentity({ brand, site, agency }) {
+  const identity = [
+    brand?.values?.name,
+    brand?.name,
+    site?.name,
+    site?.slug,
+    agency?.name,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  return identity.includes("tui");
+}
+
 function resolveLogo({ brand, brandAssets, site, agency }) {
   // The public Mondescale header must never depend on a stale or broken
   // Brand Studio URL. The canonical network logo is shipped inside the
@@ -70,6 +86,16 @@ function resolveLogo({ brand, brandAssets, site, agency }) {
       width: 360,
       height: 144,
       __source: "bundled-canonical",
+    };
+  }
+
+  if (isTuiIdentity({ brand, site, agency })) {
+    return {
+      publicUrl: TUI_FALLBACK_LOGO,
+      altText: "Logo TUI STORE",
+      width: 600,
+      height: 240,
+      __source: "bundled-tui",
     };
   }
 
@@ -165,8 +191,10 @@ export {
   DEFAULT_LOGO_HEIGHT,
   DEFAULT_LOGO_WIDTH,
   MONDESCALE_FALLBACK_LOGO,
+  TUI_FALLBACK_LOGO,
   assetPublicUrl,
   isMondescaleIdentity,
+  isTuiIdentity,
   normalizeAsset,
   resolveLogo,
 };
