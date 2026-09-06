@@ -1,3 +1,6 @@
+const {
+  paragraphFragments,
+} = require("./safe-rich-text");
 import {
   getSectionContent,
   getSectionTitle,
@@ -163,16 +166,62 @@ function LegalDocument({ section, page, content, paragraphs }) {
 export default function RichTextV2Renderer({ section, page }) {
   const content = getSectionContent(section);
   const alignment = normalizeAlignment(content.alignment);
-  const paragraphs = textParagraphs(content.html);
-  if (isLegalPage(page)) return <LegalDocument section={section} page={page} content={content} paragraphs={paragraphs} />;
-  if (isGenericHomeIntro(section, page) || isRedundantHomeLocalSection(section, page)) return null;
+
+  if (isLegalPage(page)) {
+    return (
+      <LegalDocument
+        section={section}
+        page={page}
+        content={content}
+        paragraphs={textParagraphs(content.html)}
+      />
+    );
+  }
+
+  if (
+    isGenericHomeIntro(section, page) ||
+    isRedundantHomeLocalSection(section, page)
+  ) {
+    return null;
+  }
+
+  const paragraphs =
+    paragraphFragments(content.html);
+
   return (
     <section className="public-site-section public-site-rich-text">
-      <div className="public-site-container public-site-prose" style={{ textAlign: alignment }}>
-        {getSectionTitle(section, null) ? <h2>{getSectionTitle(section, null)}</h2> : null}
+      <div
+        className="public-site-container public-site-prose"
+        style={{ textAlign: alignment }}
+      >
+        {getSectionTitle(section, null) ? (
+          <h2>{getSectionTitle(section, null)}</h2>
+        ) : null}
+
         {content.text ? <p>{content.text}</p> : null}
-        {content.description ? <p>{content.description}</p> : null}
-        {paragraphs.map((paragraph, index) => <p key={`paragraph-${index}`}>{paragraph}</p>)}
+
+        {content.description ? (
+          <p>{content.description}</p>
+        ) : null}
+
+        {paragraphs.map((fragments, index) => (
+          <p key={`paragraph-${index}`}>
+            {fragments.map((fragment, fragmentIndex) =>
+              fragment.type === "link" ? (
+                <a
+                  key={`fragment-${fragmentIndex}`}
+                  href={fragment.href}
+                >
+                  {fragment.text}
+                </a>
+              ) : (
+                <span key={`fragment-${fragmentIndex}`}>
+                  {fragment.text}
+                </span>
+              )
+            )}
+          </p>
+        ))}
       </div>
     </section>
   );

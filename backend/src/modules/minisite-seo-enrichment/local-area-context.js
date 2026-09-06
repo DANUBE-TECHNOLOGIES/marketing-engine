@@ -6,8 +6,14 @@ function clean(value) {
 
 const LOCAL_AREA_BY_SITE_SLUG = Object.freeze({
   "ambassade-fram-mondescale-bois-colombes": [
-    "Colombes",
+    // MSE-25.125AI: Ranking Grid z14 Wave 1 territories first.
+    // This is a service-area relevance signal only: no physical presence
+    // or separate agency location is claimed in these municipalities.
+    "Levallois-Perret",
     "Asnières-sur-Seine",
+    "Clichy",
+    "Neuilly-sur-Seine",
+    "Colombes",
     "La Garenne-Colombes",
     "Courbevoie",
     "Gennevilliers",
