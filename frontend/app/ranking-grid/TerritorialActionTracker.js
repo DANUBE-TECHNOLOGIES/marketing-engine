@@ -17,6 +17,10 @@ function actionKey(row) {
   return trackedKey(metadata.sourceCampaignId, metadata.territoryCity, metadata.actionCode);
 }
 
+function executionKey(city, code) {
+  return `${city}:${code}`;
+}
+
 function statusClasses(status) {
   if (status === "done") return "bg-emerald-100 text-emerald-900";
   if (status === "in_progress") return "bg-cyan-100 text-cyan-900";
@@ -45,6 +49,17 @@ export default function TerritorialActionTracker({
   const [drafts, setDrafts] = useState({});
 
   const tracked = useMemo(() => new Set(actions.map(actionKey)), [actions]);
+  const executionPlan = plan?.executionPlan || null;
+  const wave1 = Array.isArray(executionPlan?.wave1) ? executionPlan.wave1 : [];
+  const wave2 = Array.isArray(executionPlan?.wave2) ? executionPlan.wave2 : [];
+  const wave1Keys = useMemo(
+    () => new Set(wave1.map((row) => executionKey(row.city, row.actionCode))),
+    [wave1],
+  );
+  const wave2Keys = useMemo(
+    () => new Set(wave2.map((row) => executionKey(row.city, row.actionCode))),
+    [wave2],
+  );
 
   async function refresh() {
     const response = await fetch(
@@ -149,6 +164,41 @@ export default function TerritorialActionTracker({
         <div className="mt-4 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-900">{error}</div>
       ) : null}
 
+      {plan && wave1.length ? (
+        <div className="mt-5 rounded-xl border border-indigo-200 bg-indigo-50 p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="text-sm font-black text-indigo-950">Vague 1 — actions à lancer maintenant</div>
+              <p className="mt-1 text-xs text-indigo-900/80">
+                {wave1.length} actions prioritaires · 2 leviers par territoire critique · aucune création automatique.
+              </p>
+            </div>
+            <div className="rounded-full bg-white px-3 py-1 text-xs font-black text-indigo-900 shadow-sm">
+              Priorité V1
+            </div>
+          </div>
+          <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+            {wave1.map((row, index) => {
+              const trackedNow = tracked.has(trackedKey(campaignId, row.city, row.actionCode));
+              return (
+                <div key={`${row.city}:${row.actionCode}`} className="rounded-lg bg-white p-3 text-xs shadow-sm">
+                  <div className="flex items-center justify-between gap-2">
+                    <strong className="text-slate-900">#{index + 1} {row.city}</strong>
+                    <span className={trackedNow ? "font-bold text-emerald-700" : "font-bold text-indigo-700"}>
+                      {trackedNow ? "Suivie" : "À suivre"}
+                    </span>
+                  </div>
+                  <div className="mt-1 text-slate-600">{row.actionCode === "service_area_relevance" ? "Pertinence zone de service" : row.actionCode === "internal_linking" ? "Maillage interne local" : row.actionCode}</div>
+                  <div className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                    impact {row.impact} · effort {row.effort}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+
       {plan ? (
         <div className="mt-5 space-y-4">
           {(plan.territories || []).map((territory) => (
@@ -157,18 +207,28 @@ export default function TerritorialActionTracker({
               <div className="mt-3 grid gap-2 lg:grid-cols-2">
                 {(territory.actions || []).map((recommendation) => {
                   const key = trackedKey(campaignId, territory.city, recommendation.code);
+                  const execution = executionKey(territory.city, recommendation.code);
                   const alreadyTracked = tracked.has(key);
+                  const isWave1 = wave1Keys.has(execution);
+                  const isWave2 = wave2Keys.has(execution);
                   return (
-                    <div key={recommendation.code} className="flex items-start justify-between gap-3 rounded-lg bg-slate-50 p-3 text-sm">
+                    <div key={recommendation.code} className={`flex items-start justify-between gap-3 rounded-lg p-3 text-sm ${isWave1 ? "border border-indigo-200 bg-indigo-50" : "bg-slate-50"}`}>
                       <div>
-                        <div className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{recommendation.type}</div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{recommendation.type}</div>
+                          {isWave1 ? (
+                            <span className="rounded-full bg-indigo-700 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white">Priorité V1</span>
+                          ) : isWave2 ? (
+                            <span className="rounded-full bg-cyan-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-cyan-900">Vague 2</span>
+                          ) : null}
+                        </div>
                         <div className="mt-1 text-slate-800">{recommendation.action}</div>
                       </div>
                       <button
                         type="button"
                         disabled={alreadyTracked || busy === `create:${key}`}
                         onClick={() => create(territory, recommendation)}
-                        className="shrink-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        className={`shrink-0 rounded-lg border px-3 py-2 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-50 ${isWave1 ? "border-indigo-300 bg-indigo-700 text-white" : "border-slate-300 bg-white text-slate-700"}`}
                       >
                         {alreadyTracked ? "Suivie" : busy === `create:${key}` ? "Ajout…" : "Suivre"}
                       </button>
