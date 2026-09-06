@@ -60,6 +60,9 @@ export default function TerritorialActionTracker({
     () => new Set(wave2.map((row) => executionKey(row.city, row.actionCode))),
     [wave2],
   );
+  const untrackedWave1 = wave1.filter(
+    (row) => !tracked.has(trackedKey(campaignId, row.city, row.actionCode)),
+  );
 
   async function refresh() {
     const response = await fetch(
@@ -71,34 +74,64 @@ export default function TerritorialActionTracker({
     setActions(payload.actions || []);
   }
 
+  async function postRecommendation(territory, recommendation) {
+    const response = await fetch("/api/ranking-grid/territorial-actions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        campaignId,
+        territory: {
+          city: territory.city,
+          urgency: territory.urgency,
+          p1: territory.p1,
+          p2: territory.p2,
+          p3: territory.p3,
+          averageRank: territory.averageRank,
+          worstRank: territory.worstRank,
+          gridCells: territory.gridCells,
+        },
+        actionCode: recommendation.code,
+      }),
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload?.error || `HTTP ${response.status}`);
+    return payload;
+  }
+
   async function create(territory, recommendation) {
     const key = trackedKey(campaignId, territory.city, recommendation.code);
     setBusy(`create:${key}`);
     setError(null);
     try {
-      const response = await fetch("/api/ranking-grid/territorial-actions", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          campaignId,
-          territory: {
-            city: territory.city,
-            urgency: territory.urgency,
-            p1: territory.p1,
-            p2: territory.p2,
-            p3: territory.p3,
-            averageRank: territory.averageRank,
-            worstRank: territory.worstRank,
-            gridCells: territory.gridCells,
-          },
-          actionCode: recommendation.code,
-        }),
-      });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload?.error || `HTTP ${response.status}`);
+      await postRecommendation(territory, recommendation);
       await refresh();
     } catch (cause) {
       setError(cause.message || "Impossible d’ajouter cette action au suivi.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function createWave1() {
+    setBusy("wave1");
+    setError(null);
+    try {
+      for (const row of untrackedWave1) {
+        const territory = (plan?.territories || []).find((item) => item.city === row.city);
+        const recommendation = territory?.actions?.find((item) => item.code === row.actionCode);
+        if (!territory || !recommendation) {
+          throw new Error(`Recommandation V1 introuvable: ${row.city} / ${row.actionCode}`);
+        }
+        await postRecommendation(territory, recommendation);
+      }
+      await refresh();
+    } catch (cause) {
+      setError(cause.message || "Impossible d’ajouter la Vague 1 au suivi.");
+      try {
+        await refresh();
+      } catch {
+        // Keep the original error. The backend POST is idempotent, so a retry is safe.
+      }
     } finally {
       setBusy(null);
     }
@@ -170,11 +203,21 @@ export default function TerritorialActionTracker({
             <div>
               <div className="text-sm font-black text-indigo-950">Vague 1 — actions à lancer maintenant</div>
               <p className="mt-1 text-xs text-indigo-900/80">
-                {wave1.length} actions prioritaires · 2 leviers par territoire critique · aucune création automatique.
+                {wave1.length} actions prioritaires · 2 leviers par territoire critique · création uniquement après action explicite.
               </p>
             </div>
-            <div className="rounded-full bg-white px-3 py-1 text-xs font-black text-indigo-900 shadow-sm">
-              Priorité V1
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="rounded-full bg-white px-3 py-1 text-xs font-black text-indigo-900 shadow-sm">
+                Priorité V1
+              </div>
+              <button
+                type="button"
+                disabled={!untrackedWave1.length || busy === "wave1"}
+                onClick={createWave1}
+                className="rounded-lg bg-indigo-700 px-4 py-2 text-xs font-black text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {!untrackedWave1.length ? "Vague 1 entièrement suivie" : busy === "wave1" ? "Ajout de la Vague 1…" : `Suivre toute la Vague 1 (${untrackedWave1.length})`}
+              </button>
             </div>
           </div>
           <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
@@ -226,7 +269,7 @@ export default function TerritorialActionTracker({
                       </div>
                       <button
                         type="button"
-                        disabled={alreadyTracked || busy === `create:${key}`}
+                        disabled={alreadyTracked || busy === `create:${key}` || busy === "wave1"}
                         onClick={() => create(territory, recommendation)}
                         className={`shrink-0 rounded-lg border px-3 py-2 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-50 ${isWave1 ? "border-indigo-300 bg-indigo-700 text-white" : "border-slate-300 bg-white text-slate-700"}`}
                       >
@@ -268,7 +311,7 @@ export default function TerritorialActionTracker({
                     <button
                       key={status}
                       type="button"
-                      disabled={row.status === status || busy === `patch:${row.id}`}
+                      disabled={row.status === status || busy === `patch:${row.id}` || busy === "wave1"}
                       onClick={() => patch(row, { status })}
                       className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700 disabled:opacity-40"
                     >
@@ -299,7 +342,7 @@ export default function TerritorialActionTracker({
                 />
                 <button
                   type="button"
-                  disabled={busy === `patch:${row.id}`}
+                  disabled={busy === `patch:${row.id}` || busy === "wave1"}
                   onClick={() => patch(row, draft)}
                   className="rounded-lg bg-[#0f2e46] px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
                 >
