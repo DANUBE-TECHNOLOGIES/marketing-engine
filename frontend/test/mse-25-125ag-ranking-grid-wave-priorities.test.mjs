@@ -27,8 +27,9 @@ test("Wave 1 and Wave 2 recommendations are marked from executionPlan", () => {
 test("Wave prioritization never auto-creates tracked actions", () => {
   const tracker = read("app/ranking-grid/TerritorialActionTracker.js");
   assert.match(tracker, /onClick=\{\(\) => create\(territory, recommendation\)\}/);
-  assert.doesNotMatch(tracker, /useEffect\([^]*create\(/);
-  assert.match(tracker, /aucune création automatique/);
+  assert.match(tracker, /onClick=\{createWave1\}/);
+  assert.doesNotMatch(tracker, /useEffect\([^]*(?:create\(|createWave1\()/);
+  assert.match(tracker, /création uniquement après action explicite/);
 });
 
 test("Wave 1 card highlights expected low-effort action labels", () => {
