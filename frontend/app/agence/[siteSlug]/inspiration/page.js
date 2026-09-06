@@ -41,10 +41,10 @@ function formatPublishedDate(value) {
   };
 }
 
-function inspirationSeo(site) {
+function inspirationSeo(site, page = null) {
   return buildLocalPageSeo({
     site,
-    page: {
+    page: page || {
       slug: "inspiration",
       title: "Inspirations voyage",
     },
@@ -75,7 +75,10 @@ export async function generateMetadata({ params }) {
   const { siteSlug } = await params;
 
   try {
-    const site = await publicSiteApi.getSite(siteSlug);
+    const [site, inspirationPage] = await Promise.all([
+      publicSiteApi.getSite(siteSlug),
+      publicSiteApi.getPage(siteSlug, "inspirations"),
+    ]);
     const agencyId = site?.agencyId || site?.agency?.id || null;
     const items = await publicSiteApi.getInspirations({
       limit: 1,
@@ -83,7 +86,7 @@ export async function generateMetadata({ params }) {
       agencyId,
     });
     const hasPublicInspirations = items.length > 0;
-    const seo = inspirationSeo(site);
+    const seo = inspirationSeo(site, inspirationPage);
     const canonical = `${PUBLIC_ORIGIN}${canonicalPath(siteSlug)}`;
 
     return {
@@ -129,9 +132,15 @@ export default async function InspirationIndexPage({ params }) {
 
   let site;
   let items;
+  let inspirationPage = null;
 
   try {
-    site = await publicSiteApi.getSite(siteSlug);
+    const loaded = await Promise.all([
+      publicSiteApi.getSite(siteSlug),
+      publicSiteApi.getPage(siteSlug, "inspirations"),
+    ]);
+    site = loaded[0];
+    inspirationPage = loaded[1];
     const agencyId = site?.agencyId || site?.agency?.id || null;
     items = await publicSiteApi.getInspirations({
       limit: 24,
@@ -148,7 +157,7 @@ export default async function InspirationIndexPage({ params }) {
   const contactPath = `${homePath}/contact`;
   const servicesPath = `${homePath}/services`;
   const destinationsPath = `${homePath}/destinations`;
-  const seo = inspirationSeo(site);
+  const seo = inspirationSeo(site, inspirationPage);
   const breadcrumb = buildBreadcrumbSchema([
     { name: "Accueil", path: site.basePath },
     { name: "Inspirations voyage", path: canonical },
