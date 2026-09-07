@@ -7,6 +7,11 @@ const source = fs.readFileSync(
   "utf8"
 );
 
+const knowledgeStudioSource = fs.readFileSync(
+  new URL("../app/knowledge/page.js", import.meta.url),
+  "utf8"
+);
+
 test("pilot admin uses preview and apply endpoints only", () => {
   assert.match(source, /\/api\/knowledge\/pilots\/maurepas\/preview/);
   assert.match(source, /\/api\/knowledge\/pilots\/maurepas\/apply/);
@@ -28,4 +33,10 @@ test("explicit approval and confirmation are mandatory before apply", () => {
 test("frontend does not expose expertise override or inference helpers", () => {
   assert.doesNotMatch(source, /allowExpertise/);
   assert.doesNotMatch(source, /autoMatch|inferExpertise|similarity|guessRelation/i);
+});
+
+test("Knowledge Studio exposes navigation to Maurepas pilot without triggering apply", () => {
+  assert.match(knowledgeStudioSource, /href="\/knowledge\/pilots\/maurepas"/);
+  assert.match(knowledgeStudioSource, /Pilote GEO Maurepas/);
+  assert.doesNotMatch(knowledgeStudioSource, /\/api\/knowledge\/pilots\/maurepas\/apply/);
 });
