@@ -1,0 +1,26 @@
+name: MSE-25.125BX Dax extended 9x9
+
+on:
+  pull_request:
+    paths:
+      - "scripts/mse-25-125bx-dax-extended-9x9.sh"
+      - "frontend/test/mse-25-125bx-dax-extended-9x9.test.mjs"
+      - ".github/workflows/mse-25-125bx-dax-extended-9x9.yml"
+  push:
+    paths:
+      - "scripts/mse-25-125bx-dax-extended-9x9.sh"
+      - "frontend/test/mse-25-125bx-dax-extended-9x9.test.mjs"
+      - ".github/workflows/mse-25-125bx-dax-extended-9x9.yml"
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Shell syntax
+        run: bash -n scripts/mse-25-125bx-dax-extended-9x9.sh
+      - name: Contract test
+        run: node --test frontend/test/mse-25-125bx-dax-extended-9x9.test.mjs
