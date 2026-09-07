@@ -10,6 +10,14 @@ function asyncRoute(handler) {
 }
 
 router.get(
+  "/report",
+  asyncRoute(async (_req, res) => {
+    const result = await service.report();
+    res.json({ data: result });
+  })
+);
+
+router.get(
   "/preview",
   asyncRoute(async (_req, res) => {
     const result = await service.preview();

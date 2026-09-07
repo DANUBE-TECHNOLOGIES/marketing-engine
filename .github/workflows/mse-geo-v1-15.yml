@@ -1,0 +1,31 @@
+name: MSE-GEO V1.15 Maurepas Read-only Report
+
+on:
+  pull_request:
+    paths:
+      - "backend/src/knowledge/maurepas-pilot.service.js"
+      - "backend/src/knowledge/maurepas-pilot.routes.js"
+      - "backend/test/mse-geo-v1-15-maurepas-readonly-report.test.js"
+      - ".github/workflows/mse-geo-v1-15.yml"
+
+jobs:
+  readonly-report-contract:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: Run read-only Maurepas report contracts
+        run: >-
+          node --test
+          test/mse-geo-v1-15-maurepas-readonly-report.test.js
+          test/mse-geo-v1-8-maurepas-knowledge-pilot.test.js
+          test/mse-geo-v1-12-maurepas-pilot-api.test.js
+          test/mse-geo-v1-14-canonical-reconvergence.test.js
