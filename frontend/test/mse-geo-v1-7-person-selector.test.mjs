@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
 
 import {
   fetchPublishedPersonKnowledge,
@@ -71,4 +72,17 @@ test("fetcher returns only published Person options and never creates a match", 
   assert.deepEqual(result, [
     { id: "p1", title: "Anisia", slug: null },
   ]);
+});
+
+test("selector UI preserves explicit ids and requires an explicit user change", () => {
+  const source = fs.readFileSync(
+    new URL("../components/website-builder/KnowledgePersonSelect.js", import.meta.url),
+    "utf8"
+  );
+
+  assert.match(source, /Aucune liaison Knowledge/);
+  assert.match(source, /Liaison existante/);
+  assert.match(source, /onChange\(event\.target\.value\)/);
+  assert.match(source, /fetchPublishedPersonKnowledge/);
+  assert.doesNotMatch(source, /autoMatch|generatedSlug|selectedIndex\s*=|defaultValue\s*=\s*people/);
 });
