@@ -1,0 +1,26 @@
+name: MSE-25.125BS Maurepas prepared campaign
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/mse-25-125bs-maurepas-run-prepared-7x7.sh'
+      - 'frontend/test/mse-25-125bs-maurepas-prepared-campaign.test.mjs'
+      - '.github/workflows/mse-25-125bs-maurepas-prepared-campaign.yml'
+  push:
+    paths:
+      - 'scripts/mse-25-125bs-maurepas-run-prepared-7x7.sh'
+      - 'frontend/test/mse-25-125bs-maurepas-prepared-campaign.test.mjs'
+      - '.github/workflows/mse-25-125bs-maurepas-prepared-campaign.yml'
+
+jobs:
+  prepared-campaign:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Shell syntax
+        run: bash -n scripts/mse-25-125bs-maurepas-run-prepared-7x7.sh
+      - name: Prepared campaign contract
+        run: node --test frontend/test/mse-25-125bs-maurepas-prepared-campaign.test.mjs
