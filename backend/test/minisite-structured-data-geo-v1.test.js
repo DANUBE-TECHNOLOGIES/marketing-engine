@@ -86,6 +86,27 @@ test("GEO V1 accepts structured target city records without inferring missing fa
   ]);
 });
 
+test("GEO V1 deduplicates target cities independently of case and accents", () => {
+  const duplicated = {
+    ...agency,
+    seoSite: {
+      targetCities: [
+        "maurepas",
+        "ELANCOURT",
+        "Élancourt",
+        "Coignières",
+        "coignieres",
+      ],
+    },
+  };
+
+  assert.deepEqual(targetCityNames(duplicated), [
+    "Maurepas",
+    "ELANCOURT",
+    "Coignières",
+  ]);
+});
+
 test("GEO V1 links each agency to one canonical Mondescale organization", () => {
   const organization = buildMondescaleOrganization();
   const travelAgency = buildTravelAgency({
