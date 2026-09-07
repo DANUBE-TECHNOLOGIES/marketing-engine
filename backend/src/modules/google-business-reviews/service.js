@@ -95,11 +95,15 @@ function calculateReviewSummary(reviews) {
 
 function buildReviewProof(reviews, { source, sourceUrl = null } = {}) {
   const summary = calculateReviewSummary(reviews);
+  const normalizedSource = source || "local-fallback";
+  const googleSnapshot = normalizedSource === "google";
 
   return {
     kind: "ReviewProof",
     version: "1.0.0",
-    source: source || "local-fallback",
+    source: normalizedSource,
+    provider: googleSnapshot ? "google_business_profile" : null,
+    completeness: googleSnapshot ? "best-effort" : "local-fallback",
     sourceUrl: sourceUrl || null,
     averageRating: summary.averageRating,
     total: summary.total,
