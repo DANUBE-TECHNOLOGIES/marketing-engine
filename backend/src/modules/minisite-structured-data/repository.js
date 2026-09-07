@@ -82,6 +82,50 @@ class MiniSiteStructuredDataRepository {
     return sites.find((site) => String(site.slug || "") === normalizedSlug) || null;
   }
 
+  async listPublishedKnowledgePeopleByIds(ids = []) {
+    const normalizedIds = [...new Set(
+      (ids || [])
+        .map((id) => String(id || "").trim())
+        .filter(Boolean)
+    )];
+
+    if (!normalizedIds.length || !this.prisma?.knowledgeEntity) {
+      return [];
+    }
+
+    return this.prisma.knowledgeEntity.findMany({
+      where: {
+        id: { in: normalizedIds },
+        type: "person",
+        status: "published",
+      },
+      select: {
+        id: true,
+        type: true,
+        slug: true,
+        title: true,
+        status: true,
+        outgoingRelations: {
+          where: {
+            relationType: "expert_in",
+          },
+          select: {
+            relationType: true,
+            target: {
+              select: {
+                id: true,
+                type: true,
+                slug: true,
+                title: true,
+                status: true,
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
   async listPublishedEditorialContents(tenantId) {
     const resolvedTenantId = requireTenantId(tenantId);
 
