@@ -1,0 +1,29 @@
+name: MSE-GEO V1.9 Controlled Knowledge Apply
+
+on:
+  pull_request:
+    paths:
+      - "backend/src/knowledge/pilot-apply.js"
+      - "backend/test/mse-geo-v1-9-controlled-knowledge-apply.test.js"
+      - ".github/workflows/mse-geo-v1-9-controlled-knowledge-apply.yml"
+  workflow_dispatch:
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - run: npm ci
+      - run: node --test test/mse-geo-v1-9-controlled-knowledge-apply.test.js
+      - run: node --test test/mse-geo-v1-8-maurepas-knowledge-pilot.test.js
