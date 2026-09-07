@@ -24,7 +24,7 @@ test("preview returns deterministic dry-run and approval token without writes", 
   });
 
   assert.equal(reads, 1);
-  assert.equal(result.manifestKey, "maurepas-v1");
+  assert.equal(result.manifestKey, "maurepas");
   assert.equal(result.plan.mode, "dry-run");
   assert.equal(result.plan.writes, false);
   assert.equal(result.plan.destructive, false);
