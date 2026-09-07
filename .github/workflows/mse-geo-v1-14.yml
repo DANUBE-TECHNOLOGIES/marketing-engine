@@ -1,0 +1,63 @@
+name: MSE-GEO V1.14 Canonical Reconvergence
+
+on:
+  pull_request:
+    paths:
+      - "backend/src/modules/minisite-structured-data/person.js"
+      - "backend/src/modules/minisite-structured-data/planner.js"
+      - "backend/src/modules/minisite-structured-data/repository.js"
+      - "backend/src/modules/minisite-structured-data/service.js"
+      - "backend/src/knowledge/**"
+      - "backend/test/mse-geo-v1-*.test.js"
+      - "frontend/components/website-builder/KnowledgePersonSelect.js"
+      - "frontend/components/website-builder/SectionInspector.js"
+      - "frontend/lib/website-builder/inspector-registry.js"
+      - "frontend/lib/website-builder/knowledge-person-selector.js"
+      - "frontend/app/knowledge/**"
+      - "frontend/test/mse-geo-v1-*.test.mjs"
+      - ".github/workflows/mse-geo-v1-14.yml"
+
+jobs:
+  backend-reconvergence:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: Run canonical GEO backend contracts
+        run: >-
+          node --test
+          test/mse-geo-v1-2-person-graph.test.js
+          test/mse-geo-v1-3-knowledge-taxonomy.test.js
+          test/mse-geo-v1-4-knowledge-bridge.test.js
+          test/mse-geo-v1-8-maurepas-knowledge-pilot.test.js
+          test/mse-geo-v1-9-controlled-knowledge-apply.test.js
+          test/mse-geo-v1-10-explicit-apply-approval.test.js
+          test/mse-geo-v1-12-maurepas-pilot-api.test.js
+
+  frontend-reconvergence:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Run canonical GEO frontend contracts
+        run: >-
+          node --test
+          test/mse-geo-v1-11-knowledge-admin-geo-foundation.test.mjs
+          test/mse-geo-v1-13-maurepas-pilot-admin.test.mjs
+          test/mse-geo-v1-14-canonical-reconvergence.test.mjs
