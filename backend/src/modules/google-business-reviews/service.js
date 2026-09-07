@@ -69,6 +69,49 @@ function dedupeGoogleReviews(reviews) {
   });
 }
 
+function newestIsoDate(values) {
+  let newest = null;
+
+  for (const value of values) {
+    if (!value) continue;
+    const timestamp = new Date(value).getTime();
+    if (!Number.isFinite(timestamp)) continue;
+    if (newest === null || timestamp > newest) newest = timestamp;
+  }
+
+  return newest === null ? null : new Date(newest).toISOString();
+}
+
+function calculateReviewSummary(reviews) {
+  const total = reviews.length;
+  const averageRating = total
+    ? Math.round(
+        (reviews.reduce((sum, review) => sum + review.rating, 0) / total) * 10
+      ) / 10
+    : 0;
+
+  return { averageRating, total };
+}
+
+function buildReviewProof(reviews, { source, sourceUrl = null } = {}) {
+  const summary = calculateReviewSummary(reviews);
+
+  return {
+    kind: "ReviewProof",
+    version: "1.0.0",
+    source: source || "local-fallback",
+    sourceUrl: sourceUrl || null,
+    averageRating: summary.averageRating,
+    total: summary.total,
+    latestReviewPublishedAt: newestIsoDate(
+      reviews.map((review) => review.publishedAt || review.createdAt)
+    ),
+    snapshotLastChangedAt: newestIsoDate(
+      reviews.map((review) => review.updatedAt || review.createdAt)
+    ),
+  };
+}
+
 class GoogleBusinessReviewsService {
   constructor(repository, provider) {
     this.repository = repository;
@@ -191,12 +234,9 @@ class GoogleBusinessReviewsService {
     // Dès qu'un snapshot Google existe, il devient la source publique.
     // Sinon on conserve le jeu local historique comme fallback.
     const completeSet = syncedGoogle.length > 0 ? syncedGoogle : allLocalReviews;
-    const total = completeSet.length;
-    const averageRating = total
-      ? Math.round(
-          (completeSet.reduce((sum, review) => sum + review.rating, 0) / total) * 10
-        ) / 10
-      : 0;
+    const source = syncedGoogle.length > 0 ? "google" : "local-fallback";
+    const summary = calculateReviewSummary(completeSet);
+    const reviewUrl = site.agency.googleReviewUrl || null;
 
     return {
       agency: {
@@ -204,11 +244,12 @@ class GoogleBusinessReviewsService {
         name: site.agency.name,
         city: site.agency.city,
       },
-      summary: {
-        averageRating,
-        total,
-      },
-      reviewUrl: site.agency.googleReviewUrl || null,
+      summary,
+      proof: buildReviewProof(completeSet, {
+        source,
+        sourceUrl: reviewUrl,
+      }),
+      reviewUrl,
       reviews: completeSet.slice(0, limit).map((review) => ({
         id: review.id,
         authorName: review.authorName,
@@ -228,4 +269,6 @@ module.exports = {
   normalizeGoogleReview,
   buildDesiredUpdate,
   dedupeGoogleReviews,
+  calculateReviewSummary,
+  buildReviewProof,
 };
