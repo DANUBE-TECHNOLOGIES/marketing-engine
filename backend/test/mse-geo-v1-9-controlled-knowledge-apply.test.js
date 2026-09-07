@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 const {
   applyKnowledgePilotPlan,
   validateApplyPlan,
+  approvalTokenForPlan,
 } = require("../src/knowledge/pilot-apply");
 
 function basePlan() {
@@ -55,6 +56,7 @@ test("controlled apply creates entities then resolves works_at explicitly", asyn
 
   const result = await applyKnowledgePilotPlan({
     plan,
+    approvalToken: approvalTokenForPlan(plan),
     rebuildCurrentPlan: async () => structuredClone(plan),
     createEntity: async (entity) => {
       const id = entity.type === "agency" ? "agency-1" : "person-1";
@@ -96,6 +98,7 @@ test("apply refuses stale dry-run when current plan changed", async () => {
     () =>
       applyKnowledgePilotPlan({
         plan,
+        approvalToken: approvalTokenForPlan(plan),
         rebuildCurrentPlan: async () => changed,
         createEntity: async () => {
           writes += 1;
@@ -159,6 +162,7 @@ test("expert_in is refused unless explicitly authorized", async () => {
   let relationWrites = 0;
   const result = await applyKnowledgePilotPlan({
     plan,
+    approvalToken: approvalTokenForPlan(plan),
     allowExpertise: true,
     rebuildCurrentPlan: async () => structuredClone(plan),
     createEntity: async () => ({ id: "unused" }),
@@ -202,6 +206,7 @@ test("noop plan performs zero writes", async () => {
 
   const result = await applyKnowledgePilotPlan({
     plan,
+    approvalToken: approvalTokenForPlan(plan),
     rebuildCurrentPlan: async () => structuredClone(plan),
     createEntity: async () => { writes += 1; },
     updateEntity: async () => { writes += 1; },
