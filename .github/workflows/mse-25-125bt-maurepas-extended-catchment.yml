@@ -1,0 +1,31 @@
+name: MSE-25.125BT Maurepas extended catchment
+
+on:
+  pull_request:
+    paths:
+      - 'frontend/lib/seo/local-area-config.js'
+      - 'frontend/components/public-site/LocalSeoAreaLinks.js'
+      - 'frontend/lib/seo/local-page-seo.js'
+      - 'frontend/test/mse-25-125bt-maurepas-extended-catchment.test.mjs'
+      - '.github/workflows/mse-25-125bt-maurepas-extended-catchment.yml'
+  push:
+    paths:
+      - 'frontend/lib/seo/local-area-config.js'
+      - 'frontend/components/public-site/LocalSeoAreaLinks.js'
+      - 'frontend/lib/seo/local-page-seo.js'
+      - 'frontend/test/mse-25-125bt-maurepas-extended-catchment.test.mjs'
+      - '.github/workflows/mse-25-125bt-maurepas-extended-catchment.yml'
+
+jobs:
+  maurepas-extended-catchment:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Maurepas extended catchment contract
+        run: node --test test/mse-25-125bt-maurepas-extended-catchment.test.mjs

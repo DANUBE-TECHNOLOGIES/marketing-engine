@@ -1,5 +1,8 @@
 import Link from "next/link";
-import { resolvedTargetCities } from "../../lib/seo/local-area-config";
+import {
+  resolvedExtendedTargetCities,
+  resolvedTargetCities,
+} from "../../lib/seo/local-area-config";
 
 function clean(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
@@ -7,6 +10,10 @@ function clean(value) {
 
 function targetCities(site) {
   return resolvedTargetCities(site, { limit: 6 });
+}
+
+function extendedTargetCities(site) {
+  return resolvedExtendedTargetCities(site, { limit: 4 });
 }
 
 function joinCities(values) {
@@ -20,6 +27,7 @@ export default function LocalSeoAreaLinks({ site }) {
   const agency = site?.agency || {};
   const city = clean(agency.city || site?.city);
   const nearby = targetCities(site);
+  const extended = extendedTargetCities(site);
 
   if (!city || !nearby.length) return null;
 
@@ -44,6 +52,13 @@ export default function LocalSeoAreaLinks({ site }) {
             contacter l’équipe de {city} pour une recherche, un devis ou un rendez-vous en agence.
           </p>
         ) : null}
+        {extended.length ? (
+          <p>
+            Au-delà de ce premier cercle, l’équipe de {city} accompagne également des projets de voyageurs
+            situés à {joinCities(extended)}. Cette zone élargie complète notre bassin de clientèle sans
+            remplacer l’ancrage de proximité autour de {city}.
+          </p>
+        ) : null}
         <div className="public-site-related-links" aria-label={`Découvrir l’agence de voyages de ${city}`}>
           <Link href={`${root}/services`}>Services de l’agence de voyages de {city}</Link>
           <Link href={`${root}/destinations`}>Destinations conseillées depuis {city}</Link>
@@ -55,4 +70,4 @@ export default function LocalSeoAreaLinks({ site }) {
   );
 }
 
-export { joinCities, targetCities };
+export { extendedTargetCities, joinCities, targetCities };
