@@ -1,0 +1,21 @@
+name: MSE-GEO V1.10 Explicit Apply Approval
+
+on:
+  pull_request:
+    paths:
+      - "backend/src/knowledge/pilot-apply.js"
+      - "backend/test/mse-geo-v1-9-controlled-knowledge-apply.test.js"
+      - "backend/test/mse-geo-v1-10-explicit-apply-approval.test.js"
+      - ".github/workflows/mse-geo-v1-10.yml"
+
+jobs:
+  approval-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run V1.9 and V1.10 Knowledge apply contracts
+        working-directory: backend
+        run: node --test test/mse-geo-v1-9-controlled-knowledge-apply.test.js test/mse-geo-v1-10-explicit-apply-approval.test.js
