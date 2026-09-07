@@ -70,9 +70,23 @@ const LOCAL_AREA_BY_SITE_SLUG = Object.freeze({
   ],
 });
 
+const EXTENDED_LOCAL_AREA_BY_SITE_SLUG = Object.freeze({
+  "ambassade-fram-mondescale-maurepas": [
+    "Les Essarts-le-Roi",
+    "Plaisir",
+    "Montigny-le-Bretonneux",
+    "Rambouillet",
+  ],
+});
+
 function configuredTargetCities(site) {
   const slug = clean(site?.slug).toLowerCase();
   return LOCAL_AREA_BY_SITE_SLUG[slug] || [];
+}
+
+function configuredExtendedTargetCities(site) {
+  const slug = clean(site?.slug).toLowerCase();
+  return EXTENDED_LOCAL_AREA_BY_SITE_SLUG[slug] || [];
 }
 
 function explicitTargetCities(site) {
@@ -112,8 +126,33 @@ export function resolvedTargetCities(site, { limit = 6 } = {}) {
   return result.slice(0, limit);
 }
 
+export function resolvedExtendedTargetCities(site, { limit = 4 } = {}) {
+  const agency = site?.agency || {};
+  const primary = clean(agency.city || site?.city).toLocaleLowerCase("fr-FR");
+  const core = new Set(
+    resolvedTargetCities(site, { limit: Number.MAX_SAFE_INTEGER })
+      .map((city) => city.toLocaleLowerCase("fr-FR")),
+  );
+  const seen = new Set();
+  const result = [];
+
+  for (const value of configuredExtendedTargetCities(site)) {
+    const city = clean(value);
+    if (!city) continue;
+
+    const key = city.toLocaleLowerCase("fr-FR");
+    if (key === primary || core.has(key) || seen.has(key)) continue;
+    seen.add(key);
+    result.push(city);
+  }
+
+  return result.slice(0, limit);
+}
+
 export {
+  EXTENDED_LOCAL_AREA_BY_SITE_SLUG,
   LOCAL_AREA_BY_SITE_SLUG,
+  configuredExtendedTargetCities,
   configuredTargetCities,
   explicitTargetCities,
 };
