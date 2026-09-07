@@ -12,6 +12,7 @@ on:
       - 'backend/src/modules/register-modules.js'
       - 'scripts/mse-25-125-ranking-grid-migrate.sh'
       - 'scripts/mse-25-125-ranking-grid-runtime.sh'
+      - 'scripts/mse-25-125bq-maurepas-catchment-7x7.sh'
       - 'docker-compose.yml'
       - '.github/workflows/mse-25-125-ranking-grid.yml'
   push:
@@ -27,6 +28,7 @@ on:
       - 'backend/src/modules/register-modules.js'
       - 'scripts/mse-25-125-ranking-grid-migrate.sh'
       - 'scripts/mse-25-125-ranking-grid-runtime.sh'
+      - 'scripts/mse-25-125bq-maurepas-catchment-7x7.sh'
       - 'docker-compose.yml'
       - '.github/workflows/mse-25-125-ranking-grid.yml'
 
@@ -71,6 +73,7 @@ jobs:
         run: |
           bash -n scripts/mse-25-125-ranking-grid-migrate.sh
           bash -n scripts/mse-25-125-ranking-grid-runtime.sh
+          bash -n scripts/mse-25-125bq-maurepas-catchment-7x7.sh
 
       - name: Syntax guard
         run: |
