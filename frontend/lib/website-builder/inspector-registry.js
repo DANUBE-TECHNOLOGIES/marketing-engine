@@ -466,6 +466,39 @@ export const INSPECTOR_REGISTRY = {
 
   team: {
     fields: COMMON_FIELDS,
+    collection: {
+      key: "members",
+      label: "Équipe",
+      itemLabel: "Conseiller",
+      fields: [
+        {
+          key: "name",
+          label: "Nom",
+          control: "text",
+        },
+        {
+          key: "role",
+          label: "Fonction",
+          control: "text",
+        },
+        {
+          key: "bio",
+          label: "Présentation",
+          control: "textarea",
+          rows: 4,
+        },
+        {
+          key: "imageUrl",
+          label: "URL du portrait",
+          control: "url",
+        },
+        {
+          key: "knowledgeEntityId",
+          label: "Profil Knowledge lié",
+          control: "knowledge-person",
+        },
+      ],
+    },
   },
 };
 
