@@ -1,0 +1,30 @@
+name: MSE-GEO V1.7 Person Selector
+
+on:
+  pull_request:
+    paths:
+      - "frontend/lib/website-builder/knowledge-person-selector.js"
+      - "frontend/components/website-builder/KnowledgePersonSelect.js"
+      - "frontend/components/website-builder/SectionInspector.js"
+      - "frontend/test/mse-geo-v1-7-person-selector.test.mjs"
+      - ".github/workflows/mse-geo-v1-7-person-selector.yml"
+  workflow_dispatch:
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+      - run: node --test test/mse-geo-v1-7-person-selector.test.mjs
