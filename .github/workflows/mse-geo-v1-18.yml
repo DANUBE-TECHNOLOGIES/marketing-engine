@@ -1,0 +1,52 @@
+name: MSE-GEO V1.18 Network Person Reconciliation
+
+on:
+  pull_request:
+    paths:
+      - "backend/src/knowledge/network-person-reconciliation.service.js"
+      - "backend/src/knowledge/network-geo.routes.js"
+      - "backend/test/mse-geo-v1-18-network-person-reconciliation.test.js"
+      - "frontend/app/knowledge/geo/network/people/page.js"
+      - "frontend/test/mse-geo-v1-18-network-person-reconciliation.test.mjs"
+      - ".github/workflows/mse-geo-v1-18.yml"
+
+jobs:
+  backend-person-reconciliation:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: Run network Person reconciliation contracts
+        run: >-
+          node --test
+          test/mse-geo-v1-18-network-person-reconciliation.test.js
+          test/mse-geo-v1-17-network-agency-apply.test.js
+          test/mse-geo-v1-16-network-rollout.test.js
+          test/mse-geo-v1-4-knowledge-bridge.test.js
+
+  frontend-person-reconciliation:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Run Person reconciliation dashboard contract
+        run: >-
+          node --test
+          test/mse-geo-v1-18-network-person-reconciliation.test.mjs
+          test/mse-geo-v1-17-network-agency-apply.test.mjs
