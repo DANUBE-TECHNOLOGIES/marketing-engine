@@ -3,6 +3,7 @@ const service = require("./knowledge.service");
 const knowledgeBlockRoutes = require("./knowledge-block.routes");
 const knowledgeRelationRoutes = require("./knowledge-relation.routes");
 const knowledgeMediaRoutes = require("./knowledge-media.routes");
+const maurepasPilotRoutes = require("./maurepas-pilot.routes");
 
 const router = express.Router();
 
@@ -20,6 +21,10 @@ router.get(
   })
 );
 
+router.use(
+  "/pilots/maurepas",
+  maurepasPilotRoutes
+);
 
 router.use(
   "/:id/blocks",
