@@ -491,9 +491,31 @@ export default function KnowledgePage() {
             </p>
           </div>
 
-          <div style={styles.badge}>
-            {pagination.total} connaissance
-            {pagination.total > 1 ? "s" : ""}
+          <div
+            style={{
+              display: "flex",
+              gap: "10px",
+              alignItems: "center",
+              flexWrap: "wrap",
+            }}
+          >
+            <a
+              href="/knowledge/pilots/maurepas"
+              style={{
+                ...styles.button,
+                ...styles.primaryButton,
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
+              }}
+            >
+              Pilote GEO Maurepas
+            </a>
+
+            <div style={styles.badge}>
+              {pagination.total} connaissance
+              {pagination.total > 1 ? "s" : ""}
+            </div>
           </div>
         </header>
 
