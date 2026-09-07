@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "frontend/lib/website-builder/knowledge-person-selector.js"
+      - "frontend/components/website-builder/KnowledgePersonSelect.js"
       - "frontend/test/mse-geo-v1-7-person-selector.test.mjs"
       - ".github/workflows/mse-geo-v1-7-person-selector.yml"
   workflow_dispatch:
