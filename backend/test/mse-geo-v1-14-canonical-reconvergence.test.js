@@ -7,7 +7,7 @@ const {
   buildPerson,
 } = require("../src/modules/minisite-structured-data/person");
 const {
-  planKnowledgePilot,
+  buildKnowledgePilotPlan,
 } = require("../src/knowledge/pilot-planner");
 const MAUREPAS_KNOWLEDGE_MANIFEST = require("../src/knowledge/pilots/maurepas.manifest");
 
@@ -30,7 +30,8 @@ test("canonical GEO chain keeps explicit Person bridge and Maurepas pilot compat
   assert.equal(node.knowsAbout, undefined);
   assert.equal(MAUREPAS_KNOWLEDGE_MANIFEST.expertise.length, 0);
 
-  const plan = planKnowledgePilot(MAUREPAS_KNOWLEDGE_MANIFEST, {
+  const plan = buildKnowledgePilotPlan({
+    manifest: MAUREPAS_KNOWLEDGE_MANIFEST,
     existingEntities: [],
     existingRelations: [],
   });
