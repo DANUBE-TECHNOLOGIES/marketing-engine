@@ -3,6 +3,14 @@ function clean(value) {
 }
 
 const LOCAL_AREA_BY_SITE_SLUG = Object.freeze({
+  "tui-store-melun": [
+    "Dammarie-les-Lys",
+    "Le Mée-sur-Seine",
+    "Vaux-le-Pénil",
+    "La Rochette",
+    "Rubelles",
+    "Vert-Saint-Denis",
+  ],
   "tui-store-amilly": [
     "Montargis",
     "Villemandeur",
