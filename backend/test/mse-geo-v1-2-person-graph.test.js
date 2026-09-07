@@ -49,13 +49,13 @@ test("MSE-GEO V1.2 publie uniquement les champs Person explicitement fournis", (
   });
 
   assert.equal(node["@type"], "Person");
-  assert.equal(node["@id"], "https://agences.mondescale.com/maurepas#person-anisia");
+  assert.equal(node["@id"], "https://agences.mondescale.com/agence/maurepas#person-anisia");
   assert.equal(node.name, "Anisia");
   assert.equal(node.jobTitle, "Conseillère voyage");
   assert.equal(node.description, "Accompagne les clients dans leurs projets de voyage.");
   assert.equal(node.image, "/media/assets/anisia.webp");
   assert.deepEqual(node.worksFor, {
-    "@id": "https://agences.mondescale.com/maurepas#travel-agency",
+    "@id": "https://agences.mondescale.com/agence/maurepas#travel-agency",
   });
   assert.equal(Object.prototype.hasOwnProperty.call(node, "knowsAbout"), false);
   assert.equal(Object.prototype.hasOwnProperty.call(node, "knowsLanguage"), false);
