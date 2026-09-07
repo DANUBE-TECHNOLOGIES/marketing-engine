@@ -1,0 +1,42 @@
+name: MSE-GEO V1.1 Reviews Proof Graph
+
+on:
+  pull_request:
+    paths:
+      - "backend/src/modules/google-business-reviews/**"
+      - "backend/test/mse-geo-v1-1-reviews-proof.test.js"
+      - ".github/workflows/mse-geo-v1-1.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/src/modules/google-business-reviews/**"
+      - "backend/test/mse-geo-v1-1-reviews-proof.test.js"
+      - ".github/workflows/mse-geo-v1-1.yml"
+
+jobs:
+  reviews-proof-contract:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        run: npm ci
+
+      - name: MSE-25.124 review sync regression tests
+        run: node --test test/mse-25-124-google-business-reviews.test.js
+
+      - name: MSE-GEO V1.1 reviews proof contract tests
+        run: node --test test/mse-geo-v1-1-reviews-proof.test.js
