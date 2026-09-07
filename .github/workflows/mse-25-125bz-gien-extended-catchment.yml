@@ -1,0 +1,22 @@
+name: MSE-25.125BZ Gien extended catchment
+
+on:
+  pull_request:
+    paths:
+      - "frontend/lib/seo/local-area-config.js"
+      - "frontend/components/public-site/LocalSeoAreaLinks.js"
+      - "frontend/lib/seo/local-page-seo.js"
+      - "frontend/test/mse-25-125bz-gien-extended-catchment.test.mjs"
+      - ".github/workflows/mse-25-125bz-gien-extended-catchment.yml"
+  workflow_dispatch:
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate Gien extended catchment contract
+        run: node --test frontend/test/mse-25-125bz-gien-extended-catchment.test.mjs
