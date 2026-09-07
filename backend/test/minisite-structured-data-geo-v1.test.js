@@ -10,6 +10,10 @@ const {
   buildTravelAgency,
   targetCityNames,
 } = require("../src/modules/minisite-structured-data/travel-agency");
+const {
+  publicTargetCities,
+  sanitizePublicAgency,
+} = require("../src/modules/public-site-read/section-aware-service");
 
 const agency = {
   name: "Mondescale Maurepas",
@@ -120,4 +124,26 @@ test("GEO V1 links each agency to one canonical Mondescale organization", () => 
     "@id": MONDESCALE_ORGANIZATION_ID,
   });
   assert.equal(travelAgency.areaServed.length, 4);
+});
+
+test("GEO V1 projects AgencySeoSite targetCities into the canonical public contract", () => {
+  const canonicalSite = {
+    targetCities: ["legacy-site-city"],
+    agency: {
+      id: "agency-maurepas",
+      city: "Maurepas",
+      seoSite: {
+        targetCities: ["Élancourt", "Coignières"],
+      },
+    },
+  };
+
+  assert.deepEqual(publicTargetCities(canonicalSite), [
+    "Élancourt",
+    "Coignières",
+  ]);
+  assert.deepEqual(sanitizePublicAgency(canonicalSite.agency), {
+    id: "agency-maurepas",
+    city: "Maurepas",
+  });
 });
