@@ -166,6 +166,52 @@ function buildSameAs(
   ];
 }
 
+function normalizedCityKey(
+  value
+) {
+  const text = cleanText(
+    value
+  );
+
+  if (!text) {
+    return "";
+  }
+
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("fr-FR");
+}
+
+function deduplicateCityNames(
+  names
+) {
+  const seen = new Set();
+  const result = [];
+
+  for (const name of names) {
+    const cleaned =
+      cleanText(name);
+    const key =
+      normalizedCityKey(
+        cleaned
+      );
+
+    if (
+      !cleaned ||
+      !key ||
+      seen.has(key)
+    ) {
+      continue;
+    }
+
+    seen.add(key);
+    result.push(cleaned);
+  }
+
+  return result;
+}
+
 function targetCityNames(
   agency
 ) {
@@ -237,14 +283,10 @@ function targetCityNames(
       )
       .filter(Boolean);
 
-  return [
-    ...new Set(
-      [
-        primaryCity,
-        ...names,
-      ].filter(Boolean)
-    ),
-  ];
+  return deduplicateCityNames([
+    primaryCity,
+    ...names,
+  ]);
 }
 
 function buildAreaServed(
@@ -383,6 +425,8 @@ module.exports = {
   buildPostalAddress,
   buildSameAs,
   buildTravelAgency,
+  deduplicateCityNames,
   isHttpUrl,
+  normalizedCityKey,
   targetCityNames,
 };
