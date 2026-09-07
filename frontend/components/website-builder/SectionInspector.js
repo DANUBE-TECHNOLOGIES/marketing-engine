@@ -12,6 +12,7 @@ import {
   fetchPublishedDestinations,
   fetchPublishedInspirations,
 } from "../../lib/page-builder-v2/page-builder-api";
+import KnowledgePersonSelect from "./KnowledgePersonSelect";
 
 function FieldControl({
   field,
@@ -209,17 +210,30 @@ function CollectionEditor({
             <label key={field.key}>
               {field.label}
 
-              <FieldControl
-                field={field}
-                value={item[field.key]}
-                onChange={(value) =>
-                  updateItem(
-                    index,
-                    field.key,
-                    value
-                  )
-                }
-              />
+              {field.key === "knowledgeEntityId" ? (
+                <KnowledgePersonSelect
+                  value={item[field.key]}
+                  onChange={(value) =>
+                    updateItem(
+                      index,
+                      field.key,
+                      value
+                    )
+                  }
+                />
+              ) : (
+                <FieldControl
+                  field={field}
+                  value={item[field.key]}
+                  onChange={(value) =>
+                    updateItem(
+                      index,
+                      field.key,
+                      value
+                    )
+                  }
+                />
+              )}
             </label>
           ))}
         </section>
