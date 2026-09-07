@@ -48,6 +48,21 @@ test("GEO V1 keeps the agency city and adds only explicit target cities", () => 
   ]);
 });
 
+test("GEO V1 safely falls back to the main agency city without targetCities", () => {
+  const withoutTargets = {
+    ...agency,
+    seoSite: undefined,
+  };
+
+  assert.deepEqual(targetCityNames(withoutTargets), [
+    "Maurepas",
+  ]);
+
+  assert.deepEqual(buildAreaServed(withoutTargets), [
+    { "@type": "City", name: "Maurepas" },
+  ]);
+});
+
 test("GEO V1 accepts structured target city records without inferring missing facts", () => {
   const structured = {
     ...agency,
