@@ -9,10 +9,20 @@ const box = {
   padding: 18,
 };
 
+const requestHeaders = {
+  accept: "application/json",
+  "x-tenant-slug": "mondescale",
+};
+
 export default function NetworkGeoPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [applyPreview, setApplyPreview] = useState(null);
+  const [approved, setApproved] = useState(false);
+  const [preparingApply, setPreparingApply] = useState(false);
+  const [applying, setApplying] = useState(false);
+  const [applyResult, setApplyResult] = useState(null);
 
   const load = useCallback(async () => {
     try {
@@ -20,10 +30,7 @@ export default function NetworkGeoPage() {
       setError("");
       const response = await fetch("/api/knowledge/geo/network/report", {
         cache: "no-store",
-        headers: {
-          accept: "application/json",
-          "x-tenant-slug": "mondescale",
-        },
+        headers: requestHeaders,
       });
       const payload = await response.json();
       if (!response.ok) {
@@ -41,7 +48,73 @@ export default function NetworkGeoPage() {
     load();
   }, [load]);
 
+  async function prepareApply() {
+    try {
+      setPreparingApply(true);
+      setError("");
+      setApplyResult(null);
+      setApproved(false);
+
+      const response = await fetch("/api/knowledge/geo/network/apply-preview", {
+        cache: "no-store",
+        headers: requestHeaders,
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error?.message || "Impossible de préparer l’application réseau.");
+      }
+      setApplyPreview(payload?.data || null);
+    } catch (prepareError) {
+      setError(prepareError?.message || "Impossible de préparer l’application réseau.");
+    } finally {
+      setPreparingApply(false);
+    }
+  }
+
+  async function applyAgencies() {
+    if (!approved || !applyPreview?.approvalToken) return;
+
+    const eligible = applyPreview?.report?.summary?.eligibleAgencyCount ?? 0;
+    const actionable = applyPreview?.report?.summary?.actionable ?? 0;
+    const confirmed = window.confirm(
+      `Appliquer le plan GEO Agency sur ${eligible} agence(s), dont ${actionable} action(s) nécessaire(s) ?`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setApplying(true);
+      setError("");
+      setApplyResult(null);
+
+      const response = await fetch("/api/knowledge/geo/network/apply-agencies", {
+        method: "POST",
+        headers: {
+          ...requestHeaders,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          approvalToken: applyPreview.approvalToken,
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error?.message || "L’application GEO réseau a échoué.");
+      }
+
+      setApplyResult(payload?.data || null);
+      setApplyPreview(null);
+      setApproved(false);
+      await load();
+    } catch (applyError) {
+      setError(applyError?.message || "L’application GEO réseau a échoué.");
+    } finally {
+      setApplying(false);
+    }
+  }
+
   const summary = data?.summary || {};
+  const previewSummary = applyPreview?.report?.summary || {};
 
   return (
     <main style={{ minHeight: "100vh", padding: 32, background: "#f4f6f8", color: "#17202a" }}>
@@ -51,15 +124,45 @@ export default function NetworkGeoPage() {
             <a href="/knowledge">← Knowledge Studio</a>
             <h1 style={{ margin: "12px 0 6px" }}>GEO réseau Mondescale</h1>
             <p style={{ margin: 0, color: "#64748b" }}>
-              Rapport de réconciliation en lecture seule. Aucune écriture Knowledge n’est déclenchée depuis cette page.
+              Diagnostic réseau en lecture seule, avec application contrôlée limitée aux entités Agency.
             </p>
           </div>
-          <button type="button" onClick={load} disabled={loading} style={{ padding: "10px 16px", borderRadius: 10, border: 0, cursor: "pointer", fontWeight: 700 }}>
-            {loading ? "Actualisation…" : "Actualiser"}
-          </button>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <button type="button" onClick={load} disabled={loading || applying} style={{ padding: "10px 16px", borderRadius: 10, border: 0, cursor: "pointer", fontWeight: 700 }}>
+              {loading ? "Actualisation…" : "Actualiser"}
+            </button>
+            <button type="button" onClick={prepareApply} disabled={preparingApply || applying || !data} style={{ padding: "10px 16px", borderRadius: 10, border: 0, cursor: "pointer", fontWeight: 700, background: "#0f766e", color: "#fff" }}>
+              {preparingApply ? "Préparation…" : "Préparer l’application Agency"}
+            </button>
+          </div>
         </div>
 
         {error ? <div style={{ ...box, borderColor: "#fecaca", color: "#991b1b", marginBottom: 20 }}>{error}</div> : null}
+
+        {applyResult ? (
+          <div style={{ ...box, borderColor: "#bbf7d0", color: "#166534", marginBottom: 20 }}>
+            Application terminée sur {applyResult.appliedAgencyCount ?? 0} agence(s). Les agences bloquées sont restées inchangées.
+          </div>
+        ) : null}
+
+        {applyPreview ? (
+          <section style={{ ...box, borderColor: "#f59e0b", marginBottom: 22 }}>
+            <h2 style={{ marginTop: 0 }}>Approbation réseau Agency</h2>
+            <p>
+              Le serveur vient de recalculer le plan complet : <strong>{previewSummary.eligibleAgencyCount ?? 0} agence(s) éligible(s)</strong>, <strong>{previewSummary.actionable ?? 0} action(s)</strong>, <strong>{previewSummary.blockedAgencyCount ?? 0} bloquée(s)</strong> laissée(s) inchangée(s).
+            </p>
+            <p style={{ color: "#64748b" }}>
+              Cette opération ne crée ni conseiller, ni expertise, ni relation. Le token ci-dessous est lié exactement à ce rapport et devient invalide si le réseau change.
+            </p>
+            <label style={{ display: "flex", gap: 10, alignItems: "flex-start", margin: "16px 0" }}>
+              <input type="checkbox" checked={approved} onChange={(event) => setApproved(event.target.checked)} />
+              <span>J’approuve explicitement l’application des seules entités Knowledge <strong>Agency</strong> correspondant à ce rapport réseau.</span>
+            </label>
+            <button type="button" disabled={!approved || applying} onClick={applyAgencies} style={{ padding: "10px 16px", borderRadius: 10, border: 0, cursor: approved ? "pointer" : "not-allowed", fontWeight: 700, background: "#991b1b", color: "#fff" }}>
+              {applying ? "Application…" : "Appliquer les entités Agency"}
+            </button>
+          </section>
+        ) : null}
 
         {data ? (
           <>
