@@ -7,21 +7,27 @@ function relationKey(sourceId, targetId, relationType) {
 async function loadKnowledgeSnapshot(manifest, {
   repository = knowledgeRepository,
 } = {}) {
-  const entitiesByManifestKey = {};
-  const relations = [];
+  const language = manifest.language || "fr";
+  const entitiesByRef = {};
+  const existingEntities = [];
+  const existingRelations = [];
 
   for (const entity of manifest.entities || []) {
     const current = await repository.findBySlugAndLanguage(
       entity.slug,
-      entity.language
+      entity.language || language
     );
 
-    entitiesByManifestKey[entity.key] = current || null;
+    entitiesByRef[entity.ref] = current || null;
+
+    if (current) {
+      existingEntities.push(current);
+    }
   }
 
   for (const relation of manifest.relations || []) {
-    const source = entitiesByManifestKey[relation.sourceKey];
-    const target = entitiesByManifestKey[relation.targetKey];
+    const source = entitiesByRef[relation.sourceRef];
+    const target = entitiesByRef[relation.targetRef];
 
     if (!source || !target) {
       continue;
@@ -41,7 +47,7 @@ async function loadKnowledgeSnapshot(manifest, {
     );
 
     if (exists) {
-      relations.push({
+      existingRelations.push({
         sourceId: source.id,
         targetId: target.id,
         relationType: relation.relationType,
@@ -50,8 +56,9 @@ async function loadKnowledgeSnapshot(manifest, {
   }
 
   return {
-    entitiesByManifestKey,
-    relations,
+    entitiesByRef,
+    existingEntities,
+    existingRelations,
   };
 }
 
