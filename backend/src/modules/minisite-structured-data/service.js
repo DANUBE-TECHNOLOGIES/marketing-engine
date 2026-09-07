@@ -15,6 +15,7 @@ const { auditLocalIntentTargetMapping } = require("./local-intent-target-mapping
 const { entriesForSite, renderSitemapXml } = require("./sitemap-xml");
 const { auditLocalSeoCoverage } = require("./local-seo-coverage");
 const { auditLocalContentUniqueness } = require("./local-content-uniqueness");
+const { collectKnowledgeEntityIds } = require("./person");
 const { MiniSiteStructuredDataRepository } = require("./repository");
 
 function normalizePublicOrigin(value) { return String(value || process.env.PUBLIC_SITE_ORIGIN || process.env.NEXT_PUBLIC_SITE_ORIGIN || "https://agences.mondescale.com").trim().replace(/\/+$/g, ""); }
@@ -23,8 +24,23 @@ function publicStructuredDataSite(site) { if (!isPublishedSite(site)) return nul
 
 class MiniSiteStructuredDataService {
   constructor({ prisma, repository, publicOrigin } = {}) { this.repository = repository || new MiniSiteStructuredDataRepository(prisma); this.publicOrigin = normalizePublicOrigin(publicOrigin); }
-  health() { return { status: "ok", capability: "minisite-structured-data", persistence: false, destructive: false, deterministic: true, tenantScoped: true, publicGraphPublishedOnly: true, destinationSitemap: "localized-per-published-agency-site", editorialSitemap: "canonical-agency-only", inspirationIndexSitemap: "only-when-public-content-targets-agency", contentQualityIndexability: "published-pages-remain-indexable-runtime-quality-enrichment", crawlabilityAudit: "discovery-source-and-orphan-detection", indexationReadiness: "technical-local-seo-content-uniqueness-semantic-depth-search-intent-concrete-target-and-target-quality-safe-to-submit-report", localSeoCoverage: "published-content-h1-nap-structured-data-linking-geographic-semantic-depth-search-intent-target-mapping-and-target-quality-audit", localIntentTargetMapping: "same-page-city-and-commercial-intent-mapping", localIntentTargetQuality: "target-title-meta-h1-body-and-depth-quality", localContentUniqueness: "cross-agency-published-homepage-similarity-audit", xmlSitemap: "network-and-site-candidate-rendering", publicOrigin: this.publicOrigin, schemas: ["TravelAgency", "LocalBusiness", "WebSite", "WebPage", "BreadcrumbList", "FAQPage"], operations: ["previewNetwork", "previewSitemap", "previewSite", "networkSitemapXml", "siteSitemapCandidate", "localSeoCoverage", "localIntentTargetMapping", "localContentUniqueness"] }; }
-  async previewSite({ siteSlug, tenantId } = {}) { const site = await this.repository.findSiteBySlug(siteSlug, tenantId); const publicSite = publicStructuredDataSite(site); if (!publicSite) { const error = new Error(`Mini-site public introuvable : ${siteSlug}`); error.code = "MINISITE_STRUCTURED_DATA_SITE_NOT_FOUND"; error.status = 404; throw error; } const plan = buildStructuredDataPlan({ sites: [publicSite], publicOrigin: this.publicOrigin }); const item = plan.items[0]; return { version: plan.version, publicOrigin: plan.publicOrigin, siteSlug: item.siteSlug, agencyId: item.agencyId, agencyName: item.agencyName, validation: item.validation, summary: item.summary, graph: item.graph }; }
+  health() { return { status: "ok", capability: "minisite-structured-data", persistence: false, destructive: false, deterministic: true, tenantScoped: true, publicGraphPublishedOnly: true, destinationSitemap: "localized-per-published-agency-site", editorialSitemap: "canonical-agency-only", inspirationIndexSitemap: "only-when-public-content-targets-agency", contentQualityIndexability: "published-pages-remain-indexable-runtime-quality-enrichment", crawlabilityAudit: "discovery-source-and-orphan-detection", indexationReadiness: "technical-local-seo-content-uniqueness-semantic-depth-search-intent-concrete-target-and-target-quality-safe-to-submit-report", localSeoCoverage: "published-content-h1-nap-structured-data-linking-geographic-semantic-depth-search-intent-target-mapping-and-target-quality-audit", localIntentTargetMapping: "same-page-city-and-commercial-intent-mapping", localIntentTargetQuality: "target-title-meta-h1-body-and-depth-quality", localContentUniqueness: "cross-agency-published-homepage-similarity-audit", knowledgeBridge: "explicit-published-person-id-and-explicit-expert-in-only", xmlSitemap: "network-and-site-candidate-rendering", publicOrigin: this.publicOrigin, schemas: ["TravelAgency", "LocalBusiness", "Person", "WebSite", "WebPage", "BreadcrumbList", "FAQPage"], operations: ["previewNetwork", "previewSitemap", "previewSite", "networkSitemapXml", "siteSitemapCandidate", "localSeoCoverage", "localIntentTargetMapping", "localContentUniqueness"] }; }
+  async enrichSitesWithKnowledge(sites = []) {
+    const ids = [...new Set((sites || []).flatMap((site) => collectKnowledgeEntityIds(site?.pages || [])))];
+    if (!ids.length) return sites;
+
+    const knowledgePeople = await this.repository.listPublishedKnowledgePeopleByIds(ids);
+    const byId = new Map((knowledgePeople || []).map((entity) => [String(entity.id), entity]));
+
+    return (sites || []).map((site) => {
+      const siteIds = collectKnowledgeEntityIds(site?.pages || []);
+      return {
+        ...site,
+        knowledgePeople: siteIds.map((id) => byId.get(String(id))).filter(Boolean),
+      };
+    });
+  }
+  async previewSite({ siteSlug, tenantId } = {}) { const site = await this.repository.findSiteBySlug(siteSlug, tenantId); const publicSite = publicStructuredDataSite(site); if (!publicSite) { const error = new Error(`Mini-site public introuvable : ${siteSlug}`); error.code = "MINISITE_STRUCTURED_DATA_SITE_NOT_FOUND"; error.status = 404; throw error; } const [enrichedSite] = await this.enrichSitesWithKnowledge([publicSite]); const plan = buildStructuredDataPlan({ sites: [enrichedSite], publicOrigin: this.publicOrigin }); const item = plan.items[0]; return { version: plan.version, publicOrigin: plan.publicOrigin, siteSlug: item.siteSlug, agencyId: item.agencyId, agencyName: item.agencyName, validation: item.validation, summary: item.summary, graph: item.graph }; }
   async previewSitemap({ tenantId } = {}) {
     const [sites, inspirations, destinations] = await Promise.all([this.repository.listSites(tenantId), this.repository.listPublishedEditorialContents(tenantId), this.repository.listPublishedDestinations(tenantId)]);
     const publicSites = sites.map(publicStructuredDataSite).filter(Boolean);
@@ -45,7 +61,7 @@ class MiniSiteStructuredDataService {
   async localSeoCoverage({ tenantId, contexts = {} } = {}) { const sites = (await this.repository.listSites(tenantId)).map(publicStructuredDataSite).filter(Boolean); return auditLocalSeoCoverage(sites, contexts, { publicOrigin: this.publicOrigin }); }
   async localIntentTargetMapping({ tenantId } = {}) { const sites = (await this.repository.listSites(tenantId)).map(publicStructuredDataSite).filter(Boolean); const items = sites.map((site) => ({ siteSlug: site.slug, agencyName: site.agency?.name || null, ...auditLocalIntentTargetMapping(site) })); return { version: "mse-25.28", summary: { siteCount: items.length, strong: items.filter((item) => item.status === "strong").length, coreMapped: items.filter((item) => item.coreIntentMapped).length, diffuse: items.filter((item) => item.diffuseIntents.length > 0).length }, sites: items }; }
   async localContentUniqueness({ tenantId } = {}) { const sites = (await this.repository.listSites(tenantId)).map(publicStructuredDataSite).filter(Boolean); return auditLocalContentUniqueness(sites); }
-  async previewNetwork({ tenantId } = {}) { const sites = await this.repository.listSites(tenantId); return buildStructuredDataPlan({ sites, publicOrigin: this.publicOrigin }); }
+  async previewNetwork({ tenantId } = {}) { const sites = await this.repository.listSites(tenantId); const enrichedSites = await this.enrichSitesWithKnowledge(sites); return buildStructuredDataPlan({ sites: enrichedSites, publicOrigin: this.publicOrigin }); }
 }
 
 module.exports = { MiniSiteStructuredDataService, normalizePublicOrigin, isPublishedBlock, publicStructuredDataSite };
