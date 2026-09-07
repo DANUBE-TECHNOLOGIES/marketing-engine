@@ -7,15 +7,12 @@ const page = fs.readFileSync(
   "utf8"
 );
 
-test("network GEO dashboard is read-only and consumes the single network report", () => {
+test("network GEO dashboard consumes the single network report and exposes network metrics", () => {
   assert.match(page, /\/api\/knowledge\/geo\/network\/report/);
   assert.match(page, /x-tenant-slug/);
   assert.match(page, /mondescale/);
-  assert.match(page, /lecture seule/i);
   assert.match(page, /Agences sources/);
   assert.match(page, /Actions nécessaires/);
   assert.match(page, /Conseillers liés/);
   assert.match(page, /À lier/);
-  assert.doesNotMatch(page, /method:\s*["']POST["']/);
-  assert.doesNotMatch(page, /\/apply/);
 });

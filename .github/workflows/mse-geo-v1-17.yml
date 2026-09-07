@@ -1,0 +1,54 @@
+name: MSE-GEO V1.17 Network Agency Apply
+
+on:
+  pull_request:
+    paths:
+      - "backend/src/knowledge/network-geo-apply.service.js"
+      - "backend/src/knowledge/network-geo.routes.js"
+      - "backend/test/mse-geo-v1-17-network-agency-apply.test.js"
+      - "frontend/app/knowledge/geo/network/page.js"
+      - "frontend/test/mse-geo-v1-16-network-rollout.test.mjs"
+      - "frontend/test/mse-geo-v1-17-network-agency-apply.test.mjs"
+      - ".github/workflows/mse-geo-v1-17.yml"
+
+jobs:
+  backend-controlled-apply:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: Run controlled network Agency apply contracts
+        run: >-
+          node --test
+          test/mse-geo-v1-17-network-agency-apply.test.js
+          test/mse-geo-v1-16-network-rollout.test.js
+          test/mse-geo-v1-16-agency-foundation.test.js
+          test/mse-geo-v1-9-controlled-knowledge-apply.test.js
+          test/mse-geo-v1-10-explicit-apply-approval.test.js
+
+  frontend-controlled-apply:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Run network approval UI contracts
+        run: >-
+          node --test
+          test/mse-geo-v1-16-network-rollout.test.mjs
+          test/mse-geo-v1-17-network-agency-apply.test.mjs

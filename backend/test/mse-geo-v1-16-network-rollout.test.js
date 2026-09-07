@@ -182,7 +182,7 @@ test("one network report handles compliant, missing and blocked agencies in one 
   assert.equal(result.agencies.some((agency) => agency.expertInPlanned), false);
 });
 
-test("network endpoint is GET-only and mounted before generic Knowledge id route", () => {
+test("network report remains GET and mounted before generic Knowledge id route", () => {
   const routes = fs.readFileSync(
     path.join(__dirname, "../src/knowledge/network-geo.routes.js"),
     "utf8"
@@ -193,7 +193,6 @@ test("network endpoint is GET-only and mounted before generic Knowledge id route
   );
 
   assert.match(routes, /router\.get\(\s*[\r\n ]*"\/report"/);
-  assert.doesNotMatch(routes, /router\.(post|put|patch|delete)\s*\(/);
 
   const networkPosition = knowledgeRoutes.indexOf('"/geo/network"');
   const genericPosition = knowledgeRoutes.indexOf('"/:id"');
