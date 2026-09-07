@@ -1,3 +1,5 @@
+const crypto = require("node:crypto");
+
 function stableAction(action) {
   if (!action || typeof action !== "object") {
     return null;
@@ -25,6 +27,13 @@ function comparablePlan(plan) {
       ? plan.actions.map(stableAction)
       : [],
   });
+}
+
+function approvalTokenForPlan(plan) {
+  return crypto
+    .createHash("sha256")
+    .update(comparablePlan(plan), "utf8")
+    .digest("hex");
 }
 
 function validateApplyPlan(plan, {
@@ -63,8 +72,33 @@ function validateApplyPlan(plan, {
   return true;
 }
 
+function validateApprovalToken(plan, approvalToken) {
+  if (!approvalToken || typeof approvalToken !== "string") {
+    throw new Error("Une approbation explicite du plan Knowledge est obligatoire.");
+  }
+
+  const expected = approvalTokenForPlan(plan);
+  const supplied = approvalToken.trim().toLowerCase();
+
+  if (supplied.length !== expected.length) {
+    throw new Error("L'approbation Knowledge ne correspond pas au plan fourni.");
+  }
+
+  const matches = crypto.timingSafeEqual(
+    Buffer.from(supplied, "utf8"),
+    Buffer.from(expected, "utf8")
+  );
+
+  if (!matches) {
+    throw new Error("L'approbation Knowledge ne correspond pas au plan fourni.");
+  }
+
+  return true;
+}
+
 async function applyKnowledgePilotPlan({
   plan,
+  approvalToken,
   rebuildCurrentPlan,
   createEntity,
   updateEntity,
@@ -72,6 +106,7 @@ async function applyKnowledgePilotPlan({
   allowExpertise = false,
 }) {
   validateApplyPlan(plan, { allowExpertise });
+  validateApprovalToken(plan, approvalToken);
 
   if (typeof rebuildCurrentPlan !== "function") {
     throw new Error("La reconstruction du plan courant est obligatoire.");
@@ -187,6 +222,7 @@ async function applyKnowledgePilotPlan({
     mode: "apply",
     destructive: false,
     manifestKey: plan.manifestKey || null,
+    approvalToken,
     applied: true,
     results,
   };
@@ -195,5 +231,7 @@ async function applyKnowledgePilotPlan({
 module.exports = {
   applyKnowledgePilotPlan,
   validateApplyPlan,
+  validateApprovalToken,
+  approvalTokenForPlan,
   comparablePlan,
 };
