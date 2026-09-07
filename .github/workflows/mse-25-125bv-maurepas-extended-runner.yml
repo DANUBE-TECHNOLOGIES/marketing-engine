@@ -1,0 +1,26 @@
+name: MSE-25.125BV Maurepas extended runner
+
+on:
+  pull_request:
+    paths:
+      - "scripts/mse-25-125bv-maurepas-run-prepared-11x11.sh"
+      - "frontend/test/mse-25-125bv-maurepas-extended-runner.test.mjs"
+      - ".github/workflows/mse-25-125bv-maurepas-extended-runner.yml"
+  push:
+    paths:
+      - "scripts/mse-25-125bv-maurepas-run-prepared-11x11.sh"
+      - "frontend/test/mse-25-125bv-maurepas-extended-runner.test.mjs"
+      - ".github/workflows/mse-25-125bv-maurepas-extended-runner.yml"
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Shell syntax
+        run: bash -n scripts/mse-25-125bv-maurepas-run-prepared-11x11.sh
+      - name: Contract test
+        run: node --test frontend/test/mse-25-125bv-maurepas-extended-runner.test.mjs
