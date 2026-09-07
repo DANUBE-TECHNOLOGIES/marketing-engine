@@ -1,0 +1,27 @@
+name: MSE-GEO V1 Agency Entity Graph
+
+on:
+  pull_request:
+    paths:
+      - "backend/src/modules/minisite-structured-data/**"
+      - "backend/test/minisite-structured-data-geo-v1.test.js"
+      - "backend/package.json"
+      - "backend/package-lock.json"
+      - ".github/workflows/mse-geo-v1.yml"
+  workflow_dispatch:
+
+jobs:
+  geo-v1-backend-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: node --test test/minisite-structured-data-geo-v1.test.js
