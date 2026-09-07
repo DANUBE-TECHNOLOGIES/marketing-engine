@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { GEO_KNOWLEDGE_TYPES } from "../../../lib/knowledge/geo-admin-options";
 import BlockManager from "./BlockManager";
 import RelationManager from "./RelationManager";
 import MediaManager from "./MediaManager";
 import KnowledgeComposer from "./KnowledgeComposer";
 
 const TYPES = [
+  ...GEO_KNOWLEDGE_TYPES,
   ["country", "Pays"],
   ["region", "Région"],
   ["destination", "Destination"],
@@ -520,9 +522,6 @@ export default function KnowledgeDetailPage() {
           </form>
         </section>
 
-
-
-
         <KnowledgeComposer
           entityId={id}
         />
@@ -536,7 +535,6 @@ export default function KnowledgeDetailPage() {
           entityId={id}
           onChanged={loadEntity}
         />
-
 
         <RelationManager
           entityId={id}

@@ -1,9 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { GEO_KNOWLEDGE_TYPES } from "../../lib/knowledge/geo-admin-options";
 
 const TYPES = [
   ["", "Tous les types"],
+  ...GEO_KNOWLEDGE_TYPES,
   ["country", "Pays"],
   ["region", "Région"],
   ["destination", "Destination"],

@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { GEO_KNOWLEDGE_RELATION_TYPES } from "../../../lib/knowledge/geo-admin-options";
 
 const RELATION_TYPES = [
+  ...GEO_KNOWLEDGE_RELATION_TYPES,
   ["located_in", "Situé dans"],
   ["contains", "Contient"],
   ["part_of", "Fait partie de"],
