@@ -6,7 +6,12 @@ on:
       - "backend/src/knowledge/network-geo.service.js"
       - "backend/src/knowledge/network-geo.routes.js"
       - "backend/src/knowledge/knowledge.routes.js"
+      - "backend/src/modules/minisite-structured-data/travel-agency.js"
+      - "backend/src/modules/minisite-structured-data/planner.js"
+      - "backend/src/modules/minisite-structured-data/repository.js"
+      - "backend/src/modules/public-site-read/section-aware-service.js"
       - "backend/test/mse-geo-v1-16-network-rollout.test.js"
+      - "backend/test/mse-geo-v1-16-agency-foundation.test.js"
       - "frontend/app/knowledge/geo/network/page.js"
       - "frontend/test/mse-geo-v1-16-network-rollout.test.mjs"
       - ".github/workflows/mse-geo-v1-16.yml"
@@ -26,7 +31,12 @@ jobs:
           cache-dependency-path: backend/package-lock.json
       - run: npm ci
       - name: Run network GEO contracts
-        run: node --test test/mse-geo-v1-16-network-rollout.test.js
+        run: >-
+          node --test
+          test/mse-geo-v1-16-network-rollout.test.js
+          test/mse-geo-v1-16-agency-foundation.test.js
+          test/mse-geo-v1-2-person-graph.test.js
+          test/mse-geo-v1-4-knowledge-bridge.test.js
 
   frontend-network-dashboard:
     runs-on: ubuntu-latest
