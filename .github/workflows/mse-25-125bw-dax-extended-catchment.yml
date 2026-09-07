@@ -1,0 +1,25 @@
+name: MSE-25.125BW Dax extended catchment
+
+on:
+  pull_request:
+    paths:
+      - "frontend/lib/seo/local-area-config.js"
+      - "frontend/test/mse-25-125bw-dax-extended-catchment.test.mjs"
+      - ".github/workflows/mse-25-125bw-dax-extended-catchment.yml"
+  push:
+    paths:
+      - "frontend/lib/seo/local-area-config.js"
+      - "frontend/test/mse-25-125bw-dax-extended-catchment.test.mjs"
+      - ".github/workflows/mse-25-125bw-dax-extended-catchment.yml"
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Contract test
+        working-directory: frontend
+        run: node --test test/mse-25-125bw-dax-extended-catchment.test.mjs
