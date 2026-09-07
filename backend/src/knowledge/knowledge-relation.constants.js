@@ -48,6 +48,16 @@ const RELATION_TYPES = Object.freeze({
     label: "Desservi par",
     inverseLabel: "Dessert",
   },
+
+  works_at: {
+    label: "Travaille dans",
+    inverseLabel: "Compte dans son équipe",
+  },
+
+  expert_in: {
+    label: "Expert de",
+    inverseLabel: "A pour expert",
+  },
 });
 
 module.exports = {
