@@ -77,6 +77,12 @@ const EXTENDED_LOCAL_AREA_BY_SITE_SLUG = Object.freeze({
     "Saugnac-et-Cambran",
     "Mées",
   ],
+  "ambassade-fram-mondescale-gien": [
+    "Saint-Martin-sur-Ocre",
+    "Nevoy",
+    "Coullons",
+    "Boismorand",
+  ],
   "ambassade-fram-mondescale-maurepas": [
     "Les Essarts-le-Roi",
     "Plaisir",
