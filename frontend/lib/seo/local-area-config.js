@@ -43,6 +43,7 @@ const LOCAL_AREA_BY_SITE_SLUG = Object.freeze({
     "Élancourt",
     "Coignières",
     "La Verrière",
+    "Jouars-Pontchartrain",
     "Le Mesnil-Saint-Denis",
     "Trappes",
   ],
