@@ -61,6 +61,8 @@ test("MSE-GEO V1.1 le proof porte sur le snapshot complet et non sur les cartes 
   assert.equal(result.proof.total, 8);
   assert.equal(result.proof.averageRating, 4.9);
   assert.equal(result.proof.source, "google");
+  assert.equal(result.proof.provider, "google_business_profile");
+  assert.equal(result.proof.completeness, "best-effort");
   assert.equal(result.proof.sourceUrl, "https://example.test/google-reviews");
 });
 
@@ -95,6 +97,8 @@ test("MSE-GEO V1.1 le proof expose uniquement des dates factuelles du snapshot",
 
   assert.equal(proof.kind, "ReviewProof");
   assert.equal(proof.version, "1.0.0");
+  assert.equal(proof.provider, "google_business_profile");
+  assert.equal(proof.completeness, "best-effort");
   assert.equal(proof.latestReviewPublishedAt, "2026-09-05T10:00:00.000Z");
   assert.equal(proof.snapshotLastChangedAt, "2026-09-06T12:00:00.000Z");
   assert.equal(Object.prototype.hasOwnProperty.call(proof, "lastVerifiedAt"), false);
@@ -119,6 +123,8 @@ test("MSE-GEO V1.1 sans snapshot Google la provenance reste explicitement locale
 
   assert.equal(result.reviews.length, 1);
   assert.equal(result.proof.source, "local-fallback");
+  assert.equal(result.proof.provider, null);
+  assert.equal(result.proof.completeness, "local-fallback");
   assert.equal(result.proof.total, 2);
   assert.equal(result.proof.averageRating, 4.5);
 });
@@ -130,6 +136,8 @@ test("MSE-GEO V1.1 un snapshot vide produit un proof neutre et déterministe", (
     kind: "ReviewProof",
     version: "1.0.0",
     source: "local-fallback",
+    provider: null,
+    completeness: "local-fallback",
     sourceUrl: null,
     averageRating: 0,
     total: 0,
