@@ -6,7 +6,10 @@ import PublicSiteHeader from "../../../components/public-site/PublicSiteHeader";
 import PublicSiteFooter from "../../../components/public-site/PublicSiteFooter";
 import PublicBrandLegalRuntime from "../../../components/public-site/PublicBrandLegalRuntime";
 import JsonLd from "../../../components/JsonLd";
-import { buildWebSiteSchema } from "../../../lib/seo/json-ld";
+import {
+  buildOrganizationSchema,
+  buildWebSiteSchema,
+} from "../../../lib/seo/json-ld";
 import {
   fetchPublicBrandLegalRuntime,
   runtimeBrandAssets,
@@ -60,6 +63,7 @@ export default async function PublicAgencySiteLayout({ children, params }) {
 
   return (
     <PublicBrandLegalRuntime runtime={publicBrandLegalRuntime}>
+      <JsonLd data={buildOrganizationSchema()} />
       <JsonLd data={buildWebSiteSchema()} />
 
       <div
