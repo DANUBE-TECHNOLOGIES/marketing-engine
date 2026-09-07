@@ -24,7 +24,7 @@ test("network Agency apply sends only the approval token", () => {
 });
 
 test("network UI states clearly that apply is Agency-only", () => {
-  assert.match(page, /limité aux entités Agency/i);
+  assert.match(page, /limitée aux entités Agency/i);
   assert.match(page, /ne crée ni conseiller, ni expertise, ni relation/i);
   assert.match(page, /agences bloquées sont restées inchangées/i);
 });
