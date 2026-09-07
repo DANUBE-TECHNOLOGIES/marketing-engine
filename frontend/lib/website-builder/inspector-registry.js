@@ -15,27 +15,10 @@ const COMMON_FIELDS = [
 export const INSPECTOR_REGISTRY = {
   hero: {
     fields: [
-      {
-        key: "title",
-        label: "Titre principal",
-        control: "text",
-      },
-      {
-        key: "subtitle",
-        label: "Sous-titre",
-        control: "textarea",
-        rows: 5,
-      },
-      {
-        key: "backgroundImage",
-        label: "URL de l’image",
-        control: "url",
-      },
-      {
-        key: "imageAlt",
-        label: "Texte alternatif",
-        control: "text",
-      },
+      { key: "title", label: "Titre principal", control: "text" },
+      { key: "subtitle", label: "Sous-titre", control: "textarea", rows: 5 },
+      { key: "backgroundImage", label: "URL de l’image", control: "url" },
+      { key: "imageAlt", label: "Texte alternatif", control: "text" },
       {
         key: "backgroundPosition",
         label: "Position de l’image",
@@ -48,30 +31,13 @@ export const INSPECTOR_REGISTRY = {
           ["right", "Droite"],
         ],
       },
-      {
-        key: "overlayOpacity",
-        label: "Intensité de l’overlay",
-        control: "range",
-        min: 20,
-        max: 90,
-        step: 5,
-      },
-      {
-        key: "primaryButton",
-        label: "Bouton principal",
-        control: "text",
-      },
-      {
-        key: "secondaryButton",
-        label: "Bouton secondaire",
-        control: "text",
-      },
+      { key: "overlayOpacity", label: "Intensité de l’overlay", control: "range", min: 20, max: 90, step: 5 },
+      { key: "primaryButton", label: "Bouton principal", control: "text" },
+      { key: "secondaryButton", label: "Bouton secondaire", control: "text" },
     ],
   },
 
-  "rich-text": {
-    fields: COMMON_FIELDS,
-  },
+  "rich-text": { fields: COMMON_FIELDS },
 
   services: {
     fields: COMMON_FIELDS,
@@ -80,17 +46,8 @@ export const INSPECTOR_REGISTRY = {
       label: "Services",
       itemLabel: "Service",
       fields: [
-        {
-          key: "title",
-          label: "Nom",
-          control: "text",
-        },
-        {
-          key: "description",
-          label: "Description",
-          control: "textarea",
-          rows: 3,
-        },
+        { key: "title", label: "Nom", control: "text" },
+        { key: "description", label: "Description", control: "textarea", rows: 3 },
       ],
     },
   },
@@ -102,21 +59,13 @@ export const INSPECTOR_REGISTRY = {
         key: "__dataSource",
         label: "Source des destinations",
         control: "select",
-        options: [
-          ["travel-core", "Référentiel destinations"],
-          ["manual", "Saisie manuelle"],
-        ],
+        options: [["travel-core", "Référentiel destinations"], ["manual", "Saisie manuelle"]],
       },
       {
         key: "limit",
         label: "Nombre maximum de destinations",
         control: "select",
-        options: [
-          ["3", "3 destinations"],
-          ["6", "6 destinations"],
-          ["9", "9 destinations"],
-          ["12", "12 destinations"],
-        ],
+        options: [["3", "3 destinations"], ["6", "6 destinations"], ["9", "9 destinations"], ["12", "12 destinations"]],
       },
     ],
     collection: {
@@ -124,27 +73,10 @@ export const INSPECTOR_REGISTRY = {
       label: "Destinations",
       itemLabel: "Destination",
       fields: [
-        {
-          key: "title",
-          label: "Nom",
-          control: "text",
-        },
-        {
-          key: "eyebrow",
-          label: "Région ou thème",
-          control: "text",
-        },
-        {
-          key: "description",
-          label: "Description",
-          control: "textarea",
-          rows: 3,
-        },
-        {
-          key: "image",
-          label: "URL de l’image",
-          control: "url",
-        },
+        { key: "title", label: "Nom", control: "text" },
+        { key: "eyebrow", label: "Région ou thème", control: "text" },
+        { key: "description", label: "Description", control: "textarea", rows: 3 },
+        { key: "image", label: "URL de l’image", control: "url" },
       ],
     },
   },
@@ -156,10 +88,7 @@ export const INSPECTOR_REGISTRY = {
         key: "__dataSource",
         label: "Source des offres",
         control: "select",
-        options: [
-          ["campaigns", "Campagnes approuvées"],
-          ["manual", "Sélection manuelle"],
-        ],
+        options: [["campaigns", "Campagnes approuvées"], ["manual", "Sélection manuelle"]],
       },
     ],
     collection: {
@@ -167,32 +96,11 @@ export const INSPECTOR_REGISTRY = {
       label: "Offres",
       itemLabel: "Offre",
       fields: [
-        {
-          key: "title",
-          label: "Titre",
-          control: "text",
-        },
-        {
-          key: "badge",
-          label: "Badge",
-          control: "text",
-        },
-        {
-          key: "description",
-          label: "Description",
-          control: "textarea",
-          rows: 3,
-        },
-        {
-          key: "price",
-          label: "Prix affiché",
-          control: "text",
-        },
-        {
-          key: "image",
-          label: "URL de l’image",
-          control: "url",
-        },
+        { key: "title", label: "Titre", control: "text" },
+        { key: "badge", label: "Badge", control: "text" },
+        { key: "description", label: "Description", control: "textarea", rows: 3 },
+        { key: "price", label: "Prix affiché", control: "text" },
+        { key: "image", label: "URL de l’image", control: "url" },
       ],
     },
   },
@@ -204,30 +112,19 @@ export const INSPECTOR_REGISTRY = {
         key: "__dataSource",
         label: "Source des inspirations",
         control: "select",
-        options: [
-          ["content-generation", "Contenus éditoriaux publiés"],
-          ["manual", "Saisie manuelle"],
-        ],
+        options: [["content-generation", "Contenus éditoriaux publiés"], ["manual", "Saisie manuelle"]],
       },
       {
         key: "selectionMode",
         label: "Mode de sélection",
         control: "select",
-        options: [
-          ["automatic", "Automatique (plus récents)"],
-          ["manual", "Sélection d’articles"],
-        ],
+        options: [["automatic", "Automatique (plus récents)"], ["manual", "Sélection d’articles"]],
       },
       {
         key: "limit",
         label: "Nombre maximum d’articles",
         control: "select",
-        options: [
-          ["3", "3 articles"],
-          ["6", "6 articles"],
-          ["9", "9 articles"],
-          ["12", "12 articles"],
-        ],
+        options: [["3", "3 articles"], ["6", "6 articles"], ["9", "9 articles"], ["12", "12 articles"]],
       },
     ],
     collection: {
@@ -235,178 +132,72 @@ export const INSPECTOR_REGISTRY = {
       label: "Inspirations",
       itemLabel: "Article",
       fields: [
-        {
-          key: "title",
-          label: "Titre",
-          control: "text",
-        },
-        {
-          key: "category",
-          label: "Catégorie",
-          control: "text",
-        },
-        {
-          key: "description",
-          label: "Résumé",
-          control: "textarea",
-          rows: 3,
-        },
-        {
-          key: "image",
-          label: "URL de l’image",
-          control: "url",
-        },
+        { key: "title", label: "Titre", control: "text" },
+        { key: "category", label: "Catégorie", control: "text" },
+        { key: "description", label: "Résumé", control: "textarea", rows: 3 },
+        { key: "image", label: "URL de l’image", control: "url" },
       ],
     },
   },
 
   stats: {
-    fields: [
-      {
-        key: "title",
-        label: "Titre",
-        control: "text",
-      },
-    ],
+    fields: [{ key: "title", label: "Titre", control: "text" }],
     collection: {
       key: "items",
       label: "Chiffres clés",
       itemLabel: "Chiffre",
       fields: [
-        {
-          key: "value",
-          label: "Valeur",
-          control: "text",
-        },
-        {
-          key: "label",
-          label: "Libellé",
-          control: "text",
-        },
+        { key: "value", label: "Valeur", control: "text" },
+        { key: "label", label: "Libellé", control: "text" },
       ],
     },
   },
 
   partners: {
-    fields: [
-      {
-        key: "title",
-        label: "Titre",
-        control: "text",
-      },
-    ],
+    fields: [{ key: "title", label: "Titre", control: "text" }],
     collection: {
       key: "items",
       label: "Partenaires",
       itemLabel: "Partenaire",
       fields: [
-        {
-          key: "name",
-          label: "Nom",
-          control: "text",
-        },
-        {
-          key: "logo",
-          label: "URL du logo",
-          control: "url",
-        },
+        { key: "name", label: "Nom", control: "text" },
+        { key: "logo", label: "URL du logo", control: "url" },
       ],
     },
   },
 
   faq: {
-    fields: [
-      {
-        key: "title",
-        label: "Titre",
-        control: "text",
-      },
-    ],
+    fields: [{ key: "title", label: "Titre", control: "text" }],
     collection: {
       key: "items",
       label: "Questions",
       itemLabel: "Question",
       fields: [
-        {
-          key: "question",
-          label: "Question",
-          control: "text",
-        },
-        {
-          key: "answer",
-          label: "Réponse",
-          control: "textarea",
-          rows: 4,
-        },
+        { key: "question", label: "Question", control: "text" },
+        { key: "answer", label: "Réponse", control: "textarea", rows: 4 },
       ],
     },
   },
 
   appointment: {
     fields: [
-      {
-        key: "title",
-        label: "Titre",
-        control: "text",
-      },
-      {
-        key: "text",
-        label: "Texte",
-        control: "textarea",
-        rows: 5,
-      },
-      {
-        key: "primaryButton",
-        label: "Libellé du bouton",
-        control: "text",
-      },
+      { key: "title", label: "Titre", control: "text" },
+      { key: "text", label: "Texte", control: "textarea", rows: 5 },
+      { key: "primaryButton", label: "Libellé du bouton", control: "text" },
     ],
   },
 
   cta: {
     fields: [
-      {
-        key: "title",
-        label: "Titre",
-        control: "text",
-      },
-      {
-        key: "text",
-        label: "Texte",
-        control: "textarea",
-        rows: 5,
-      },
-      {
-        key: "primaryButton",
-        label: "Libellé du bouton",
-        control: "text",
-      },
+      { key: "title", label: "Titre", control: "text" },
+      { key: "text", label: "Texte", control: "textarea", rows: 5 },
+      { key: "primaryButton", label: "Libellé du bouton", control: "text" },
     ],
   },
 
-  contact: {
-    fields: COMMON_FIELDS,
-  },
-
-  hours: {
-    fields: [
-      {
-        key: "title",
-        label: "Titre",
-        control: "text",
-      },
-    ],
-  },
-
-  map: {
-    fields: [
-      {
-        key: "title",
-        label: "Titre",
-        control: "text",
-      },
-    ],
-  },
+  contact: { fields: COMMON_FIELDS },
+  hours: { fields: [{ key: "title", label: "Titre", control: "text" }] },
+  map: { fields: [{ key: "title", label: "Titre", control: "text" }] },
 
   reviews: {
     fields: [
@@ -415,21 +206,13 @@ export const INSPECTOR_REGISTRY = {
         key: "__dataSource",
         label: "Source des avis",
         control: "select",
-        options: [
-          ["google-reviews", "Avis Google"],
-          ["manual", "Sélection manuelle"],
-        ],
+        options: [["google-reviews", "Avis Google"], ["manual", "Sélection manuelle"]],
       },
       {
         key: "limit",
         label: "Nombre maximum d’avis",
         control: "select",
-        options: [
-          ["3", "3 avis"],
-          ["6", "6 avis"],
-          ["9", "9 avis"],
-          ["12", "12 avis"],
-        ],
+        options: [["3", "3 avis"], ["6", "6 avis"], ["9", "9 avis"], ["12", "12 avis"]],
       },
     ],
     collection: {
@@ -437,42 +220,39 @@ export const INSPECTOR_REGISTRY = {
       label: "Avis",
       itemLabel: "Avis",
       fields: [
-        {
-          key: "authorName",
-          label: "Auteur",
-          control: "text",
-        },
+        { key: "authorName", label: "Auteur", control: "text" },
         {
           key: "rating",
           label: "Note",
           control: "select",
-          options: [
-            ["5", "5 étoiles"],
-            ["4", "4 étoiles"],
-            ["3", "3 étoiles"],
-            ["2", "2 étoiles"],
-            ["1", "1 étoile"],
-          ],
+          options: [["5", "5 étoiles"], ["4", "4 étoiles"], ["3", "3 étoiles"], ["2", "2 étoiles"], ["1", "1 étoile"]],
         },
-        {
-          key: "comment",
-          label: "Commentaire",
-          control: "textarea",
-          rows: 4,
-        },
+        { key: "comment", label: "Commentaire", control: "textarea", rows: 4 },
       ],
     },
   },
 
   team: {
     fields: COMMON_FIELDS,
+    collection: {
+      key: "members",
+      label: "Équipe",
+      itemLabel: "Conseiller",
+      fields: [
+        { key: "name", label: "Nom", control: "text" },
+        { key: "role", label: "Fonction", control: "text" },
+        { key: "bio", label: "Présentation", control: "textarea", rows: 4 },
+        { key: "imageUrl", label: "URL du portrait", control: "url" },
+        {
+          key: "knowledgeEntityId",
+          label: "ID Knowledge Person (liaison explicite)",
+          control: "text",
+        },
+      ],
+    },
   },
 };
 
 export function getInspectorDefinition(type) {
-  return (
-    INSPECTOR_REGISTRY[type] || {
-      fields: COMMON_FIELDS,
-    }
-  );
+  return INSPECTOR_REGISTRY[type] || { fields: COMMON_FIELDS };
 }
