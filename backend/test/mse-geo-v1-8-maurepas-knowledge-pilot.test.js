@@ -6,6 +6,9 @@ const {
   buildKnowledgePilotPlan,
   validateManifest,
 } = require("../src/knowledge/pilot-planner");
+const {
+  loadKnowledgeSnapshot,
+} = require("../src/knowledge/knowledge-pilot-readonly");
 
 test("Maurepas manifest contains only explicit agency/person facts and no expertise", () => {
   assert.equal(validateManifest(manifest), true);
@@ -119,4 +122,51 @@ test("manifest rejects unvalidated expertise injection", () => {
       }),
     /explicitement validées/
   );
+});
+
+test("read-only adapter resolves exact refs and existing works_at without writes", async () => {
+  const calls = [];
+  const repository = {
+    async findBySlugAndLanguage(slug, language) {
+      calls.push(["findBySlugAndLanguage", slug, language]);
+      if (slug === "mondescale-maurepas") {
+        return { id: "agency-1", slug, language, type: "agency", title: "Mondescale Maurepas", status: "published", summary: "Agence de voyages Mondescale à Maurepas." };
+      }
+      if (slug === "anisia-maurepas") {
+        return { id: "person-1", slug, language, type: "person", title: "Anisia", status: "published", summary: "Conseillère de l'agence Mondescale Maurepas." };
+      }
+      return null;
+    },
+    async findById(id) {
+      calls.push(["findById", id]);
+      return {
+        id,
+        outgoingRelations: id === "person-1"
+          ? [{ sourceId: "person-1", targetId: "agency-1", relationType: "works_at" }]
+          : [],
+      };
+    },
+    create() { throw new Error("write forbidden"); },
+    update() { throw new Error("write forbidden"); },
+    remove() { throw new Error("write forbidden"); },
+  };
+
+  const snapshot = await loadKnowledgeSnapshot(manifest, { repository });
+  const plan = buildKnowledgePilotPlan({
+    manifest,
+    existingEntities: snapshot.existingEntities,
+    existingRelations: snapshot.existingRelations,
+  });
+
+  assert.equal(snapshot.entitiesByRef["agency:maurepas"].id, "agency-1");
+  assert.equal(snapshot.entitiesByRef["person:anisia"].id, "person-1");
+  assert.deepEqual(snapshot.existingRelations, [
+    { sourceId: "person-1", targetId: "agency-1", relationType: "works_at" },
+  ]);
+  assert.deepEqual(plan.actions.map((action) => action.action), [
+    "noop_entity",
+    "noop_entity",
+    "noop_relation",
+  ]);
+  assert.equal(calls.some(([name]) => ["create", "update", "remove"].includes(name)), false);
 });
