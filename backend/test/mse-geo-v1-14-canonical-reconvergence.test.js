@@ -9,9 +9,7 @@ const {
 const {
   planKnowledgePilot,
 } = require("../src/knowledge/pilot-planner");
-const {
-  MAUREPAS_KNOWLEDGE_MANIFEST,
-} = require("../src/knowledge/pilots/maurepas.manifest");
+const MAUREPAS_KNOWLEDGE_MANIFEST = require("../src/knowledge/pilots/maurepas.manifest");
 
 test("canonical GEO chain keeps explicit Person bridge and Maurepas pilot compatible", () => {
   const node = buildPerson({
