@@ -114,6 +114,14 @@ function memberIdentity(member) {
     normalizedLabel(name);
 }
 
+function memberKnowledgeEntityId(member) {
+  return cleanText(
+    member?.knowledgeEntityId ||
+    member?.knowledge?.entityId ||
+    member?.knowledge?.id
+  );
+}
+
 function collectVerifiedTeamMembers(pages = []) {
   const members = new Map();
 
@@ -142,6 +150,55 @@ function collectVerifiedTeamMembers(pages = []) {
   return [...members.values()];
 }
 
+function collectKnowledgeEntityIds(pages = []) {
+  return [...new Set(
+    collectVerifiedTeamMembers(pages)
+      .map(memberKnowledgeEntityId)
+      .filter(Boolean)
+  )];
+}
+
+function isPublishedKnowledgeEntity(entity, type) {
+  return Boolean(
+    entity &&
+    cleanText(entity.type).toLowerCase() === type &&
+    cleanText(entity.status).toLowerCase() === "published"
+  );
+}
+
+function explicitExpertiseNames(knowledgePerson) {
+  if (!isPublishedKnowledgeEntity(knowledgePerson, "person")) return [];
+
+  const names = [];
+  const seen = new Set();
+
+  for (const relation of knowledgePerson.outgoingRelations || []) {
+    if (cleanText(relation?.relationType).toLowerCase() !== "expert_in") continue;
+
+    const target = relation?.target;
+    if (!isPublishedKnowledgeEntity(target, "expertise")) continue;
+
+    const title = cleanText(target.title);
+    const key = normalizedLabel(title);
+    if (!title || seen.has(key)) continue;
+
+    seen.add(key);
+    names.push(title);
+  }
+
+  return names;
+}
+
+function linkedKnowledgePerson(member, knowledgePeople = []) {
+  const knowledgeEntityId = memberKnowledgeEntityId(member);
+  if (!knowledgeEntityId) return null;
+
+  return (knowledgePeople || []).find((entity) =>
+    String(entity?.id || "") === knowledgeEntityId &&
+    isPublishedKnowledgeEntity(entity, "person")
+  ) || null;
+}
+
 function buildPerson({ member, site, publicOrigin } = {}) {
   const name = memberName(member);
   if (!name || isPlaceholderMember(member)) return null;
@@ -149,6 +206,12 @@ function buildPerson({ member, site, publicOrigin } = {}) {
   const agencyUrl = siteUrl(publicOrigin, site?.slug);
   const stablePart = personSlug(member?.id || name);
   if (!stablePart) return null;
+
+  const knowledgePerson = linkedKnowledgePerson(
+    member,
+    site?.knowledgePeople || []
+  );
+  const knowsAbout = explicitExpertiseNames(knowledgePerson);
 
   return removeEmpty({
     "@type": "Person",
@@ -160,6 +223,7 @@ function buildPerson({ member, site, publicOrigin } = {}) {
     worksFor: {
       "@id": `${agencyUrl}#travel-agency`,
     },
+    knowsAbout,
   });
 }
 
@@ -175,12 +239,17 @@ module.exports = {
   blockType,
   buildPeople,
   buildPerson,
+  collectKnowledgeEntityIds,
   collectVerifiedTeamMembers,
+  explicitExpertiseNames,
   isPlaceholderMember,
+  isPublishedKnowledgeEntity,
   isTeamBlock,
+  linkedKnowledgePerson,
   memberDescription,
   memberImage,
   memberJobTitle,
+  memberKnowledgeEntityId,
   memberName,
   normalizedLabel,
   personSlug,
