@@ -3,6 +3,7 @@ name: MSE-GEO V1.13 Maurepas Pilot Admin
 on:
   pull_request:
     paths:
+      - "frontend/app/knowledge/page.js"
       - "frontend/app/knowledge/pilots/maurepas/page.js"
       - "frontend/test/mse-geo-v1-13-maurepas-pilot-admin.test.mjs"
       - ".github/workflows/mse-geo-v1-13.yml"
