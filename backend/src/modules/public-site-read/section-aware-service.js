@@ -102,6 +102,21 @@ function asObject(value) {
     : {};
 }
 
+function publicTargetCities(site) {
+  return (
+    site?.agency?.seoSite?.targetCities ??
+    site?.targetCities ??
+    site?.agency?.targetCities ??
+    []
+  );
+}
+
+function sanitizePublicAgency(agency) {
+  if (!agency || typeof agency !== "object") return agency ?? null;
+  const { seoSite: _seoSite, ...publicAgency } = agency;
+  return publicAgency;
+}
+
 function heroAssetReferences(pages = []) {
   const references = [];
   const seen = new Set();
@@ -191,6 +206,20 @@ class SectionAwarePublicSiteReadService extends PublicSiteReadService {
     const select = super.buildSelect();
     const pageFields = fieldsFor("AgencySitePage");
     const sectionFields = fieldsFor("AgencySiteSection");
+    const agencyFields = fieldsFor("Agency");
+    const agencySeoSiteFields = fieldsFor("AgencySeoSite");
+
+    if (
+      select.agency?.select &&
+      agencyFields.has("seoSite") &&
+      agencySeoSiteFields.has("targetCities")
+    ) {
+      select.agency.select.seoSite = {
+        select: {
+          targetCities: true,
+        },
+      };
+    }
 
     if (
       select.pages?.select &&
@@ -284,23 +313,26 @@ class SectionAwarePublicSiteReadService extends PublicSiteReadService {
       null;
 
     const canonicalBasePath = `/agence/${site.slug}`;
+    const agency = sanitizePublicAgency(site.agency);
+    const targetCities = publicTargetCities(site);
 
     return {
       version: "1.4",
       site: {
         id: site.id,
         agencyId: site.agencyId,
-        tenantId: site.tenantId ?? site.agency?.tenantId ?? null,
+        tenantId: site.tenantId ?? agency?.tenantId ?? null,
         slug: site.slug,
-        name: site.name ?? site.agency?.name ?? "",
+        name: site.name ?? agency?.name ?? "",
         basePath: canonicalBasePath,
         status: site.status ?? null,
         published: publishedLike(site),
         publishedAt: site.publishedAt ?? null,
         theme: site.theme ?? {},
-        agency: site.agency ?? null,
+        targetCities,
+        agency,
       },
-      agency: site.agency ?? null,
+      agency,
       pages: hydratedPages,
       navigation: hydratedPages.map((page) => ({
         id: page.id,
@@ -323,6 +355,8 @@ module.exports = {
   normalizeDesignerSection,
   normalizeV2Block,
   normalizePublicPage,
+  publicTargetCities,
+  sanitizePublicAgency,
   heroAssetReferences,
   loadPublishedHeroAssets,
   hydrateHeroMediaAssets,

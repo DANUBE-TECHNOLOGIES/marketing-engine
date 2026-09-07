@@ -1,8 +1,11 @@
 import { absoluteUrl } from "./site-url";
-import { resolvedTargetCities } from "./local-area-config";
+import { explicitTargetCities } from "./local-area-config";
 import {
   buildGoogleMapsSearchUrl,
 } from "../public-agency-location";
+
+export const MONDESCALE_ORGANIZATION_ID =
+  "https://www.mondescale.com/#organization";
 
 export function compactJsonLd(value) {
   return JSON.parse(
@@ -18,6 +21,16 @@ export function compactJsonLd(value) {
       return item;
     })
   );
+}
+
+export function buildOrganizationSchema() {
+  return compactJsonLd({
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "@id": MONDESCALE_ORGANIZATION_ID,
+    name: "Mondescale Voyages",
+    url: "https://www.mondescale.com",
+  });
 }
 
 export function buildWebSiteSchema() {
@@ -49,9 +62,17 @@ function openingHoursSpecification(hours) {
   });
 }
 
+function normalizedCityKey(value) {
+  return String(value || "")
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("fr-FR");
+}
+
 function servedAreas(site, agency) {
   const primaryCity = String(agency?.city || site?.city || "").trim();
-  const values = resolvedTargetCities(site, { limit: 12 });
+  const values = explicitTargetCities(site);
   const result = [];
   const seen = new Set();
 
@@ -59,13 +80,13 @@ function servedAreas(site, agency) {
     const name = String(
       typeof value === "string"
         ? value
-        : value?.name || value?.city || ""
+        : value?.name || value?.city || value?.label || ""
     ).trim();
 
     if (!name) return;
 
-    const key = name.toLocaleLowerCase("fr-FR");
-    if (seen.has(key)) return;
+    const key = normalizedCityKey(name);
+    if (!key || seen.has(key)) return;
 
     seen.add(key);
     result.push({
@@ -253,6 +274,9 @@ export function buildTravelAgencySchema(site) {
         : undefined,
     hasMap,
     areaServed: servedAreas(site, agency),
+    parentOrganization: {
+      "@id": MONDESCALE_ORGANIZATION_ID,
+    },
     openingHoursSpecification: openingHoursSpecification(site?.hours || agency?.hours),
     contactPoint:
       phone || email
@@ -447,6 +471,7 @@ export function buildDestinationWebPageSchema(data) {
 
 export {
   internationalPhone,
+  normalizedCityKey,
   openingHoursSpecification,
   physicalPostalAddress,
   schemaImage,

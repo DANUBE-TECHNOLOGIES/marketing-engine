@@ -9,6 +9,7 @@ const {
 } = require("./faq");
 
 const {
+  buildMondescaleOrganization,
   buildTravelAgency,
 } = require("./travel-agency");
 
@@ -37,6 +38,8 @@ function buildStructuredDataPlan({
     of sites || []
   ) {
     const graph = [
+      buildMondescaleOrganization(),
+
       buildTravelAgency({
         agency:
           site.agency,
