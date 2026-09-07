@@ -176,6 +176,7 @@ class MiniSiteStructuredDataRepository {
     const resolvedTenantId = requireTenantId(tenantId);
     const agencyFields = modelFields("Agency");
     const agencyProfileFields = modelFields("AgencyProfile");
+    const agencySeoSiteFields = modelFields("AgencySeoSite");
     const brandProfileFields = modelFields("BrandProfile");
     const siteFields = modelFields("AgencySite");
     const pageFields = modelFields("AgencySitePage");
@@ -187,6 +188,9 @@ class MiniSiteStructuredDataRepository {
     ]);
     const agencyProfileSelect = selectExisting(agencyProfileFields, [
       "timezone", "regularHours", "specialHours", "hoursSource", "googleSyncedAt", "updatedAt",
+    ]);
+    const agencySeoSiteSelect = selectExisting(agencySeoSiteFields, [
+      "seoCity", "targetCities", "status", "updatedAt",
     ]);
     const brandProfileSelect = selectExisting(brandProfileFields, [
       "id", "tenantId", "agencyId", "facebookUrl", "instagramUrl", "linkedinUrl", "youtubeUrl", "updatedAt",
@@ -210,6 +214,9 @@ class MiniSiteStructuredDataRepository {
             ...agencySelect,
             ...(agencyFields.has("profile") && Object.keys(agencyProfileSelect).length
               ? { profile: { select: agencyProfileSelect } }
+              : {}),
+            ...(agencyFields.has("seoSite") && Object.keys(agencySeoSiteSelect).length
+              ? { seoSite: { select: agencySeoSiteSelect } }
               : {}),
             ...(agencyFields.has("brandProfiles") && Object.keys(brandProfileSelect).length
               ? {
