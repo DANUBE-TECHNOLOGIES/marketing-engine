@@ -1,0 +1,26 @@
+name: MSE-25.125BU Maurepas extended measurement
+
+on:
+  pull_request:
+    paths:
+      - "scripts/mse-25-125bu-maurepas-extended-11x11.sh"
+      - "frontend/test/mse-25-125bu-maurepas-extended-measurement.test.mjs"
+      - ".github/workflows/mse-25-125bu-maurepas-extended-measurement.yml"
+  push:
+    paths:
+      - "scripts/mse-25-125bu-maurepas-extended-11x11.sh"
+      - "frontend/test/mse-25-125bu-maurepas-extended-measurement.test.mjs"
+      - ".github/workflows/mse-25-125bu-maurepas-extended-measurement.yml"
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Shell syntax
+        run: bash -n scripts/mse-25-125bu-maurepas-extended-11x11.sh
+      - name: Contract test
+        run: node --test frontend/test/mse-25-125bu-maurepas-extended-measurement.test.mjs
