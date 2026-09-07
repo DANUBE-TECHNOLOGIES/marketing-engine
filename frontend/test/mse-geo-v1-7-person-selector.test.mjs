@@ -86,3 +86,17 @@ test("selector UI preserves explicit ids and requires an explicit user change", 
   assert.match(source, /fetchPublishedPersonKnowledge/);
   assert.doesNotMatch(source, /autoMatch|generatedSlug|selectedIndex\s*=|defaultValue\s*=\s*people/);
 });
+
+test("SectionInspector routes knowledgeEntityId through KnowledgePersonSelect", () => {
+  const source = fs.readFileSync(
+    new URL("../components/website-builder/SectionInspector.js", import.meta.url),
+    "utf8"
+  );
+
+  assert.match(source, /import KnowledgePersonSelect from "\.\/KnowledgePersonSelect"/);
+  assert.match(source, /field\.key === "knowledgeEntityId"/);
+  assert.match(source, /<KnowledgePersonSelect/);
+  assert.match(source, /value=\{item\[field\.key\]\}/);
+  assert.match(source, /updateItem\(\s*index,\s*field\.key,\s*value\s*\)/s);
+  assert.doesNotMatch(source, /knowledgeEntityId[\s\S]{0,200}<input/);
+});
