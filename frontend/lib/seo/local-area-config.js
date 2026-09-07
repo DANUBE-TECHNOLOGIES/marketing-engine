@@ -71,6 +71,12 @@ const LOCAL_AREA_BY_SITE_SLUG = Object.freeze({
 });
 
 const EXTENDED_LOCAL_AREA_BY_SITE_SLUG = Object.freeze({
+  "ambassade-fram-mondescale-dax": [
+    "Saint-Vincent-de-Paul",
+    "Oeyreluy",
+    "Saugnac-et-Cambran",
+    "Mées",
+  ],
   "ambassade-fram-mondescale-maurepas": [
     "Les Essarts-le-Roi",
     "Plaisir",
