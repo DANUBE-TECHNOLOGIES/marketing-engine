@@ -4,6 +4,7 @@ const knowledgeBlockRoutes = require("./knowledge-block.routes");
 const knowledgeRelationRoutes = require("./knowledge-relation.routes");
 const knowledgeMediaRoutes = require("./knowledge-media.routes");
 const maurepasPilotRoutes = require("./maurepas-pilot.routes");
+const networkGeoRoutes = require("./network-geo.routes");
 
 const router = express.Router();
 
@@ -22,6 +23,11 @@ router.get(
 );
 
 router.use(
+  "/geo/network",
+  networkGeoRoutes
+);
+
+router.use(
   "/pilots/maurepas",
   maurepasPilotRoutes
 );
@@ -30,8 +36,6 @@ router.use(
   "/:id/blocks",
   knowledgeBlockRoutes
 );
-
-
 
 router.use(
   "/:id/media",

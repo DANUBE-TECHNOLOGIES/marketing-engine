@@ -30,6 +30,9 @@ const SCHEMA_DAYS = {
     "https://schema.org/Saturday",
 };
 
+const MONDESCALE_ORGANIZATION_ID =
+  "https://www.mondescale.com/#organization";
+
 function buildPostalAddress(
   agency
 ) {
@@ -163,6 +166,160 @@ function buildSameAs(
   ];
 }
 
+function normalizedCityKey(
+  value
+) {
+  const text = cleanText(
+    value
+  );
+
+  if (!text) {
+    return "";
+  }
+
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("fr-FR");
+}
+
+function deduplicateCityNames(
+  names
+) {
+  const seen = new Set();
+  const result = [];
+
+  for (const name of names) {
+    const cleaned =
+      cleanText(name);
+    const key =
+      normalizedCityKey(
+        cleaned
+      );
+
+    if (
+      !cleaned ||
+      !key ||
+      seen.has(key)
+    ) {
+      continue;
+    }
+
+    seen.add(key);
+    result.push(cleaned);
+  }
+
+  return result;
+}
+
+function targetCityNames(
+  agency
+) {
+  const primaryCity =
+    cleanText(
+      agency?.city
+    );
+
+  const raw =
+    agency?.seoSite
+      ?.targetCities;
+
+  let candidates = [];
+
+  if (Array.isArray(raw)) {
+    candidates = raw;
+  } else if (
+    raw &&
+    typeof raw === "object"
+  ) {
+    if (
+      Array.isArray(
+        raw.cities
+      )
+    ) {
+      candidates = raw.cities;
+    } else if (
+      Array.isArray(
+        raw.items
+      )
+    ) {
+      candidates = raw.items;
+    } else if (
+      Array.isArray(
+        raw.targets
+      )
+    ) {
+      candidates = raw.targets;
+    }
+  }
+
+  const names =
+    candidates
+      .map(
+        (item) => {
+          if (
+            typeof item ===
+              "string"
+          ) {
+            return cleanText(
+              item
+            );
+          }
+
+          if (
+            !item ||
+            typeof item !==
+              "object"
+          ) {
+            return undefined;
+          }
+
+          return cleanText(
+            item.name ||
+            item.city ||
+            item.label
+          );
+        }
+      )
+      .filter(Boolean);
+
+  return deduplicateCityNames([
+    primaryCity,
+    ...names,
+  ]);
+}
+
+function buildAreaServed(
+  agency
+) {
+  return targetCityNames(
+    agency
+  ).map(
+    (name) => ({
+      "@type":
+        "City",
+
+      name,
+    })
+  );
+}
+
+function buildMondescaleOrganization() {
+  return {
+    "@type":
+      "Organization",
+
+    "@id":
+      MONDESCALE_ORGANIZATION_ID,
+
+    name:
+      "Mondescale Voyages",
+
+    url:
+      "https://www.mondescale.com",
+  };
+}
+
 function buildTravelAgency({
   agency,
   site,
@@ -181,6 +338,11 @@ function buildTravelAgency({
     cleanText(
       agency.name,
       "Agence de voyages"
+    );
+
+  const areaServed =
+    buildAreaServed(
+      agency
     );
 
   return removeEmpty({
@@ -232,30 +394,14 @@ function buildTravelAgency({
       "€€",
 
     areaServed:
-      cleanText(
-        agency.city
-      )
-        ? {
-            "@type":
-              "City",
-
-            name:
-              cleanText(
-                agency.city
-              ),
-          }
+      areaServed.length
+        ? areaServed
         : undefined,
 
     parentOrganization:
       {
-        "@type":
-          "Organization",
-
-        name:
-          "Mondescale Voyages",
-
-        url:
-          "https://www.mondescale.com",
+        "@id":
+          MONDESCALE_ORGANIZATION_ID,
       },
 
     openingHoursSpecification:
@@ -272,9 +418,15 @@ function buildTravelAgency({
 }
 
 module.exports = {
+  MONDESCALE_ORGANIZATION_ID,
+  buildAreaServed,
+  buildMondescaleOrganization,
   buildOpeningHoursSpecification,
   buildPostalAddress,
   buildSameAs,
   buildTravelAgency,
+  deduplicateCityNames,
   isHttpUrl,
+  normalizedCityKey,
+  targetCityNames,
 };
