@@ -23,6 +23,9 @@ const KNOWLEDGE_TYPES = Object.freeze([
   "faq",
   "advice",
   "media",
+  "agency",
+  "person",
+  "expertise",
   "other",
 ]);
 
