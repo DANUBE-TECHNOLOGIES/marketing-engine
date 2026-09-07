@@ -1,0 +1,44 @@
+name: MSE-GEO V1.2 Person Graph
+
+on:
+  pull_request:
+    paths:
+      - "backend/src/modules/minisite-structured-data/person.js"
+      - "backend/src/modules/minisite-structured-data/planner.js"
+      - "backend/test/mse-geo-v1-2-person-graph.test.js"
+      - ".github/workflows/mse-geo-v1-2.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  person-graph-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: MSE-GEO V1.2 Person graph contract tests
+        working-directory: backend
+        run: node --test test/mse-geo-v1-2-person-graph.test.js
+
+      - name: Existing structured-data regression tests
+        working-directory: backend
+        run: |
+          if [ -f test/minisite-structured-data.test.js ]; then
+            node --test test/minisite-structured-data.test.js
+          fi

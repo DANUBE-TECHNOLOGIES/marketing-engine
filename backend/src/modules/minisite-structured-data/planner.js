@@ -9,6 +9,10 @@ const {
 } = require("./faq");
 
 const {
+  buildPeople,
+} = require("./person");
+
+const {
   buildTravelAgency,
 } = require("./travel-agency");
 
@@ -36,6 +40,11 @@ function buildStructuredDataPlan({
     const site
     of sites || []
   ) {
+    const people = buildPeople({
+      site,
+      publicOrigin,
+    });
+
     const graph = [
       buildTravelAgency({
         agency:
@@ -54,6 +63,8 @@ function buildStructuredDataPlan({
 
         publicOrigin,
       }),
+
+      ...people,
     ];
 
     const pages = [];
@@ -161,6 +172,9 @@ function buildStructuredDataPlan({
               page.hasFaq
           ).length,
 
+        personCount:
+          people.length,
+
         issueCount:
           validation.issues.length,
       },
@@ -231,6 +245,18 @@ function buildStructuredDataPlan({
             total +
             item.summary
               .faqPageCount,
+          0
+        ),
+
+      personCount:
+        items.reduce(
+          (
+            total,
+            item
+          ) =>
+            total +
+            item.summary
+              .personCount,
           0
         ),
 
