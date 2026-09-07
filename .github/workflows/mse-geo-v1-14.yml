@@ -41,6 +41,7 @@ jobs:
           test/mse-geo-v1-9-controlled-knowledge-apply.test.js
           test/mse-geo-v1-10-explicit-apply-approval.test.js
           test/mse-geo-v1-12-maurepas-pilot-api.test.js
+          test/mse-geo-v1-14-canonical-reconvergence.test.js
 
   frontend-reconvergence:
     runs-on: ubuntu-latest
