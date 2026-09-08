@@ -38,7 +38,10 @@ import { assessLocalContentQuality } from "../../../../lib/seo/local-content-qua
 import {
   buildLocalPageSeo,
 } from "../../../../lib/seo/local-page-seo";
-import { buildServiceAwareWebPageSchema } from "../../../../lib/seo/service-page-schema";
+import {
+  buildServiceAwareWebPageSchema,
+  linkServiceCatalogToPage,
+} from "../../../../lib/seo/service-page-schema";
 import { absoluteUrl } from "../../../../lib/seo/site-url";
 
 const PUBLIC_ORIGIN = String(
@@ -260,7 +263,8 @@ export default async function AgencySitePage({ params }) {
 
   const legalPage = isLegalPage(pageSlug, page);
   const servicesPage = isServicesPage(pageSlug, page);
-  const serviceCatalog = servicesPage ? buildServiceCatalogSchema(site, page) : null;
+  const rawServiceCatalog = servicesPage ? buildServiceCatalogSchema(site, page) : null;
+  const serviceCatalog = linkServiceCatalogToPage(rawServiceCatalog, currentUrl);
   const faqSchema = legalPage ? null : buildPageFaqSchema(page);
   const webPageSchema = buildServiceAwareWebPageSchema({
     site,
