@@ -335,7 +335,7 @@ export default async function AgencySitePage({ params }) {
 
         {!legalPage && isHomePage(pageSlug) ? <LocalSeoAreaLinks site={site} /> : null}
         {!legalPage && !isHomePage(pageSlug) ? (
-          <LocalContentContext site={site} kind={localSeo.kind} quality={quality} />
+          <LocalContentContext site={site} page={page} kind={localSeo.kind} quality={quality} />
         ) : null}
         {!legalPage && !isHomePage(pageSlug) ? (
           <PublicContextualJourney site={site} currentSlug={canonicalPageSlug(pageSlug || page?.slug)} />
