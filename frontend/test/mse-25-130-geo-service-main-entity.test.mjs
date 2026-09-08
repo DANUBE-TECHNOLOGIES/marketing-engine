@@ -22,7 +22,8 @@ test("MSE-25.130 generic pages keep the canonical agency main entity when no cat
 });
 
 test("MSE-25.130 public services renderer wires the real published catalog into the webpage schema", () => {
-  assert.match(page, /const serviceCatalog = servicesPage \? buildServiceCatalogSchema\(site, page\) : null/);
+  assert.match(page, /const rawServiceCatalog = servicesPage \? buildServiceCatalogSchema\(site, page\) : null/);
+  assert.match(page, /const serviceCatalog = linkServiceCatalogToPage\(rawServiceCatalog, currentUrl\)/);
   assert.match(page, /buildServiceAwareWebPageSchema/);
   assert.match(page, /serviceCatalog,/);
   assert.match(page, /\{serviceCatalog \? <JsonLd data=\{serviceCatalog\} \/> : null\}/);
