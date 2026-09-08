@@ -47,8 +47,8 @@ export default function LocalSeoAreaLinks({ site }) {
           <h2 id="local-area-title">Votre agence de voyages à {city} et dans les communes voisines</h2>
           <p>
             Installée à {city}, notre agence accompagne aussi les voyageurs de {joinCities(closeArea)}
-            pour préparer séjours, circuits, croisières, autotours et voyages sur mesure. Vous pouvez
-            échanger avec un conseiller qui suit votre projet depuis les premières recherches jusqu’au retour.
+            dans la préparation de leur projet de voyage. Vous pouvez échanger avec un conseiller qui suit
+            votre projet depuis les premières recherches jusqu’au retour.
           </p>
           {extendedArea.length ? (
             <p>
