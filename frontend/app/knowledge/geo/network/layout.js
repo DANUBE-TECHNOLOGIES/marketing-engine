@@ -16,6 +16,7 @@ export default function NetworkGeoLayout({ children }) {
         <a href="/knowledge/geo/network/people">Conseillers</a>
         <a href="/knowledge/geo/network/expertise">Expertises</a>
         <a href="/knowledge/geo/network/agency-knowledge">Destinations & thèmes</a>
+        <a href="/knowledge/geo/network/coverage">Couverture GEO</a>
         <a href="/knowledge/geo/network/readiness">Readiness publique</a>
       </nav>
       {children}
