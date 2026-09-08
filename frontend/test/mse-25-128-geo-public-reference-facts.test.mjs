@@ -8,8 +8,8 @@ const component = fs.readFileSync(
   path.join(root, "components/public-site/PublicAgencyReferenceFacts.js"),
   "utf8"
 );
-const page = fs.readFileSync(
-  path.join(root, "app/agence/[siteSlug]/[[...pageSlug]]/page.js"),
+const localArea = fs.readFileSync(
+  path.join(root, "components/public-site/LocalSeoAreaLinks.js"),
   "utf8"
 );
 
@@ -32,5 +32,6 @@ test("MSE-25.128 facts are visible semantic HTML tied to the canonical TravelAge
   assert.match(component, /itemProp="address"/);
   assert.match(component, /itemProp="telephone"/);
   assert.match(component, /itemProp="areaServed"/);
-  assert.match(page, /PublicAgencyReferenceFacts/);
+  assert.match(localArea, /PublicAgencyReferenceFacts/);
+  assert.match(localArea, /<PublicAgencyReferenceFacts site=\{site\} \/>/);
 });
