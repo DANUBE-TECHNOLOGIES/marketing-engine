@@ -7,6 +7,7 @@ const teamLinkService = require("./network-team-link.service");
 const publicReadinessService = require("./network-public-readiness.service");
 const expertiseService = require("./network-expertise.service");
 const agencyKnowledgeService = require("./network-agency-knowledge.service");
+const agencyKnowledgeBulkService = require("./network-agency-knowledge-bulk.service");
 
 const router = express.Router();
 
@@ -34,6 +35,21 @@ router.post("/agency-knowledge-links", asyncRoute(async (req, res) => {
     agencyKnowledgeId: req.body?.agencyKnowledgeId,
     targetKnowledgeId: req.body?.targetKnowledgeId,
     relationType: req.body?.relationType,
+  }) });
+}));
+router.post("/agency-knowledge-bulk-preview", asyncRoute(async (req, res) => {
+  res.json({ data: await agencyKnowledgeBulkService.preview({
+    agencyKnowledgeIds: req.body?.agencyKnowledgeIds,
+    targetKnowledgeId: req.body?.targetKnowledgeId,
+    relationType: req.body?.relationType,
+  }) });
+}));
+router.post("/agency-knowledge-bulk-apply", asyncRoute(async (req, res) => {
+  res.json({ data: await agencyKnowledgeBulkService.apply({
+    agencyKnowledgeIds: req.body?.agencyKnowledgeIds,
+    targetKnowledgeId: req.body?.targetKnowledgeId,
+    relationType: req.body?.relationType,
+    approvalToken: req.body?.approvalToken,
   }) });
 }));
 router.get("/expertise-matrix", asyncRoute(async (_req, res) => {
