@@ -7,19 +7,21 @@ const page = fs.readFileSync(
   "utf8"
 );
 
-test("network Person dashboard consumes one read-only people report", () => {
+test("network Person dashboard still consumes the read-only reconciliation report", () => {
   assert.match(page, /\/api\/knowledge\/geo\/network\/people-report/);
   assert.match(page, /x-tenant-slug/);
-  assert.match(page, /lecture seule/i);
+  assert.match(page, /Analyse de tous les blocs équipe publiés/i);
   assert.match(page, /Conseillers explicites/);
   assert.match(page, /Person exactes/);
   assert.match(page, /Nouveaux candidats/);
   assert.match(page, /À vérifier/);
 });
 
-test("network Person dashboard exposes no mutation path", () => {
-  assert.doesNotMatch(page, /method:\s*["']POST["']/);
+test("V1.18 reconciliation remains distinct from V1.19 controlled mutation path", () => {
+  assert.match(page, /\/api\/knowledge\/geo\/network\/people-report/);
+  assert.match(page, /\/api\/knowledge\/geo\/network\/people-apply-preview/);
+  assert.match(page, /\/api\/knowledge\/geo\/network\/apply-people/);
   assert.doesNotMatch(page, /method:\s*["']DELETE["']/);
-  assert.doesNotMatch(page, /\/apply/);
-  assert.match(page, /aucune Person, liaison ou expertise n’est créée/i);
+  assert.match(page, /aucune expertise n’est générée/i);
+  assert.match(page, /cas ambigu/i);
 });
