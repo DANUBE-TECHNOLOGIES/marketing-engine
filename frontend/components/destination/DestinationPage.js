@@ -6,6 +6,7 @@ import {
   buildDestinationSchema,
   buildDestinationWebPageSchema,
 } from "../../lib/seo/json-ld";
+import { buildDestinationFaqSchema } from "../../lib/seo/destination-faq-schema";
 import {
   buildMondescaleNetworkSchema,
   buildNetworkAwareTravelAgencySchema,
@@ -163,24 +164,6 @@ function SectionContent({ section }) {
   );
 }
 
-function faqSchema(faqs) {
-  if (!Array.isArray(faqs) || !faqs.length) return null;
-  return {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: faqs
-      .filter((faq) => faq?.question && faq?.answer)
-      .map((faq) => ({
-        "@type": "Question",
-        name: faq.question,
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: faq.answer,
-        },
-      })),
-  };
-}
-
 export default function DestinationPage({ data }) {
   const { destination: d, site } = data;
   const sections = Array.isArray(d.sections) ? d.sections : [];
@@ -206,7 +189,7 @@ export default function DestinationPage({ data }) {
     { name: "Destinations", path: destinationsPath },
     { name: d.name, path: data.canonicalPath },
   ]);
-  const destinationFaqSchema = faqSchema(faqs);
+  const destinationFaqSchema = buildDestinationFaqSchema(data);
 
   const facts = [
     ["Meilleure période", d.bestTime],
