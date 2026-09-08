@@ -1,0 +1,45 @@
+name: MSE-GEO V1.21 Public GEO Feeds
+
+on:
+  pull_request:
+    paths:
+      - "backend/src/modules/minisite-structured-data/geo-feed.js"
+      - "backend/src/modules/minisite-structured-data/routes.js"
+      - "backend/test/mse-geo-v1-21-public-geo-feeds.test.js"
+      - "frontend/app/agence/[siteSlug]/geo.json/route.js"
+      - "frontend/app/geo/network.json/route.js"
+      - "frontend/test/mse-geo-v1-21-public-geo-feeds.test.mjs"
+      - ".github/workflows/mse-geo-v1-21.yml"
+
+jobs:
+  backend-public-feed:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: Run public GEO feed and canonical graph contracts
+        run: node --test test/mse-geo-v1-21-public-geo-feeds.test.js test/mse-geo-v1-16-agency-foundation.test.js test/mse-geo-v1-4-knowledge-bridge.test.js test/mse-geo-v1-2-person-graph.test.js
+
+  frontend-public-feed:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Run public GEO feed route contracts
+        run: node --test test/mse-geo-v1-21-public-geo-feeds.test.mjs
