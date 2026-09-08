@@ -242,16 +242,24 @@ async function apply({
   const currentReport = await reportLoader({ tenantSlug, reconciliationLoader, entityLookup, detailLookup });
   validateApproval(currentReport, approvalToken);
 
-  const results = [];
+  const preflight = [];
 
   for (const approved of currentReport.eligible || []) {
-    const { agencyKnowledge } = await revalidateMember(approved, {
+    const validation = await revalidateMember(approved, {
       tenantSlug,
       reconciliationLoader,
       peopleLoader,
       entityLookup,
       detailLookup,
     });
+    preflight.push({ approved, ...validation });
+  }
+
+  const results = [];
+
+  for (const item of preflight) {
+    const approved = item.approved;
+    const agencyKnowledge = item.agencyKnowledge;
 
     if (approved.action === "noop") {
       results.push({ ...stableMember(approved), result: "noop" });
