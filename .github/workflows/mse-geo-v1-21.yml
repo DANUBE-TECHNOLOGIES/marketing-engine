@@ -1,0 +1,45 @@
+name: MSE-GEO V1.21 Network Public Readiness
+
+on:
+  pull_request:
+    paths:
+      - "backend/src/knowledge/network-public-readiness.service.js"
+      - "backend/src/knowledge/network-geo.routes.js"
+      - "backend/test/mse-geo-v1-21-network-public-readiness.test.js"
+      - "frontend/app/knowledge/geo/network/layout.js"
+      - "frontend/app/knowledge/geo/network/readiness/page.js"
+      - "frontend/test/mse-geo-v1-21-network-public-readiness.test.mjs"
+      - ".github/workflows/mse-geo-v1-21.yml"
+
+jobs:
+  backend-public-readiness:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: Run readiness and inherited GEO contracts
+        run: node --test test/mse-geo-v1-21-network-public-readiness.test.js test/mse-geo-v1-20-network-team-link.test.js test/mse-geo-v1-19-network-person-apply.test.js test/mse-geo-v1-18-network-person-reconciliation.test.js test/mse-geo-v1-17-network-agency-apply.test.js test/mse-geo-v1-16-network-rollout.test.js
+
+  frontend-public-readiness:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Run readiness and Person UI contracts
+        run: node --test test/mse-geo-v1-21-network-public-readiness.test.mjs test/mse-geo-v1-20-network-team-link.test.mjs test/mse-geo-v1-19-network-person-apply.test.mjs test/mse-geo-v1-18-network-person-reconciliation.test.mjs
