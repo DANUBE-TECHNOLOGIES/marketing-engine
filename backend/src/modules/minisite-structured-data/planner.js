@@ -13,6 +13,10 @@ const {
 } = require("./person");
 
 const {
+  buildAgencyKnowsAbout,
+} = require("./agency-knowledge");
+
+const {
   buildMondescaleOrganization,
   buildTravelAgency,
 } = require("./travel-agency");
@@ -46,17 +50,19 @@ function buildStructuredDataPlan({
       publicOrigin,
     });
 
+    const travelAgency = buildTravelAgency({
+      agency: site.agency,
+      site,
+      publicOrigin,
+    });
+    const agencyKnowsAbout = buildAgencyKnowsAbout(site);
+    if (agencyKnowsAbout.length) {
+      travelAgency.knowsAbout = agencyKnowsAbout;
+    }
+
     const graph = [
       buildMondescaleOrganization(),
-
-      buildTravelAgency({
-        agency:
-          site.agency,
-
-        site,
-
-        publicOrigin,
-      }),
+      travelAgency,
 
       buildWebSite({
         agency:
@@ -178,6 +184,9 @@ function buildStructuredDataPlan({
         personCount:
           people.length,
 
+        agencyKnowledgeCount:
+          agencyKnowsAbout.length,
+
         issueCount:
           validation.issues.length,
       },
@@ -260,6 +269,14 @@ function buildStructuredDataPlan({
             total +
             item.summary
               .personCount,
+          0
+        ),
+
+      agencyKnowledgeCount:
+        items.reduce(
+          (total, item) =>
+            total +
+            (item.summary.agencyKnowledgeCount || 0),
           0
         ),
 
