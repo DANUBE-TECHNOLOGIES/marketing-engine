@@ -8,6 +8,7 @@ const publicReadinessService = require("./network-public-readiness.service");
 const expertiseService = require("./network-expertise.service");
 const agencyKnowledgeService = require("./network-agency-knowledge.service");
 const agencyKnowledgeBulkService = require("./network-agency-knowledge-bulk.service");
+const coverageService = require("./network-coverage.service");
 
 const router = express.Router();
 
@@ -26,6 +27,9 @@ router.get("/report", asyncRoute(async (req, res) => {
 }));
 router.get("/public-readiness", asyncRoute(async (req, res) => {
   res.json({ data: await publicReadinessService.report({ tenantSlug: tenantSlug(req) }) });
+}));
+router.get("/coverage", asyncRoute(async (_req, res) => {
+  res.json({ data: await coverageService.report() });
 }));
 router.get("/agency-knowledge-matrix", asyncRoute(async (_req, res) => {
   res.json({ data: await agencyKnowledgeService.matrix() });
