@@ -22,37 +22,37 @@ function joinedCities(values) {
 
 const OPENINGS = Object.freeze([
   ({ agencyName, city, destination }) =>
-    `Depuis ${city}, l’équipe de ${agencyName} vous aide à transformer votre envie de ${destination} en voyage concret, avec un itinéraire, un rythme et des prestations adaptés à votre projet.`,
+    `Depuis ${city}, retrouvez chez ${agencyName} les informations publiées pour préparer un projet vers ${destination} et échanger avec un conseiller de proximité.`,
   ({ agencyName, city, destination }) =>
-    `Préparer ${destination} depuis ${city}, c’est pouvoir échanger avec ${agencyName} sur les étapes du voyage, les bonnes périodes et les choix qui comptent vraiment pour votre séjour.`,
+    `Vous préparez un voyage à ${destination} depuis ${city} ? ${agencyName} rassemble sur cette page les informations publiées sur cette destination et vous permet de poursuivre votre projet avec l’agence.`,
   ({ agencyName, city, destination }) =>
-    `À ${city}, ${agencyName} construit votre voyage à ${destination} autour de vos priorités : découverte, confort, budget, rythme et accompagnement avant le départ.`,
+    `À ${city}, ${agencyName} présente ${destination} parmi les destinations publiées sur son mini-site afin de vous aider à préparer votre projet de voyage.`,
   ({ agencyName, city, destination }) =>
-    `Votre projet ${destination} peut être préparé directement avec ${agencyName} à ${city}, pour comparer les solutions et composer un séjour cohérent plutôt qu’une simple juxtaposition de prestations.`,
+    `Cette page de ${agencyName} à ${city} rassemble les informations publiées pour découvrir ${destination} et préparer la suite de votre projet avec l’agence.`,
   ({ agencyName, city, destination }) =>
-    `${agencyName} accompagne les voyageurs de ${city} qui souhaitent découvrir ${destination} avec un conseil de proximité et un projet adapté à leurs dates, leurs envies et leur budget.`,
+    `${agencyName} met à disposition des voyageurs de ${city} cette page consacrée à ${destination}, avec les informations publiées pour préparer leur projet.`,
 ]);
 
 const AREA_SENTENCES = Object.freeze([
   ({ nearby, destination }) =>
-    `L’agence accompagne aussi les voyageurs de ${joinedCities(nearby)} pour leurs projets vers ${destination}.`,
+    `Cette page consacrée à ${destination} est également accessible aux voyageurs de ${joinedCities(nearby)} qui souhaitent contacter l’agence.`,
   ({ nearby, destination }) =>
-    `Pour ${destination}, nos conseillers reçoivent également des voyageurs venant de ${joinedCities(nearby)} et des communes voisines.`,
+    `Les voyageurs de ${joinedCities(nearby)} peuvent eux aussi consulter ces informations sur ${destination} et prendre contact avec l’agence.`,
   ({ nearby, destination }) =>
-    `Cette expertise est accessible aux voyageurs de ${joinedCities(nearby)} qui souhaitent préparer ${destination} avec un interlocuteur local.`,
+    `Depuis ${joinedCities(nearby)} et les communes voisines, vous pouvez consulter cette page sur ${destination} puis contacter l’agence pour votre projet.`,
   ({ nearby, destination }) =>
-    `Les projets vers ${destination} sont également préparés pour les clients de ${joinedCities(nearby)}, au sein de la même zone de proximité.`,
+    `Le contenu publié sur ${destination} est également proposé aux voyageurs de ${joinedCities(nearby)} dans la zone de proximité de l’agence.`,
 ]);
 
 const VALUE_SENTENCES = Object.freeze([
   ({ destination }) =>
-    `Nous pouvons comparer différentes formules pour ${destination}, ajuster les étapes et vérifier la cohérence globale du voyage avant réservation.`,
+    `Les éléments propres à ${destination} présentés ici proviennent du contenu publié de cette page ; l’agence peut ensuite être contactée pour étudier votre demande.`,
   ({ destination }) =>
-    `Pour ${destination}, l’accompagnement porte autant sur le choix du séjour que sur les détails pratiques : transport, durée, rythme, hébergements et options utiles.`,
+    `Pour ${destination}, cette page distingue les informations éditoriales publiées de l’étude personnalisée qui peut être réalisée ensuite avec l’agence.`,
   ({ destination }) =>
-    `L’objectif est de construire un voyage à ${destination} qui corresponde réellement à votre façon de voyager, plutôt que de vous proposer une solution standard par défaut.`,
+    `Les informations affichées sur ${destination} servent de point de départ à votre projet ; contactez l’agence pour une recherche adaptée à vos critères.`,
   ({ destination }) =>
-    `Nos conseillers peuvent mettre en perspective plusieurs possibilités pour ${destination} et vous aider à arbitrer entre budget, confort, emplacement et expériences.` ,
+    `Cette présentation de ${destination} repose sur les informations publiées du mini-site et peut être complétée par un échange avec l’agence selon votre projet.`,
 ]);
 
 export function destinationLocalCopy({ site, destination, nearby = [] }) {
