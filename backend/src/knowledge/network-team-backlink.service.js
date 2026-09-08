@@ -246,6 +246,15 @@ function patchedContent(block, approved) {
   };
 }
 
+function groupByBlock(items = []) {
+  const groups = new Map();
+  for (const item of items) {
+    if (!groups.has(item.blockId)) groups.set(item.blockId, []);
+    groups.get(item.blockId).push(item);
+  }
+  return groups;
+}
+
 async function apply({
   approvalToken,
   tenantSlug = "mondescale",
@@ -261,16 +270,27 @@ async function apply({
   validateApproval(current, approvalToken);
 
   const preflight = [];
-  for (const approved of current.eligible || []) {
-    const block = await blockLoader(approved.blockId);
-    const content = patchedContent(block, approved);
-    preflight.push({ approved, content });
+  for (const [blockId, approvedItems] of groupByBlock(current.eligible || [])) {
+    const block = await blockLoader(blockId);
+    let content = block?.content;
+
+    for (const approved of approvedItems) {
+      content = patchedContent({ ...block, content }, approved);
+    }
+
+    preflight.push({
+      blockId,
+      content,
+      approvedItems,
+    });
   }
 
   const results = [];
   for (const item of preflight) {
-    await updateBlock(item.approved.blockId, item.content);
-    results.push({ ...stableItem(item.approved), result: "patched" });
+    await updateBlock(item.blockId, item.content);
+    for (const approved of item.approvedItems) {
+      results.push({ ...stableItem(approved), result: "patched" });
+    }
   }
 
   return {
@@ -279,6 +299,7 @@ async function apply({
     tenantId: current.tenantId,
     tenantSlug: current.tenantSlug,
     patchedCount: results.length,
+    updatedBlockCount: preflight.length,
     blocked: current.blocked || [],
     noop: current.noop || [],
     results,
@@ -290,6 +311,7 @@ module.exports = {
   approvalTokenForReport,
   apply,
   buildReport,
+  groupByBlock,
   loadBlock,
   locateTeamMembers,
   patchedContent,
