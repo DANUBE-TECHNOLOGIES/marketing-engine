@@ -1,0 +1,44 @@
+name: MSE-GEO V1.19 Network Person Apply
+
+on:
+  pull_request:
+    paths:
+      - "backend/src/knowledge/network-person-apply.service.js"
+      - "backend/src/knowledge/network-geo.routes.js"
+      - "backend/test/mse-geo-v1-19-network-person-apply.test.js"
+      - "frontend/app/knowledge/geo/network/people/page.js"
+      - "frontend/test/mse-geo-v1-19-network-person-apply.test.mjs"
+      - ".github/workflows/mse-geo-v1-19.yml"
+
+jobs:
+  backend-person-apply:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: Run Person apply and inherited GEO contracts
+        run: node --test test/mse-geo-v1-19-network-person-apply.test.js test/mse-geo-v1-18-network-person-reconciliation.test.js test/mse-geo-v1-17-network-agency-apply.test.js test/mse-geo-v1-16-network-rollout.test.js
+
+  frontend-person-apply:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Run Person apply UI and reconciliation contracts
+        run: node --test test/mse-geo-v1-19-network-person-apply.test.mjs test/mse-geo-v1-18-network-person-reconciliation.test.mjs
