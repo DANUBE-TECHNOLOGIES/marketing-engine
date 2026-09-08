@@ -1,4 +1,5 @@
 import Link from "next/link";
+import PublicAgencyReferenceFacts from "./PublicAgencyReferenceFacts";
 import {
   resolvedExtendedTargetCities,
   resolvedTargetCities,
@@ -29,7 +30,9 @@ export default function LocalSeoAreaLinks({ site }) {
   const nearby = targetCities(site);
   const extended = extendedTargetCities(site);
 
-  if (!city || !nearby.length) return null;
+  if (!city || !nearby.length) {
+    return <PublicAgencyReferenceFacts site={site} />;
+  }
 
   const basePath = clean(site?.basePath) || `/agence/${encodeURIComponent(site?.slug || "")}`;
   const root = basePath.replace(/\/$/, "");
@@ -37,36 +40,39 @@ export default function LocalSeoAreaLinks({ site }) {
   const extendedArea = nearby.slice(3);
 
   return (
-    <section className="public-site-section" aria-labelledby="local-area-title">
-      <div className="public-site-container public-site-prose">
-        <p className="public-site-eyebrow">Votre agence de proximité</p>
-        <h2 id="local-area-title">Votre agence de voyages à {city} et dans les communes voisines</h2>
-        <p>
-          Installée à {city}, notre agence accompagne aussi les voyageurs de {joinCities(closeArea)}
-          pour préparer séjours, circuits, croisières, autotours et voyages sur mesure. Vous pouvez
-          échanger avec un conseiller qui suit votre projet depuis les premières recherches jusqu’au retour.
-        </p>
-        {extendedArea.length ? (
+    <>
+      <section className="public-site-section" aria-labelledby="local-area-title">
+        <div className="public-site-container public-site-prose">
+          <p className="public-site-eyebrow">Votre agence de proximité</p>
+          <h2 id="local-area-title">Votre agence de voyages à {city} et dans les communes voisines</h2>
           <p>
-            Notre secteur de proximité s’étend également à {joinCities(extendedArea)} : vous pouvez
-            contacter l’équipe de {city} pour une recherche, un devis ou un rendez-vous en agence.
+            Installée à {city}, notre agence accompagne aussi les voyageurs de {joinCities(closeArea)}
+            pour préparer séjours, circuits, croisières, autotours et voyages sur mesure. Vous pouvez
+            échanger avec un conseiller qui suit votre projet depuis les premières recherches jusqu’au retour.
           </p>
-        ) : null}
-        {extended.length ? (
-          <p>
-            Au-delà de ce premier cercle, l’équipe de {city} accompagne également des projets de voyageurs
-            situés à {joinCities(extended)}. Cette zone élargie complète notre bassin de clientèle sans
-            remplacer l’ancrage de proximité autour de {city}.
-          </p>
-        ) : null}
-        <div className="public-site-related-links" aria-label={`Découvrir l’agence de voyages de ${city}`}>
-          <Link href={`${root}/services`}>Services de l’agence de voyages de {city}</Link>
-          <Link href={`${root}/destinations`}>Destinations conseillées depuis {city}</Link>
-          <Link href={`${root}/inspiration`}>Conseils et inspirations voyage à {city}</Link>
-          <Link href={`${root}/contact`}>Contacter l’agence de voyages de {city}</Link>
+          {extendedArea.length ? (
+            <p>
+              Notre secteur de proximité s’étend également à {joinCities(extendedArea)} : vous pouvez
+              contacter l’équipe de {city} pour une recherche, un devis ou un rendez-vous en agence.
+            </p>
+          ) : null}
+          {extended.length ? (
+            <p>
+              Au-delà de ce premier cercle, l’équipe de {city} accompagne également des projets de voyageurs
+              situés à {joinCities(extended)}. Cette zone élargie complète notre bassin de clientèle sans
+              remplacer l’ancrage de proximité autour de {city}.
+            </p>
+          ) : null}
+          <div className="public-site-related-links" aria-label={`Découvrir l’agence de voyages de ${city}`}>
+            <Link href={`${root}/services`}>Services de l’agence de voyages de {city}</Link>
+            <Link href={`${root}/destinations`}>Destinations conseillées depuis {city}</Link>
+            <Link href={`${root}/inspiration`}>Conseils et inspirations voyage à {city}</Link>
+            <Link href={`${root}/contact`}>Contacter l’agence de voyages de {city}</Link>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+      <PublicAgencyReferenceFacts site={site} />
+    </>
   );
 }
 
