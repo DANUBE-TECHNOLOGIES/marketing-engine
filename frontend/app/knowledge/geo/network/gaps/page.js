@@ -11,6 +11,16 @@ function displayDate(value) {
   return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString("fr-FR");
 }
 
+function reconciliationLabel(reconciliation) {
+  if (reconciliation?.status === "exact_match" && reconciliation.candidate) {
+    return `${reconciliation.candidate.type} · ${reconciliation.candidate.title}`;
+  }
+  if (reconciliation?.status === "ambiguous_exact") {
+    return `Ambiguë — ${(reconciliation.candidates || []).length} correspondances exactes`;
+  }
+  return "Aucune correspondance exacte";
+}
+
 export default function NetworkGeoKnowledgeGapsPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -20,7 +30,7 @@ export default function NetworkGeoKnowledgeGapsPage() {
     try {
       setLoading(true);
       setError("");
-      const response = await fetch("/api/knowledge/geo/network/agent-gaps?limit=100", {
+      const response = await fetch("/api/knowledge/geo/network/agent-gap-reconciliation?limit=100", {
         cache: "no-store",
         headers,
       });
@@ -36,6 +46,7 @@ export default function NetworkGeoKnowledgeGapsPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  const reconciliation = data?.reconciliation || {};
   return (
     <main style={{ minHeight: "100vh", padding: 32, background: "#f4f6f8", color: "#17202a" }}>
       <div style={{ maxWidth: 1500, margin: "0 auto" }}>
@@ -43,7 +54,7 @@ export default function NetworkGeoKnowledgeGapsPage() {
           <div>
             <h1 style={{ margin: "0 0 8px" }}>Questions non couvertes — réseau</h1>
             <p style={{ margin: 0, color: "#64748b" }}>
-              Questions réellement recherchées par l’agent sans fait canonique correspondant. Elles constituent un signal éditorial à examiner, jamais une suggestion automatique ni un fait à publier tel quel.
+              Questions réellement recherchées par l’agent sans fait canonique correspondant. Une correspondance Knowledge n’est affichée que si le titre est strictement identique après normalisation ; aucun rapprochement sémantique ou fuzzy n’est effectué.
             </p>
           </div>
           <button type="button" onClick={load} disabled={loading}>{loading ? "Actualisation…" : "Actualiser"}</button>
@@ -52,9 +63,11 @@ export default function NetworkGeoKnowledgeGapsPage() {
         {error ? <div style={{ ...card, color: "#991b1b", marginBottom: 20 }}>{error}</div> : null}
 
         {data ? <>
-          <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginBottom: 22 }}>
+          <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14, marginBottom: 22 }}>
             <div style={card}><div style={{ color: "#64748b", fontSize: 13 }}>Recherches inconnues</div><strong style={{ display: "block", marginTop: 6, fontSize: 28 }}>{data.totalUnknownSearches ?? 0}</strong></div>
-            <div style={card}><div style={{ color: "#64748b", fontSize: 13 }}>Lacunes uniques affichées</div><strong style={{ display: "block", marginTop: 6, fontSize: 28 }}>{data.uniqueGapCount ?? 0}</strong></div>
+            <div style={card}><div style={{ color: "#64748b", fontSize: 13 }}>Lacunes uniques</div><strong style={{ display: "block", marginTop: 6, fontSize: 28 }}>{data.uniqueGapCount ?? 0}</strong></div>
+            <div style={card}><div style={{ color: "#64748b", fontSize: 13 }}>Correspondances exactes</div><strong style={{ display: "block", marginTop: 6, fontSize: 28 }}>{reconciliation.exactMatchCount ?? 0}</strong></div>
+            <div style={card}><div style={{ color: "#64748b", fontSize: 13 }}>Sans correspondance</div><strong style={{ display: "block", marginTop: 6, fontSize: 28 }}>{reconciliation.unmatchedCount ?? 0}</strong></div>
           </section>
 
           <section style={{ ...card, marginBottom: 22 }}>
@@ -70,6 +83,7 @@ export default function NetworkGeoKnowledgeGapsPage() {
                   <tr>
                     <th align="left">Agence</th>
                     <th align="left">Question non couverte</th>
+                    <th align="left">Correspondance Knowledge</th>
                     <th>Occurrences</th>
                     <th align="left">Première</th>
                     <th align="left">Dernière</th>
@@ -80,6 +94,7 @@ export default function NetworkGeoKnowledgeGapsPage() {
                     <tr key={`${gap.siteSlug || "network"}:${gap.normalizedQuery}`}>
                       <td>{gap.siteSlug || "Réseau"}</td>
                       <td>{gap.query}</td>
+                      <td>{reconciliationLabel(gap.reconciliation)}</td>
                       <td align="center">{gap.occurrences}</td>
                       <td>{displayDate(gap.firstSeenAt)}</td>
                       <td>{displayDate(gap.lastSeenAt)}</td>
@@ -94,7 +109,7 @@ export default function NetworkGeoKnowledgeGapsPage() {
           <section style={card}>
             <strong>Règle de traitement</strong>
             <p style={{ marginBottom: 0, color: "#64748b" }}>
-              Une question fréquente doit être vérifiée humainement puis, si le fait est réel et utile, ajoutée dans le Knowledge Graph via les matrices explicites. Cette page ne crée ni relation, ni expertise, ni destination.
+              Une correspondance exacte signale seulement qu’une cible Knowledge publiée porte le même titre normalisé. Elle ne crée aucune relation et ne prouve pas que cette cible répond à la question. La validation et l’enrichissement restent humains via les matrices explicites.
             </p>
           </section>
         </> : loading ? <div style={card}>Chargement…</div> : null}
