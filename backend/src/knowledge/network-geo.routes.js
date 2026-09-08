@@ -4,6 +4,7 @@ const applyService = require("./network-geo-apply.service");
 const personService = require("./network-person-reconciliation.service");
 const personApplyService = require("./network-person-apply.service");
 const teamLinkService = require("./network-team-link.service");
+const publicReadinessService = require("./network-public-readiness.service");
 
 const router = express.Router();
 
@@ -21,6 +22,17 @@ router.get(
   "/report",
   asyncRoute(async (req, res) => {
     const result = await service.report({
+      tenantSlug: tenantSlug(req),
+    });
+
+    res.json({ data: result });
+  })
+);
+
+router.get(
+  "/public-readiness",
+  asyncRoute(async (req, res) => {
+    const result = await publicReadinessService.report({
       tenantSlug: tenantSlug(req),
     });
 
