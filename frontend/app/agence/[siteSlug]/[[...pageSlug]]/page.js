@@ -29,7 +29,6 @@ import {
 
 import {
   buildBreadcrumbSchema,
-  buildLocalWebPageSchema,
   buildServiceCatalogSchema,
   buildTravelAgencySchema,
 } from "../../../../lib/seo/json-ld";
@@ -39,6 +38,7 @@ import { assessLocalContentQuality } from "../../../../lib/seo/local-content-qua
 import {
   buildLocalPageSeo,
 } from "../../../../lib/seo/local-page-seo";
+import { buildServiceAwareWebPageSchema } from "../../../../lib/seo/service-page-schema";
 import { absoluteUrl } from "../../../../lib/seo/site-url";
 
 const PUBLIC_ORIGIN = String(
@@ -262,13 +262,14 @@ export default async function AgencySitePage({ params }) {
   const servicesPage = isServicesPage(pageSlug, page);
   const serviceCatalog = servicesPage ? buildServiceCatalogSchema(site, page) : null;
   const faqSchema = legalPage ? null : buildPageFaqSchema(page);
-  const webPageSchema = buildLocalWebPageSchema({
+  const webPageSchema = buildServiceAwareWebPageSchema({
     site,
     page,
     url: currentUrl,
     title: localSeo.title,
     description: localSeo.description,
     image: localSeo.image,
+    serviceCatalog,
   });
   const pageSemanticsSchema = buildPageSemanticsSchema({ page, url: currentUrl });
   const sharedHero = !isHomePage(pageSlug) ? homeHeroSection(homePage) : null;
