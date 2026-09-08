@@ -6,6 +6,25 @@ const {
   "@prisma/client"
 );
 
+const PUBLIC_AGENCY_RELATION_TYPES = [
+  "features",
+  "recommends",
+  "available_in",
+];
+
+const PUBLIC_AGENCY_TARGET_TYPES = [
+  "destination",
+  "country",
+  "region",
+  "city",
+  "island",
+  "travel_theme",
+  "cruise",
+  "circuit",
+  "travel_product",
+  "activity",
+];
+
 function modelFields(
   modelName
 ) {
@@ -124,6 +143,61 @@ class MiniSiteStructuredDataRepository {
         },
       },
     });
+  }
+
+  async listPublishedAgencyKnowledgeBySlugs(slugs = []) {
+    const normalizedSlugs = [...new Set(
+      (slugs || [])
+        .map((slug) => String(slug || "").trim())
+        .filter(Boolean)
+    )];
+
+    if (!normalizedSlugs.length || !this.prisma?.knowledgeEntity) {
+      return [];
+    }
+
+    const agencies = await this.prisma.knowledgeEntity.findMany({
+      where: {
+        slug: { in: normalizedSlugs },
+        language: "fr",
+        type: "agency",
+        status: "published",
+      },
+      select: {
+        id: true,
+        type: true,
+        slug: true,
+        title: true,
+        status: true,
+        language: true,
+        outgoingRelations: {
+          where: {
+            relationType: { in: PUBLIC_AGENCY_RELATION_TYPES },
+          },
+          select: {
+            relationType: true,
+            target: {
+              select: {
+                id: true,
+                type: true,
+                slug: true,
+                title: true,
+                status: true,
+                language: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return agencies.map((agency) => ({
+      ...agency,
+      outgoingRelations: (agency.outgoingRelations || []).filter((relation) =>
+        relation?.target?.status === "published" &&
+        PUBLIC_AGENCY_TARGET_TYPES.includes(String(relation?.target?.type || ""))
+      ),
+    }));
   }
 
   async listPublishedEditorialContents(tenantId) {
@@ -253,6 +327,8 @@ class MiniSiteStructuredDataRepository {
 
 module.exports = {
   MiniSiteStructuredDataRepository,
+  PUBLIC_AGENCY_RELATION_TYPES,
+  PUBLIC_AGENCY_TARGET_TYPES,
   modelFields,
   requireTenantId,
   selectExisting,

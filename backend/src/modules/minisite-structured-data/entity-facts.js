@@ -1,5 +1,9 @@
 "use strict";
 
+const {
+  knowledgeFactFromThing,
+} = require("./agency-knowledge");
+
 function nodeTypes(node) {
   return Array.isArray(node?.["@type"])
     ? node["@type"]
@@ -44,6 +48,11 @@ function areaServedFacts(value) {
     .filter(Boolean);
 }
 
+function agencyKnowledgeFacts(value) {
+  const items = Array.isArray(value) ? value : value ? [value] : [];
+  return items.map(knowledgeFactFromThing).filter(Boolean);
+}
+
 function personFact(person) {
   return compact({
     id: person?.["@id"],
@@ -78,6 +87,7 @@ function agencyFact(agency) {
     parentOrganization: agency?.parentOrganization?.["@id"],
     openingHours: agency?.openingHoursSpecification,
     sameAs: agency?.sameAs,
+    knowledge: agencyKnowledgeFacts(agency?.knowsAbout),
   });
 }
 
@@ -104,7 +114,7 @@ function buildEntityFacts(preview) {
   }
 
   return compact({
-    version: "1.0.0",
+    version: "1.1.0",
     siteSlug: preview?.siteSlug,
     agencyId: preview?.agencyId,
     agency: agencyFact(agency),
@@ -123,6 +133,7 @@ function buildEntityFacts(preview) {
 module.exports = {
   addressFact,
   agencyFact,
+  agencyKnowledgeFacts,
   areaServedFacts,
   buildEntityFacts,
   compact,
