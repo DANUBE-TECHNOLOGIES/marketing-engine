@@ -30,6 +30,11 @@ export default function NetworkPeoplePage() {
   const [preparing, setPreparing] = useState(false);
   const [applying, setApplying] = useState(false);
   const [applyResult, setApplyResult] = useState(null);
+  const [linkPreview, setLinkPreview] = useState(null);
+  const [linksApproved, setLinksApproved] = useState(false);
+  const [preparingLinks, setPreparingLinks] = useState(false);
+  const [applyingLinks, setApplyingLinks] = useState(false);
+  const [linkResult, setLinkResult] = useState(null);
 
   const load = useCallback(async () => {
     try {
@@ -110,6 +115,8 @@ export default function NetworkPeoplePage() {
       setApplyResult(payload?.data || null);
       setApplyPreview(null);
       setApproved(false);
+      setLinkPreview(null);
+      setLinksApproved(false);
       await load();
     } catch (applyError) {
       setError(applyError?.message || "L’application Person réseau a échoué.");
@@ -118,8 +125,72 @@ export default function NetworkPeoplePage() {
     }
   }
 
+  async function prepareTeamLinks() {
+    try {
+      setPreparingLinks(true);
+      setError("");
+      setLinkResult(null);
+      setLinksApproved(false);
+
+      const response = await fetch("/api/knowledge/geo/network/team-link-preview", {
+        cache: "no-store",
+        headers: requestHeaders,
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error?.message || "Impossible de préparer les liaisons mini-sites.");
+      }
+      setLinkPreview(payload?.data || null);
+    } catch (prepareError) {
+      setError(prepareError?.message || "Impossible de préparer les liaisons mini-sites.");
+    } finally {
+      setPreparingLinks(false);
+    }
+  }
+
+  async function applyTeamLinks() {
+    if (!linksApproved || !linkPreview?.approvalToken) return;
+
+    const summary = linkPreview?.report?.summary || {};
+    const confirmed = window.confirm(
+      `Écrire ${summary.linkRequiredCount ?? 0} liaison(s) Knowledge dans ${summary.affectedBlockCount ?? 0} bloc(s) équipe ? Les blocs modifiés depuis le preview feront annuler toute la transaction.`
+    );
+    if (!confirmed) return;
+
+    try {
+      setApplyingLinks(true);
+      setError("");
+      setLinkResult(null);
+
+      const response = await fetch("/api/knowledge/geo/network/apply-team-links", {
+        method: "POST",
+        headers: {
+          ...requestHeaders,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          approvalToken: linkPreview.approvalToken,
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error?.message || "La liaison Knowledge des mini-sites a échoué.");
+      }
+
+      setLinkResult(payload?.data || null);
+      setLinkPreview(null);
+      setLinksApproved(false);
+      await load();
+    } catch (applyError) {
+      setError(applyError?.message || "La liaison Knowledge des mini-sites a échoué.");
+    } finally {
+      setApplyingLinks(false);
+    }
+  }
+
   const summary = data?.summary || {};
   const previewSummary = applyPreview?.report?.summary || {};
+  const linkSummary = linkPreview?.report?.summary || {};
 
   return (
     <main style={{ minHeight: "100vh", padding: 32, background: "#f4f6f8", color: "#17202a" }}>
@@ -133,11 +204,14 @@ export default function NetworkPeoplePage() {
             </p>
           </div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <button type="button" onClick={load} disabled={loading || applying} style={{ padding: "10px 16px", border: 0, borderRadius: 10, fontWeight: 700, cursor: "pointer" }}>
+            <button type="button" onClick={load} disabled={loading || applying || applyingLinks} style={{ padding: "10px 16px", border: 0, borderRadius: 10, fontWeight: 700, cursor: "pointer" }}>
               {loading ? "Actualisation…" : "Actualiser"}
             </button>
-            <button type="button" onClick={prepareApply} disabled={preparing || applying || !data} style={{ padding: "10px 16px", border: 0, borderRadius: 10, fontWeight: 700, cursor: "pointer", background: "#0f766e", color: "#fff" }}>
+            <button type="button" onClick={prepareApply} disabled={preparing || applying || applyingLinks || !data} style={{ padding: "10px 16px", border: 0, borderRadius: 10, fontWeight: 700, cursor: "pointer", background: "#0f766e", color: "#fff" }}>
               {preparing ? "Préparation…" : "Préparer l’application Person"}
+            </button>
+            <button type="button" onClick={prepareTeamLinks} disabled={preparingLinks || applyingLinks || applying || !data} style={{ padding: "10px 16px", border: 0, borderRadius: 10, fontWeight: 700, cursor: "pointer", background: "#334155", color: "#fff" }}>
+              {preparingLinks ? "Préparation…" : "Préparer les liaisons mini-sites"}
             </button>
           </div>
         </header>
@@ -147,6 +221,12 @@ export default function NetworkPeoplePage() {
         {applyResult ? (
           <div style={{ ...card, color: "#166534", borderColor: "#bbf7d0", marginBottom: 20 }}>
             Application terminée : {applyResult.appliedCount ?? 0} modification(s), {applyResult.noopCount ?? 0} déjà conforme(s). Les cas bloqués sont restés inchangés.
+          </div>
+        ) : null}
+
+        {linkResult ? (
+          <div style={{ ...card, color: "#166534", borderColor: "#bbf7d0", marginBottom: 20 }}>
+            Liaisons mini-sites terminées : {linkResult.linkedOccurrenceCount ?? 0} profil(s) relié(s) dans {linkResult.updatedBlockCount ?? 0} bloc(s). Les cas bloqués sont restés inchangés.
           </div>
         ) : null}
 
@@ -165,6 +245,25 @@ export default function NetworkPeoplePage() {
             </label>
             <button type="button" disabled={!approved || applying} onClick={applyPeople} style={{ padding: "10px 16px", border: 0, borderRadius: 10, fontWeight: 700, cursor: approved ? "pointer" : "not-allowed", background: "#991b1b", color: "#fff" }}>
               {applying ? "Application…" : "Appliquer Person + works_at"}
+            </button>
+          </section>
+        ) : null}
+
+        {linkPreview ? (
+          <section style={{ ...card, borderColor: "#6366f1", marginBottom: 22 }}>
+            <h2 style={{ marginTop: 0 }}>Approbation des liaisons mini-sites</h2>
+            <p>
+              Le serveur a identifié <strong>{linkSummary.linkRequiredCount ?? 0} liaison(s) à écrire</strong> dans <strong>{linkSummary.affectedBlockCount ?? 0} bloc(s)</strong>, avec <strong>{linkSummary.noopCount ?? 0} liaison(s) déjà correcte(s)</strong> et <strong>{linkSummary.blockedCount ?? 0} cas bloqué(s)</strong> laissés inchangés.
+            </p>
+            <p style={{ color: "#64748b" }}>
+              Chaque profil est ciblé par blockId + collection + index et empreinte. Une transaction Prisma unique relit tous les blocs avant la première update ; si un bloc ou un profil a changé, aucune liaison n’est écrite. Seul knowledgeEntityId est ajouté, sans modifier rôle, bio, image ou expertise.
+            </p>
+            <label style={{ display: "flex", gap: 10, alignItems: "flex-start", margin: "16px 0" }}>
+              <input type="checkbox" checked={linksApproved} onChange={(event) => setLinksApproved(event.target.checked)} />
+              <span>J’approuve explicitement l’écriture des seuls <strong>knowledgeEntityId</strong> exacts correspondant à ce rapport réseau.</span>
+            </label>
+            <button type="button" disabled={!linksApproved || applyingLinks} onClick={applyTeamLinks} style={{ padding: "10px 16px", border: 0, borderRadius: 10, fontWeight: 700, cursor: linksApproved ? "pointer" : "not-allowed", background: "#4338ca", color: "#fff" }}>
+              {applyingLinks ? "Liaison…" : "Lier les profils mini-sites"}
             </button>
           </section>
         ) : null}

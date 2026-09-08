@@ -152,6 +152,7 @@ async function listAgencySources(tenantId, { prismaClient = prisma } = {}) {
                   blockType: true,
                   content: true,
                   status: true,
+                  updatedAt: true,
                 },
               },
             },
