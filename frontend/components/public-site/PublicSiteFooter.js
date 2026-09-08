@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { absoluteUrl } from "../../lib/seo/site-url";
 
 function telephoneHref(phone) {
   return `tel:${String(phone || "").replace(/\s+/g, "")}`;
@@ -81,6 +82,11 @@ function localAnchor(label, city) {
   return locality ? `${label} à ${locality}` : label;
 }
 
+function canonicalAgencyEntityId(site) {
+  const basePath = site?.basePath || `/agence/${encodeURIComponent(site?.slug || "")}`;
+  return `${absoluteUrl(basePath)}#travel-agency`;
+}
+
 export default function PublicSiteFooter({ site }) {
   const agency = site.agency || {};
   const basePath = `/agence/${site.slug}`;
@@ -90,9 +96,16 @@ export default function PublicSiteFooter({ site }) {
   const hasReviewsPage = navigationSlugs.has("avis");
   const hasContactPage = navigationSlugs.has("contact");
   const city = agency.city || site.city;
+  const agencyEntityId = canonicalAgencyEntityId(site);
 
   return (
-    <footer className="public-site-footer">
+    <footer
+      className="public-site-footer"
+      itemScope
+      itemType="https://schema.org/TravelAgency"
+      itemID={agencyEntityId}
+      data-geo-reference="canonical-agency-footer"
+    >
       <div className="public-site-footer-decoration" />
 
       <div className="public-site-container public-site-social-row" aria-label="Réseaux sociaux Mondescale Voyages">
@@ -119,7 +132,7 @@ export default function PublicSiteFooter({ site }) {
           <span className="public-site-footer-mark">M</span>
 
           <div>
-            <strong>{site.name}</strong>
+            <strong itemProp="name">{site.name}</strong>
             <p>
               {city
                 ? `Votre agence de voyages à ${city} vous accompagne dans la création de voyages uniques, adaptés à vos envies.`
@@ -131,23 +144,30 @@ export default function PublicSiteFooter({ site }) {
         <div>
           <h3>Votre agence</h3>
 
-          <address className="public-site-footer-address">
+          <address
+            className="public-site-footer-address"
+            itemProp="address"
+            itemScope
+            itemType="https://schema.org/PostalAddress"
+          >
             <strong>{site.name}</strong>
 
             {agency.address ? (
               <span>
-                {agency.address}
+                <span itemProp="streetAddress">{agency.address}</span>
                 <br />
-                {agency.postalCode} {agency.city}
+                <span itemProp="postalCode">{agency.postalCode}</span>{" "}
+                <span itemProp="addressLocality">{agency.city}</span>
+                <meta itemProp="addressCountry" content="FR" />
               </span>
             ) : null}
 
             {agency.phone ? (
-              <a href={telephoneHref(agency.phone)}>{agency.phone}</a>
+              <a itemProp="telephone" href={telephoneHref(agency.phone)}>{agency.phone}</a>
             ) : null}
 
             {agency.email ? (
-              <a href={`mailto:${agency.email}`}>{agency.email}</a>
+              <a itemProp="email" href={`mailto:${agency.email}`}>{agency.email}</a>
             ) : null}
           </address>
         </div>
@@ -205,6 +225,7 @@ export default function PublicSiteFooter({ site }) {
 export {
   FOOTER_ALIASES,
   SOCIAL_LINKS,
+  canonicalAgencyEntityId,
   canonicalFooterSlug,
   localAnchor,
   publishedNavigationSlugs,
