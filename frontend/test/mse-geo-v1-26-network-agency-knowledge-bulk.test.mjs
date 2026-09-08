@@ -31,8 +31,8 @@ test("bulk requires human approval and exact confirmation before apply", () => {
 });
 
 test("bulk only exposes recommends and features as creatable relations", () => {
-  const bulkSection = page.slice(page.indexOf("Bulk réseau contrôlé"), page.indexOf("{(data.agencies || []).map((row) =>"));
-  assert.match(bulkSection, /value="recommends"/);
-  assert.match(bulkSection, /value="features"/);
-  assert.doesNotMatch(bulkSection, /value="available_in"/);
+  assert.match(page, /value="recommends">recommends<\/option>/);
+  assert.match(page, /value="features">features<\/option>/);
+  assert.doesNotMatch(page, /<option value="available_in">/);
+  assert.match(page, /bulkRelationType/);
 });
