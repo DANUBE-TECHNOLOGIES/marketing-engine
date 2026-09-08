@@ -30,6 +30,11 @@ function identifierValues(item) {
     },
     {
       "@type": "PropertyValue",
+      propertyID: "mondescale:knowledgeSlug",
+      value: cleanText(item?.target?.slug),
+    },
+    {
+      "@type": "PropertyValue",
       propertyID: "mondescale:knowledgeType",
       value: cleanText(item?.target?.type),
     },
@@ -59,6 +64,7 @@ function publicAgencyKnowledgeRelations(site) {
     const target = relation?.target;
     const targetType = cleanText(target?.type);
     const targetId = cleanText(target?.id);
+    const targetSlug = cleanText(target?.slug);
     const title = cleanText(target?.title);
 
     if (
@@ -67,6 +73,7 @@ function publicAgencyKnowledgeRelations(site) {
       target.status !== "published" ||
       !PUBLIC_TARGET_TYPES.has(targetType) ||
       !targetId ||
+      !targetSlug ||
       !title
     ) {
       continue;
@@ -98,14 +105,15 @@ function propertyValue(identifier, propertyID) {
 
 function knowledgeFactFromThing(thing) {
   const id = propertyValue(thing?.identifier, "mondescale:knowledgeEntityId");
+  const slug = propertyValue(thing?.identifier, "mondescale:knowledgeSlug");
   const type = propertyValue(thing?.identifier, "mondescale:knowledgeType");
   const relationType = propertyValue(thing?.identifier, "mondescale:relationType");
   const title = cleanText(thing?.name);
 
-  if (!id || !type || !relationType || !title) return null;
+  if (!id || !slug || !type || !relationType || !title) return null;
   if (!PUBLIC_RELATION_TYPES.has(relationType) || !PUBLIC_TARGET_TYPES.has(type)) return null;
 
-  return { id, type, relationType, title };
+  return { id, slug, type, relationType, title };
 }
 
 module.exports = {
