@@ -219,6 +219,15 @@ function webPageEntityReference(url) {
   };
 }
 
+function serviceEntityId(url, name) {
+  const key = String(name || "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .toLocaleLowerCase("fr-FR");
+
+  return key ? `${url}#service-${encodeURIComponent(key)}` : undefined;
+}
+
 export function buildTravelAgencySchema(site) {
   const agency = site?.agency || site;
   const address = physicalPostalAddress(site, agency);
@@ -344,6 +353,7 @@ export function buildServiceCatalogSchema(site, page) {
       position: index + 1,
       itemOffered: {
         "@type": "Service",
+        "@id": serviceEntityId(url, service.name),
         name: service.name,
         description: service.description,
         provider: {
@@ -465,6 +475,7 @@ export {
   physicalPostalAddress,
   schemaImage,
   servedAreas,
+  serviceEntityId,
   uniqueUrls,
   webPageEntityReference,
 };
