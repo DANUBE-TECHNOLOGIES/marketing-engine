@@ -200,6 +200,24 @@ function uniqueUrls(values) {
   return [...new Set(values.filter(Boolean).map((value) => String(value).trim()).filter(Boolean))];
 }
 
+function agencyEntityReference(site) {
+  return {
+    "@type": "TravelAgency",
+    "@id": `${absoluteUrl(site.basePath)}#travel-agency`,
+    name: site.name || site?.agency?.name,
+    url: absoluteUrl(site.basePath),
+  };
+}
+
+function webPageEntityReference(url) {
+  const pageUrl = absoluteUrl(url);
+  return {
+    "@type": "WebPage",
+    "@id": `${pageUrl}#webpage`,
+    url: pageUrl,
+  };
+}
+
 export function buildTravelAgencySchema(site) {
   const agency = site?.agency || site;
   const address = physicalPostalAddress(site, agency);
@@ -237,6 +255,7 @@ export function buildTravelAgencySchema(site) {
     "@id": `${absoluteUrl(site.basePath)}#travel-agency`,
     name: site.name || agency.name,
     url: absoluteUrl(site.basePath),
+    mainEntityOfPage: webPageEntityReference(site.basePath),
     telephone: phone,
     email,
     logo: logo ? absoluteUrl(logo) : undefined,
@@ -277,7 +296,7 @@ export function buildLocalWebPageSchema({
   image,
 }) {
   const pageUrl = absoluteUrl(url);
-  const agencyId = `${absoluteUrl(site.basePath)}#travel-agency`;
+  const agency = agencyEntityReference(site);
   const pageImage = image ? absoluteUrl(image) : schemaImage(page, site);
 
   return compactJsonLd({
@@ -300,16 +319,9 @@ export function buildLocalWebPageSchema({
       url: absoluteUrl("/"),
       name: "Mondescale Voyages",
     },
-    about: {
-      "@type": "TravelAgency",
-      "@id": agencyId,
-      name: site.name || site?.agency?.name,
-      url: absoluteUrl(site.basePath),
-    },
-    mainEntity: {
-      "@type": "TravelAgency",
-      "@id": agencyId,
-    },
+    publisher: agency,
+    about: agency,
+    mainEntity: agency,
   });
 }
 
@@ -360,17 +372,19 @@ export function buildBreadcrumbSchema(items) {
 export function buildDestinationSchema(data) {
   const destination = data.destination;
   const site = data.site;
+  const pageUrl = absoluteUrl(data.canonicalPath);
 
   return compactJsonLd({
     "@context": "https://schema.org",
     "@type": "TouristDestination",
-    "@id": `${absoluteUrl(data.canonicalPath)}#destination`,
+    "@id": `${pageUrl}#destination`,
     name: destination.name,
     description:
       destination.seoDescription ||
       destination.summary ||
       destination.tagline,
-    url: absoluteUrl(data.canonicalPath),
+    url: pageUrl,
+    mainEntityOfPage: webPageEntityReference(data.canonicalPath),
     image: destination.heroImageUrl ? absoluteUrl(destination.heroImageUrl) : undefined,
     touristType: destination.audiences,
     geo:
@@ -389,12 +403,7 @@ export function buildDestinationSchema(data) {
         }
       : undefined,
     provider: site
-      ? {
-          "@type": "TravelAgency",
-          "@id": `${absoluteUrl(site.basePath)}#travel-agency`,
-          name: site.name,
-          url: absoluteUrl(site.basePath),
-        }
+      ? agencyEntityReference(site)
       : undefined,
   });
 }
@@ -404,7 +413,13 @@ export function buildDestinationWebPageSchema(data) {
   const site = data?.site || {};
   const pageUrl = absoluteUrl(data?.canonicalPath);
   const destinationId = `${pageUrl}#destination`;
-  const agencyId = `${absoluteUrl(site.basePath)}#travel-agency`;
+  const agency = agencyEntityReference(site);
+  const destinationEntity = {
+    "@type": "TouristDestination",
+    "@id": destinationId,
+    name: destination.name,
+    url: pageUrl,
+  };
   const description =
     destination.seoDescription ||
     destination.summary ||
@@ -432,24 +447,19 @@ export function buildDestinationWebPageSchema(data) {
           url: absoluteUrl(destination.heroImageUrl),
         }
       : undefined,
-    about: {
-      "@type": "TravelAgency",
-      "@id": agencyId,
-      name: site.name || site?.agency?.name,
-      url: absoluteUrl(site.basePath),
-    },
-    mainEntity: {
-      "@type": "TouristDestination",
-      "@id": destinationId,
-    },
+    publisher: agency,
+    about: [destinationEntity, agency],
+    mainEntity: destinationEntity,
   });
 }
 
 export {
+  agencyEntityReference,
   internationalPhone,
   openingHoursSpecification,
   physicalPostalAddress,
   schemaImage,
   servedAreas,
   uniqueUrls,
+  webPageEntityReference,
 };
