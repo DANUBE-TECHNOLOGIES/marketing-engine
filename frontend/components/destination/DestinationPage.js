@@ -5,8 +5,11 @@ import {
   buildBreadcrumbSchema,
   buildDestinationSchema,
   buildDestinationWebPageSchema,
-  buildTravelAgencySchema,
 } from "../../lib/seo/json-ld";
+import {
+  buildMondescaleNetworkSchema,
+  buildNetworkAwareTravelAgencySchema,
+} from "../../lib/seo/network-entity-schema";
 import { resolvedTargetCities } from "../../lib/seo/local-area-config";
 import {
   destinationLocalCopy,
@@ -196,7 +199,8 @@ export default function DestinationPage({ data }) {
 
   const destinationSchema = buildDestinationSchema(data);
   const destinationWebPageSchema = buildDestinationWebPageSchema(data);
-  const agencySchema = buildTravelAgencySchema(site);
+  const networkSchema = buildMondescaleNetworkSchema();
+  const agencySchema = buildNetworkAwareTravelAgencySchema(site);
   const breadcrumbSchema = buildBreadcrumbSchema([
     { name: "Accueil", path: siteRoot },
     { name: "Destinations", path: destinationsPath },
@@ -213,6 +217,7 @@ export default function DestinationPage({ data }) {
 
   return (
     <div className={styles["de-page"]}>
+      <JsonLd data={networkSchema} />
       <JsonLd data={agencySchema} />
       <JsonLd data={destinationWebPageSchema} />
       <JsonLd data={destinationSchema} />
