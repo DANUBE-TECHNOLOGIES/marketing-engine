@@ -228,6 +228,24 @@ function serviceEntityId(url, name) {
   return key ? `${url}#service-${encodeURIComponent(key)}` : undefined;
 }
 
+export function destinationPracticalProperties(destination) {
+  const facts = [
+    ["Meilleure période", destination?.bestTime],
+    ["Durée idéale", destination?.idealDuration],
+    ["Langue", destination?.language],
+    ["Monnaie", destination?.currency],
+  ];
+
+  return facts
+    .map(([name, rawValue]) => [name, String(rawValue || "").trim()])
+    .filter(([, value]) => value)
+    .map(([name, value]) => ({
+      "@type": "PropertyValue",
+      name,
+      value,
+    }));
+}
+
 export function buildTravelAgencySchema(site) {
   const agency = site?.agency || site;
   const address = physicalPostalAddress(site, agency);
@@ -398,6 +416,7 @@ export function buildDestinationSchema(data) {
     mainEntityOfPage: webPageEntityReference(data.canonicalPath),
     image: destination.heroImageUrl ? absoluteUrl(destination.heroImageUrl) : undefined,
     touristType: destination.audiences,
+    additionalProperty: destinationPracticalProperties(destination),
     geo:
       destination.latitude != null &&
       destination.longitude != null
