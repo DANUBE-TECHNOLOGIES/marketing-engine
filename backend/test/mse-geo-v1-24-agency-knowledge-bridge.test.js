@@ -51,11 +51,12 @@ test("Agency Knowledge bridge exposes only explicit published allowlisted relati
   );
 });
 
-test("Agency knowsAbout keeps exact Knowledge id, type and relationType in PropertyValue identifiers", () => {
+test("Agency knowsAbout keeps exact Knowledge id, slug, type and relationType in PropertyValue identifiers", () => {
   const knowsAbout = buildAgencyKnowsAbout({ agencyKnowledge: agencyKnowledge() });
   assert.equal(knowsAbout.length, 3);
   assert.deepEqual(knowledgeFactFromThing(knowsAbout[0]), {
     id: "dest-1",
+    slug: "sicile",
     type: "destination",
     relationType: "recommends",
     title: "Sicile",
@@ -100,9 +101,9 @@ test("structured graph and Entity Facts expose the same explicit Agency Knowledg
   });
 
   assert.deepEqual(facts.agency.knowledge, [
-    { id: "dest-1", type: "destination", relationType: "recommends", title: "Sicile" },
-    { id: "theme-1", type: "travel_theme", relationType: "features", title: "Croisières" },
-    { id: "cruise-1", type: "cruise", relationType: "available_in", title: "Croisière aux Seychelles" },
+    { id: "dest-1", slug: "sicile", type: "destination", relationType: "recommends", title: "Sicile" },
+    { id: "theme-1", slug: "croisieres", type: "travel_theme", relationType: "features", title: "Croisières" },
+    { id: "cruise-1", slug: "seychelles", type: "cruise", relationType: "available_in", title: "Croisière aux Seychelles" },
   ]);
   assert.equal(facts.provenance.inference, false);
 });
@@ -126,6 +127,20 @@ test("site enrichment resolves canonical Agency Knowledge even without any Perso
 
   assert.equal(site.agencyKnowledge.id, "agency-k-1");
   assert.deepEqual(calls, [["agency", ["mondescale-maurepas"]]]);
+});
+
+test("legacy injected repository without Agency Knowledge capability degrades safely", async () => {
+  const repository = {
+    async listPublishedKnowledgePeopleByIds() {
+      return [];
+    },
+  };
+  const service = new MiniSiteStructuredDataService({ repository });
+  const [site] = await service.enrichSitesWithKnowledge([
+    { slug: "maurepas", pages: [] },
+  ]);
+
+  assert.equal(site.agencyKnowledge, null);
 });
 
 test("invalid or unpublished Agency Knowledge never produces knowsAbout", () => {
