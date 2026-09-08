@@ -11,6 +11,19 @@ function serviceCatalogReference(serviceCatalog) {
   };
 }
 
+export function linkServiceCatalogToPage(serviceCatalog, url) {
+  if (!serviceCatalog?.["@id"] || !url) return serviceCatalog;
+
+  return {
+    ...serviceCatalog,
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": `${url}#webpage`,
+      url,
+    },
+  };
+}
+
 export function buildServiceAwareWebPageSchema({
   site,
   page,
