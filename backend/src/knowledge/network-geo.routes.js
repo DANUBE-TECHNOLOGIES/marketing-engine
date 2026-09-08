@@ -9,6 +9,7 @@ const expertiseService = require("./network-expertise.service");
 const agencyKnowledgeService = require("./network-agency-knowledge.service");
 const agencyKnowledgeBulkService = require("./network-agency-knowledge-bulk.service");
 const coverageService = require("./network-coverage.service");
+const agentKnowledgeGapsService = require("./agent-knowledge-gaps.service");
 
 const router = express.Router();
 
@@ -30,6 +31,12 @@ router.get("/public-readiness", asyncRoute(async (req, res) => {
 }));
 router.get("/coverage", asyncRoute(async (_req, res) => {
   res.json({ data: await coverageService.report() });
+}));
+router.get("/agent-gaps", asyncRoute(async (req, res) => {
+  res.json({ data: await agentKnowledgeGapsService.report({
+    siteSlug: req.query?.siteSlug,
+    limit: req.query?.limit,
+  }) });
 }));
 router.get("/agency-knowledge-matrix", asyncRoute(async (_req, res) => {
   res.json({ data: await agencyKnowledgeService.matrix() });
