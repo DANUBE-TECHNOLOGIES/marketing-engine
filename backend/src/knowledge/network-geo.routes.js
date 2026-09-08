@@ -1,6 +1,7 @@
 const express = require("express");
 const service = require("./network-geo.service");
 const applyService = require("./network-geo-apply.service");
+const personService = require("./network-person-reconciliation.service");
 
 const router = express.Router();
 
@@ -18,6 +19,17 @@ router.get(
   "/report",
   asyncRoute(async (req, res) => {
     const result = await service.report({
+      tenantSlug: tenantSlug(req),
+    });
+
+    res.json({ data: result });
+  })
+);
+
+router.get(
+  "/people-report",
+  asyncRoute(async (req, res) => {
+    const result = await personService.report({
       tenantSlug: tenantSlug(req),
     });
 
