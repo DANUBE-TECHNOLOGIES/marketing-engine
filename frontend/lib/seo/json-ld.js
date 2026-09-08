@@ -1,5 +1,6 @@
 import { absoluteUrl } from "./site-url";
 import { resolvedTargetCities } from "./local-area-config";
+import { isoDate } from "./page-semantics-schema";
 import {
   buildGoogleMapsSearchUrl,
 } from "../public-agency-location";
@@ -424,6 +425,8 @@ export function buildDestinationWebPageSchema(data) {
     destination.seoDescription ||
     destination.summary ||
     destination.tagline;
+  const datePublished = isoDate(destination.publishedAt || destination.createdAt);
+  const dateModified = isoDate(destination.updatedAt || destination.publishedAt || destination.createdAt);
 
   return compactJsonLd({
     "@context": "https://schema.org",
@@ -435,6 +438,8 @@ export function buildDestinationWebPageSchema(data) {
       : undefined,
     description,
     inLanguage: "fr-FR",
+    datePublished,
+    dateModified,
     isPartOf: {
       "@type": "WebSite",
       "@id": `${absoluteUrl("/")}#website`,
