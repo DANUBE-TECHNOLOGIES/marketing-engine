@@ -9,6 +9,11 @@ const card = {
   padding: 18,
 };
 
+const requestHeaders = {
+  accept: "application/json",
+  "x-tenant-slug": "mondescale",
+};
+
 const LABELS = {
   linked: "Déjà lié",
   canonical_match: "Person canonique trouvée",
@@ -20,6 +25,11 @@ export default function NetworkPeoplePage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [applyPreview, setApplyPreview] = useState(null);
+  const [approved, setApproved] = useState(false);
+  const [preparing, setPreparing] = useState(false);
+  const [applying, setApplying] = useState(false);
+  const [applyResult, setApplyResult] = useState(null);
 
   const load = useCallback(async () => {
     try {
@@ -27,10 +37,7 @@ export default function NetworkPeoplePage() {
       setError("");
       const response = await fetch("/api/knowledge/geo/network/people-report", {
         cache: "no-store",
-        headers: {
-          accept: "application/json",
-          "x-tenant-slug": "mondescale",
-        },
+        headers: requestHeaders,
       });
       const payload = await response.json();
       if (!response.ok) {
@@ -48,7 +55,71 @@ export default function NetworkPeoplePage() {
     load();
   }, [load]);
 
+  async function prepareApply() {
+    try {
+      setPreparing(true);
+      setError("");
+      setApplyResult(null);
+      setApproved(false);
+
+      const response = await fetch("/api/knowledge/geo/network/people-apply-preview", {
+        cache: "no-store",
+        headers: requestHeaders,
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error?.message || "Impossible de préparer l’application Person réseau.");
+      }
+      setApplyPreview(payload?.data || null);
+    } catch (prepareError) {
+      setError(prepareError?.message || "Impossible de préparer l’application Person réseau.");
+    } finally {
+      setPreparing(false);
+    }
+  }
+
+  async function applyPeople() {
+    if (!approved || !applyPreview?.approvalToken) return;
+
+    const summary = applyPreview?.report?.summary || {};
+    const confirmed = window.confirm(
+      `Appliquer ${summary.createPersonCount ?? 0} création(s) Person et ${summary.createWorksAtCount ?? 0} relation(s) works_at manquante(s) ? Les cas ambigus resteront inchangés.`
+    );
+    if (!confirmed) return;
+
+    try {
+      setApplying(true);
+      setError("");
+      setApplyResult(null);
+
+      const response = await fetch("/api/knowledge/geo/network/apply-people", {
+        method: "POST",
+        headers: {
+          ...requestHeaders,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          approvalToken: applyPreview.approvalToken,
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error?.message || "L’application Person réseau a échoué.");
+      }
+
+      setApplyResult(payload?.data || null);
+      setApplyPreview(null);
+      setApproved(false);
+      await load();
+    } catch (applyError) {
+      setError(applyError?.message || "L’application Person réseau a échoué.");
+    } finally {
+      setApplying(false);
+    }
+  }
+
   const summary = data?.summary || {};
+  const previewSummary = applyPreview?.report?.summary || {};
 
   return (
     <main style={{ minHeight: "100vh", padding: 32, background: "#f4f6f8", color: "#17202a" }}>
@@ -58,15 +129,45 @@ export default function NetworkPeoplePage() {
             <a href="/knowledge/geo/network">← GEO réseau</a>
             <h1 style={{ margin: "12px 0 6px" }}>Réconciliation conseillers — réseau</h1>
             <p style={{ margin: 0, color: "#64748b" }}>
-              Une seule passe sur tous les blocs équipe publiés. Rapport strictement en lecture seule : aucune Person, liaison ou expertise n’est créée ici.
+              Analyse de tous les blocs équipe publiés. L’application contrôlée ne traite que les Person non ambiguës et les relations works_at ; aucune expertise n’est générée.
             </p>
           </div>
-          <button type="button" onClick={load} disabled={loading} style={{ padding: "10px 16px", border: 0, borderRadius: 10, fontWeight: 700, cursor: "pointer" }}>
-            {loading ? "Actualisation…" : "Actualiser"}
-          </button>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <button type="button" onClick={load} disabled={loading || applying} style={{ padding: "10px 16px", border: 0, borderRadius: 10, fontWeight: 700, cursor: "pointer" }}>
+              {loading ? "Actualisation…" : "Actualiser"}
+            </button>
+            <button type="button" onClick={prepareApply} disabled={preparing || applying || !data} style={{ padding: "10px 16px", border: 0, borderRadius: 10, fontWeight: 700, cursor: "pointer", background: "#0f766e", color: "#fff" }}>
+              {preparing ? "Préparation…" : "Préparer l’application Person"}
+            </button>
+          </div>
         </header>
 
         {error ? <div style={{ ...card, color: "#991b1b", borderColor: "#fecaca", marginBottom: 20 }}>{error}</div> : null}
+
+        {applyResult ? (
+          <div style={{ ...card, color: "#166534", borderColor: "#bbf7d0", marginBottom: 20 }}>
+            Application terminée : {applyResult.appliedCount ?? 0} modification(s), {applyResult.noopCount ?? 0} déjà conforme(s). Les cas bloqués sont restés inchangés.
+          </div>
+        ) : null}
+
+        {applyPreview ? (
+          <section style={{ ...card, borderColor: "#f59e0b", marginBottom: 22 }}>
+            <h2 style={{ marginTop: 0 }}>Approbation réseau Person</h2>
+            <p>
+              Le serveur a recalculé le réseau : <strong>{previewSummary.eligibleCount ?? 0} profil(s) éligible(s)</strong>, dont <strong>{previewSummary.createPersonCount ?? 0} création(s) Person</strong> et <strong>{previewSummary.createWorksAtCount ?? 0} relation(s) works_at</strong>. <strong>{previewSummary.blockedCount ?? 0} cas bloqué(s)</strong> resteront inchangés.
+            </p>
+            <p style={{ color: "#64748b" }}>
+              Le batch effectue un préflight complet avant la première écriture. Il ne crée ni expertise, ni relation expert_in, ne modifie aucun cas ambigu et n’accepte aucun plan envoyé par le navigateur.
+            </p>
+            <label style={{ display: "flex", gap: 10, alignItems: "flex-start", margin: "16px 0" }}>
+              <input type="checkbox" checked={approved} onChange={(event) => setApproved(event.target.checked)} />
+              <span>J’approuve explicitement l’application des seules Person non ambiguës et de leurs relations <strong>works_at</strong> correspondant à ce rapport réseau.</span>
+            </label>
+            <button type="button" disabled={!approved || applying} onClick={applyPeople} style={{ padding: "10px 16px", border: 0, borderRadius: 10, fontWeight: 700, cursor: approved ? "pointer" : "not-allowed", background: "#991b1b", color: "#fff" }}>
+              {applying ? "Application…" : "Appliquer Person + works_at"}
+            </button>
+          </section>
+        ) : null}
 
         {data ? (
           <>

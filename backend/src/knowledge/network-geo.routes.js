@@ -2,6 +2,7 @@ const express = require("express");
 const service = require("./network-geo.service");
 const applyService = require("./network-geo-apply.service");
 const personService = require("./network-person-reconciliation.service");
+const personApplyService = require("./network-person-apply.service");
 
 const router = express.Router();
 
@@ -31,6 +32,29 @@ router.get(
   asyncRoute(async (req, res) => {
     const result = await personService.report({
       tenantSlug: tenantSlug(req),
+    });
+
+    res.json({ data: result });
+  })
+);
+
+router.get(
+  "/people-apply-preview",
+  asyncRoute(async (req, res) => {
+    const result = await personApplyService.preview({
+      tenantSlug: tenantSlug(req),
+    });
+
+    res.json({ data: result });
+  })
+);
+
+router.post(
+  "/apply-people",
+  asyncRoute(async (req, res) => {
+    const result = await personApplyService.apply({
+      tenantSlug: tenantSlug(req),
+      approvalToken: req.body?.approvalToken,
     });
 
     res.json({ data: result });
