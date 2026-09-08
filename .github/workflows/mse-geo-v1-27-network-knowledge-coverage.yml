@@ -1,0 +1,46 @@
+name: MSE-GEO V1.27 Network Knowledge Coverage
+
+on:
+  pull_request:
+    paths:
+      - "backend/src/knowledge/network-agency-knowledge-coverage.service.js"
+      - "backend/src/knowledge/network-geo.routes.js"
+      - "backend/test/mse-geo-v1-27-network-knowledge-coverage.test.js"
+      - "frontend/app/knowledge/geo/network/coverage/page.js"
+      - "frontend/app/knowledge/geo/network/layout.js"
+      - "frontend/test/mse-geo-v1-27-network-knowledge-coverage.test.mjs"
+      - ".github/workflows/mse-geo-v1-27-network-knowledge-coverage.yml"
+  workflow_dispatch:
+
+jobs:
+  backend-knowledge-coverage:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: Run coverage and inherited Agency Knowledge contracts
+        run: node --test test/mse-geo-v1-27-network-knowledge-coverage.test.js test/mse-geo-v1-26-network-agency-knowledge-bulk.test.js test/mse-geo-v1-25-network-agency-knowledge-matrix.test.js test/mse-geo-v1-24-agency-knowledge-bridge.test.js
+
+  frontend-knowledge-coverage:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Run coverage and inherited network UI contracts
+        run: node --test test/mse-geo-v1-27-network-knowledge-coverage.test.mjs test/mse-geo-v1-26-network-agency-knowledge-bulk.test.mjs test/mse-geo-v1-25-network-agency-knowledge-matrix.test.mjs
