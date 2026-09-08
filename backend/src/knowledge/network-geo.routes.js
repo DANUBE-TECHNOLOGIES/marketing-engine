@@ -5,6 +5,7 @@ const personService = require("./network-person-reconciliation.service");
 const personApplyService = require("./network-person-apply.service");
 const teamLinkService = require("./network-team-link.service");
 const publicReadinessService = require("./network-public-readiness.service");
+const expertiseService = require("./network-expertise.service");
 
 const router = express.Router();
 
@@ -34,6 +35,26 @@ router.get(
   asyncRoute(async (req, res) => {
     const result = await publicReadinessService.report({
       tenantSlug: tenantSlug(req),
+    });
+
+    res.json({ data: result });
+  })
+);
+
+router.get(
+  "/expertise-matrix",
+  asyncRoute(async (_req, res) => {
+    const result = await expertiseService.matrix();
+    res.json({ data: result });
+  })
+);
+
+router.post(
+  "/expertise-links",
+  asyncRoute(async (req, res) => {
+    const result = await expertiseService.addExplicitExpertise({
+      personId: req.body?.personId,
+      expertiseId: req.body?.expertiseId,
     });
 
     res.json({ data: result });
