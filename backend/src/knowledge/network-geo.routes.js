@@ -10,6 +10,7 @@ const agencyKnowledgeService = require("./network-agency-knowledge.service");
 const agencyKnowledgeBulkService = require("./network-agency-knowledge-bulk.service");
 const coverageService = require("./network-coverage.service");
 const agentKnowledgeGapsService = require("./agent-knowledge-gaps.service");
+const agentGapReconciliationService = require("./agent-gap-reconciliation.service");
 
 const router = express.Router();
 
@@ -34,6 +35,12 @@ router.get("/coverage", asyncRoute(async (_req, res) => {
 }));
 router.get("/agent-gaps", asyncRoute(async (req, res) => {
   res.json({ data: await agentKnowledgeGapsService.report({
+    siteSlug: req.query?.siteSlug,
+    limit: req.query?.limit,
+  }) });
+}));
+router.get("/agent-gap-reconciliation", asyncRoute(async (req, res) => {
+  res.json({ data: await agentGapReconciliationService.report({
     siteSlug: req.query?.siteSlug,
     limit: req.query?.limit,
   }) });
