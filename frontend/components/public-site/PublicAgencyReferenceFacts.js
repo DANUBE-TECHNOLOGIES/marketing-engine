@@ -55,6 +55,8 @@ export default function PublicAgencyReferenceFacts({ site }) {
   if (!hasReferenceFact) return null;
 
   const entityId = `${absoluteUrl(site?.basePath || `/agence/${encodeURIComponent(site?.slug || "")}`)}#travel-agency`;
+  const networkUrl = absoluteUrl("/");
+  const networkEntityId = `${networkUrl}#mondescale-network`;
 
   return (
     <section
@@ -72,6 +74,20 @@ export default function PublicAgencyReferenceFacts({ site }) {
           <div>
             <dt>Agence</dt>
             <dd itemProp="name">{facts.name}</dd>
+          </div>
+
+          <div>
+            <dt>Réseau</dt>
+            <dd
+              itemProp="memberOf"
+              itemScope
+              itemType="https://schema.org/Organization"
+              itemID={networkEntityId}
+            >
+              <a itemProp="url" href={networkUrl}>
+                <span itemProp="name">Mondescale Voyages</span>
+              </a>
+            </dd>
           </div>
 
           {hasAddress ? (
