@@ -32,6 +32,13 @@ class MiniSiteStructuredDataService {
     const canLoadPeople = typeof this.repository?.listPublishedKnowledgePeopleByIds === "function";
     const canLoadAgencyKnowledge = typeof this.repository?.listPublishedAgencyKnowledgeBySlugs === "function";
 
+    // Preserve the historical V1.4 no-op contract exactly when no explicit
+    // Person reference is present and the injected repository does not expose
+    // the newer Agency Knowledge capability.
+    if (!ids.length && !canLoadAgencyKnowledge) {
+      return sites;
+    }
+
     const [knowledgePeople, agencyKnowledge] = await Promise.all([
       ids.length && canLoadPeople
         ? this.repository.listPublishedKnowledgePeopleByIds(ids)
@@ -47,11 +54,16 @@ class MiniSiteStructuredDataService {
     return (sites || []).map((site) => {
       const siteIds = collectKnowledgeEntityIds(site?.pages || []);
       const agencySlug = canonicalAgencyKnowledgeSlug(site?.slug);
-      return {
+      const enriched = {
         ...site,
         knowledgePeople: siteIds.map((id) => peopleById.get(String(id))).filter(Boolean),
-        agencyKnowledge: agencyBySlug.get(agencySlug) || null,
       };
+
+      if (canLoadAgencyKnowledge) {
+        enriched.agencyKnowledge = agencyBySlug.get(agencySlug) || null;
+      }
+
+      return enriched;
     });
   }
   async previewSite({ siteSlug, tenantId } = {}) { const site = await this.repository.findSiteBySlug(siteSlug, tenantId); const publicSite = publicStructuredDataSite(site); if (!publicSite) { const error = new Error(`Mini-site public introuvable : ${siteSlug}`); error.code = "MINISITE_STRUCTURED_DATA_SITE_NOT_FOUND"; error.status = 404; throw error; } const [enrichedSite] = await this.enrichSitesWithKnowledge([publicSite]); const plan = buildStructuredDataPlan({ sites: [enrichedSite], publicOrigin: this.publicOrigin }); const item = plan.items[0]; return { version: plan.version, publicOrigin: plan.publicOrigin, siteSlug: item.siteSlug, agencyId: item.agencyId, agencyName: item.agencyName, validation: item.validation, summary: item.summary, graph: item.graph }; }

@@ -129,18 +129,18 @@ test("site enrichment resolves canonical Agency Knowledge even without any Perso
   assert.deepEqual(calls, [["agency", ["mondescale-maurepas"]]]);
 });
 
-test("legacy injected repository without Agency Knowledge capability degrades safely", async () => {
+test("legacy injected repository without Agency Knowledge capability degrades as an exact no-op", async () => {
   const repository = {
     async listPublishedKnowledgePeopleByIds() {
       return [];
     },
   };
   const service = new MiniSiteStructuredDataService({ repository });
-  const [site] = await service.enrichSitesWithKnowledge([
-    { slug: "maurepas", pages: [] },
-  ]);
+  const sites = [{ slug: "maurepas", pages: [] }];
+  const enriched = await service.enrichSitesWithKnowledge(sites);
 
-  assert.equal(site.agencyKnowledge, null);
+  assert.equal(enriched, sites);
+  assert.equal(Object.prototype.hasOwnProperty.call(enriched[0], "agencyKnowledge"), false);
 });
 
 test("invalid or unpublished Agency Knowledge never produces knowsAbout", () => {
