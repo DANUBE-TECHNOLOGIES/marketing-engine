@@ -1,0 +1,32 @@
+name: MSE-GEO V1.28 Network Knowledge API
+
+on:
+  pull_request:
+    paths:
+      - "backend/src/modules/minisite-structured-data/**"
+      - "backend/test/mse-geo-v1-28-network-entity-facts.test.js"
+      - "backend/test/mse-geo-v1-24-agency-knowledge-bridge.test.js"
+      - "backend/test/mse-geo-v1-22-public-entity-facts.test.js"
+      - ".github/workflows/mse-geo-v1-28.yml"
+  workflow_dispatch:
+
+jobs:
+  backend-network-knowledge-api:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: Run network Knowledge API and inherited public Entity Facts contracts
+        run: >-
+          node --test
+          test/mse-geo-v1-28-network-entity-facts.test.js
+          test/mse-geo-v1-24-agency-knowledge-bridge.test.js
+          test/mse-geo-v1-22-public-entity-facts.test.js
