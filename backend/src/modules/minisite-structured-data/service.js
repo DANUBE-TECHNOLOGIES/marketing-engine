@@ -29,10 +29,16 @@ class MiniSiteStructuredDataService {
   async enrichSitesWithKnowledge(sites = []) {
     const ids = [...new Set((sites || []).flatMap((site) => collectKnowledgeEntityIds(site?.pages || [])))];
     const agencySlugs = [...new Set((sites || []).map((site) => canonicalAgencyKnowledgeSlug(site?.slug)).filter(Boolean))];
+    const canLoadPeople = typeof this.repository?.listPublishedKnowledgePeopleByIds === "function";
+    const canLoadAgencyKnowledge = typeof this.repository?.listPublishedAgencyKnowledgeBySlugs === "function";
 
     const [knowledgePeople, agencyKnowledge] = await Promise.all([
-      ids.length ? this.repository.listPublishedKnowledgePeopleByIds(ids) : Promise.resolve([]),
-      agencySlugs.length ? this.repository.listPublishedAgencyKnowledgeBySlugs(agencySlugs) : Promise.resolve([]),
+      ids.length && canLoadPeople
+        ? this.repository.listPublishedKnowledgePeopleByIds(ids)
+        : Promise.resolve([]),
+      agencySlugs.length && canLoadAgencyKnowledge
+        ? this.repository.listPublishedAgencyKnowledgeBySlugs(agencySlugs)
+        : Promise.resolve([]),
     ]);
 
     const peopleById = new Map((knowledgePeople || []).map((entity) => [String(entity.id), entity]));
