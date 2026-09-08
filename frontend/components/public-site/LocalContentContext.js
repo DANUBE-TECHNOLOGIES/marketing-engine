@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { extractPublishedServices } from "../../lib/seo/json-ld";
 import { resolvedTargetCities } from "../../lib/seo/local-area-config";
 
 function clean(value) {
@@ -12,6 +13,12 @@ function joinCities(values) {
   return `${values.slice(0, -1).join(", ")} et ${values[values.length - 1]}`;
 }
 
+function publishedServiceNames(page) {
+  return extractPublishedServices(page)
+    .map((service) => clean(service?.name))
+    .filter(Boolean);
+}
+
 const COPY = {
   agency: ({ city, nearby }) => ({
     title: `Notre implantation et notre accompagnement à ${city}`,
@@ -19,12 +26,19 @@ const COPY = {
       ? `Notre agence de ${city} accompagne aussi les voyageurs de ${joinCities(nearby.slice(0, 2))}. Sur place, l’équipe prend le temps de comprendre le projet, de comparer les solutions et de suivre le dossier avant, pendant et après le départ.`
       : `Notre agence de ${city} privilégie un accompagnement de proximité : compréhension du projet, comparaison des solutions et suivi du dossier avant, pendant et après le départ.`,
   }),
-  services: ({ city, nearby }) => ({
-    title: `Des conseils voyage personnalisés à ${city}`,
-    text: nearby.length
-      ? `Depuis ${city}, notre équipe accompagne aussi les voyageurs de ${joinCities(nearby.slice(0, 2))}. Séjours, circuits, croisières, autotours ou voyages sur mesure : nous comparons les solutions selon vos dates, votre budget et votre façon de voyager.`
-      : `À ${city}, notre équipe vous accompagne pour comparer séjours, circuits, croisières, autotours et voyages sur mesure selon vos dates, votre budget et votre façon de voyager.`,
-  }),
+  services: ({ city, nearby, services }) => {
+    const published = services.slice(0, 4);
+    const serviceSentence = published.length
+      ? `Les services actuellement présentés sur cette page comprennent ${joinCities(published)}.`
+      : "Cette page présente les services actuellement publiés par l’agence.";
+
+    return {
+      title: `Des conseils voyage personnalisés à ${city}`,
+      text: nearby.length
+        ? `Depuis ${city}, notre équipe accompagne aussi les voyageurs de ${joinCities(nearby.slice(0, 2))}. ${serviceSentence} Nous comparons les solutions selon vos dates, votre budget et votre façon de voyager.`
+        : `À ${city}, notre équipe vous accompagne dans la préparation de votre projet. ${serviceSentence} Nous comparons les solutions selon vos dates, votre budget et votre façon de voyager.`,
+    };
+  },
   destinations: ({ city, nearby }) => ({
     title: `Choisir votre prochaine destination depuis ${city}`,
     text: nearby.length
@@ -75,7 +89,7 @@ const COPY = {
   }),
 };
 
-export default function LocalContentContext({ site, kind, quality }) {
+export default function LocalContentContext({ site, page, kind, quality }) {
   const agency = site?.agency || {};
   const city = clean(agency.city || site?.city);
   const builder = COPY[kind];
@@ -83,7 +97,8 @@ export default function LocalContentContext({ site, kind, quality }) {
   if (quality?.strong && !quality?.needsLocalContext) return null;
 
   const nearby = resolvedTargetCities(site, { limit: 4 });
-  const copy = builder({ city, nearby });
+  const services = kind === "services" ? publishedServiceNames(page) : [];
+  const copy = builder({ city, nearby, services });
   const root = clean(site?.basePath) || `/agence/${encodeURIComponent(site?.slug || "")}`;
 
   return (
@@ -116,3 +131,5 @@ export default function LocalContentContext({ site, kind, quality }) {
     </section>
   );
 }
+
+export { COPY, joinCities, publishedServiceNames };
