@@ -30,8 +30,11 @@ import {
 import {
   buildBreadcrumbSchema,
   buildServiceCatalogSchema,
-  buildTravelAgencySchema,
 } from "../../../../lib/seo/json-ld";
+import {
+  buildMondescaleNetworkSchema,
+  buildNetworkAwareTravelAgencySchema,
+} from "../../../../lib/seo/network-entity-schema";
 import { buildPageFaqSchema } from "../../../../lib/seo/page-faq-schema";
 import { buildPageSemanticsSchema } from "../../../../lib/seo/page-semantics-schema";
 import { assessLocalContentQuality } from "../../../../lib/seo/local-content-quality";
@@ -286,7 +289,8 @@ export default async function AgencySitePage({ params }) {
 
   return (
     <>
-      <JsonLd data={buildTravelAgencySchema(site)} />
+      <JsonLd data={buildMondescaleNetworkSchema()} />
+      <JsonLd data={buildNetworkAwareTravelAgencySchema(site)} />
       <JsonLd data={buildBreadcrumbSchema(breadcrumbItems)} />
       <JsonLd data={webPageSchema} />
       {pageSemanticsSchema ? <JsonLd data={pageSemanticsSchema} /> : null}
