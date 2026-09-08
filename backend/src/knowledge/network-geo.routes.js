@@ -3,6 +3,7 @@ const service = require("./network-geo.service");
 const applyService = require("./network-geo-apply.service");
 const personService = require("./network-person-reconciliation.service");
 const personApplyService = require("./network-person-apply.service");
+const teamBacklinkService = require("./network-team-backlink.service");
 
 const router = express.Router();
 
@@ -53,6 +54,29 @@ router.post(
   "/apply-people",
   asyncRoute(async (req, res) => {
     const result = await personApplyService.apply({
+      tenantSlug: tenantSlug(req),
+      approvalToken: req.body?.approvalToken,
+    });
+
+    res.json({ data: result });
+  })
+);
+
+router.get(
+  "/team-backlink-preview",
+  asyncRoute(async (req, res) => {
+    const result = await teamBacklinkService.preview({
+      tenantSlug: tenantSlug(req),
+    });
+
+    res.json({ data: result });
+  })
+);
+
+router.post(
+  "/apply-team-backlinks",
+  asyncRoute(async (req, res) => {
+    const result = await teamBacklinkService.apply({
       tenantSlug: tenantSlug(req),
       approvalToken: req.body?.approvalToken,
     });
