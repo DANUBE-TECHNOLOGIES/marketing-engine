@@ -1,0 +1,44 @@
+name: MSE-GEO V1.20 Network Team Backlink
+
+on:
+  pull_request:
+    paths:
+      - "backend/src/knowledge/network-team-backlink.service.js"
+      - "backend/src/knowledge/network-geo.routes.js"
+      - "backend/test/mse-geo-v1-20-network-team-backlink.test.js"
+      - "frontend/app/knowledge/geo/network/backlinks/page.js"
+      - "frontend/test/mse-geo-v1-20-network-team-backlink.test.mjs"
+      - ".github/workflows/mse-geo-v1-20.yml"
+
+jobs:
+  backend-team-backlink:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: Run team backlink and inherited Person contracts
+        run: node --test test/mse-geo-v1-20-network-team-backlink.test.js test/mse-geo-v1-19-network-person-apply.test.js test/mse-geo-v1-18-network-person-reconciliation.test.js
+
+  frontend-team-backlink:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Run team backlink UI contracts
+        run: node --test test/mse-geo-v1-20-network-team-backlink.test.mjs
