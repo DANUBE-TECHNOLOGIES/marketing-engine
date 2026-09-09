@@ -69,6 +69,20 @@ function dedupeGoogleReviews(reviews) {
   });
 }
 
+function latestReviewPublishedAt(reviews) {
+  let latest = null;
+
+  for (const review of reviews || []) {
+    const value = review?.publishedAt || review?.createdAt;
+    if (!value) continue;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) continue;
+    if (!latest || date.getTime() > latest.getTime()) latest = date;
+  }
+
+  return latest ? latest.toISOString() : null;
+}
+
 class GoogleBusinessReviewsService {
   constructor(repository, provider) {
     this.repository = repository;
@@ -197,6 +211,7 @@ class GoogleBusinessReviewsService {
           (completeSet.reduce((sum, review) => sum + review.rating, 0) / total) * 10
         ) / 10
       : 0;
+    const latestPublishedAt = latestReviewPublishedAt(completeSet);
 
     return {
       agency: {
@@ -207,6 +222,7 @@ class GoogleBusinessReviewsService {
       summary: {
         averageRating,
         total,
+        latestPublishedAt,
       },
       reviewUrl: site.agency.googleReviewUrl || null,
       reviews: completeSet.slice(0, limit).map((review) => ({
@@ -228,4 +244,5 @@ module.exports = {
   normalizeGoogleReview,
   buildDesiredUpdate,
   dedupeGoogleReviews,
+  latestReviewPublishedAt,
 };
