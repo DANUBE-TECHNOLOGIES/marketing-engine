@@ -53,6 +53,7 @@ jobs:
           node --test test/mse-25-152-geo-team-person-entities.test.mjs
           node --test test/mse-25-155-geo-institutional-reassurance-authority.test.mjs
           node --test test/mse-25-156-geo-legal-reassurance-runtime.test.mjs
+          node --test test/mse-25-157-geo-payment-reassurance-authority.test.mjs
 
       - name: Lint canonical public files
         working-directory: frontend
