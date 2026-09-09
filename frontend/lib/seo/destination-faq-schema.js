@@ -4,15 +4,20 @@ function clean(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
 }
 
-export function buildDestinationFaqSchema(data) {
+export function destinationFaqItems(data) {
   const faqs = Array.isArray(data?.destination?.faqs) ? data.destination.faqs : [];
-  const items = faqs
+
+  return faqs
     .map((faq) => ({
+      id: faq?.id || null,
       question: clean(faq?.question),
       answer: clean(faq?.answer),
     }))
     .filter((faq) => faq.question && faq.answer);
+}
 
+export function buildDestinationFaqSchema(data) {
+  const items = destinationFaqItems(data);
   if (!items.length) return null;
 
   const pageUrl = absoluteUrl(data?.canonicalPath);
@@ -46,3 +51,24 @@ export function buildDestinationFaqSchema(data) {
     })),
   };
 }
+
+export function linkDestinationFaqToWebPage(webPageSchema, faqSchema) {
+  if (!webPageSchema || !faqSchema?.["@id"]) return webPageSchema;
+
+  return {
+    ...webPageSchema,
+    hasPart: [
+      ...(Array.isArray(webPageSchema.hasPart)
+        ? webPageSchema.hasPart
+        : webPageSchema.hasPart
+          ? [webPageSchema.hasPart]
+          : []),
+      {
+        "@type": "FAQPage",
+        "@id": faqSchema["@id"],
+      },
+    ],
+  };
+}
+
+export { clean };
