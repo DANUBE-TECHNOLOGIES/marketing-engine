@@ -86,6 +86,7 @@ jobs:
           node --test test/mse-25-188-geo-grounded-destinations.test.mjs
           node --test test/mse-25-189-geo-strict-cta-href-provenance.test.mjs
           node --test test/mse-25-190-geo-strict-shared-cta-resolution.test.mjs
+          node --test test/mse-25-191-geo-strict-hero-cta-provenance.test.mjs
 
       - name: Lint canonical public files
         working-directory: frontend
