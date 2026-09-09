@@ -55,10 +55,13 @@ test("MSE-25.91 keeps the home hero contained and complete without invented CTA 
   const css = read("components/public-site/network-home-hero.css");
   assert.match(renderer, /public-site-hero--immersive/);
   assert.match(renderer, /NETWORK_HOME_HERO_IMAGE/);
-  assert.match(renderer, /getShowcaseUrl\(site\)/);
+  assert.match(renderer, /configuredHeroCta\(site, content\.primaryCta\)/);
+  assert.match(renderer, /configuredHeroCta\(site, content\.secondaryCta\)/);
+  assert.match(renderer, /resolvePublicCtaHref\(site, explicitHref, ""\)/);
   assert.match(renderer, /factualHeroSubtitle/);
-  assert.match(renderer, /const primaryHref = primaryLabel/);
-  assert.match(renderer, /const secondaryHref = secondaryLabel/);
+  assert.doesNotMatch(renderer, /getShowcaseUrl\(site\)/);
+  assert.doesNotMatch(renderer, /content\.primaryButton/);
+  assert.doesNotMatch(renderer, /content\.secondaryButton/);
   assert.doesNotMatch(renderer, /Découvrir nos voyages/);
   assert.doesNotMatch(renderer, /"Demander un devis"/);
   assert.match(css, /width: min\(1480px, calc\(100% - 48px\)\)/);

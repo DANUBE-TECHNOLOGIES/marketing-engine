@@ -1,5 +1,4 @@
 import { preconnect, preload } from "react-dom";
-import { getShowcaseUrl } from "../../../lib/showcase-url";
 import {
   getSectionContent,
 } from "./helpers";
@@ -120,6 +119,14 @@ function isShowcaseCta(cta, legacyLabel) {
   return /\bdecouvrir\b/.test(label) && /\b(nos|vos)?\s*voyages?\b/.test(label);
 }
 
+function configuredHeroCta(site, cta) {
+  const label = String(cta?.label || "").trim();
+  const explicitHref = String(cta?.href || "").trim();
+  if (!label || !explicitHref) return null;
+  const href = resolvePublicCtaHref(site, explicitHref, "");
+  return href ? { label, href } : null;
+}
+
 export default function HeroV2Renderer({ section, site, page, forcePageIntent = false, sharedNetworkHero = false }) {
   const content = getSectionContent(section);
   const title = resolvedHeroTitle({ content, section, site, page, forcePageIntent });
@@ -141,24 +148,10 @@ export default function HeroV2Renderer({ section, site, page, forcePageIntent = 
     });
   }
 
-  const primaryCta = content.primaryCta || null;
-  const secondaryCta = content.secondaryCta || null;
-  const primaryLabel = ctaLabel(primaryCta, content.primaryButton);
-  const secondaryLabel = ctaLabel(secondaryCta, content.secondaryButton);
-  const primaryShowcase = Boolean(primaryLabel) && isShowcaseCta(primaryCta, content.primaryButton);
-  const secondaryShowcase = Boolean(secondaryLabel) && isShowcaseCta(secondaryCta, content.secondaryButton);
-  const primaryHref = primaryLabel
-    ? primaryShowcase
-      ? getShowcaseUrl(site)
-      : resolvePublicCtaHref(site, primaryCta?.href, "contact", { label: primaryLabel })
-    : null;
-  const secondaryHref = secondaryLabel
-    ? secondaryShowcase
-      ? getShowcaseUrl(site)
-      : secondaryCta
-        ? resolvePublicCtaHref(site, secondaryCta.href, "destinations", { label: secondaryLabel })
-        : resolvePublicCtaHref(site, "contact", "contact", { label: secondaryLabel })
-    : null;
+  const primaryCta = configuredHeroCta(site, content.primaryCta);
+  const secondaryCta = configuredHeroCta(site, content.secondaryCta);
+  const primaryShowcase = Boolean(primaryCta) && isShowcaseCta(primaryCta);
+  const secondaryShowcase = Boolean(secondaryCta) && isShowcaseCta(secondaryCta);
 
   const contentStyle = { textAlign: alignment };
   const centered = alignment === "center";
@@ -200,26 +193,28 @@ export default function HeroV2Renderer({ section, site, page, forcePageIntent = 
           <p className="public-site-eyebrow">{content.eyebrow || defaultHeroEyebrow(site)}</p>
           <h1 style={centered ? { marginInline: "auto" } : rightAligned ? { marginLeft: "auto" } : undefined}>{title}</h1>
           <p className="public-site-hero-text" style={centered ? { marginInline: "auto" } : rightAligned ? { marginLeft: "auto" } : undefined}>{subtitle}</p>
-          <div className="public-site-hero-actions" style={{ justifyContent: centered ? "center" : rightAligned ? "flex-end" : "flex-start" }}>
-            {primaryHref ? (
-              <a
-                className="public-site-button"
-                href={primaryHref}
-                {...(primaryShowcase ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-              >
-                {primaryLabel}
-              </a>
-            ) : null}
-            {secondaryHref ? (
-              <a
-                className="public-site-button public-site-button-secondary"
-                href={secondaryHref}
-                {...(secondaryShowcase ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-              >
-                {secondaryLabel}
-              </a>
-            ) : null}
-          </div>
+          {primaryCta || secondaryCta ? (
+            <div className="public-site-hero-actions" style={{ justifyContent: centered ? "center" : rightAligned ? "flex-end" : "flex-start" }}>
+              {primaryCta ? (
+                <a
+                  className="public-site-button"
+                  href={primaryCta.href}
+                  {...(primaryShowcase ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                >
+                  {primaryCta.label}
+                </a>
+              ) : null}
+              {secondaryCta ? (
+                <a
+                  className="public-site-button public-site-button-secondary"
+                  href={secondaryCta.href}
+                  {...(secondaryShowcase ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                >
+                  {secondaryCta.label}
+                </a>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </div>
     </section>
@@ -228,6 +223,8 @@ export default function HeroV2Renderer({ section, site, page, forcePageIntent = 
 
 export {
   NETWORK_HOME_HERO_IMAGE,
+  configuredHeroCta,
+  ctaLabel,
   defaultHeroEyebrow,
   defaultHeroTitle,
   factualHeroSubtitle,

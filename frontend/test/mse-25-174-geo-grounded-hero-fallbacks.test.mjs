@@ -15,23 +15,22 @@ test("MSE-25.174 hero fallback subtitle stays factual", () => {
 });
 
 test("MSE-25.174 hero does not invent primary or secondary CTA labels", () => {
-  assert.match(source, /const primaryLabel = ctaLabel\(primaryCta, content\.primaryButton\);/);
-  assert.match(source, /const secondaryLabel = ctaLabel\(secondaryCta, content\.secondaryButton\);/);
+  assert.match(source, /configuredHeroCta\(site, content\.primaryCta\)/);
+  assert.match(source, /configuredHeroCta\(site, content\.secondaryCta\)/);
   assert.doesNotMatch(source, /ctaLabel\(primaryCta, content\.primaryButton, "Demander un devis"\)/);
   assert.doesNotMatch(source, /immersiveNetworkHero \? "Découvrir nos voyages" : "Nous contacter"/);
 });
 
-test("MSE-25.174 hero only resolves CTA hrefs when a published label exists", () => {
-  assert.match(source, /const primaryHref = primaryLabel/);
-  assert.match(source, /const secondaryHref = secondaryLabel/);
-  assert.match(source, /Boolean\(primaryLabel\) && isShowcaseCta/);
-  assert.match(source, /Boolean\(secondaryLabel\) && isShowcaseCta/);
+test("MSE-25.174 hero only renders explicitly configured CTA targets", () => {
+  assert.match(source, /if \(!label \|\| !explicitHref\) return null/);
+  assert.match(source, /resolvePublicCtaHref\(site, explicitHref, ""\)/);
+  assert.match(source, /\{primaryCta \|\| secondaryCta \? \(/);
 });
 
-test("MSE-25.174 preserves explicitly configured and legacy CTA paths", () => {
-  assert.match(source, /primaryCta\?\.href/);
-  assert.match(source, /secondaryCta\.href/);
-  assert.match(source, /content\.primaryButton/);
-  assert.match(source, /content\.secondaryButton/);
-  assert.match(source, /getShowcaseUrl\(site\)/);
+test("MSE-25.174 no longer preserves legacy button-only CTA routes", () => {
+  assert.doesNotMatch(source, /content\.primaryButton/);
+  assert.doesNotMatch(source, /content\.secondaryButton/);
+  assert.doesNotMatch(source, /getShowcaseUrl\(site\)/);
+  assert.doesNotMatch(source, /resolvePublicCtaHref\(site, .*"contact"/);
+  assert.doesNotMatch(source, /resolvePublicCtaHref\(site, .*"destinations"/);
 });
