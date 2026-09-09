@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { extractPublishedServices } from "../../lib/seo/json-ld";
 import { resolvedTargetCities } from "../../lib/seo/local-area-config";
+import { pageHref, pageSlug, uniquePublishedNavigation } from "./PublicSiteHeader";
 
 function clean(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
@@ -17,6 +18,17 @@ function publishedServiceNames(page) {
   return extractPublishedServices(page)
     .map((service) => clean(service?.name))
     .filter(Boolean);
+}
+
+function publishedContextNavigation(site, currentPage, limit = 4) {
+  const currentSlug = pageSlug(currentPage);
+  return uniquePublishedNavigation(site)
+    .filter((candidate) => pageSlug(candidate) !== currentSlug)
+    .slice(0, limit)
+    .map((candidate) => ({
+      title: candidate.title,
+      href: pageHref(site.slug, candidate),
+    }));
 }
 
 function localAreaSentence(city, nearby) {
@@ -85,7 +97,7 @@ export default function LocalContentContext({ site, page, kind, quality }) {
   const nearby = resolvedTargetCities(site, { limit: 4 });
   const services = kind === "services" ? publishedServiceNames(page) : [];
   const copy = builder({ city, nearby, services });
-  const root = clean(site?.basePath) || `/agence/${encodeURIComponent(site?.slug || "")}`;
+  const relatedPages = publishedContextNavigation(site, page);
 
   return (
     <section className="public-site-section public-site-local-context" aria-labelledby="local-context-title">
@@ -98,24 +110,16 @@ export default function LocalContentContext({ site, page, kind, quality }) {
             Ce mini-site présente aussi l’agence pour les secteurs de {joinCities(nearby.slice(2))}.
           </p>
         ) : null}
-        <div className="public-site-related-links" aria-label={`Navigation locale autour de ${city}`}>
-          <Link href={root}>Agence de voyages à {city}</Link>
-          {kind !== "services" ? (
-            <Link href={`${root}/services`}>Services publiés à {city}</Link>
-          ) : null}
-          {kind !== "destinations" ? (
-            <Link href={`${root}/destinations`}>Destinations publiées depuis {city}</Link>
-          ) : null}
-          {kind !== "inspirations" ? (
-            <Link href={`${root}/inspiration`}>Inspirations voyage publiées depuis {city}</Link>
-          ) : null}
-          {kind !== "contact" ? (
-            <Link href={`${root}/contact`}>Coordonnées de l’agence à {city}</Link>
-          ) : null}
-        </div>
+        {relatedPages.length ? (
+          <div className="public-site-related-links" aria-label={`Pages publiées par l’agence de voyages de ${city}`}>
+            {relatedPages.map((candidate) => (
+              <Link key={candidate.href} href={candidate.href}>{candidate.title}</Link>
+            ))}
+          </div>
+        ) : null}
       </div>
     </section>
   );
 }
 
-export { COPY, joinCities, localAreaSentence, publishedServiceNames };
+export { COPY, joinCities, localAreaSentence, publishedContextNavigation, publishedServiceNames };
