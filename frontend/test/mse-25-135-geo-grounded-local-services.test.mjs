@@ -22,7 +22,7 @@ test("MSE-25.135 local services copy reuses the canonical published-service extr
 
 test("MSE-25.135 services copy names only services supplied by the published page", () => {
   assert.match(context, /const published = services\.slice\(0, 4\)/);
-  assert.match(context, /Les services actuellement présentés sur cette page comprennent/);
+  assert.match(context, /Les services actuellement publiés sur cette page comprennent/);
   assert.match(context, /Cette page présente les services actuellement publiés par l’agence/);
   assert.doesNotMatch(context, /Séjours, circuits, croisières, autotours ou voyages sur mesure/);
 });

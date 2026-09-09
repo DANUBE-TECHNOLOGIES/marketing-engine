@@ -111,10 +111,10 @@ test("MSE-25.121 internal linking sends the generic local anchor back to the hom
   );
 
   assert.match(contextSource, /<Link href=\{root\}>Agence de voyages à \{city\}<\/Link>/);
-  assert.match(contextSource, /Services voyage et billetterie à \{city\}/);
-  assert.match(contextSource, /Destinations et voyages depuis \{city\}/);
-  assert.match(contextSource, /Inspirations voyage depuis \{city\}/);
-  assert.match(contextSource, /Nous contacter à \{city\}/);
+  assert.match(contextSource, /Services publiés à \{city\}/);
+  assert.match(contextSource, /Destinations publiées depuis \{city\}/);
+  assert.match(contextSource, /Inspirations voyage publiées depuis \{city\}/);
+  assert.match(contextSource, /Coordonnées de l’agence à \{city\}/);
   assert.doesNotMatch(contextSource, /Services de notre agence de voyages à \{city\}/);
   assert.doesNotMatch(contextSource, /Contacter notre agence de voyages à \{city\}/);
 });
