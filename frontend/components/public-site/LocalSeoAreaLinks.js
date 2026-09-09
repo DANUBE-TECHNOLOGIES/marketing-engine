@@ -1,5 +1,6 @@
 import Link from "next/link";
 import PublicAgencyReferenceFacts from "./PublicAgencyReferenceFacts";
+import { pageHref, pageSlug, uniquePublishedNavigation } from "./PublicSiteHeader";
 import {
   resolvedExtendedTargetCities,
   resolvedTargetCities,
@@ -24,6 +25,16 @@ function joinCities(values) {
   return `${values.slice(0, -1).join(", ")} et ${values[values.length - 1]}`;
 }
 
+function publishedLocalNavigation(site, limit = 4) {
+  return uniquePublishedNavigation(site)
+    .filter((page) => pageSlug(page))
+    .slice(0, limit)
+    .map((page) => ({
+      title: page.title,
+      href: pageHref(site.slug, page),
+    }));
+}
+
 export default function LocalSeoAreaLinks({ site }) {
   const agency = site?.agency || {};
   const city = clean(agency.city || site?.city);
@@ -34,10 +45,9 @@ export default function LocalSeoAreaLinks({ site }) {
     return <PublicAgencyReferenceFacts site={site} />;
   }
 
-  const basePath = clean(site?.basePath) || `/agence/${encodeURIComponent(site?.slug || "")}`;
-  const root = basePath.replace(/\/$/, "");
   const closeArea = nearby.slice(0, 3);
   const extendedArea = nearby.slice(3);
+  const relatedPages = publishedLocalNavigation(site);
 
   return (
     <>
@@ -59,12 +69,13 @@ export default function LocalSeoAreaLinks({ site }) {
               le contexte géographique du mini-site sans modifier l’adresse d’implantation de l’agence à {city}.
             </p>
           ) : null}
-          <div className="public-site-related-links" aria-label={`Découvrir l’agence de voyages de ${city}`}>
-            <Link href={`${root}/services`}>Services publiés par l’agence de {city}</Link>
-            <Link href={`${root}/destinations`}>Destinations publiées depuis {city}</Link>
-            <Link href={`${root}/inspiration`}>Conseils et inspirations publiés depuis {city}</Link>
-            <Link href={`${root}/contact`}>Coordonnées de l’agence de {city}</Link>
-          </div>
+          {relatedPages.length ? (
+            <div className="public-site-related-links" aria-label={`Pages publiées par l’agence de voyages de ${city}`}>
+              {relatedPages.map((page) => (
+                <Link key={page.href} href={page.href}>{page.title}</Link>
+              ))}
+            </div>
+          ) : null}
         </div>
       </section>
       <PublicAgencyReferenceFacts site={site} />
@@ -72,4 +83,4 @@ export default function LocalSeoAreaLinks({ site }) {
   );
 }
 
-export { extendedTargetCities, joinCities, targetCities };
+export { extendedTargetCities, joinCities, publishedLocalNavigation, targetCities };

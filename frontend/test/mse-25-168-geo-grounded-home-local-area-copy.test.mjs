@@ -22,12 +22,14 @@ test("MSE-25.168 extended catchment remains contextual rather than canonical ser
   assert.doesNotMatch(source, /accompagne également des projets|bassin de clientèle/i);
 });
 
-test("MSE-25.168 home local links use grounded published wording", () => {
-  assert.match(source, /Services publiés par l’agence de \{city\}/);
-  assert.match(source, /Destinations publiées depuis \{city\}/);
-  assert.match(source, /Conseils et inspirations publiés depuis \{city\}/);
-  assert.match(source, /Coordonnées de l’agence de \{city\}/);
-  assert.doesNotMatch(source, /Destinations conseillées depuis/);
+test("MSE-25.168 home local links reuse published navigation", () => {
+  assert.match(source, /uniquePublishedNavigation\(site\)/);
+  assert.match(source, /pageHref\(site\.slug, page\)/);
+  assert.match(source, /page\.title/);
+  assert.doesNotMatch(source, /\$\{root\}\/services/);
+  assert.doesNotMatch(source, /\$\{root\}\/destinations/);
+  assert.doesNotMatch(source, /\$\{root\}\/inspiration/);
+  assert.doesNotMatch(source, /\$\{root\}\/contact/);
 });
 
 test("MSE-25.168 home local copy does not manufacture lifecycle or transactional promises", () => {
