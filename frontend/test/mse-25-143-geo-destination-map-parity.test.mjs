@@ -11,9 +11,15 @@ const destinationPageSource = await readFile(
   "utf8"
 );
 
-test("destination coordinates are accepted only when finite and inside WGS84 bounds", () => {
-  assert.match(locationSource, /Number\.isFinite\(latitude\)/);
-  assert.match(locationSource, /Number\.isFinite\(longitude\)/);
+test("destination coordinates reject absent and blank values before numeric conversion", () => {
+  assert.match(locationSource, /value === null \|\| value === undefined/);
+  assert.match(locationSource, /typeof value === "string" \? value\.trim\(\) : value/);
+  assert.match(locationSource, /if \(raw === ""\) return null/);
+  assert.match(locationSource, /Number\.isFinite\(number\)/);
+});
+
+test("destination coordinates are accepted only inside WGS84 bounds", () => {
+  assert.match(locationSource, /latitude === null \|\| longitude === null/);
   assert.match(locationSource, /latitude < -90 \|\| latitude > 90/);
   assert.match(locationSource, /longitude < -180 \|\| longitude > 180/);
 });
