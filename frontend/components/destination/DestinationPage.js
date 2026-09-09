@@ -12,6 +12,7 @@ import {
   buildNetworkAwareTravelAgencySchema,
 } from "../../lib/seo/network-entity-schema";
 import { resolvedTargetCities } from "../../lib/seo/local-area-config";
+import { absoluteUrl } from "../../lib/seo/site-url";
 import {
   destinationLocalCopy,
   rotateCommercialLinks,
@@ -168,6 +169,9 @@ export default function DestinationPage({ data }) {
   const { destination: d, site } = data;
   const sections = Array.isArray(d.sections) ? d.sections : [];
   const faqs = Array.isArray(d.faqs) ? d.faqs : [];
+  const editorialRelations = Array.isArray(data.editorialRelations)
+    ? data.editorialRelations.filter((item) => item?.name && item?.href)
+    : [];
   const siteRoot = site.basePath || `/agence/${encodeURIComponent(site.slug)}`;
   const root = siteRoot.replace(/\/$/, "");
   const destinationsPath = `${root}/destinations`;
@@ -181,7 +185,12 @@ export default function DestinationPage({ data }) {
   const destinationHeading = city ? `Voyage à ${d.name} depuis ${city}` : `Voyage à ${d.name}`;
 
   const destinationSchema = buildDestinationSchema(data);
-  const destinationWebPageSchema = buildDestinationWebPageSchema(data);
+  const destinationWebPageSchema = {
+    ...buildDestinationWebPageSchema(data),
+    ...(editorialRelations.length
+      ? { relatedLink: editorialRelations.map((item) => absoluteUrl(item.href)) }
+      : {}),
+  };
   const networkSchema = buildMondescaleNetworkSchema();
   const agencySchema = buildNetworkAwareTravelAgencySchema(site);
   const breadcrumbSchema = buildBreadcrumbSchema([
@@ -270,6 +279,22 @@ export default function DestinationPage({ data }) {
       </section>
 
       {sections.map((section) => <SectionContent key={section.id || section.key} section={section} />)}
+
+      {editorialRelations.length ? (
+        <section className={styles["de-section"]} aria-label={`Destinations liées à ${d.name}`}>
+          <div className={styles["de-shell"]}>
+            <p className={styles["de-kicker"]}>Destinations associées</p>
+            <h2>Vous aimerez aussi</h2>
+            <div className={styles["de-actions"]}>
+              {editorialRelations.map((item) => (
+                <Link key={item.href} href={item.href}>
+                  Découvrir {item.name}
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       {faqs.length ? (
         <section className={styles["de-faq"]}>
