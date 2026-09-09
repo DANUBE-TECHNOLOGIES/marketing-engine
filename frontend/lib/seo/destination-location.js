@@ -1,8 +1,18 @@
-export function destinationCoordinates(destination) {
-  const latitude = Number(destination?.latitude);
-  const longitude = Number(destination?.longitude);
+function finiteCoordinate(value) {
+  if (value === null || value === undefined) return null;
 
-  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+  const raw = typeof value === "string" ? value.trim() : value;
+  if (raw === "") return null;
+
+  const number = Number(raw);
+  return Number.isFinite(number) ? number : null;
+}
+
+export function destinationCoordinates(destination) {
+  const latitude = finiteCoordinate(destination?.latitude);
+  const longitude = finiteCoordinate(destination?.longitude);
+
+  if (latitude === null || longitude === null) {
     return null;
   }
 
@@ -20,3 +30,5 @@ export function destinationMapUrl(destination) {
   const query = encodeURIComponent(`${coordinates.latitude},${coordinates.longitude}`);
   return `https://www.google.com/maps/search/?api=1&query=${query}`;
 }
+
+export { finiteCoordinate };
