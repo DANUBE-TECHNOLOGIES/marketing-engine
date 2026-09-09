@@ -20,74 +20,89 @@ function installmentLabel(counts) {
   return `${labels.slice(0, -1).join(", ")} ou ${labels.at(-1)}`;
 }
 
-function safePaymentBody(content) {
+function normalizedFeeMode(value) {
+  const mode = String(value || "unspecified").trim();
+  return ALLOWED_FEE_MODES.has(mode) ? mode : "unspecified";
+}
+
+function configuredPaymentBody(content) {
+  return String(content.body || content.text || content.description || "").trim() || null;
+}
+
+function factualInstallmentText(content) {
   const counts = normalizeInstallmentCounts(content.installmentCounts);
-  const rawFeeMode = String(content.feeMode || "unspecified").trim();
-  const feeMode = ALLOWED_FEE_MODES.has(rawFeeMode) ? rawFeeMode : "unspecified";
+  if (!counts.length) return null;
+  const feeMode = normalizedFeeMode(content.feeMode);
+  const suffix = feeMode === "without-fees" ? " sans frais" : feeMode === "with-fees" ? " avec frais" : "";
+  return `Modalités publiées : règlement en ${installmentLabel(counts)}${suffix}.`;
+}
 
-  if (!counts.length) {
-    return content.body || content.text || "Votre agence peut étudier avec vous une solution de règlement échelonné adaptée à votre réservation.";
-  }
-
-  const fees = feeMode === "without-fees" ? " sans frais" : "";
-  return content.body || `Selon votre réservation et les conditions applicables, votre agence peut vous proposer un règlement en ${installmentLabel(counts)}${fees}.`;
+function configuredPaymentAction(content) {
+  const cta = content.primaryCta && typeof content.primaryCta === "object" ? content.primaryCta : null;
+  const label = String(content.ctaLabel || cta?.label || "").trim();
+  const href = String(cta?.href || content.ctaHref || "").trim();
+  return label && href ? { label, href } : null;
 }
 
 export default function FlexiblePaymentRenderer({ section, site }) {
   const content = getSectionContent(section);
   const variant = content.variant === "compact" ? "compact" : "enriched";
-  const ctaLabel = content.ctaLabel || content.primaryCta?.label || "Étudier mes possibilités de paiement";
-  const ctaHref = content.primaryCta?.href || (content.ctaMode === "quote" ? "devis" : "contact");
   const installmentCounts = normalizeInstallmentCounts(content.installmentCounts);
-  const feeMode = ALLOWED_FEE_MODES.has(content.feeMode) ? content.feeMode : "unspecified";
-  const eyebrow = content.eyebrow || "Facilités de paiement";
+  const feeMode = normalizedFeeMode(content.feeMode);
+  const body = configuredPaymentBody(content);
+  const installmentText = factualInstallmentText(content);
+  const action = configuredPaymentAction(content);
+  const title = getSectionTitle(section, installmentCounts.length ? "Modalités de paiement publiées" : null);
+  const eyebrow = String(content.eyebrow || "").trim() || null;
+
+  if (!title && !body && !installmentText && !content.disclaimer && !action) return null;
 
   return (
     <section
       className={`public-site-section public-site-cta public-site-flexible-payment public-site-flexible-payment--${variant}`}
       data-payment-variant={variant}
-      aria-label="Facilités de paiement"
+      aria-label={title || "Informations de paiement publiées"}
     >
       <div className="public-site-container">
-        <p className="public-site-eyebrow">{eyebrow}</p>
-
-        <h2>
-          {getSectionTitle(section, "Payez vos billets d’avion et vos voyages en plusieurs fois")}
-        </h2>
-
-        <p>{safePaymentBody(content)}</p>
-
-        {installmentCounts.length ? (
-          <p className="public-site-flexible-payment-installments">
-            Paiement possible en <strong>{installmentLabel(installmentCounts)}</strong>
-            {feeMode === "without-fees" ? " sans frais" : ""}
-          </p>
+        {eyebrow ? <p className="public-site-eyebrow">{eyebrow}</p> : null}
+        {title ? <h2>{title}</h2> : null}
+        {body ? <p>{body}</p> : null}
+        {installmentText ? (
+          <p className="public-site-flexible-payment-installments">{installmentText}</p>
         ) : null}
-
         {content.disclaimer ? <small>{content.disclaimer}</small> : null}
 
-        <div className="public-site-hero-actions">
-          <TrackedConversionLink
-            className="public-site-button"
-            href={resolvePublicCtaHref(site, ctaHref, "contact")}
-            tracking={{
-              conversionType: "flexible_payment_cta",
-              siteId: site?.id,
-              siteSlug: site?.slug,
-              paymentVariant: variant,
-              paymentProducts: content.products,
-              paymentInstallments: installmentCounts,
-              paymentFeeMode: feeMode,
-              paymentCtaMode: content.ctaMode || "contact",
-              ctaLabel,
-            }}
-          >
-            {ctaLabel}
-          </TrackedConversionLink>
-        </div>
+        {action ? (
+          <div className="public-site-hero-actions">
+            <TrackedConversionLink
+              className="public-site-button"
+              href={resolvePublicCtaHref(site, action.href, "contact", { label: action.label })}
+              tracking={{
+                conversionType: "flexible_payment_cta",
+                siteId: site?.id,
+                siteSlug: site?.slug,
+                paymentVariant: variant,
+                paymentProducts: content.products,
+                paymentInstallments: installmentCounts,
+                paymentFeeMode: feeMode,
+                paymentCtaMode: content.ctaMode || null,
+                ctaLabel: action.label,
+              }}
+            >
+              {action.label}
+            </TrackedConversionLink>
+          </div>
+        ) : null}
       </div>
     </section>
   );
 }
 
-export { installmentLabel, normalizeInstallmentCounts, safePaymentBody };
+export {
+  configuredPaymentAction,
+  configuredPaymentBody,
+  factualInstallmentText,
+  installmentLabel,
+  normalizeInstallmentCounts,
+  normalizedFeeMode,
+};
