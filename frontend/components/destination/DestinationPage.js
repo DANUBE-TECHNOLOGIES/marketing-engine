@@ -14,6 +14,10 @@ import {
 import { resolvedTargetCities } from "../../lib/seo/local-area-config";
 import { absoluteUrl } from "../../lib/seo/site-url";
 import {
+  destinationCoordinates,
+  destinationMapUrl,
+} from "../../lib/seo/destination-location";
+import {
   destinationLocalCopy,
   rotateCommercialLinks,
 } from "../../lib/seo/destination-local-differentiation";
@@ -183,8 +187,20 @@ export default function DestinationPage({ data }) {
   const localCopy = destinationLocalCopy({ site, destination: d, nearby });
   const commercialLinks = rotateCommercialLinks(commercialPageLinks(site), site, d);
   const destinationHeading = city ? `Voyage à ${d.name} depuis ${city}` : `Voyage à ${d.name}`;
+  const coordinates = destinationCoordinates(d);
+  const mapUrl = destinationMapUrl(d);
 
-  const destinationSchema = buildDestinationSchema(data);
+  const destinationSchema = {
+    ...buildDestinationSchema(data),
+    geo: coordinates
+      ? {
+          "@type": "GeoCoordinates",
+          latitude: coordinates.latitude,
+          longitude: coordinates.longitude,
+        }
+      : undefined,
+    hasMap: mapUrl || undefined,
+  };
   const destinationWebPageSchema = {
     ...buildDestinationWebPageSchema(data),
     ...(editorialRelations.length
@@ -246,6 +262,11 @@ export default function DestinationPage({ data }) {
           <div className={styles["de-actions"]}>
             <Link href={data.quotePath}>Construire mon voyage</Link>
             <a href="#decouvrir">Découvrir {d.name}</a>
+            {mapUrl ? (
+              <a href={mapUrl} target="_blank" rel="noopener noreferrer">
+                Voir sur la carte
+              </a>
+            ) : null}
           </div>
         </div>
       </section>
