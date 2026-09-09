@@ -6,7 +6,11 @@ import {
   buildDestinationSchema,
   buildDestinationWebPageSchema,
 } from "../../lib/seo/json-ld";
-import { buildDestinationFaqSchema } from "../../lib/seo/destination-faq-schema";
+import {
+  buildDestinationFaqSchema,
+  destinationFaqItems,
+  linkDestinationFaqToWebPage,
+} from "../../lib/seo/destination-faq-schema";
 import {
   buildMondescaleNetworkSchema,
   buildNetworkAwareTravelAgencySchema,
@@ -173,7 +177,7 @@ function SectionContent({ section }) {
 export default function DestinationPage({ data }) {
   const { destination: d, site } = data;
   const sections = Array.isArray(d.sections) ? d.sections : [];
-  const faqs = Array.isArray(d.faqs) ? d.faqs : [];
+  const faqs = destinationFaqItems(data);
   const editorialRelations = Array.isArray(data.editorialRelations)
     ? data.editorialRelations.filter((item) => item?.name && item?.href)
     : [];
@@ -204,7 +208,7 @@ export default function DestinationPage({ data }) {
       : undefined,
     hasMap: mapUrl || undefined,
   };
-  const destinationWebPageSchema = {
+  const baseDestinationWebPageSchema = {
     ...buildDestinationWebPageSchema(data),
     ...(editorialRelations.length
       ? { relatedLink: editorialRelations.map((item) => absoluteUrl(item.href)) }
@@ -218,6 +222,10 @@ export default function DestinationPage({ data }) {
     { name: d.name, path: data.canonicalPath },
   ]);
   const destinationFaqSchema = buildDestinationFaqSchema(data);
+  const destinationWebPageSchema = linkDestinationFaqToWebPage(
+    baseDestinationWebPageSchema,
+    destinationFaqSchema
+  );
 
   const facts = [
     ["Meilleure période", d.bestTime],
