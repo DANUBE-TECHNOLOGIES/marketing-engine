@@ -1,7 +1,23 @@
 import Link from "next/link";
 
-import { getItems, getSectionContent, getSectionTitle } from "./helpers";
+import JsonLd from "../../JsonLd";
+import {
+  getSectionContent,
+  getSectionTitle,
+} from "./helpers";
+import {
+  getSectionType,
+  isSectionVisible,
+  sortSections,
+} from "../../page-builder/shared/blockUtils";
 import { resolvedTargetCities } from "../../../lib/seo/local-area-config";
+import {
+  DESTINATION_SECTION_TYPES,
+  destinationHref,
+  destinationSectionItems,
+  destinationSiteRoot,
+} from "../../../lib/seo/destination-public-collection";
+import { buildDestinationCollectionSchemas } from "../../../lib/seo/destination-collection-schema";
 
 function joinCities(values) {
   if (!values.length) return "";
@@ -9,32 +25,7 @@ function joinCities(values) {
   if (values.length === 2) return `${values[0]} et ${values[1]}`;
   return `${values.slice(0, -1).join(", ")} et ${values[values.length - 1]}`;
 }
-function siteRoot(site) { return String(site?.basePath || `/agence/${encodeURIComponent(site?.slug || "")}`).replace(/\/$/, ""); }
 function localCity(site) { return String(site?.agency?.city || site?.city || "").trim(); }
-function destinationHref(site, item) {
-  const root = siteRoot(site);
-  const explicit = String(item?.href || item?.url || "").trim();
-
-  if (explicit) {
-    if (/^(https?:|mailto:|tel:|#)/i.test(explicit)) return explicit;
-
-    const legacyDestination = explicit.match(/^\/destinations\/([^/?#]+)\/?(?:[?#].*)?$/i);
-    if (legacyDestination) {
-      return `${root}/destination/${encodeURIComponent(decodeURIComponent(legacyDestination[1]))}`;
-    }
-
-    if (explicit.startsWith("/agence/")) return explicit;
-
-    if (explicit.startsWith("/")) {
-      return `${root}/${explicit.replace(/^\/+/, "")}`;
-    }
-
-    return `${root}/${explicit.replace(/^\/+|\/+$/g, "")}`;
-  }
-
-  if (!item?.slug) return null;
-  return `${root}/destination/${encodeURIComponent(item.slug)}`;
-}
 function destinationImage(item) {
   if (!item || typeof item !== "object") return null;
   const candidates = [
@@ -79,21 +70,44 @@ function DestinationCard({ item, site }) {
   </article>;
   return href ? <Link href={href} aria-label={city ? `Découvrir ${title} avec notre agence de voyages à ${city}` : `Découvrir nos voyages vers ${title}`} style={{color:"inherit",textDecoration:"none"}}>{card}</Link> : card;
 }
-export default function DestinationsRenderer({ section, site }) {
-  const content = getSectionContent(section);
-  const source = String(content.__dataSource || content.source || (Array.isArray(content.destinationIds) && content.destinationIds.length ? "travel-core" : "automatic")).toLowerCase();
-  const dynamicSource = ["travel-core","catalog","automatic","auto"].includes(source);
-  const items = getItems(section, dynamicSource ? ["destinations","items"] : ["items"]);
-  const introduction = content.text || content.description || defaultDestinationsIntro(site); const root = siteRoot(site); const city = localCity(site);
-  if (!items.length && content.showWhenEmpty !== true) return null;
-  return <section className="public-site-section public-site-destinations"><div className="public-site-container">
-    <p className="public-site-section-kicker">Inspirations</p><h2>{getSectionTitle(section, defaultDestinationsTitle(site))}</h2>{introduction ? <p className="public-site-section-intro">{introduction}</p> : null}
-    {items.length ? <div className="public-site-destination-grid">{items.map((item,index)=><DestinationCard key={item.id||item.slug||item.title||index} item={item} site={site}/>)}</div> : null}
-    <div className="public-site-related-links" aria-label={city ? `Conseils voyage de notre agence à ${city}` : "Conseils pour choisir votre voyage"}>
-      <Link href={`${root}/inspiration`}>{city ? `Conseils et inspirations voyage depuis ${city}` : "Conseils et idées pour préparer votre voyage"}</Link>
-      <Link href={`${root}/services`}>{city ? `Services de notre agence de voyages à ${city}` : "Services de votre agence de voyages"}</Link>
-      <Link href={`${root}/contact`}>{city ? `Demander conseil à notre agence de ${city}` : "Demander conseil à votre agence"}</Link>
-    </div>
-  </div></section>;
+function isDestinationCollectionPage(page) {
+  return String(page?.slug || "").trim().toLowerCase() === "destinations";
 }
-export { defaultDestinationsIntro, defaultDestinationsTitle, destinationHref, destinationImage, destinationImageAlt, joinCities, localCity, siteRoot };
+function destinationCollectionSections(page) {
+  return sortSections(page?.sections || page?.blocks)
+    .filter(isSectionVisible)
+    .filter((candidate) => DESTINATION_SECTION_TYPES.has(getSectionType(candidate)));
+}
+function sameSection(left, right) {
+  if (left === right) return true;
+  if (left?.id && right?.id) return left.id === right.id;
+  if (left?.key && right?.key) return left.key === right.key;
+  return false;
+}
+export default function DestinationsRenderer({ section, site, page }) {
+  const content = getSectionContent(section);
+  const items = destinationSectionItems(section);
+  const introduction = content.text || content.description || defaultDestinationsIntro(site); const root = destinationSiteRoot(site); const city = localCity(site);
+  if (!items.length && content.showWhenEmpty !== true) return null;
+
+  const collectionSections = isDestinationCollectionPage(page)
+    ? destinationCollectionSections(page)
+    : [];
+  const collectionSchemas = collectionSections.length && sameSection(collectionSections[0], section)
+    ? buildDestinationCollectionSchemas({ site, sections: collectionSections })
+    : [];
+
+  return <>
+    {collectionSchemas.map((schema) => <JsonLd key={schema["@id"]} data={schema} />)}
+    <section className="public-site-section public-site-destinations"><div className="public-site-container">
+      <p className="public-site-section-kicker">Inspirations</p><h2>{getSectionTitle(section, defaultDestinationsTitle(site))}</h2>{introduction ? <p className="public-site-section-intro">{introduction}</p> : null}
+      {items.length ? <div className="public-site-destination-grid">{items.map((item,index)=><DestinationCard key={item.id||item.slug||item.title||index} item={item} site={site}/>)}</div> : null}
+      <div className="public-site-related-links" aria-label={city ? `Conseils voyage de notre agence à ${city}` : "Conseils pour choisir votre voyage"}>
+        <Link href={`${root}/inspiration`}>{city ? `Conseils et inspirations voyage depuis ${city}` : "Conseils et idées pour préparer votre voyage"}</Link>
+        <Link href={`${root}/services`}>{city ? `Services de notre agence de voyages à ${city}` : "Services de votre agence de voyages"}</Link>
+        <Link href={`${root}/contact`}>{city ? `Demander conseil à notre agence de ${city}` : "Demander conseil à votre agence"}</Link>
+      </div>
+    </div></section>
+  </>;
+}
+export { defaultDestinationsIntro, defaultDestinationsTitle, destinationHref, destinationImage, destinationImageAlt, joinCities, localCity, destinationSiteRoot as siteRoot };
