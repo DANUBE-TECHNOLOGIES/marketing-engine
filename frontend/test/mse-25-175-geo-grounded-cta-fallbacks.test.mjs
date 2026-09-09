@@ -19,11 +19,12 @@ test("MSE-25.175 empty CTA sections render nothing", () => {
   assert.match(source, /\{title \? <h2>\{title\}<\/h2> : null\}/);
 });
 
-test("MSE-25.175 preserves explicitly published structured and legacy CTA labels", () => {
-  assert.match(source, /content\.primaryCta \|\| legacyCta\(content\.primaryButton\)/);
-  assert.match(source, /content\.secondaryCta \|\| legacyCta\(content\.secondaryButton\)/);
-  assert.match(source, /if \(!cta\?\.label\) return null;/);
-  assert.match(source, /resolvePublicCtaHref\(site, cta\.href, "contact", \{ label: cta\.label \}\)/);
+test("MSE-25.175 preserves only explicitly published structured CTA actions", () => {
+  assert.match(source, /configuredCta\(site, content\.primaryCta\)/);
+  assert.match(source, /configuredCta\(site, content\.secondaryCta\)/);
+  assert.doesNotMatch(source, /legacyCta/);
+  assert.doesNotMatch(source, /content\.primaryButton/);
+  assert.doesNotMatch(source, /content\.secondaryButton/);
 });
 
 test("MSE-25.175 keeps historical home suppression", () => {
