@@ -142,7 +142,8 @@ class DestinationService {
       normalizedTenantId,
       site.slug
     );
-    const { relationsFrom: _relationsFrom, ...publicDestination } = destination;
+    const publicDestination = { ...destination };
+    delete publicDestination.relationsFrom;
 
     const pages = Array.isArray(site.pages)
       ? site.pages
