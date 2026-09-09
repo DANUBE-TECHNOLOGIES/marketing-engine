@@ -46,7 +46,7 @@ function memberEntityId(site, member, index) {
   const rawKey = clean(member?.id || member?.email || member?.name || member?.title || `member-${index + 1}`)
     .toLocaleLowerCase("fr-FR")
     .replace(/\s+/g, "-");
-  return `${absoluteUrl(`${siteRoot(site)}/equipe`)}#person-${encodeURIComponent(rawKey)}`;
+  return `${absoluteUrl(siteRoot(site))}#person-${encodeURIComponent(rawKey)}`;
 }
 
 function firstText(...values) {
