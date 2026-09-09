@@ -43,31 +43,27 @@ export default function LocalSeoAreaLinks({ site }) {
     <>
       <section className="public-site-section" aria-labelledby="local-area-title">
         <div className="public-site-container public-site-prose">
-          <p className="public-site-eyebrow">Votre agence de proximité</p>
-          <h2 id="local-area-title">Votre agence de voyages à {city} et dans les communes voisines</h2>
+          <p className="public-site-eyebrow">Zone locale publiée</p>
+          <h2 id="local-area-title">Votre agence de voyages à {city} et les secteurs présentés sur ce mini-site</h2>
           <p>
-            Installée à {city}, notre agence accompagne aussi les voyageurs de {joinCities(closeArea)}
-            dans la préparation de leur projet de voyage. Vous pouvez échanger avec un conseiller qui suit
-            votre projet depuis les premières recherches jusqu’au retour.
+            L’agence est implantée à {city}. Ce mini-site présente également l’agence pour les secteurs de {joinCities(closeArea)}.
           </p>
           {extendedArea.length ? (
             <p>
-              Notre secteur de proximité s’étend également à {joinCities(extendedArea)} : vous pouvez
-              contacter l’équipe de {city} pour une recherche, un devis ou un rendez-vous en agence.
+              Les autres secteurs de proximité publiés sur ce mini-site sont {joinCities(extendedArea)}.
             </p>
           ) : null}
           {extended.length ? (
             <p>
-              Au-delà de ce premier cercle, l’équipe de {city} accompagne également des projets de voyageurs
-              situés à {joinCities(extended)}. Cette zone élargie complète notre bassin de clientèle sans
-              remplacer l’ancrage de proximité autour de {city}.
+              Une zone locale élargie est également présentée pour {joinCities(extended)}. Ces communes complètent
+              le contexte géographique du mini-site sans modifier l’adresse d’implantation de l’agence à {city}.
             </p>
           ) : null}
           <div className="public-site-related-links" aria-label={`Découvrir l’agence de voyages de ${city}`}>
-            <Link href={`${root}/services`}>Services de l’agence de voyages de {city}</Link>
-            <Link href={`${root}/destinations`}>Destinations conseillées depuis {city}</Link>
-            <Link href={`${root}/inspiration`}>Conseils et inspirations voyage à {city}</Link>
-            <Link href={`${root}/contact`}>Contacter l’agence de voyages de {city}</Link>
+            <Link href={`${root}/services`}>Services publiés par l’agence de {city}</Link>
+            <Link href={`${root}/destinations`}>Destinations publiées depuis {city}</Link>
+            <Link href={`${root}/inspiration`}>Conseils et inspirations publiés depuis {city}</Link>
+            <Link href={`${root}/contact`}>Coordonnées de l’agence de {city}</Link>
           </div>
         </div>
       </section>
