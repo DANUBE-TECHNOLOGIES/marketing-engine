@@ -40,7 +40,10 @@ import {
   buildPageFaqSchema,
   linkFaqToWebPage,
 } from "../../../../lib/seo/page-faq-schema";
-import { buildPageSemanticsSchema } from "../../../../lib/seo/page-semantics-schema";
+import {
+  buildPageSemanticsSchema,
+  mergePageSemanticsIntoWebPage,
+} from "../../../../lib/seo/page-semantics-schema";
 import { assessLocalContentQuality } from "../../../../lib/seo/local-content-quality";
 import {
   buildLocalPageSeo,
@@ -293,8 +296,9 @@ export default async function AgencySitePage({ params }) {
     image: localSeo.image,
     serviceCatalog,
   });
-  const webPageSchema = linkFaqToWebPage(baseWebPageSchema, faqSchema);
+  const faqAwareWebPageSchema = linkFaqToWebPage(baseWebPageSchema, faqSchema);
   const pageSemanticsSchema = buildPageSemanticsSchema({ page, url: currentUrl });
+  const webPageSchema = mergePageSemanticsIntoWebPage(faqAwareWebPageSchema, pageSemanticsSchema);
   const sharedHero = !isHomePage(pageSlug) ? homeHeroSection(homePage) : null;
   const needsFallbackHeading = !legalPage && !pageHasHero(page) && !sharedHero;
   const legalRuntimeHtml = legalPage ? resolveLegalPageHtml(pageSlug, runtime) : null;
@@ -305,7 +309,6 @@ export default async function AgencySitePage({ params }) {
       <JsonLd data={buildNetworkAwareTravelAgencySchema(site)} />
       <JsonLd data={buildBreadcrumbSchema(breadcrumbItems)} />
       <JsonLd data={webPageSchema} />
-      {pageSemanticsSchema ? <JsonLd data={pageSemanticsSchema} /> : null}
       {serviceCatalog ? <JsonLd data={serviceCatalog} /> : null}
       {partnerDirectorySchemas.map((schema) => <JsonLd key={schema["@id"]} data={schema} />)}
       {faqSchema ? <JsonLd data={faqSchema} /> : null}
