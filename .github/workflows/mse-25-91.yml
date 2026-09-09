@@ -50,6 +50,7 @@ jobs:
         run: |
           node --test test/mse-25-91-canonical-public-reconvergence.test.mjs
           node --test test/mse-25-85-sitemap-cache-safety.test.mjs
+          node --test test/mse-25-152-geo-team-person-entities.test.mjs
 
       - name: Lint canonical public files
         working-directory: frontend
