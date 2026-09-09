@@ -1,8 +1,8 @@
 import {
-  getItems,
   getSectionContent,
   getSectionTitle,
 } from "./helpers";
+import { faqItemsForSection } from "../../../lib/public-faq";
 
 function clean(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
@@ -25,13 +25,7 @@ function resolvedFaqTitle(section, site) {
 }
 
 function validFaqItems(section) {
-  return getItems(section, ["items", "questions", "faqs"])
-    .map((item) => ({
-      ...item,
-      question: clean(item?.question || item?.title),
-      answer: clean(item?.answer || item?.text || item?.description),
-    }))
-    .filter((item) => item.question && item.answer);
+  return faqItemsForSection(section);
 }
 
 export default function FaqRenderer({ section, site }) {
