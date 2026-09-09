@@ -2,7 +2,7 @@ const PAYMENT_METHODS = Object.freeze([
   {
     id: "cb",
     label: "Carte bancaire",
-    logo: "https://d2csxpduxe849s.cloudfront.net/media/F44207E3-1DDE-4798-B0FCC94F6227FCB/8642409E-0CD7-4EB5-A36E36D5BA3E9BE7/webimage-0D45FA73-E241-49FC-9F4CCF6FD9747B83.jpg",
+    logo: "https://d2csxpduxe849s.cloudfront.net/media/F44207E3-1DDE-4798-B0FCC94F6227FCB7/8642409E-0CD7-4EB5-A36E36D5BA3E9BE7/webimage-0D45FA73-E241-49FC-9F4CCF6FD9747B83.jpg",
   },
   {
     id: "visa",
