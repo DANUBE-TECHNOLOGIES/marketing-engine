@@ -79,6 +79,7 @@ jobs:
           node --test test/mse-25-181-geo-grounded-stats.test.mjs
           node --test test/mse-25-182-geo-grounded-contact.test.mjs
           node --test test/mse-25-183-geo-grounded-hours.test.mjs
+          node --test test/mse-25-184-geo-grounded-reviews.test.mjs
 
       - name: Lint canonical public files
         working-directory: frontend
@@ -109,6 +110,7 @@ jobs:
           components/public-site/renderers/StatsRenderer.js
           components/public-site/renderers/ContactRenderer.js
           components/public-site/renderers/HoursRenderer.js
+          components/public-site/renderers/ReviewsRenderer.js
           components/public-site/renderers/TeamRenderer.js
           components/public-site/renderers/PartnersRenderer.js
           components/public-site/renderers/FaqRenderer.js
