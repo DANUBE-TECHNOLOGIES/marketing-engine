@@ -55,12 +55,14 @@ jobs:
           node --test test/mse-25-157-geo-payment-reassurance-authority.test.mjs
           node --test test/mse-25-158-geo-professional-affiliation-authority.test.mjs
           node --test test/mse-25-159-geo-faq-visible-schema-parity.test.mjs
+          node --test test/mse-25-160-geo-faq-canonical-graph-linkage.test.mjs
 
       - name: Lint canonical public files
         working-directory: frontend
         run: >-
           npx eslint
           app/agence/[siteSlug]/layout.js
+          app/agence/[siteSlug]/[[...pageSlug]]/page.js
           components/public-site/PublicBrandLogo.js
           components/public-site/PublicReassuranceBand.js
           components/public-site/renderers/HeroV2Renderer.js
