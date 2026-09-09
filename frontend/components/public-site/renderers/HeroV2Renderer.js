@@ -5,7 +5,6 @@ import {
 } from "./helpers";
 import {
   resolvePublicCtaHref,
-  sitePageHref,
 } from "./ctaLinks";
 
 const NETWORK_HOME_HERO_IMAGE =
