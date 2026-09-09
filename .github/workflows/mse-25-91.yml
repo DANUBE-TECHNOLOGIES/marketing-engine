@@ -57,6 +57,7 @@ jobs:
           node --test test/mse-25-159-geo-faq-visible-schema-parity.test.mjs
           node --test test/mse-25-160-geo-faq-canonical-graph-linkage.test.mjs
           node --test test/mse-25-161-geo-canonical-webpage-semantic-consolidation.test.mjs
+          node --test test/mse-25-162-geo-collection-webpage-consolidation.test.mjs
 
       - name: Lint canonical public files
         working-directory: frontend
@@ -64,13 +65,17 @@ jobs:
           npx eslint
           app/agence/[siteSlug]/layout.js
           app/agence/[siteSlug]/[[...pageSlug]]/page.js
+          app/agence/[siteSlug]/inspiration/page.js
           components/public-site/PublicBrandLogo.js
           components/public-site/PublicReassuranceBand.js
           components/public-site/renderers/HeroV2Renderer.js
           components/public-site/renderers/TeamRenderer.js
           components/public-site/renderers/PartnersRenderer.js
           components/public-site/renderers/FaqRenderer.js
+          components/public-site/renderers/DestinationsRenderer.js
           lib/public-faq.js
+          lib/seo/collection-webpage-schema.js
+          lib/seo/destination-public-collection.js
           lib/seo/page-faq-schema.js
           lib/seo/page-semantics-schema.js
           lib/showcase-url.js
