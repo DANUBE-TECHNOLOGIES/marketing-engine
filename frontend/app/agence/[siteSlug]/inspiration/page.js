@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import JsonLd from "../../../../components/JsonLd";
 import { publicSiteApi } from "../../../../lib/public-site-api";
+import { consolidateCollectionWebPage } from "../../../../lib/seo/collection-webpage-schema";
 import {
   buildBreadcrumbSchema,
   buildLocalWebPageSchema,
@@ -77,21 +78,16 @@ function inspirationIntroduction(site) {
 
 function inspirationCmsEditorial(site, page) {
   const blocks =
-    (Array.isArray(page?.contentBlocks) &&
-      page.contentBlocks) ||
-    (Array.isArray(page?.sections) &&
-      page.sections) ||
-    (Array.isArray(page?.blocks) &&
-      page.blocks) ||
+    (Array.isArray(page?.contentBlocks) && page.contentBlocks) ||
+    (Array.isArray(page?.sections) && page.sections) ||
+    (Array.isArray(page?.blocks) && page.blocks) ||
     [];
 
   const block = blocks.find((item) => {
     const content =
-      item?.jsonContent &&
-      typeof item.jsonContent === "object"
+      item?.jsonContent && typeof item.jsonContent === "object"
         ? item.jsonContent
-        : item?.content &&
-            typeof item.content === "object"
+        : item?.content && typeof item.content === "object"
           ? item.content
           : {};
 
@@ -105,35 +101,21 @@ function inspirationCmsEditorial(site, page) {
       .trim()
       .toLowerCase();
 
-    const status = String(
-      item?.status || ""
-    )
-      .trim()
-      .toLowerCase();
+    const status = String(item?.status || "").trim().toLowerCase();
 
-    return (
-      ["text", "rich_text", "rich-text"].includes(type) &&
-      status === "published"
-    );
+    return ["text", "rich_text", "rich-text"].includes(type) && status === "published";
   });
 
   if (!block) return null;
 
   const content =
-    block?.jsonContent &&
-    typeof block.jsonContent === "object"
+    block?.jsonContent && typeof block.jsonContent === "object"
       ? block.jsonContent
-      : block?.content &&
-          typeof block.content === "object"
+      : block?.content && typeof block.content === "object"
         ? block.content
         : {};
 
-  const text = String(
-    content.text ||
-      content.body ||
-      content.description ||
-      ""
-  )
+  const text = String(content.text || content.body || content.description || "")
     .replace(/\s+/g, " ")
     .trim();
 
@@ -142,24 +124,15 @@ function inspirationCmsEditorial(site, page) {
   const legacySeed =
     /accompagne ses clients avec conseil, expertise et suivi personnalisé avant, pendant et après leur voyage\.?$/i;
 
-  if (legacySeed.test(text)) {
-    return null;
-  }
+  if (legacySeed.test(text)) return null;
 
-  const cmsTitle = String(
-    content.title || ""
-  )
-    .replace(/\s+/g, " ")
-    .trim();
+  const cmsTitle = String(content.title || "").replace(/\s+/g, " ").trim();
 
   return {
     title:
-      cmsTitle &&
-      cmsTitle.toLowerCase() !==
-        "inspirations voyage"
+      cmsTitle && cmsTitle.toLowerCase() !== "inspirations voyage"
         ? cmsTitle
         : inspirationHeading(site),
-
     text,
   };
 }
@@ -257,7 +230,7 @@ export default async function InspirationIndexPage({ params }) {
     { name: "Accueil", path: site.basePath },
     { name: "Inspirations voyage", path: canonical },
   ]);
-  const webPage = buildLocalWebPageSchema({
+  const baseWebPage = buildLocalWebPageSchema({
     site,
     page: {
       slug: "inspiration",
@@ -268,13 +241,16 @@ export default async function InspirationIndexPage({ params }) {
     description: seo.description,
   });
   const collectionSchemas = buildInspirationCollectionSchemas({ siteSlug, items });
+  const collectionGraph = consolidateCollectionWebPage(baseWebPage, collectionSchemas);
+  const webPage = collectionGraph.webPage;
+  const remainingCollectionSchemas = collectionGraph.schemas;
 
   return (
     <>
       <JsonLd data={buildTravelAgencySchema(site)} />
       <JsonLd data={breadcrumb} />
       <JsonLd data={webPage} />
-      {collectionSchemas.map((schema) => <JsonLd key={schema["@id"]} data={schema} />)}
+      {remainingCollectionSchemas.map((schema) => <JsonLd key={schema["@id"]} data={schema} />)}
 
       <section className="public-site-section">
         <div className="public-site-container public-site-prose">
@@ -285,14 +261,8 @@ export default async function InspirationIndexPage({ params }) {
           </nav>
 
           <p className="public-site-eyebrow">Idées & conseils</p>
-          <h1>
-            {cmsEditorial?.title ||
-              inspirationHeading(site)}
-          </h1>
-          <p>
-            {cmsEditorial?.text ||
-              inspirationIntroduction(site)}
-          </p>
+          <h1>{cmsEditorial?.title || inspirationHeading(site)}</h1>
+          <p>{cmsEditorial?.text || inspirationIntroduction(site)}</p>
         </div>
       </section>
 
@@ -314,9 +284,7 @@ export default async function InspirationIndexPage({ params }) {
                   itemSeo.openGraph?.imageUrl ||
                   null;
                 const title = String(item.title || "Cette inspiration").trim();
-                const published = formatPublishedDate(
-                  item.publishedAt || item.createdAt
-                );
+                const published = formatPublishedDate(item.publishedAt || item.createdAt);
                 const articlePath = inspirationVisiblePath(siteSlug, item);
                 if (!articlePath) return null;
 
@@ -338,9 +306,7 @@ export default async function InspirationIndexPage({ params }) {
                       {published ? (
                         <p className="public-site-content-date">
                           Publié le{" "}
-                          <time dateTime={published.iso}>
-                            {published.label}
-                          </time>
+                          <time dateTime={published.iso}>{published.label}</time>
                         </p>
                       ) : null}
                       {item.excerpt ? (
@@ -361,9 +327,7 @@ export default async function InspirationIndexPage({ params }) {
                 Votre agence prépare actuellement de nouvelles idées de voyages.
                 Contactez-nous pour construire dès maintenant votre prochain départ.
               </p>
-              <Link href={contactPath}>
-                Contacter l’agence
-              </Link>
+              <Link href={contactPath}>Contacter l’agence</Link>
             </div>
           )}
 

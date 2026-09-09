@@ -28,6 +28,9 @@ import {
   runtimeLegalValues,
 } from "../../../../lib/public-brand-legal-runtime";
 
+import { consolidateCollectionWebPage } from "../../../../lib/seo/collection-webpage-schema";
+import { buildDestinationCollectionSchemas } from "../../../../lib/seo/destination-collection-schema";
+import { publicDestinationCollectionSections } from "../../../../lib/seo/destination-public-collection";
 import {
   buildBreadcrumbSchema,
   buildServiceCatalogSchema,
@@ -109,6 +112,11 @@ function isServicesPage(pageSlug, page) {
 function isPartnersPage(pageSlug, page) {
   const slug = normalizePageSlug(pageSlug || page?.slug);
   return ["partenaires", "partners", "nos-partenaires"].includes(slug);
+}
+
+function isDestinationsPage(pageSlug, page) {
+  const slug = normalizePageSlug(pageSlug || page?.slug);
+  return slug === "destinations";
 }
 
 function isLegalPage(pageSlug, page) {
@@ -283,9 +291,16 @@ export default async function AgencySitePage({ params }) {
   const legalPage = isLegalPage(pageSlug, page);
   const servicesPage = isServicesPage(pageSlug, page);
   const partnersPage = isPartnersPage(pageSlug, page);
+  const destinationsPage = isDestinationsPage(pageSlug, page);
   const rawServiceCatalog = servicesPage ? buildServiceCatalogSchema(site, page) : null;
   const serviceCatalog = linkServiceCatalogToPage(rawServiceCatalog, currentUrl);
   const partnerDirectorySchemas = partnersPage ? buildPartnerDirectorySchemas({ site, pageUrl: currentUrl }) : [];
+  const destinationCollectionSchemas = destinationsPage
+    ? buildDestinationCollectionSchemas({
+        site,
+        sections: publicDestinationCollectionSections(page),
+      })
+    : [];
   const faqSchema = legalPage ? null : buildPageFaqSchema(page, currentUrl);
   const baseWebPageSchema = buildServiceAwareWebPageSchema({
     site,
@@ -298,7 +313,13 @@ export default async function AgencySitePage({ params }) {
   });
   const faqAwareWebPageSchema = linkFaqToWebPage(baseWebPageSchema, faqSchema);
   const pageSemanticsSchema = buildPageSemanticsSchema({ page, url: currentUrl });
-  const webPageSchema = mergePageSemanticsIntoWebPage(faqAwareWebPageSchema, pageSemanticsSchema);
+  const semanticWebPageSchema = mergePageSemanticsIntoWebPage(faqAwareWebPageSchema, pageSemanticsSchema);
+  const destinationCollectionGraph = consolidateCollectionWebPage(
+    semanticWebPageSchema,
+    destinationCollectionSchemas
+  );
+  const webPageSchema = destinationCollectionGraph.webPage;
+  const remainingDestinationSchemas = destinationCollectionGraph.schemas;
   const sharedHero = !isHomePage(pageSlug) ? homeHeroSection(homePage) : null;
   const needsFallbackHeading = !legalPage && !pageHasHero(page) && !sharedHero;
   const legalRuntimeHtml = legalPage ? resolveLegalPageHtml(pageSlug, runtime) : null;
@@ -311,6 +332,7 @@ export default async function AgencySitePage({ params }) {
       <JsonLd data={webPageSchema} />
       {serviceCatalog ? <JsonLd data={serviceCatalog} /> : null}
       {partnerDirectorySchemas.map((schema) => <JsonLd key={schema["@id"]} data={schema} />)}
+      {remainingDestinationSchemas.map((schema) => <JsonLd key={schema["@id"]} data={schema} />)}
       {faqSchema ? <JsonLd data={faqSchema} /> : null}
 
       <div
@@ -372,6 +394,7 @@ export {
   canonicalUrl,
   homeHeroSection,
   isAliasPage,
+  isDestinationsPage,
   isHomePage,
   isLegalPage,
   isNonCanonicalPageSlug,

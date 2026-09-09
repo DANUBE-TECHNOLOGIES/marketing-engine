@@ -14,6 +14,10 @@ const rendererSource = await readFile(
   new URL("../components/public-site/renderers/DestinationsRenderer.js", import.meta.url),
   "utf8"
 );
+const routeSource = await readFile(
+  new URL("../app/agence/[siteSlug]/[[...pageSlug]]/page.js", import.meta.url),
+  "utf8"
+);
 
 test("visible destination cards and GEO collection share one URL resolver and item extractor", () => {
   assert.match(rendererSource, /destinationHref,/);
@@ -43,10 +47,12 @@ test("ItemList uses canonical destination URLs and stable TouristDestination ids
   assert.match(schemaSource, /position: index \+ 1/);
 });
 
-test("collection schema is emitted only once and only on the destinations page", () => {
-  assert.match(rendererSource, /=== "destinations"/);
-  assert.match(rendererSource, /sameSection\(collectionSections\[0\], section\)/);
-  assert.match(rendererSource, /buildDestinationCollectionSchemas\(\{ site, sections: collectionSections \}\)/);
+test("collection graph is owned once by the public route while the renderer stays visual", () => {
+  assert.match(collectionSource, /publicDestinationCollectionSections/);
+  assert.match(routeSource, /buildDestinationCollectionSchemas/);
+  assert.match(routeSource, /publicDestinationCollectionSections\(page\)/);
+  assert.match(routeSource, /consolidateCollectionWebPage/);
+  assert.doesNotMatch(rendererSource, /buildDestinationCollectionSchemas|<JsonLd/);
 });
 
 test("destination collection GEO does not add transactional or inferred expertise claims", () => {
