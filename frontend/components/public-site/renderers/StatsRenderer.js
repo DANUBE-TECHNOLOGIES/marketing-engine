@@ -9,7 +9,9 @@ export default function StatsRenderer({
   const items = getItems(section, [
     "items",
     "stats",
-  ]);
+  ]).filter((item) => item?.value != null && item?.label);
+
+  if (!items.length) return null;
 
   return (
     <section className="public-site-section public-site-stats">
@@ -17,7 +19,7 @@ export default function StatsRenderer({
         <h2>
           {getSectionTitle(
             section,
-            "Notre expertise en quelques chiffres"
+            "Quelques chiffres"
           )}
         </h2>
 
