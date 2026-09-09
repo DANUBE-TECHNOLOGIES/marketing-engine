@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { absoluteUrl } from "../../../lib/seo/site-url";
 import { getSectionContent, getSectionTitle } from "./helpers";
 import styles from "./TeamRenderer.module.css";
 
@@ -29,22 +30,23 @@ function localTeamIntro(site) {
     : "Des conseillers disponibles pour écouter votre projet et construire avec vous un voyage réellement adapté.";
 }
 
+function siteRoot(site) {
+  return String(site?.basePath || `/agence/${encodeURIComponent(site?.slug || "")}`).replace(/\/$/, "");
+}
+
 function siteHref(site, slug) {
-  const root = String(site?.basePath || `/agence/${encodeURIComponent(site?.slug || "")}`).replace(/\/$/, "");
-  return `${root}/${slug}`;
+  return `${siteRoot(site)}/${slug}`;
 }
 
 function agencyEntityId(site) {
-  const root = String(site?.basePath || `/agence/${encodeURIComponent(site?.slug || "")}`).replace(/\/$/, "");
-  return `${root}#travel-agency`;
+  return `${absoluteUrl(siteRoot(site))}#travel-agency`;
 }
 
 function memberEntityId(site, member, index) {
-  const root = String(site?.basePath || `/agence/${encodeURIComponent(site?.slug || "")}`).replace(/\/$/, "");
   const rawKey = clean(member?.id || member?.email || member?.name || member?.title || `member-${index + 1}`)
     .toLocaleLowerCase("fr-FR")
     .replace(/\s+/g, "-");
-  return `${root}/equipe#person-${encodeURIComponent(rawKey)}`;
+  return `${absoluteUrl(`${siteRoot(site)}/equipe`)}#person-${encodeURIComponent(rawKey)}`;
 }
 
 function firstText(...values) {
@@ -212,6 +214,7 @@ export default function TeamRenderer({ section, site }) {
   if (!uniqueMembers.length && content.showWhenEmpty !== true) return null;
   const singleMember = uniqueMembers.length === 1;
   const agencyId = agencyEntityId(site);
+  const agencyName = clean(site?.name || site?.agency?.name) || "Mondescale Voyages";
 
   return (
     <section className={`public-site-section public-site-team ${styles.section}`} data-team-size={uniqueMembers.length}>
@@ -238,7 +241,9 @@ export default function TeamRenderer({ section, site }) {
                   itemType="https://schema.org/Person"
                   itemID={memberEntityId(site, member, index)}
                 >
-                  <meta itemProp="worksFor" content={agencyId} />
+                  <span itemProp="worksFor" itemScope itemType="https://schema.org/TravelAgency" itemID={agencyId}>
+                    <meta itemProp="name" content={agencyName} />
+                  </span>
                   <div className={styles.portrait}>
                     {image ? (
                       <img itemProp="image" src={image} alt={memberImageAlt(member, name)} loading="lazy" decoding="async" fetchPriority="low" width="720" height="720" />
