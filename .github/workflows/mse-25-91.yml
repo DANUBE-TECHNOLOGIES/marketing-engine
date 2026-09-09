@@ -64,6 +64,7 @@ jobs:
           node --test test/mse-25-166-geo-area-served-visible-parity.test.mjs
           node --test test/mse-25-167-geo-grounded-local-context-copy.test.mjs
           node --test test/mse-25-168-geo-grounded-home-local-area-copy.test.mjs
+          node --test test/mse-25-169-geo-canonical-team-person-identity.test.mjs
 
       - name: Lint canonical public files
         working-directory: frontend
