@@ -1,27 +1,3 @@
-const PAYMENT_METHODS = Object.freeze([
-  {
-    id: "cb",
-    label: "Carte bancaire",
-    logo: "https://d2csxpduxe849s.cloudfront.net/media/F44207E3-1DDE-4798-B0FCC94F6227FCB7/8642409E-0CD7-4EB5-A36E36D5BA3E9BE7/webimage-0D45FA73-E241-49FC-9F4CCF6FD9747B83.jpg",
-  },
-  {
-    id: "visa",
-    label: "VISA",
-    logo: "https://commons.wikimedia.org/wiki/Special:Redirect/file/Visa_2021.svg",
-    fallback: "VISA",
-  },
-  {
-    id: "mastercard",
-    label: "Mastercard",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg",
-  },
-  {
-    id: "amex",
-    label: "American Express",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/3/30/American_Express_logo.svg",
-  },
-]);
-
 const TRUST_REFERENCES = Object.freeze([
   {
     id: "cediv",
@@ -42,6 +18,40 @@ const LOGO_INTRINSIC_HEIGHT = 64;
 
 function clean(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
+}
+
+function paymentSettings(legalValues) {
+  const settings = legalValues?.settings;
+  if (!settings || typeof settings !== "object" || Array.isArray(settings)) return [];
+  return Array.isArray(settings.paymentMethods) ? settings.paymentMethods : [];
+}
+
+function normalizedPaymentMethods(legalValues) {
+  const result = [];
+  const seen = new Set();
+
+  for (const [index, value] of paymentSettings(legalValues).entries()) {
+    const item = typeof value === "string" ? { label: value } : value;
+    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+
+    const label = clean(item.label || item.name || item.title);
+    if (!label) continue;
+
+    const id = clean(item.id || label.toLocaleLowerCase("fr-FR").replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "")) || `payment-${index + 1}`;
+    const dedupeKey = id.toLocaleLowerCase("fr-FR");
+    if (seen.has(dedupeKey)) continue;
+    seen.add(dedupeKey);
+
+    result.push({
+      id,
+      label,
+      detail: clean(item.detail || item.description) || undefined,
+      logo: clean(item.logo || item.logoUrl || item.image) || undefined,
+      fallback: clean(item.fallback) || undefined,
+    });
+  }
+
+  return result;
 }
 
 function legalTrustReferences(legalValues) {
@@ -121,37 +131,46 @@ function BrandRow({ items, kind }) {
 }
 
 export default function PublicReassuranceBand({ legalValues = null }) {
+  const paymentMethods = normalizedPaymentMethods(legalValues);
   const trustReferences = resolvedTrustReferences(legalValues);
+  const hasPayments = paymentMethods.length > 0;
+  const hasTrust = trustReferences.length > 0;
+
+  if (!hasPayments && !hasTrust) return null;
 
   return (
     <section
       className="public-reassurance"
-      aria-label="Moyens de paiement et repères professionnels"
+      aria-label={hasPayments ? "Moyens de paiement publiés et repères professionnels" : "Repères professionnels"}
     >
       <div className="public-site-container public-reassurance-shell">
-        <div className="public-reassurance-panel public-reassurance-panel--payments">
-          <header className="public-reassurance-heading">
-            <span className="public-reassurance-kicker">Paiement en agence</span>
-            <div>
-              <strong>Moyens de paiement acceptés</strong>
-              <small>Selon les conditions de votre dossier</small>
-            </div>
-          </header>
-          <BrandRow items={PAYMENT_METHODS} kind="payment" />
-        </div>
+        {hasPayments ? (
+          <div className="public-reassurance-panel public-reassurance-panel--payments">
+            <header className="public-reassurance-heading">
+              <span className="public-reassurance-kicker">Paiement en agence</span>
+              <div>
+                <strong>Moyens de paiement publiés</strong>
+                <small>Informations issues du profil public Mondescale</small>
+              </div>
+            </header>
+            <BrandRow items={paymentMethods} kind="payment" />
+          </div>
+        ) : null}
 
-        <div className="public-reassurance-divider" aria-hidden="true" />
+        {hasPayments && hasTrust ? <div className="public-reassurance-divider" aria-hidden="true" /> : null}
 
-        <div className="public-reassurance-panel public-reassurance-panel--trust">
-          <header className="public-reassurance-heading">
-            <span className="public-reassurance-kicker">Repères professionnels</span>
-            <div>
-              <strong>Affiliations et informations légales publiées</strong>
-              <small>Les données légales sont affichées uniquement lorsqu’elles sont présentes dans le profil public Mondescale</small>
-            </div>
-          </header>
-          <BrandRow items={trustReferences} kind="trust" />
-        </div>
+        {hasTrust ? (
+          <div className="public-reassurance-panel public-reassurance-panel--trust">
+            <header className="public-reassurance-heading">
+              <span className="public-reassurance-kicker">Repères professionnels</span>
+              <div>
+                <strong>Affiliations et informations légales publiées</strong>
+                <small>Les données légales sont affichées uniquement lorsqu’elles sont présentes dans le profil public Mondescale</small>
+              </div>
+            </header>
+            <BrandRow items={trustReferences} kind="trust" />
+          </div>
+        ) : null}
       </div>
     </section>
   );
@@ -160,8 +179,9 @@ export default function PublicReassuranceBand({ legalValues = null }) {
 export {
   LOGO_INTRINSIC_HEIGHT,
   LOGO_INTRINSIC_WIDTH,
-  PAYMENT_METHODS,
   TRUST_REFERENCES,
   legalTrustReferences,
+  normalizedPaymentMethods,
+  paymentSettings,
   resolvedTrustReferences,
 };
