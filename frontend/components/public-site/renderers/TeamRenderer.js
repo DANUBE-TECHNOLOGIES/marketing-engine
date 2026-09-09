@@ -26,8 +26,8 @@ function localTeamTitle(site) {
 function localTeamIntro(site) {
   const city = clean(site?.agency?.city || site?.city);
   return city
-    ? `Des conseillers qui connaissent vos projets, vos envies et les solutions disponibles pour construire votre voyage depuis ${city}.`
-    : "Des conseillers disponibles pour écouter votre projet et construire avec vous un voyage réellement adapté.";
+    ? `Retrouvez les conseillers présentés par votre agence de voyages à ${city} et les informations publiées sur leur rôle et leur parcours.`
+    : "Retrouvez les conseillers présentés par votre agence et les informations publiées sur leur rôle et leur parcours.";
 }
 
 function siteRoot(site) {
