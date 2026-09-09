@@ -80,7 +80,7 @@ export default function OffersRenderer({ section, site }) {
           {items.length ? (
             items.map((item, index) => {
               const image = offerImage(item);
-              const hasHref = Boolean(String(item?.href || "").trim());
+              const resolvedHref = resolvePublicCtaHref(site, item?.href, "");
               return (
                 <article className="public-site-offer-card" key={item.id || item.title || index}>
                   {image ? (
@@ -104,9 +104,9 @@ export default function OffersRenderer({ section, site }) {
                     <h3>{item.title || item.name || "Offre publiée"}</h3>
                     {item.description ? <p>{item.description}</p> : null}
                     {item.price ? <strong className="public-site-offer-price">Prix publié : {item.price}</strong> : null}
-                    {hasHref ? (
+                    {resolvedHref ? (
                       <a
-                        href={resolvePublicCtaHref(site, item.href, "contact")}
+                        href={resolvedHref}
                         className="public-site-inline-link"
                       >
                         {offerLinkLabel(item)} →

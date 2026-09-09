@@ -23,12 +23,11 @@ function resolvedAppointmentCta(content, site, contactPage) {
   const explicitHref = String(structured?.href || "").trim();
   if (!explicitHref && !contactPage) return null;
 
-  return {
-    label,
-    href: explicitHref
-      ? resolvePublicCtaHref(site, explicitHref, contactPage ? "contact" : "", { label })
-      : pageHref(site.slug, contactPage),
-  };
+  const href = explicitHref
+    ? resolvePublicCtaHref(site, explicitHref, "")
+    : pageHref(site.slug, contactPage);
+
+  return href ? { label, href } : null;
 }
 
 export default function AppointmentRenderer({

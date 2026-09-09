@@ -85,6 +85,7 @@ jobs:
           node --test test/mse-25-187-geo-grounded-image-text.test.mjs
           node --test test/mse-25-188-geo-grounded-destinations.test.mjs
           node --test test/mse-25-189-geo-strict-cta-href-provenance.test.mjs
+          node --test test/mse-25-190-geo-strict-shared-cta-resolution.test.mjs
 
       - name: Lint canonical public files
         working-directory: frontend
@@ -123,6 +124,7 @@ jobs:
           components/public-site/renderers/PartnersRenderer.js
           components/public-site/renderers/FaqRenderer.js
           components/public-site/renderers/DestinationsRenderer.js
+          components/public-site/renderers/ctaLinks.js
           lib/public-faq.js
           lib/seo/canonical-jsonld.js
           lib/seo/collection-webpage-schema.js

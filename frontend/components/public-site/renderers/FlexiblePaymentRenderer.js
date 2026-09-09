@@ -52,10 +52,11 @@ export default function FlexiblePaymentRenderer({ section, site }) {
   const body = configuredPaymentBody(content);
   const installmentText = factualInstallmentText(content);
   const action = configuredPaymentAction(content);
+  const actionHref = action ? resolvePublicCtaHref(site, action.href, "") : null;
   const title = getSectionTitle(section, installmentCounts.length ? "Modalités de paiement publiées" : null);
   const eyebrow = String(content.eyebrow || "").trim() || null;
 
-  if (!title && !body && !installmentText && !content.disclaimer && !action) return null;
+  if (!title && !body && !installmentText && !content.disclaimer && !actionHref) return null;
 
   return (
     <section
@@ -72,11 +73,11 @@ export default function FlexiblePaymentRenderer({ section, site }) {
         ) : null}
         {content.disclaimer ? <small>{content.disclaimer}</small> : null}
 
-        {action ? (
+        {action && actionHref ? (
           <div className="public-site-hero-actions">
             <TrackedConversionLink
               className="public-site-button"
-              href={resolvePublicCtaHref(site, action.href, "contact", { label: action.label })}
+              href={actionHref}
               tracking={{
                 conversionType: "flexible_payment_cta",
                 siteId: site?.id,
