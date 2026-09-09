@@ -8,6 +8,10 @@ import {
 import {
   getPublicReviews,
 } from "../../../lib/public-reviews-api";
+import {
+  normalizeGoogleReviewSummary,
+  visibleReviewFreshness,
+} from "../../../lib/seo/google-review-provenance";
 
 function stars(rating) {
   const normalized = Math.max(0, Math.min(5, Math.round(Number(rating) || 0)));
@@ -24,13 +28,7 @@ function formatDate(value) {
 }
 
 function latestPublishedAt(reviews = []) {
-  const dates = reviews
-    .map((review) => review?.publishedAt)
-    .filter(Boolean)
-    .map((value) => new Date(value))
-    .filter((date) => !Number.isNaN(date.getTime()));
-  if (!dates.length) return null;
-  return new Date(Math.max(...dates.map((date) => date.getTime()))).toISOString();
+  return visibleReviewFreshness(null, reviews).value;
 }
 
 function reviewInitial(authorName) {
@@ -58,8 +56,8 @@ function defaultReviewsIntro(site, total) {
   const city = String(site?.agency?.city || site?.city || "").trim();
   if (!total) return null;
   return city
-    ? `Découvrez les retours publiés sur Google par les voyageurs accompagnés par notre agence de ${city}.`
-    : "Découvrez les retours publiés sur Google par les voyageurs accompagnés par notre agence.";
+    ? `Découvrez les avis Google publiés pour notre agence de ${city}.`
+    : "Découvrez les avis Google publiés pour notre agence.";
 }
 
 function siteHref(site, slug = "") {
@@ -90,14 +88,19 @@ export default async function ReviewsRenderer({ section, site, page }) {
   }
 
   const reviews = Array.isArray(data?.reviews) ? data.reviews : [];
-  const averageRating = Number(data?.summary?.averageRating) || 0;
-  const total = Number(data?.summary?.total) || 0;
+  const summary = normalizeGoogleReviewSummary(data?.summary);
+  const averageRating = summary.averageRating;
+  const total = summary.total;
   const introduction = content.text || defaultReviewsIntro(site, total);
-  const latestReview = data?.summary?.latestPublishedAt || latestPublishedAt(reviews);
+  const freshness = visibleReviewFreshness(data?.summary, reviews);
+  const latestReview = freshness.value;
   const latestReviewLabel = formatDate(latestReview);
+  const freshnessLabel = freshness.scope === "synchronized-summary"
+    ? "Dernier avis Google synchronisé"
+    : "Dernier avis affiché";
 
   return (
-    <section className="public-site-section public-site-reviews">
+    <section className="public-site-section public-site-reviews" data-review-source="google-business-profile">
       <div className="public-site-container">
         <div className="public-site-reviews-heading">
           <div className="public-site-reviews-heading-copy">
@@ -114,7 +117,8 @@ export default async function ReviewsRenderer({ section, site, page }) {
                 <div className="public-site-google-summary-rating"><strong>{averageRating.toFixed(1)}</strong><span>/ 5</span></div>
                 <span className="public-site-google-stars" aria-hidden="true">{stars(averageRating)}</span>
                 <small>{total} avis clients</small>
-                {latestReviewLabel ? <small>Dernier avis affiché : <time dateTime={latestReview}>{latestReviewLabel}</time></small> : null}
+                <small>Source : Google Business Profile</small>
+                {latestReviewLabel ? <small>{freshnessLabel} : <time dateTime={latestReview}>{latestReviewLabel}</time></small> : null}
               </div>
             </div>
           ) : null}
