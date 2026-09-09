@@ -23,34 +23,42 @@ function isHomePage(page) {
   return !slug || ["home", "accueil", "index"].includes(slug);
 }
 
+function legacyCta(label) {
+  return label ? { label, href: "contact" } : null;
+}
+
 export default function CtaV2Renderer({ section, site, page }) {
   const content = getSectionContent(section);
 
   /*
-   * The home already exposes a primary CTA in the hero and conversion actions
-   * in the contact block. Historical CTA PageBlocks duplicated that journey
-   * and made the page unnecessarily long, so they remain available on inner
-   * pages but are intentionally suppressed on the home.
+   * The home already exposes its configured conversion actions elsewhere.
+   * Historical CTA PageBlocks remain available on inner pages only.
    */
   if (isHomePage(page)) return null;
 
-  const primaryCta = content.primaryCta || (content.primaryButton
-    ? { label: content.primaryButton, href: "contact" }
-    : { label: "Demander un devis", href: "contact" });
-  const secondaryCta = content.secondaryCta || null;
+  const title = getSectionTitle(section, null);
+  const primaryCta = content.primaryCta || legacyCta(content.primaryButton);
+  const secondaryCta = content.secondaryCta || legacyCta(content.secondaryButton);
+  const text = content.text || null;
+  const hasPrimaryCta = Boolean(primaryCta?.label);
+  const hasSecondaryCta = Boolean(secondaryCta?.label);
+
+  if (!title && !text && !hasPrimaryCta && !hasSecondaryCta) return null;
 
   return (
     <section className="public-site-section public-site-cta">
       <div className="public-site-container">
-        <h2>{getSectionTitle(section, "Préparons votre prochain voyage")}</h2>
-        {content.text ? <p>{content.text}</p> : null}
-        <div className="public-site-hero-actions">
-          <CtaButton cta={primaryCta} site={site} className="public-site-button" />
-          <CtaButton cta={secondaryCta} site={site} className="public-site-button public-site-button-secondary" />
-        </div>
+        {title ? <h2>{title}</h2> : null}
+        {text ? <p>{text}</p> : null}
+        {hasPrimaryCta || hasSecondaryCta ? (
+          <div className="public-site-hero-actions">
+            <CtaButton cta={primaryCta} site={site} className="public-site-button" />
+            <CtaButton cta={secondaryCta} site={site} className="public-site-button public-site-button-secondary" />
+          </div>
+        ) : null}
       </div>
     </section>
   );
 }
 
-export { isHomePage };
+export { isHomePage, legacyCta };
