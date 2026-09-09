@@ -66,6 +66,7 @@ jobs:
           node --test test/mse-25-168-geo-grounded-home-local-area-copy.test.mjs
           node --test test/mse-25-169-geo-canonical-team-person-identity.test.mjs
           node --test test/mse-25-170-geo-grounded-team-navigation.test.mjs
+          node --test test/mse-25-171-geo-grounded-global-header.test.mjs
 
       - name: Lint canonical public files
         working-directory: frontend
@@ -83,6 +84,7 @@ jobs:
           components/public-site/PublicBrandLogo.js
           components/public-site/PublicReassuranceBand.js
           components/public-site/PublicContextualJourney.js
+          components/public-site/PublicSiteHeader.js
           components/public-site/renderers/HeroV2Renderer.js
           components/public-site/renderers/TeamRenderer.js
           components/public-site/renderers/PartnersRenderer.js

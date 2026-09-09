@@ -61,6 +61,11 @@ function uniquePublishedNavigation(site) {
   });
 }
 
+function publishedPageBySlug(pages, slug) {
+  const target = canonicalNavigationSlug(slug);
+  return (pages || []).find((page) => pageSlug(page) === target) || null;
+}
+
 function telephoneHref(phone) {
   return `tel:${String(phone || "").replace(/\s+/g, "")}`;
 }
@@ -76,6 +81,7 @@ export default function PublicSiteHeader({ site, brand, brandRuntime, brandAsset
     brand || brandRuntime?.runtime?.brand || site?.brand || site?.branding || site?.brandProfile || null;
   const resolvedPublicBrandAssets = brandAssets || resolvedPublicBrand?.assets || {};
   const pages = uniquePublishedNavigation(site);
+  const contactPage = publishedPageBySlug(pages, "contact");
   const agency = site.agency || {};
   const city = String(agency.city || "").trim();
   const showcaseDisabled = isTuiShowcaseDisabled(site);
@@ -90,8 +96,6 @@ export default function PublicSiteHeader({ site, brand, brandRuntime, brandAsset
             <Suspense fallback={null}>
               <PublicOpeningStatus siteSlug={site.slug} />
             </Suspense>
-            <span>Conseils personnalisés</span>
-            <span>Accompagnement avant, pendant et après</span>
           </div>
         </div>
       </div>
@@ -130,13 +134,15 @@ export default function PublicSiteHeader({ site, brand, brandRuntime, brandAsset
               </a>
             ) : null}
 
-            <Link
-              className="public-site-header-cta"
-              href={`/agence/${site.slug}/contact`}
-              aria-label={city ? `Demander un devis voyage à l’agence de ${city}` : "Demander un devis voyage"}
-            >
-              Demander un devis
-            </Link>
+            {contactPage ? (
+              <Link
+                className="public-site-header-cta"
+                href={pageHref(site.slug, contactPage)}
+                aria-label={city ? `${contactPage.title} — agence de ${city}` : contactPage.title}
+              >
+                {contactPage.title}
+              </Link>
+            ) : null}
 
             {showcaseUrl ? (
               <a
@@ -182,6 +188,7 @@ export {
   normalizePageSlug,
   pageHref,
   pageSlug,
+  publishedPageBySlug,
   telephoneHref,
   uniquePublishedNavigation,
 };
