@@ -83,6 +83,7 @@ jobs:
           node --test test/mse-25-185-geo-grounded-testimonials.test.mjs
           node --test test/mse-25-186-geo-grounded-map.test.mjs
           node --test test/mse-25-187-geo-grounded-image-text.test.mjs
+          node --test test/mse-25-188-geo-grounded-destinations.test.mjs
 
       - name: Lint canonical public files
         working-directory: frontend
