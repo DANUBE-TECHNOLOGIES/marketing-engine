@@ -55,9 +55,9 @@ function defaultAgencyIntroduction(site) {
   const agency = site?.agency || {};
   const city = String(agency.city || site?.city || "").trim();
   const nearby = resolvedTargetCities(site, { limit: 4 });
-  if (!city) return "Notre équipe vous conseille et vous accompagne avant, pendant et après votre voyage.";
-  const area = nearby.length ? ` Elle accompagne également les voyageurs de ${joinCities(nearby)}.` : "";
-  return `Installée à ${city}, notre équipe vous conseille pour vos séjours, circuits, croisières et voyages sur mesure, avec un accompagnement avant, pendant et après le départ.${area}`;
+  if (!city) return "Retrouvez ici les coordonnées, horaires et informations publiques de votre agence Mondescale.";
+  const area = nearby.length ? ` Le mini-site dessert également les secteurs de ${joinCities(nearby)}.` : "";
+  return `Retrouvez les coordonnées, horaires et informations publiques de votre agence Mondescale à ${city}.${area}`;
 }
 
 function isHomePage(page) {
