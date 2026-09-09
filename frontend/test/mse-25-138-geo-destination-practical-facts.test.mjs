@@ -23,8 +23,12 @@ test("destination practical facts use the same four published fields as the visi
   }
 });
 
-test("destination practical facts are exposed as PropertyValue and omitted when empty", () => {
-  assert.match(jsonLdSource, /additionalProperty:\s*destinationPracticalProperties\(destination\)/);
+test("destination practical facts are included in additionalProperty as PropertyValue and omitted when empty", () => {
+  assert.match(
+    jsonLdSource,
+    /const additionalProperty\s*=\s*\[[\s\S]*\.\.\.destinationPracticalProperties\(destination\)[\s\S]*\]/
+  );
+  assert.match(jsonLdSource, /\n\s*additionalProperty,\n/);
   assert.match(jsonLdSource, /"@type": "PropertyValue"/);
   assert.match(jsonLdSource, /filter\(\(\[, value\]\) => value\)/);
 });
