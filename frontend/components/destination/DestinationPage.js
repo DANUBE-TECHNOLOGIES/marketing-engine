@@ -13,6 +13,7 @@ import {
 } from "../../lib/seo/network-entity-schema";
 import { resolvedTargetCities } from "../../lib/seo/local-area-config";
 import { absoluteUrl } from "../../lib/seo/site-url";
+import { destinationAudiences } from "../../lib/seo/destination-audience";
 import {
   destinationCoordinates,
   destinationMapUrl,
@@ -187,11 +188,13 @@ export default function DestinationPage({ data }) {
   const localCopy = destinationLocalCopy({ site, destination: d, nearby });
   const commercialLinks = rotateCommercialLinks(commercialPageLinks(site), site, d);
   const destinationHeading = city ? `Voyage à ${d.name} depuis ${city}` : `Voyage à ${d.name}`;
+  const audiences = destinationAudiences(d);
   const coordinates = destinationCoordinates(d);
   const mapUrl = destinationMapUrl(d);
 
   const destinationSchema = {
     ...buildDestinationSchema(data),
+    touristType: audiences.length ? audiences : undefined,
     geo: coordinates
       ? {
           "@type": "GeoCoordinates",
@@ -277,6 +280,17 @@ export default function DestinationPage({ data }) {
             {facts.map(([label, value]) => (
               <div key={label}><div><span>{label}</span><strong>{value}</strong></div></div>
             ))}
+          </div>
+        </section>
+      ) : null}
+
+      {audiences.length ? (
+        <section className={styles["de-section"]} aria-label={`Voyage à ${d.name} : profils de voyageurs`}>
+          <div className={styles["de-shell"]}>
+            <p className={styles["de-kicker"]}>Idéal pour</p>
+            <div className={styles["de-pills"]}>
+              {audiences.map((audience) => <span key={audience}>{audience}</span>)}
+            </div>
           </div>
         </section>
       ) : null}
