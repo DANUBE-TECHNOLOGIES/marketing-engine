@@ -15,11 +15,11 @@ test("MSE-25.155 public reassurance no longer hardcodes legal provider claims", 
   assert.doesNotMatch(band, /Atout France/);
   assert.doesNotMatch(band, /GROUPAMA/);
   assert.doesNotMatch(band, /Garantie financière & RCP/);
-  assert.match(band, /Affiliations(?: réseau)? et informations légales publiées|Affiliations réseau publiées/);
+  assert.match(band, /Affiliations et informations légales publiées/);
 });
 
-test("MSE-25.155 network affiliations remain distinct from legal guarantees", () => {
-  assert.match(band, /CEDIV Travel/);
-  assert.match(band, /Les Entreprises du Voyage/);
+test("MSE-25.155 professional affiliations remain distinct from legal guarantees", () => {
+  assert.match(band, /professionalAffiliations/);
+  assert.match(band, /normalizedProfessionalAffiliations/);
   assert.doesNotMatch(band, /Garanties & affiliations/);
 });
