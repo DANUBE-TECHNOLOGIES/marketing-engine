@@ -16,6 +16,10 @@ That could expose navigation toward routes with no published page authority, des
 - If no alternative published page exists, the related navigation block is omitted.
 - Existing factual local context remains grounded in configured target cities and published page/service data.
 
+## Regression alignment
+
+Historical MSE-25.112 and MSE-25.167 assertions now validate published-navigation provenance instead of requiring kind-based fixed links. This keeps Search Console/indexation and canonical regression coverage aligned with the stricter runtime contract.
+
 ## Scope
 
 Public Mondescale mini-sites GEO only. No agent, Orchestra, Knowledge or remediation changes.
