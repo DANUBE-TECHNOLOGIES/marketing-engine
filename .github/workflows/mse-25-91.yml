@@ -60,6 +60,7 @@ jobs:
           node --test test/mse-25-162-geo-collection-webpage-consolidation.test.mjs
           node --test test/mse-25-163-geo-canonical-breadcrumb-linkage.test.mjs
           node --test test/mse-25-164-geo-destination-faq-parity-canonical-linkage.test.mjs
+          node --test test/mse-25-165-geo-grounded-destination-metadata.test.mjs
 
       - name: Lint canonical public files
         working-directory: frontend
@@ -68,6 +69,7 @@ jobs:
           app/agence/[siteSlug]/layout.js
           app/agence/[siteSlug]/[[...pageSlug]]/page.js
           app/agence/[siteSlug]/inspiration/page.js
+          app/agence/[siteSlug]/destination/[destinationSlug]/page.js
           components/JsonLd.js
           components/destination/DestinationPage.js
           components/public-site/PublicBrandLogo.js

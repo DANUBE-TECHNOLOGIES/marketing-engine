@@ -48,12 +48,13 @@ function localDestinationTitle(data) {
 
 function localDestinationDescription(data) {
   const d = data.destination;
-  const city = data.site?.agency?.city || null;
+  const city = String(data.site?.agency?.city || "").trim();
   const brand = destinationBrand(data);
-  const base = String(d.seoDescription || d.summary || "").replace(/\s+/g, " ").trim();
+  const destinationName = String(d?.name || "").trim();
+  const base = String(d?.seoDescription || d?.summary || "").replace(/\s+/g, " ").trim();
   const local = city
-    ? `${brand} ${city} vous accompagne pour votre voyage à ${d.name} : conseils, itinéraire et devis personnalisé.`
-    : `${brand} vous accompagne pour votre voyage à ${d.name} : conseils, itinéraire et devis personnalisé.`;
+    ? `${brand} ${city} présente les informations publiées sur ${destinationName}. Contactez l’agence pour poursuivre votre projet.`
+    : `${brand} présente les informations publiées sur ${destinationName}. Contactez l’agence pour poursuivre votre projet.`;
 
   return truncateDescription(base ? `${local} ${base}` : local);
 }
