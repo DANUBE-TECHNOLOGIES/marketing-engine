@@ -14,13 +14,15 @@ test("MSE-25.153 team default copy stays limited to published member facts", () 
 test("MSE-25.153 contact copy describes public coordinates and configured coverage", () => {
   assert.match(contact, /coordonnées publiques de votre agence/);
   assert.match(contact, /Ce mini-site présente également l’agence pour les secteurs/);
-  assert.match(contact, /resolvedTargetCities\(site,\{limit:3\}\)/);
+  assert.match(contact, /resolvedTargetCities\(site,\s*\{\s*limit:\s*3\s*\}\)/);
 });
 
-test("MSE-25.153 navigation copy only claims published services destinations and inspirations", () => {
-  assert.match(contact, /Services publiés par notre agence/);
-  assert.match(contact, /Destinations publiées par notre agence/);
-  assert.match(contact, /Conseils et inspirations voyage publiés/);
+test("MSE-25.153 contact navigation stays limited to actually published pages", () => {
+  assert.match(contact, /uniquePublishedNavigation\(site\)/);
+  assert.match(contact, /RELATED_CONTACT_PAGE_SLUGS\.has\(pageSlug\(page\)\)/);
+  assert.match(contact, /pageHref\(site\.slug, page\)/);
+  assert.match(contact, /title: page\.title/);
+  assert.doesNotMatch(contact, /Services publiés par notre agence|Destinations publiées par notre agence|Conseils et inspirations voyage publiés/);
   assert.doesNotMatch(contact, /Destinations conseillées par notre agence/);
   assert.doesNotMatch(contact, /Votre avis aide les voyageurs|Votre avis aide les futurs voyageurs/);
 });
