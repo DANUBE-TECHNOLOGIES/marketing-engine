@@ -41,6 +41,7 @@ import { assessLocalContentQuality } from "../../../../lib/seo/local-content-qua
 import {
   buildLocalPageSeo,
 } from "../../../../lib/seo/local-page-seo";
+import { buildPartnerDirectorySchemas } from "../../../../lib/seo/partner-directory-schema";
 import {
   buildServiceAwareWebPageSchema,
   linkServiceCatalogToPage,
@@ -96,6 +97,11 @@ function isHomePage(pageSlug) {
 function isServicesPage(pageSlug, page) {
   const slug = normalizePageSlug(pageSlug || page?.slug);
   return slug === "services";
+}
+
+function isPartnersPage(pageSlug, page) {
+  const slug = normalizePageSlug(pageSlug || page?.slug);
+  return ["partenaires", "partners", "nos-partenaires"].includes(slug);
 }
 
 function isLegalPage(pageSlug, page) {
@@ -266,8 +272,10 @@ export default async function AgencySitePage({ params }) {
 
   const legalPage = isLegalPage(pageSlug, page);
   const servicesPage = isServicesPage(pageSlug, page);
+  const partnersPage = isPartnersPage(pageSlug, page);
   const rawServiceCatalog = servicesPage ? buildServiceCatalogSchema(site, page) : null;
   const serviceCatalog = linkServiceCatalogToPage(rawServiceCatalog, currentUrl);
+  const partnerDirectorySchemas = partnersPage ? buildPartnerDirectorySchemas({ site, pageUrl: currentUrl }) : [];
   const faqSchema = legalPage ? null : buildPageFaqSchema(page);
   const webPageSchema = buildServiceAwareWebPageSchema({
     site,
@@ -295,6 +303,7 @@ export default async function AgencySitePage({ params }) {
       <JsonLd data={webPageSchema} />
       {pageSemanticsSchema ? <JsonLd data={pageSemanticsSchema} /> : null}
       {serviceCatalog ? <JsonLd data={serviceCatalog} /> : null}
+      {partnerDirectorySchemas.map((schema) => <JsonLd key={schema["@id"]} data={schema} />)}
       {faqSchema ? <JsonLd data={faqSchema} /> : null}
 
       <div
@@ -359,6 +368,7 @@ export {
   isHomePage,
   isLegalPage,
   isNonCanonicalPageSlug,
+  isPartnersPage,
   isServicesPage,
   pageHasHero,
   pageSections,
