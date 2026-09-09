@@ -1,3 +1,5 @@
+import { resolvedTargetCities } from "./local-area-config";
+
 function clean(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
 }
@@ -23,14 +25,12 @@ function unique(values) {
   return result;
 }
 
-export function agencyAreaServedNames(site, { limit = 6 } = {}) {
+export function agencyAreaServedNames(site, { targetLimit = 6 } = {}) {
   const agency = site?.agency || site || {};
   const primaryCity = clean(agency?.city || site?.city);
-  const targetCities = Array.isArray(site?.resolvedTargetCities)
-    ? site.resolvedTargetCities
-    : [];
+  const targetCities = resolvedTargetCities(site, { limit: targetLimit });
 
-  return unique([primaryCity, ...targetCities]).slice(0, limit + 1);
+  return unique([primaryCity, ...targetCities]);
 }
 
 export function cityAreaServedSchema(names) {
