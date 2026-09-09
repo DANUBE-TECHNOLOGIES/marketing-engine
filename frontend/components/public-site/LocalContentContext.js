@@ -76,10 +76,10 @@ const COPY = {
       : `À ${city}, notre accompagnement repose sur l’écoute du projet, la clarté des solutions proposées et la disponibilité de l’agence lorsqu’un dossier nécessite un suivi.`,
   }),
   partners: ({ city, nearby }) => ({
-    title: `Des partenaires voyage sélectionnés à ${city}`,
+    title: `Partenaires voyage publiés à ${city}`,
     text: nearby.length
-      ? `Pour les voyageurs de ${city} et des communes de ${joinCities(nearby.slice(0, 2))}, l’agence s’appuie sur différents voyagistes et partenaires afin de comparer les produits, les prestations et les conditions correspondant au projet.`
-      : `Notre agence de ${city} s’appuie sur différents voyagistes et partenaires afin de comparer les produits, les prestations et les conditions correspondant à votre projet.`,
+      ? `Cette page présente aux voyageurs de ${city} et du secteur de ${joinCities(nearby.slice(0, 2))} les partenaires actuellement publiés dans le catalogue Mondescale ainsi que, lorsqu’elle existe, la sélection complémentaire configurée pour cette agence.`
+      : `Cette page présente les partenaires actuellement publiés dans le catalogue Mondescale ainsi que, lorsqu’elle existe, la sélection complémentaire configurée pour l’agence de ${city}.`,
   }),
   contact: ({ city, nearby }) => ({
     title: `Préparez votre voyage avec notre équipe à ${city}`,
