@@ -8,6 +8,7 @@ const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 
 const features = read("components/public-site/renderers/FeaturesV2Renderer.js");
 const faq = read("components/public-site/renderers/FaqRenderer.js");
+const sharedFaq = read("lib/public-faq.js");
 const team = read("components/public-site/renderers/TeamRenderer.js");
 const localContext = read("components/public-site/LocalContentContext.js");
 
@@ -20,12 +21,13 @@ test("shared service cards preserve configured links and fall back to contact", 
 });
 
 test("shared FAQ keeps configured content and suppresses incomplete rows", () => {
-  assert.match(faq, /getItems\(section, \["items", "questions", "faqs"\]\)/);
-  assert.match(faq, /item\?\.question \|\| item\?\.title/);
-  assert.match(faq, /item\?\.answer \|\| item\?\.text \|\| item\?\.description/);
-  assert.match(faq, /filter\(\(item\) => item\.question && item\.answer\)/);
+  assert.match(faq, /faqItemsForSection\(section\)/);
+  assert.match(sharedFaq, /\["items", "questions", "faqs"\]/);
+  assert.match(sharedFaq, /item\?\.question \|\| item\?\.title/);
+  assert.match(sharedFaq, /item\?\.answer \|\| item\?\.text \|\| item\?\.description \|\| item\?\.content/);
+  assert.match(sharedFaq, /filter\(\(item\) => item\.question && item\.answer\)/);
   assert.match(faq, /questions\\s\+fr\[eé\]quentes/);
-  assert.doesNotMatch(faq, /parking|garantie du meilleur prix|sans risque/);
+  assert.doesNotMatch(`${faq}\n${sharedFaq}`, /parking|garantie du meilleur prix|sans risque/);
 });
 
 test("advisor profiles expose optional factual enrichment without invented defaults", () => {
