@@ -25,12 +25,15 @@ test("MSE-25.167 local context no longer manufactures operational service promis
   assert.doesNotMatch(source, /rester votre interlocuteur jusqu’à votre retour/i);
 });
 
-test("MSE-25.167 internal local links use grounded published wording", () => {
-  assert.match(source, /Services publiés à/);
-  assert.match(source, /Destinations publiées depuis/);
-  assert.match(source, /Inspirations voyage publiées depuis/);
-  assert.match(source, /Coordonnées de l’agence à/);
-  assert.doesNotMatch(source, /Services voyage et billetterie à/);
+test("MSE-25.167 internal local links reuse actually published navigation", () => {
+  assert.match(source, /uniquePublishedNavigation\(site\)/);
+  assert.match(source, /pageSlug\(candidate\) !== currentSlug/);
+  assert.match(source, /pageHref\(site\.slug, candidate\)/);
+  assert.match(source, /title: candidate\.title/);
+  assert.doesNotMatch(source, /`\$\{root\}\/services`/);
+  assert.doesNotMatch(source, /`\$\{root\}\/destinations`/);
+  assert.doesNotMatch(source, /`\$\{root\}\/inspiration`/);
+  assert.doesNotMatch(source, /`\$\{root\}\/contact`/);
 });
 
 test("MSE-25.167 does not introduce transactional authority or inferred expertise", () => {
