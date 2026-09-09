@@ -63,7 +63,7 @@ test("MSE-25.151 latestPublishedAt is computed from the complete synchronized sn
   assert.equal(threeCards.summary.latestPublishedAt, "2026-09-20T10:00:00.000Z");
 });
 
-test("MSE-25.151 freshness helper ignores invalid dates and falls back from publishedAt to createdAt", () => {
+test("MSE-25.151 freshness helper ignores invalid dates and uses createdAt when publishedAt is absent", () => {
   const result = latestReviewPublishedAt([
     { publishedAt: "invalid", createdAt: "2026-09-30T08:00:00.000Z" },
     { publishedAt: null, createdAt: "2026-09-25T08:00:00.000Z" },
