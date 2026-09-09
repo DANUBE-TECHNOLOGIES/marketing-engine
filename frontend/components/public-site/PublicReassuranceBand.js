@@ -1,18 +1,3 @@
-const TRUST_REFERENCES = Object.freeze([
-  {
-    id: "cediv",
-    label: "CEDIV Travel",
-    detail: "Réseau professionnel",
-    logo: "https://www.sport-et-tourisme.fr/wp-content/uploads/2021/10/Logo-Cediv-Travel.jpg",
-  },
-  {
-    id: "edv",
-    label: "Les Entreprises du Voyage",
-    detail: "Organisation professionnelle",
-    logo: "https://www.depart-de-deauville.fr/assets/img/site/136/uploads/LOGOS/les_entreprises_du_voyage_logo.png",
-  },
-]);
-
 const LOGO_INTRINSIC_WIDTH = 160;
 const LOGO_INTRINSIC_HEIGHT = 64;
 
@@ -20,24 +5,38 @@ function clean(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
 }
 
-function paymentSettings(legalValues) {
+function publicSettings(legalValues) {
   const settings = legalValues?.settings;
-  if (!settings || typeof settings !== "object" || Array.isArray(settings)) return [];
+  if (!settings || typeof settings !== "object" || Array.isArray(settings)) return {};
+  return settings;
+}
+
+function paymentSettings(legalValues) {
+  const settings = publicSettings(legalValues);
   return Array.isArray(settings.paymentMethods) ? settings.paymentMethods : [];
 }
 
-function normalizedPaymentMethods(legalValues) {
+function affiliationSettings(legalValues) {
+  const settings = publicSettings(legalValues);
+  return Array.isArray(settings.professionalAffiliations) ? settings.professionalAffiliations : [];
+}
+
+function normalizeConfiguredReferences(values, fallbackPrefix) {
   const result = [];
   const seen = new Set();
 
-  for (const [index, value] of paymentSettings(legalValues).entries()) {
+  for (const [index, value] of values.entries()) {
     const item = typeof value === "string" ? { label: value } : value;
     if (!item || typeof item !== "object" || Array.isArray(item)) continue;
 
     const label = clean(item.label || item.name || item.title);
     if (!label) continue;
 
-    const id = clean(item.id || label.toLocaleLowerCase("fr-FR").replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "")) || `payment-${index + 1}`;
+    const generatedId = label
+      .toLocaleLowerCase("fr-FR")
+      .replace(/[^a-z0-9]+/gi, "-")
+      .replace(/^-+|-+$/g, "");
+    const id = clean(item.id || generatedId) || `${fallbackPrefix}-${index + 1}`;
     const dedupeKey = id.toLocaleLowerCase("fr-FR");
     if (seen.has(dedupeKey)) continue;
     seen.add(dedupeKey);
@@ -52,6 +51,14 @@ function normalizedPaymentMethods(legalValues) {
   }
 
   return result;
+}
+
+function normalizedPaymentMethods(legalValues) {
+  return normalizeConfiguredReferences(paymentSettings(legalValues), "payment");
+}
+
+function normalizedProfessionalAffiliations(legalValues) {
+  return normalizeConfiguredReferences(affiliationSettings(legalValues), "affiliation");
 }
 
 function legalTrustReferences(legalValues) {
@@ -89,7 +96,10 @@ function legalTrustReferences(legalValues) {
 }
 
 function resolvedTrustReferences(legalValues) {
-  return [...TRUST_REFERENCES, ...legalTrustReferences(legalValues)];
+  return [
+    ...normalizedProfessionalAffiliations(legalValues),
+    ...legalTrustReferences(legalValues),
+  ];
 }
 
 function BrandMark({ item, kind }) {
@@ -165,7 +175,7 @@ export default function PublicReassuranceBand({ legalValues = null }) {
               <span className="public-reassurance-kicker">Repères professionnels</span>
               <div>
                 <strong>Affiliations et informations légales publiées</strong>
-                <small>Les données légales sont affichées uniquement lorsqu’elles sont présentes dans le profil public Mondescale</small>
+                <small>Affichées uniquement lorsqu’elles sont présentes dans le profil public Mondescale</small>
               </div>
             </header>
             <BrandRow items={trustReferences} kind="trust" />
@@ -179,9 +189,12 @@ export default function PublicReassuranceBand({ legalValues = null }) {
 export {
   LOGO_INTRINSIC_HEIGHT,
   LOGO_INTRINSIC_WIDTH,
-  TRUST_REFERENCES,
+  affiliationSettings,
   legalTrustReferences,
+  normalizeConfiguredReferences,
   normalizedPaymentMethods,
+  normalizedProfessionalAffiliations,
   paymentSettings,
+  publicSettings,
   resolvedTrustReferences,
 };
