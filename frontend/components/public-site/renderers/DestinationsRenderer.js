@@ -4,20 +4,26 @@ import {
   getSectionContent,
   getSectionTitle,
 } from "./helpers";
-import { resolvedTargetCities } from "../../../lib/seo/local-area-config";
+import {
+  pageHref,
+  pageSlug,
+  uniquePublishedNavigation,
+} from "../PublicSiteHeader";
 import {
   destinationHref,
   destinationSectionItems,
-  destinationSiteRoot,
 } from "../../../lib/seo/destination-public-collection";
 
-function joinCities(values) {
-  if (!values.length) return "";
-  if (values.length === 1) return values[0];
-  if (values.length === 2) return `${values[0]} et ${values[1]}`;
-  return `${values.slice(0, -1).join(", ")} et ${values[values.length - 1]}`;
+const RELATED_DESTINATION_PAGE_SLUGS = new Set([
+  "inspiration",
+  "services",
+  "contact",
+]);
+
+function localCity(site) {
+  return String(site?.agency?.city || site?.city || "").trim();
 }
-function localCity(site) { return String(site?.agency?.city || site?.city || "").trim(); }
+
 function destinationImage(item) {
   if (!item || typeof item !== "object") return null;
   const candidates = [
@@ -40,42 +46,146 @@ function destinationImage(item) {
   ];
   return candidates.find((value) => typeof value === "string" && value.trim()) || null;
 }
+
 function destinationImageAlt(item) {
-  const explicit = String(item?.imageAlt || item?.alt || item?.media?.altText || item?.media?.alt || item?.image?.alt || "").trim();
+  const explicit = String(
+    item?.imageAlt ||
+      item?.alt ||
+      item?.media?.altText ||
+      item?.media?.alt ||
+      item?.image?.alt ||
+      ""
+  ).trim();
   if (explicit) return explicit;
-  const name = String(item?.title || item?.name || "").trim();
-  return name ? `Voyage ${name}` : "";
+  return String(item?.title || item?.name || "").trim();
 }
-function defaultDestinationsTitle(site) { const city = localCity(site); return city ? `Idées de voyages depuis ${city}` : "Nos destinations du moment"; }
-function defaultDestinationsIntro(site) {
-  const city = localCity(site); const nearby = resolvedTargetCities(site, { limit: 3 });
-  if (!city) return "Découvrez une sélection de destinations et préparez votre prochain départ avec les conseils de votre agence.";
-  const area = nearby.length ? ` Nous accompagnons aussi les voyageurs de ${joinCities(nearby)}.` : "";
-  return `Découvrez une sélection de destinations et préparez votre prochain départ avec les conseils de votre agence de voyages à ${city}.${area}`;
+
+function defaultDestinationsTitle() {
+  return "Destinations publiées";
 }
+
+function relatedPublishedPages(site) {
+  return uniquePublishedNavigation(site)
+    .filter((page) => RELATED_DESTINATION_PAGE_SLUGS.has(pageSlug(page)))
+    .map((page) => ({
+      href: pageHref(site.slug, page),
+      title: page.title,
+    }));
+}
+
 function DestinationCard({ item, site }) {
-  const href = destinationHref(site, item); const image = destinationImage(item); const title = item.title || item.name || "Destination"; const city = localCity(site);
-  const card = <article className="public-site-destination-card" data-has-image={image ? "true" : "false"}>
-    {image ? <img className="public-site-destination-card-image" src={image} alt={destinationImageAlt(item)} loading="lazy" decoding="async" fetchPriority="low" width="960" height="640" style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",zIndex:0}}/> : null}
-    {image ? <span aria-hidden="true" style={{position:"absolute",inset:0,background:"linear-gradient(rgba(8,31,52,.12),rgba(8,31,52,.78))",zIndex:1}}/> : null}
-    <div style={{position:"relative",zIndex:2}}>{item.eyebrow ? <span>{item.eyebrow}</span> : null}<h3>{title}</h3>{item.description ? <p>{item.description}</p> : null}</div>
-  </article>;
-  return href ? <Link href={href} aria-label={city ? `Découvrir ${title} avec notre agence de voyages à ${city}` : `Découvrir nos voyages vers ${title}`} style={{color:"inherit",textDecoration:"none"}}>{card}</Link> : card;
+  const href = destinationHref(site, item);
+  const image = destinationImage(item);
+  const title = String(item?.title || item?.name || "").trim();
+  if (!title) return null;
+
+  const card = (
+    <article
+      className="public-site-destination-card"
+      data-has-image={image ? "true" : "false"}
+    >
+      {image ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          className="public-site-destination-card-image"
+          src={image}
+          alt={destinationImageAlt(item)}
+          loading="lazy"
+          decoding="async"
+          fetchPriority="low"
+          width="960"
+          height="640"
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            zIndex: 0,
+          }}
+        />
+      ) : null}
+      {image ? (
+        <span
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "linear-gradient(rgba(8,31,52,.12),rgba(8,31,52,.78))",
+            zIndex: 1,
+          }}
+        />
+      ) : null}
+      <div style={{ position: "relative", zIndex: 2 }}>
+        {item.eyebrow ? <span>{item.eyebrow}</span> : null}
+        <h3>{title}</h3>
+        {item.description ? <p>{item.description}</p> : null}
+      </div>
+    </article>
+  );
+
+  return href ? (
+    <Link
+      href={href}
+      aria-label={`Voir ${title}`}
+      style={{ color: "inherit", textDecoration: "none" }}
+    >
+      {card}
+    </Link>
+  ) : card;
 }
+
 export default function DestinationsRenderer({ section, site }) {
   const content = getSectionContent(section);
-  const items = destinationSectionItems(section);
-  const introduction = content.text || content.description || defaultDestinationsIntro(site); const root = destinationSiteRoot(site); const city = localCity(site);
-  if (!items.length && content.showWhenEmpty !== true) return null;
+  const items = destinationSectionItems(section).filter((item) =>
+    String(item?.title || item?.name || "").trim()
+  );
+  const introduction = String(content.text || content.description || "").trim();
+  const relatedPages = relatedPublishedPages(site);
+  const title = getSectionTitle(section, defaultDestinationsTitle(site));
 
-  return <section className="public-site-section public-site-destinations"><div className="public-site-container">
-    <p className="public-site-section-kicker">Inspirations</p><h2>{getSectionTitle(section, defaultDestinationsTitle(site))}</h2>{introduction ? <p className="public-site-section-intro">{introduction}</p> : null}
-    {items.length ? <div className="public-site-destination-grid">{items.map((item,index)=><DestinationCard key={item.id||item.slug||item.title||index} item={item} site={site}/>)}</div> : null}
-    <div className="public-site-related-links" aria-label={city ? `Conseils voyage de notre agence à ${city}` : "Conseils pour choisir votre voyage"}>
-      <Link href={`${root}/inspiration`}>{city ? `Conseils et inspirations voyage depuis ${city}` : "Conseils et idées pour préparer votre voyage"}</Link>
-      <Link href={`${root}/services`}>{city ? `Services de notre agence de voyages à ${city}` : "Services de votre agence de voyages"}</Link>
-      <Link href={`${root}/contact`}>{city ? `Demander conseil à notre agence de ${city}` : "Demander conseil à votre agence"}</Link>
-    </div>
-  </div></section>;
+  if (!items.length && !introduction && !String(title || "").trim()) return null;
+  if (!items.length && content.showWhenEmpty !== true && !introduction) return null;
+
+  return (
+    <section className="public-site-section public-site-destinations">
+      <div className="public-site-container">
+        <p className="public-site-section-kicker">Destinations</p>
+        {title ? <h2>{title}</h2> : null}
+        {introduction ? (
+          <p className="public-site-section-intro">{introduction}</p>
+        ) : null}
+        {items.length ? (
+          <div className="public-site-destination-grid">
+            {items.map((item, index) => (
+              <DestinationCard
+                key={item.id || item.slug || item.title || index}
+                item={item}
+                site={site}
+              />
+            ))}
+          </div>
+        ) : null}
+        {relatedPages.length ? (
+          <nav className="public-site-related-links" aria-label="Pages publiées associées">
+            {relatedPages.map((page) => (
+              <Link href={page.href} key={page.href}>
+                {page.title}
+              </Link>
+            ))}
+          </nav>
+        ) : null}
+      </div>
+    </section>
+  );
 }
-export { defaultDestinationsIntro, defaultDestinationsTitle, destinationHref, destinationImage, destinationImageAlt, joinCities, localCity, destinationSiteRoot as siteRoot };
+
+export {
+  RELATED_DESTINATION_PAGE_SLUGS,
+  defaultDestinationsTitle,
+  destinationHref,
+  destinationImage,
+  destinationImageAlt,
+  localCity,
+  relatedPublishedPages,
+};
