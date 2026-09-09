@@ -53,7 +53,7 @@ function AgencyPartnerGrid({ items }) {
   if (!items.length) return null;
   return (
     <div className={`public-site-agency-partners ${styles.agencyWrap}`}>
-      <p className={styles.agencyLabel}>Également sélectionnés par votre agence</p>
+      <p className={styles.agencyLabel}>Également publiés pour cette agence</p>
       <div className={`public-site-agency-partners-grid ${styles.agencyGrid}`}>
         {items.map((item, index) => {
           const name = item.name || "Partenaire voyage";
@@ -81,11 +81,11 @@ export default function PartnersRenderer({ section, site, page }) {
       <div className="public-site-container">
         <header className={styles.heading}>
           <p className={styles.kicker}>Nos partenaires</p>
-          <h2>{getSectionTitle(section, "Des partenaires de confiance")}</h2>
-          <p>{content.text || "Des marques reconnues et des spécialistes sélectionnés pour construire votre voyage avec le bon niveau d’accompagnement."}</p>
+          <h2>{getSectionTitle(section, "Partenaires référencés par Mondescale")}</h2>
+          <p>{content.text || "Cette section présente des marques et partenaires actuellement référencés dans le catalogue public Mondescale."}</p>
         </header>
         <div className={styles.networkPanel}>
-          <p className={styles.networkLabel}>Notre sélection principale</p>
+          <p className={styles.networkLabel}>Partenaires réseau publiés</p>
           <NetworkPartnerGrid items={networkItems} />
           <AgencyPartnerGrid items={agencyItems} />
         </div>
