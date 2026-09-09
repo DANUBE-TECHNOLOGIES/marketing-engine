@@ -25,6 +25,7 @@ import {
   fetchPublicBrandLegalRuntime,
   mergePublicMetadata,
   resolveLegalPageHtml,
+  runtimeLegalValues,
 } from "../../../../lib/public-brand-legal-runtime";
 
 import {
@@ -245,11 +246,13 @@ export default async function AgencySitePage({ params }) {
   let site;
   let page;
   let homePage;
+  let runtime;
   try {
-    [site, page, homePage] = await Promise.all([
+    [site, page, homePage, runtime] = await Promise.all([
       publicSiteApi.getSite(resolved.siteSlug),
       loadPage({ siteSlug: resolved.siteSlug, pageSlug }),
       isHomePage(pageSlug) ? Promise.resolve(null) : publicSiteApi.getHome(resolved.siteSlug),
+      fetchPublicBrandLegalRuntime(resolved.siteSlug),
     ]);
   } catch (error) {
     if (error?.statusCode === 404) notFound();
@@ -263,6 +266,7 @@ export default async function AgencySitePage({ params }) {
   const currentUrl = canonicalUrl({ siteSlug: resolved.siteSlug, pageSlug });
   const localSeo = buildLocalPageSeo({ site, page, pageSlug });
   const quality = assessLocalContentQuality({ site, page });
+  const legalValues = runtimeLegalValues(runtime);
   const breadcrumbItems = [{ name: "Accueil", path: homeUrl }];
   const visibleBreadcrumbItems = [{ name: `Agence ${site?.agency?.city || site?.city || site.name}`, href: homePath }];
   if (currentUrl !== homeUrl) {
@@ -289,11 +293,7 @@ export default async function AgencySitePage({ params }) {
   const pageSemanticsSchema = buildPageSemanticsSchema({ page, url: currentUrl });
   const sharedHero = !isHomePage(pageSlug) ? homeHeroSection(homePage) : null;
   const needsFallbackHeading = !legalPage && !pageHasHero(page) && !sharedHero;
-  let legalRuntimeHtml = null;
-  if (legalPage) {
-    const runtime = await fetchPublicBrandLegalRuntime(resolved.siteSlug);
-    legalRuntimeHtml = resolveLegalPageHtml(pageSlug, runtime);
-  }
+  const legalRuntimeHtml = legalPage ? resolveLegalPageHtml(pageSlug, runtime) : null;
 
   return (
     <>
@@ -351,7 +351,7 @@ export default async function AgencySitePage({ params }) {
         ) : null}
         {legalPage ? <LegalJourneyCta site={site} /> : null}
 
-        <PublicReassuranceBand />
+        <PublicReassuranceBand legalValues={legalValues} />
       </div>
     </>
   );

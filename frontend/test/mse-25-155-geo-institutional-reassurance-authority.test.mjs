@@ -15,7 +15,7 @@ test("MSE-25.155 public reassurance no longer hardcodes legal provider claims", 
   assert.doesNotMatch(band, /Atout France/);
   assert.doesNotMatch(band, /GROUPAMA/);
   assert.doesNotMatch(band, /Garantie financière & RCP/);
-  assert.match(band, /Affiliations réseau publiées/);
+  assert.match(band, /Affiliations(?: réseau)? et informations légales publiées|Affiliations réseau publiées/);
 });
 
 test("MSE-25.155 network affiliations remain distinct from legal guarantees", () => {
