@@ -18,6 +18,12 @@ function imageAltText(section, content, site) {
   return "";
 }
 
+function explicitCtaHref(site, cta) {
+  const href = String(cta?.href || "").trim();
+  if (!href || /^(javascript:|data:|vbscript:)/i.test(href)) return null;
+  return resolvePublicCtaHref(site, href, "");
+}
+
 export default function ImageTextV2Renderer({
   section,
   site,
@@ -36,6 +42,18 @@ export default function ImageTextV2Renderer({
     content.cta ||
     content.primaryCta ||
     null;
+  const ctaLabel = String(cta?.label || "").trim();
+  const ctaHref = explicitCtaHref(site, cta);
+  const title = getSectionTitle(section, null);
+  const hasCopy = Boolean(
+    content.eyebrow ||
+    title ||
+    content.text ||
+    content.description ||
+    (ctaLabel && ctaHref)
+  );
+
+  if (!imageUrl && !hasCopy) return null;
 
   const mediaOrder = imagePosition === "right" ? 2 : 1;
   const copyOrder = imagePosition === "right" ? 1 : 2;
@@ -48,17 +66,19 @@ export default function ImageTextV2Renderer({
         style={{
           display: "grid",
           gridTemplateColumns:
-            "repeat(auto-fit, minmax(280px, 1fr))",
+            imageUrl && hasCopy
+              ? "repeat(auto-fit, minmax(280px, 1fr))"
+              : "1fr",
           gap: "42px",
           alignItems: "center",
         }}
       >
-        <div
-          className="public-site-image-text-media"
-          style={{ order: mediaOrder }}
-        >
-          {imageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
+        {imageUrl ? (
+          <div
+            className="public-site-image-text-media"
+            style={{ order: mediaOrder }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={imageUrl}
               alt={imageAltText(section, content, site)}
@@ -74,48 +94,43 @@ export default function ImageTextV2Renderer({
                 borderRadius: "var(--public-radius-md)",
               }}
             />
-          ) : (
-            <div className="public-site-image-placeholder" aria-hidden="true" />
-          )}
-        </div>
+          </div>
+        ) : null}
 
-        <div
-          className="public-site-image-text-copy"
-          style={{ order: copyOrder }}
-        >
-          {content.eyebrow ? (
-            <p className="public-site-section-kicker">
-              {content.eyebrow}
-            </p>
-          ) : null}
+        {hasCopy ? (
+          <div
+            className="public-site-image-text-copy"
+            style={{ order: copyOrder }}
+          >
+            {content.eyebrow ? (
+              <p className="public-site-section-kicker">
+                {content.eyebrow}
+              </p>
+            ) : null}
 
-          {getSectionTitle(section, null) ? (
-            <h2>{getSectionTitle(section, null)}</h2>
-          ) : null}
+            {title ? <h2>{title}</h2> : null}
 
-          {content.text ? <p>{content.text}</p> : null}
-          {content.description ? (
-            <p>{content.description}</p>
-          ) : null}
+            {content.text ? <p>{content.text}</p> : null}
+            {content.description ? (
+              <p>{content.description}</p>
+            ) : null}
 
-          {cta?.label ? (
-            <a
-              className="public-site-inline-link"
-              href={resolvePublicCtaHref(
-                site,
-                cta.href,
-                "contact"
-              )}
-            >
-              {cta.label} →
-            </a>
-          ) : null}
-        </div>
+            {ctaLabel && ctaHref ? (
+              <a
+                className="public-site-inline-link"
+                href={ctaHref}
+              >
+                {ctaLabel} →
+              </a>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </section>
   );
 }
 
 export {
+  explicitCtaHref,
   imageAltText,
 };
