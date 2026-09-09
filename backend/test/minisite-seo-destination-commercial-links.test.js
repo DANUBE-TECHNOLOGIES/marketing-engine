@@ -25,7 +25,7 @@ test("MSE-25.30 exposes only published Website Designer pages to destination ren
   service.publicRepo = {
     findPublishedForTenant: async () => ({ id: "destination-1", slug: "sicile", name: "Sicile", status: "published" }),
   };
-  service.exposureResolver = { exposes: async () => true };
+  service.exposureResolver = { resolve: async () => ["sicile"] };
 
   const result = await service.publicForSite("gien", "sicile", "tenant-1");
   assert.deepEqual(result.site.pages.map((page) => page.slug), ["croisieres", "circuits"]);
