@@ -68,13 +68,14 @@ test("MSE-25.91 keeps the home hero contained and guarantees complete copy plus 
   assert.doesNotMatch(css, /52vh/);
 });
 
-test("MSE-25.91 exposes payment reassurance once and keeps Visa resilient", () => {
+test("MSE-25.91 exposes payment reassurance only from configured public authority", () => {
   const layout = read("app/agence/[siteSlug]/layout.js");
   const reassurance = read("components/public-site/PublicReassuranceBand.js");
   assert.doesNotMatch(layout, /PublicPaymentMethodsBand/);
-  assert.match(reassurance, /id: "visa"/);
-  assert.match(reassurance, /Visa_2021\.svg/);
-  assert.match(reassurance, /fallback: "VISA"/);
+  assert.match(reassurance, /settings\.paymentMethods/);
+  assert.match(reassurance, /normalizedPaymentMethods/);
+  assert.match(reassurance, /Moyens de paiement publiés/);
+  assert.doesNotMatch(reassurance, /Visa_2021\.svg/);
 });
 
 test("MSE-25.91 uses the canonical backend service DNS", () => {
