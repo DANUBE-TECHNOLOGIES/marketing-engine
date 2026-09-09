@@ -1,12 +1,11 @@
-import { getSectionContent, getSectionTitle, getSectionType } from "./helpers";
+import { getSectionContent, getSectionTitle } from "./helpers";
 import { getPartnerDirectoryCategories } from "../../page-builder/shared/fullPartners";
 import { getPartnerProfile, getPublishablePartnerProfiles } from "../../page-builder/shared/partnerProfile";
 import { getCommonPartners } from "../../page-builder/shared/commonPartners";
-import { resolveAgencyPartnerCandidates } from "../../page-builder/shared/agencyPartnerCatalog";
-import { safePartnerAssetUrl, safePartnerHref, selectAgencyPartners } from "../../page-builder/shared/partnerSelection";
+import { selectedAgencyPartners } from "../../page-builder/shared/agencyPartnerSelection";
+import { safePartnerAssetUrl, safePartnerHref } from "../../page-builder/shared/partnerSelection";
 import styles from "./PartnerDirectoryRenderer.module.css";
 
-const AGENCY_PARTNER_SECTION_TYPES = Object.freeze(new Set(["partner-logos", "partners", "logos"]));
 const DIRECTORY_LOGO_WIDTH = 180;
 const DIRECTORY_LOGO_HEIGHT = 90;
 
@@ -35,19 +34,6 @@ function PartnerCard({ partner }) {
   );
 }
 
-function findAgencyPartnerSelection(site) {
-  const pages = Array.isArray(site?.pages) ? site.pages : [];
-  for (const page of pages) {
-    const sections = Array.isArray(page?.sections) && page.sections.length ? page.sections : Array.isArray(page?.blocks) ? page.blocks : [];
-    for (const candidate of sections) {
-      if (!AGENCY_PARTNER_SECTION_TYPES.has(getSectionType(candidate))) continue;
-      const content = getSectionContent(candidate);
-      if (Array.isArray(content.agencyPartners) && content.agencyPartners.length) return content.agencyPartners;
-    }
-  }
-  return [];
-}
-
 function PreferredPartnerCard({ item, agency = false }) {
   const name = item?.name || item?.title || "Partenaire voyage";
   const logoUrl = safePartnerAssetUrl(item?.logoUrl || item?.logo || item?.imageUrl);
@@ -58,8 +44,7 @@ function PreferredPartnerCard({ item, agency = false }) {
 
 function PreferredPartners({ site }) {
   const networkItems = getCommonPartners();
-  const candidates = resolveAgencyPartnerCandidates(findAgencyPartnerSelection(site));
-  const agencyItems = selectAgencyPartners(candidates, { networkItems, max: 3 });
+  const agencyItems = selectedAgencyPartners(site, { max: 3 });
   return <section className={styles.preferred} aria-labelledby="partenaires-selection-title"><div className={styles.preferredHeading}><span>La sélection Mondescale</span><h2 id="partenaires-selection-title">Nos partenaires de référence</h2><p>Les grandes marques que nous mobilisons régulièrement, complétées lorsque nécessaire par des spécialistes adaptés à votre projet.</p></div><div className={styles.networkPreferredGrid}>{networkItems.map((item) => <PreferredPartnerCard key={item.id} item={item} />)}</div>{agencyItems.length ? <div className={styles.agencyPreferred}><h3>Les spécialistes complémentaires de votre agence</h3><div className={styles.agencyPreferredGrid}>{agencyItems.map((item) => <PreferredPartnerCard key={item.id} item={item} agency />)}</div></div> : null}</section>;
 }
 
