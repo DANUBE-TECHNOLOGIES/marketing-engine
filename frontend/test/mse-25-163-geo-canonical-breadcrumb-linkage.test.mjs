@@ -31,6 +31,6 @@ test("MSE-25.163 JsonLd normalizes before serialization without changing rendere
 
 test("MSE-25.163 does not manufacture breadcrumb items, commercial facts or expertise", () => {
   assert.match(helper, /Array\.isArray\(data\?\.itemListElement\) \? data\.itemListElement : \[\]/);
-  assert.doesNotMatch(helper, /itemListElement\s*:\s*\[/);
+  assert.doesNotMatch(helper, /^\s*itemListElement\s*:/m);
   assert.doesNotMatch(helper, /price|availability|stock|booking|aggregateRating|knowsAbout/i);
 });
