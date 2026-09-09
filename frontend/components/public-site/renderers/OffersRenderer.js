@@ -8,40 +8,26 @@ import {
 import {
   resolvePublicCtaHref,
 } from "./ctaLinks";
-import { resolvedTargetCities } from "../../../lib/seo/local-area-config";
+import {
+  pageHref,
+  pageSlug,
+  uniquePublishedNavigation,
+} from "../PublicSiteHeader";
 
-function joinCities(values) {
-  if (!values.length) return "";
-  if (values.length === 1) return values[0];
-  if (values.length === 2) return `${values[0]} et ${values[1]}`;
-  return `${values.slice(0, -1).join(", ")} et ${values[values.length - 1]}`;
-}
-
-function siteRoot(site) {
-  return String(site?.basePath || `/agence/${encodeURIComponent(site?.slug || "")}`)
-    .replace(/\/$/, "");
-}
+const RELATED_OFFER_PAGE_SLUGS = new Set(["destinations", "services", "contact"]);
 
 function defaultOffersTitle(site) {
   const city = String(site?.agency?.city || site?.city || "").trim();
   return city
-    ? `Offres de voyages de votre agence à ${city}`
-    : "Les offres de voyages à ne pas manquer";
+    ? `Offres de voyages publiées à ${city}`
+    : "Offres de voyages publiées";
 }
 
 function defaultOffersIntro(site) {
   const city = String(site?.agency?.city || site?.city || "").trim();
-  const nearby = resolvedTargetCities(site, { limit: 3 });
-
-  if (!city) {
-    return "Découvrez les offres sélectionnées par votre agence et échangez avec un conseiller pour choisir le séjour adapté à votre projet.";
-  }
-
-  const area = nearby.length
-    ? ` L’agence conseille aussi les voyageurs de ${joinCities(nearby)}.`
-    : "";
-
-  return `Découvrez les offres sélectionnées par votre agence de voyages à ${city} et échangez avec un conseiller pour choisir le séjour adapté à votre projet.${area}`;
+  return city
+    ? `Retrouvez les offres actuellement publiées par votre agence de voyages à ${city}.`
+    : "Retrouvez les offres actuellement publiées par votre agence de voyages.";
 }
 
 function offerImage(item) {
@@ -67,22 +53,26 @@ function offerImageAlt(item) {
 }
 
 function offerLinkLabel(item) {
-  const title = String(item?.title || item?.name || "ce voyage").trim();
-  return item?.href
-    ? `Voir l’offre ${title}`
-    : `Demander un devis pour ${title}`;
+  const explicit = String(item?.linkLabel || item?.ctaLabel || item?.buttonLabel || "").trim();
+  if (explicit) return explicit;
+  const title = String(item?.title || item?.name || "").trim();
+  return title ? `Voir ${title}` : "Voir l’offre";
+}
+
+function publishedOfferRelatedPages(site) {
+  return uniquePublishedNavigation(site).filter((page) => RELATED_OFFER_PAGE_SLUGS.has(pageSlug(page)));
 }
 
 export default function OffersRenderer({ section, site }) {
   const content = getSectionContent(section);
   const items = getItems(section, ["items", "offers"]);
   const introduction = content.text || content.introduction || content.description || defaultOffersIntro(site);
-  const root = siteRoot(site);
+  const relatedPages = publishedOfferRelatedPages(site);
 
   return (
     <section className="public-site-section public-site-offers">
       <div className="public-site-container">
-        <p className="public-site-section-kicker">Bons plans</p>
+        <p className="public-site-section-kicker">Offres publiées</p>
         <h2>{getSectionTitle(section, defaultOffersTitle(site))}</h2>
         {introduction ? <p className="public-site-section-intro">{introduction}</p> : null}
 
@@ -90,7 +80,7 @@ export default function OffersRenderer({ section, site }) {
           {items.length ? (
             items.map((item, index) => {
               const image = offerImage(item);
-              const label = offerLinkLabel(item);
+              const hasHref = Boolean(String(item?.href || "").trim());
               return (
                 <article className="public-site-offer-card" key={item.id || item.title || index}>
                   {image ? (
@@ -111,43 +101,46 @@ export default function OffersRenderer({ section, site }) {
 
                   <div className="public-site-offer-content">
                     {item.badge ? <span className="public-site-offer-badge">{item.badge}</span> : null}
-                    <h3>{item.title || item.name || "Voyage"}</h3>
+                    <h3>{item.title || item.name || "Offre publiée"}</h3>
                     {item.description ? <p>{item.description}</p> : null}
-                    {item.price ? <strong className="public-site-offer-price">À partir de {item.price}</strong> : null}
-                    <a
-                      href={resolvePublicCtaHref(site, item.href, "contact")}
-                      className="public-site-inline-link"
-                    >
-                      {label} →
-                    </a>
+                    {item.price ? <strong className="public-site-offer-price">Prix publié : {item.price}</strong> : null}
+                    {hasHref ? (
+                      <a
+                        href={resolvePublicCtaHref(site, item.href, "contact")}
+                        className="public-site-inline-link"
+                      >
+                        {offerLinkLabel(item)} →
+                      </a>
+                    ) : null}
                   </div>
                 </article>
               );
             })
           ) : (
             <div className="public-site-empty-premium">
-              <strong>Les prochaines offres arrivent bientôt.</strong>
-              <p>Contactez votre agence pour connaître les meilleures opportunités du moment.</p>
+              <strong>Aucune offre n’est actuellement publiée dans cette section.</strong>
             </div>
           )}
         </div>
 
-        <div className="public-site-related-links" aria-label="Autres façons de préparer votre voyage">
-          <Link href={`${root}/destinations`}>Explorer les destinations proposées par votre agence</Link>
-          <Link href={`${root}/services`}>Découvrir l’accompagnement et les services de l’agence</Link>
-          <Link href={`${root}/contact`}>Contacter un conseiller pour préparer votre voyage</Link>
-        </div>
+        {relatedPages.length ? (
+          <div className="public-site-related-links" aria-label="Pages publiées associées aux offres">
+            {relatedPages.map((page) => (
+              <Link key={pageSlug(page)} href={pageHref(site.slug, page)}>{page.title}</Link>
+            ))}
+          </div>
+        ) : null}
       </div>
     </section>
   );
 }
 
 export {
+  RELATED_OFFER_PAGE_SLUGS,
   defaultOffersIntro,
   defaultOffersTitle,
-  joinCities,
   offerImage,
   offerImageAlt,
   offerLinkLabel,
-  siteRoot,
+  publishedOfferRelatedPages,
 };
