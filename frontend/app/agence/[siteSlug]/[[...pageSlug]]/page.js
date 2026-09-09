@@ -36,7 +36,10 @@ import {
   buildMondescaleNetworkSchema,
   buildNetworkAwareTravelAgencySchema,
 } from "../../../../lib/seo/network-entity-schema";
-import { buildPageFaqSchema } from "../../../../lib/seo/page-faq-schema";
+import {
+  buildPageFaqSchema,
+  linkFaqToWebPage,
+} from "../../../../lib/seo/page-faq-schema";
 import { buildPageSemanticsSchema } from "../../../../lib/seo/page-semantics-schema";
 import { assessLocalContentQuality } from "../../../../lib/seo/local-content-quality";
 import {
@@ -280,8 +283,8 @@ export default async function AgencySitePage({ params }) {
   const rawServiceCatalog = servicesPage ? buildServiceCatalogSchema(site, page) : null;
   const serviceCatalog = linkServiceCatalogToPage(rawServiceCatalog, currentUrl);
   const partnerDirectorySchemas = partnersPage ? buildPartnerDirectorySchemas({ site, pageUrl: currentUrl }) : [];
-  const faqSchema = legalPage ? null : buildPageFaqSchema(page);
-  const webPageSchema = buildServiceAwareWebPageSchema({
+  const faqSchema = legalPage ? null : buildPageFaqSchema(page, currentUrl);
+  const baseWebPageSchema = buildServiceAwareWebPageSchema({
     site,
     page,
     url: currentUrl,
@@ -290,6 +293,7 @@ export default async function AgencySitePage({ params }) {
     image: localSeo.image,
     serviceCatalog,
   });
+  const webPageSchema = linkFaqToWebPage(baseWebPageSchema, faqSchema);
   const pageSemanticsSchema = buildPageSemanticsSchema({ page, url: currentUrl });
   const sharedHero = !isHomePage(pageSlug) ? homeHeroSection(homePage) : null;
   const needsFallbackHeading = !legalPage && !pageHasHero(page) && !sharedHero;
