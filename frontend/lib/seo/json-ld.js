@@ -246,6 +246,29 @@ export function destinationPracticalProperties(destination) {
     }));
 }
 
+export function destinationHighlightProperties(destination) {
+  const highlights = Array.isArray(destination?.highlights)
+    ? destination.highlights
+    : [];
+  const seen = new Set();
+
+  return highlights
+    .map((value) => String(value || "").replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .filter((value) => {
+      const key = value.toLocaleLowerCase("fr-FR");
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 12)
+    .map((value) => ({
+      "@type": "PropertyValue",
+      name: "Point fort",
+      value,
+    }));
+}
+
 export function buildTravelAgencySchema(site) {
   const agency = site?.agency || site;
   const address = physicalPostalAddress(site, agency);
@@ -402,6 +425,10 @@ export function buildDestinationSchema(data) {
   const destination = data.destination;
   const site = data.site;
   const pageUrl = absoluteUrl(data.canonicalPath);
+  const additionalProperty = [
+    ...destinationPracticalProperties(destination),
+    ...destinationHighlightProperties(destination),
+  ];
 
   return compactJsonLd({
     "@context": "https://schema.org",
@@ -416,7 +443,7 @@ export function buildDestinationSchema(data) {
     mainEntityOfPage: webPageEntityReference(data.canonicalPath),
     image: destination.heroImageUrl ? absoluteUrl(destination.heroImageUrl) : undefined,
     touristType: destination.audiences,
-    additionalProperty: destinationPracticalProperties(destination),
+    additionalProperty,
     geo:
       destination.latitude != null &&
       destination.longitude != null
