@@ -76,6 +76,7 @@ jobs:
           node --test test/mse-25-178-geo-grounded-inspirations.test.mjs
           node --test test/mse-25-179-geo-grounded-features.test.mjs
           node --test test/mse-25-180-geo-grounded-flexible-payment.test.mjs
+          node --test test/mse-25-181-geo-grounded-stats.test.mjs
 
       - name: Lint canonical public files
         working-directory: frontend
@@ -103,6 +104,7 @@ jobs:
           components/public-site/renderers/InspirationsRenderer.js
           components/public-site/renderers/FeaturesV2Renderer.js
           components/public-site/renderers/FlexiblePaymentRenderer.js
+          components/public-site/renderers/StatsRenderer.js
           components/public-site/renderers/TeamRenderer.js
           components/public-site/renderers/PartnersRenderer.js
           components/public-site/renderers/FaqRenderer.js
