@@ -1,3 +1,4 @@
+import { verifiedCatalogAgencyPartners } from "../../components/page-builder/shared/agencyPartnerSelection";
 import { getPartnerDirectoryCategories } from "../../components/page-builder/shared/fullPartners";
 import { getPublishablePartnerProfiles } from "../../components/page-builder/shared/partnerProfile";
 import { absoluteUrl } from "./site-url";
@@ -35,8 +36,11 @@ export function buildPartnerDirectorySchemas({ site, pageUrl }) {
 
   const url = absoluteUrl(pageUrl || `/agence/${encodeURIComponent(site?.slug || "")}/partenaires`);
   const listId = `${url}#partner-list`;
+  const entryIds = new Set(entries.map((entry) => entry.id));
+  const agencySelections = verifiedCatalogAgencyPartners(site, { max: 3 })
+    .filter((partner) => entryIds.has(clean(partner.catalogPartnerId)));
 
-  return [
+  const schemas = [
     {
       "@context": "https://schema.org",
       "@type": "CollectionPage",
@@ -66,4 +70,33 @@ export function buildPartnerDirectorySchemas({ site, pageUrl }) {
       })),
     },
   ];
+
+  if (agencySelections.length) {
+    const agencyUrl = absoluteUrl(site?.basePath || `/agence/${encodeURIComponent(site?.slug || "")}`);
+    schemas.push({
+      "@context": "https://schema.org",
+      "@type": "ItemList",
+      "@id": `${url}#agency-partner-selection`,
+      name: `Partenaires sélectionnés par ${clean(site?.name || site?.agency?.name || "cette agence")}`,
+      about: {
+        "@type": "TravelAgency",
+        "@id": `${agencyUrl}#travel-agency`,
+        name: clean(site?.name || site?.agency?.name),
+        url: agencyUrl,
+      },
+      numberOfItems: agencySelections.length,
+      itemListElement: agencySelections.map((partner, index) => ({
+        "@type": "ListItem",
+        position: index + 1,
+        name: clean(partner.name),
+        item: {
+          "@type": "Organization",
+          "@id": `${url}#partner-${encodeURIComponent(clean(partner.catalogPartnerId))}`,
+          name: clean(partner.name),
+        },
+      })),
+    });
+  }
+
+  return schemas;
 }
