@@ -17,8 +17,8 @@ test("MSE-25.177 offers copy stays limited to published offer facts", () => {
 });
 
 test("MSE-25.177 does not invent quote actions for offers without href", () => {
-  assert.match(source, /const hasHref = Boolean/);
-  assert.match(source, /\{hasHref \? \(/);
+  assert.match(source, /const resolvedHref = resolvePublicCtaHref\(site, item\?\.href, ""\)/);
+  assert.match(source, /\{resolvedHref \? \(/);
   assert.doesNotMatch(source, /Demander un devis pour/);
 });
 
