@@ -50,13 +50,17 @@ test("MSE-25.91 preserves home partner network and agency partner selection", ()
   assert.match(source, /Partenaires réseau publiés/);
 });
 
-test("MSE-25.91 keeps the home hero contained and guarantees complete copy plus CTAs", () => {
+test("MSE-25.91 keeps the home hero contained and complete without invented CTA copy", () => {
   const renderer = read("components/public-site/renderers/HeroV2Renderer.js");
   const css = read("components/public-site/network-home-hero.css");
   assert.match(renderer, /public-site-hero--immersive/);
   assert.match(renderer, /NETWORK_HOME_HERO_IMAGE/);
   assert.match(renderer, /getShowcaseUrl\(site\)/);
-  assert.match(renderer, /Découvrir nos voyages/);
+  assert.match(renderer, /factualHeroSubtitle/);
+  assert.match(renderer, /const primaryHref = primaryLabel/);
+  assert.match(renderer, /const secondaryHref = secondaryLabel/);
+  assert.doesNotMatch(renderer, /Découvrir nos voyages/);
+  assert.doesNotMatch(renderer, /"Demander un devis"/);
   assert.match(css, /width: min\(1480px, calc\(100% - 48px\)\)/);
   assert.match(css, /height: 460px/);
   assert.match(css, /margin: 18px auto 0/);
