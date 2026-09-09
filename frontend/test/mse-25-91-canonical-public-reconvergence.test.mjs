@@ -47,7 +47,7 @@ test("MSE-25.91 preserves home partner network and agency partner selection", ()
   assert.match(source, /getCommonPartners/);
   assert.match(source, /NetworkPartnerGrid/);
   assert.match(source, /selectAgencyPartners/);
-  assert.match(source, /Notre sélection principale/);
+  assert.match(source, /Partenaires réseau publiés/);
 });
 
 test("MSE-25.91 keeps the home hero contained and guarantees complete copy plus CTAs", () => {
