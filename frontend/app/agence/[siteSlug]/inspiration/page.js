@@ -14,6 +14,10 @@ import {
 import {
   resolvedTargetCities,
 } from "../../../../lib/seo/local-area-config";
+import {
+  buildInspirationCollectionSchemas,
+  inspirationVisiblePath,
+} from "../../../../lib/seo/inspiration-collection-schema";
 import "./inspiration-index.css";
 
 const PUBLIC_ORIGIN = String(
@@ -135,11 +139,6 @@ function inspirationCmsEditorial(site, page) {
 
   if (!text) return null;
 
-  /*
-   * Refuse the historic Website Designer seed copy.
-   * Activating CMS rendering must never expose this
-   * generic placeholder across the network.
-   */
   const legacySeed =
     /accompagne ses clients avec conseil, expertise et suivi personnalisé avant, pendant et après leur voyage\.?$/i;
 
@@ -164,7 +163,6 @@ function inspirationCmsEditorial(site, page) {
     text,
   };
 }
-
 
 export async function generateMetadata({ params }) {
   const { siteSlug } = await params;
@@ -254,11 +252,7 @@ export default async function InspirationIndexPage({ params }) {
   const destinationsPath = `${homePath}/destinations`;
   const seo = inspirationSeo(site, inspirationPage);
 
-  const cmsEditorial =
-    inspirationCmsEditorial(
-      site,
-      inspirationPage
-    );
+  const cmsEditorial = inspirationCmsEditorial(site, inspirationPage);
   const breadcrumb = buildBreadcrumbSchema([
     { name: "Accueil", path: site.basePath },
     { name: "Inspirations voyage", path: canonical },
@@ -273,12 +267,14 @@ export default async function InspirationIndexPage({ params }) {
     title: seo.title,
     description: seo.description,
   });
+  const collectionSchemas = buildInspirationCollectionSchemas({ siteSlug, items });
 
   return (
     <>
       <JsonLd data={buildTravelAgencySchema(site)} />
       <JsonLd data={breadcrumb} />
       <JsonLd data={webPage} />
+      {collectionSchemas.map((schema) => <JsonLd key={schema["@id"]} data={schema} />)}
 
       <section className="public-site-section">
         <div className="public-site-container public-site-prose">
@@ -321,7 +317,8 @@ export default async function InspirationIndexPage({ params }) {
                 const published = formatPublishedDate(
                   item.publishedAt || item.createdAt
                 );
-                const articlePath = `${canonicalPath(siteSlug)}/${encodeURIComponent(slug)}`;
+                const articlePath = inspirationVisiblePath(siteSlug, item);
+                if (!articlePath) return null;
 
                 return (
                   <article className="public-inspiration-card" key={item.id || slug}>
