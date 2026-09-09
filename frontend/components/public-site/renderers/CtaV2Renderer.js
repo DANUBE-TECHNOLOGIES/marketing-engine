@@ -6,13 +6,22 @@ import {
   resolvePublicCtaHref,
 } from "./ctaLinks";
 
-function CtaButton({ cta, site, className }) {
-  if (!cta?.label) return null;
+function explicitCtaHref(site, href) {
+  const value = String(href || "").trim();
+  if (!value || /^(javascript:|data:|vbscript:)/i.test(value)) return null;
+  return resolvePublicCtaHref(site, value, "", { label: "" });
+}
+
+function configuredCta(site, cta) {
+  const label = String(cta?.label || "").trim();
+  const href = explicitCtaHref(site, cta?.href);
+  return label && href ? { label, href } : null;
+}
+
+function CtaButton({ cta, className }) {
+  if (!cta) return null;
   return (
-    <a
-      className={className}
-      href={resolvePublicCtaHref(site, cta.href, "contact", { label: cta.label })}
-    >
+    <a className={className} href={cta.href}>
       {cta.label}
     </a>
   );
@@ -21,10 +30,6 @@ function CtaButton({ cta, site, className }) {
 function isHomePage(page) {
   const slug = String(page?.slug || "").trim().toLowerCase();
   return !slug || ["home", "accueil", "index"].includes(slug);
-}
-
-function legacyCta(label) {
-  return label ? { label, href: "contact" } : null;
 }
 
 export default function CtaV2Renderer({ section, site, page }) {
@@ -37,11 +42,11 @@ export default function CtaV2Renderer({ section, site, page }) {
   if (isHomePage(page)) return null;
 
   const title = getSectionTitle(section, null);
-  const primaryCta = content.primaryCta || legacyCta(content.primaryButton);
-  const secondaryCta = content.secondaryCta || legacyCta(content.secondaryButton);
+  const primaryCta = configuredCta(site, content.primaryCta);
+  const secondaryCta = configuredCta(site, content.secondaryCta);
   const text = content.text || null;
-  const hasPrimaryCta = Boolean(primaryCta?.label);
-  const hasSecondaryCta = Boolean(secondaryCta?.label);
+  const hasPrimaryCta = Boolean(primaryCta);
+  const hasSecondaryCta = Boolean(secondaryCta);
 
   if (!title && !text && !hasPrimaryCta && !hasSecondaryCta) return null;
 
@@ -52,8 +57,8 @@ export default function CtaV2Renderer({ section, site, page }) {
         {text ? <p>{text}</p> : null}
         {hasPrimaryCta || hasSecondaryCta ? (
           <div className="public-site-hero-actions">
-            <CtaButton cta={primaryCta} site={site} className="public-site-button" />
-            <CtaButton cta={secondaryCta} site={site} className="public-site-button public-site-button-secondary" />
+            <CtaButton cta={primaryCta} className="public-site-button" />
+            <CtaButton cta={secondaryCta} className="public-site-button public-site-button-secondary" />
           </div>
         ) : null}
       </div>
@@ -61,4 +66,4 @@ export default function CtaV2Renderer({ section, site, page }) {
   );
 }
 
-export { isHomePage, legacyCta };
+export { configuredCta, explicitCtaHref, isHomePage };
