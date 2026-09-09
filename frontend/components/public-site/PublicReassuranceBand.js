@@ -35,18 +35,6 @@ const TRUST_REFERENCES = Object.freeze([
     detail: "Organisation professionnelle",
     logo: "https://www.depart-de-deauville.fr/assets/img/site/136/uploads/LOGOS/les_entreprises_du_voyage_logo.png",
   },
-  {
-    id: "atout-france",
-    label: "Atout France",
-    detail: "Immatriculation tourisme",
-    logo: "https://etc-corporate.org/uploads/2021/09/Picture4.png",
-  },
-  {
-    id: "groupama",
-    label: "GROUPAMA",
-    detail: "Garantie financière & RCP",
-    logo: "https://images.ctfassets.net/8tpbxzn2rg50/1lU4ekQZcrTPRSYfKd5JE9/122d8e3d4306829a71ede8d5f224341a/groupama-nouveau-logo.png",
-  },
 ]);
 
 const LOGO_INTRINSIC_WIDTH = 160;
@@ -92,7 +80,7 @@ export default function PublicReassuranceBand() {
   return (
     <section
       className="public-reassurance"
-      aria-label="Moyens de paiement et garanties professionnelles"
+      aria-label="Moyens de paiement et affiliations professionnelles"
     >
       <div className="public-site-container public-reassurance-shell">
         <div className="public-reassurance-panel public-reassurance-panel--payments">
@@ -110,10 +98,10 @@ export default function PublicReassuranceBand() {
 
         <div className="public-reassurance-panel public-reassurance-panel--trust">
           <header className="public-reassurance-heading">
-            <span className="public-reassurance-kicker">Votre agence en toute confiance</span>
+            <span className="public-reassurance-kicker">Repères professionnels</span>
             <div>
-              <strong>Garanties & affiliations</strong>
-              <small>Les repères professionnels de Mondescale</small>
+              <strong>Affiliations réseau publiées</strong>
+              <small>Les affiliations professionnelles actuellement affichées par Mondescale</small>
             </div>
           </header>
           <BrandRow items={TRUST_REFERENCES} kind="trust" />
