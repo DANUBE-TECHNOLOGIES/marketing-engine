@@ -12,11 +12,13 @@ const sharedFaq = read("lib/public-faq.js");
 const team = read("components/public-site/renderers/TeamRenderer.js");
 const localContext = read("components/public-site/LocalContentContext.js");
 
-test("shared service cards preserve configured links and fall back to contact", () => {
+test("shared service cards preserve only explicitly published actions", () => {
   assert.match(features, /item\?\.href \|\| item\?\.url \|\| item\?\.link/);
-  assert.match(features, /configuredHref \|\| `\$\{root\}\/contact`/);
-  assert.match(features, /Parler de votre projet/);
   assert.match(features, /item\?\.ctaLabel \|\| item\?\.linkLabel \|\| item\?\.actionLabel/);
+  assert.match(features, /return href && label \? \{ href, label \} : null/);
+  assert.doesNotMatch(features, /configuredHref \|\| `\$\{root\}\/contact`/);
+  assert.doesNotMatch(features, /Parler de votre projet/);
+  assert.doesNotMatch(features, /En savoir plus/);
   assert.doesNotMatch(features, /Bois-Colombes|Dax|Gien|Lamorlaye|Maurepas|Nevers|Ozoir/);
 });
 
