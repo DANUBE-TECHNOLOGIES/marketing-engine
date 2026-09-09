@@ -69,6 +69,7 @@ jobs:
           node --test test/mse-25-171-geo-grounded-global-header.test.mjs
           node --test test/mse-25-172-geo-grounded-generic-section-fallbacks.test.mjs
           node --test test/mse-25-173-geo-grounded-global-footer.test.mjs
+          node --test test/mse-25-174-geo-grounded-hero-fallbacks.test.mjs
 
       - name: Lint canonical public files
         working-directory: frontend
