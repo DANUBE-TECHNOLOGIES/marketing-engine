@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { absoluteUrl } from "../../../lib/seo/site-url";
+import { contextualJourneyItems } from "../PublicContextualJourney";
 import { getSectionContent, getSectionTitle } from "./helpers";
 import styles from "./TeamRenderer.module.css";
 
@@ -200,7 +201,7 @@ function MemberFacts({ member }) {
   );
 }
 
-export default function TeamRenderer({ section, site }) {
+export default function TeamRenderer({ section, site, page }) {
   const content = getSectionContent(section);
   const city = clean(site?.agency?.city || site?.city);
   const members = memberCollection(content, site);
@@ -215,6 +216,7 @@ export default function TeamRenderer({ section, site }) {
   const singleMember = uniqueMembers.length === 1;
   const agencyId = agencyEntityId(site);
   const agencyName = clean(site?.name || site?.agency?.name) || "Mondescale Voyages";
+  const navigationItems = contextualJourneyItems(site, page?.slug, 3);
 
   return (
     <section className={`public-site-section public-site-team ${styles.section}`} data-team-size={uniqueMembers.length}>
@@ -260,11 +262,13 @@ export default function TeamRenderer({ section, site }) {
             })}
           </div>
         ) : null}
-        <nav className={styles.links} aria-label={city ? `Préparer votre voyage avec l’équipe de ${city}` : "Préparer votre voyage avec notre équipe"}>
-          <Link href={siteHref(site, "services")}>Découvrir nos services</Link>
-          <Link href={siteHref(site, "destinations")}>Explorer nos destinations</Link>
-          <Link href={siteHref(site, "contact")}>Échanger avec un conseiller</Link>
-        </nav>
+        {navigationItems.length ? (
+          <nav className={styles.links} aria-label={city ? `Pages publiées par l’agence de ${city}` : "Pages publiées par notre agence"}>
+            {navigationItems.map((item) => (
+              <Link key={item.slug} href={item.href}>{item.title}</Link>
+            ))}
+          </nav>
+        ) : null}
       </div>
     </section>
   );
