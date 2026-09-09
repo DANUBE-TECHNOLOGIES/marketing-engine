@@ -3,6 +3,10 @@ import {
   getSectionContent,
   getSectionType,
 } from "../../components/public-site/renderers/helpers";
+import {
+  isSectionVisible,
+  sortSections,
+} from "../../components/page-builder/shared/blockUtils";
 
 const DESTINATION_SECTION_TYPES = new Set([
   "destinations",
@@ -63,6 +67,12 @@ export function destinationSectionItems(section) {
     section,
     dynamicSource ? ["destinations", "items"] : ["items"]
   );
+}
+
+export function publicDestinationCollectionSections(page) {
+  return sortSections(page?.sections || page?.blocks)
+    .filter(isSectionVisible)
+    .filter((section) => DESTINATION_SECTION_TYPES.has(getSectionType(section)));
 }
 
 export function publicDestinationCollectionItems({ site, sections = [] }) {
