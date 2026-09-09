@@ -34,7 +34,8 @@ export function buildInspirationCollectionSchemas({ siteSlug, items = [] }) {
     });
   }
 
-  if (!entries.length) return [];
+  const publicEntries = entries.slice(0, 24);
+  if (!publicEntries.length) return [];
 
   const pageUrl = absoluteUrl(`/agence/${encodeURIComponent(siteSlug)}/inspiration`);
   const listId = `${pageUrl}#inspiration-list`;
@@ -54,8 +55,8 @@ export function buildInspirationCollectionSchemas({ siteSlug, items = [] }) {
       "@context": "https://schema.org",
       "@type": "ItemList",
       "@id": listId,
-      numberOfItems: entries.length,
-      itemListElement: entries.slice(0, 24).map((entry, index) => ({
+      numberOfItems: publicEntries.length,
+      itemListElement: publicEntries.map((entry, index) => ({
         "@type": "ListItem",
         position: index + 1,
         name: entry.name,
