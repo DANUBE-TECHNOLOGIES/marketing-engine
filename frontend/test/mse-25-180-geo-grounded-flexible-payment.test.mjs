@@ -31,6 +31,6 @@ test("MSE-25.180 payment CTA requires explicit label and href", () => {
 });
 
 test("MSE-25.180 empty payment sections do not manufacture content", () => {
-  assert.match(source, /if \(!title && !body && !installmentText && !content\.disclaimer && !action\) return null/);
+  assert.match(source, /if \(!title && !body && !installmentText && !content\.disclaimer && !actionHref\) return null/);
   assert.doesNotMatch(source, /Facilités de paiement";/);
 });
