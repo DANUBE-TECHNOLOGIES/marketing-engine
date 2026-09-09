@@ -41,10 +41,13 @@ test("advisor profiles expose optional factual enrichment without invented defau
   assert.doesNotMatch(team, /Céline|Sylvie|Marie-Claire|Stéphanie|Prescillia|Maïlys|Princess|Anisia/);
 });
 
-test("local proximity SEO remains centralized and unchanged in principle", () => {
+test("local proximity SEO remains centralized while navigation is publication-grounded", () => {
   assert.match(localContext, /resolvedTargetCities\(site, \{ limit: 4 \}\)/);
-  assert.match(localContext, /Navigation locale autour de/);
-  assert.match(localContext, /Agence de voyages à \{city\}/);
+  assert.match(localContext, /localAreaSentence\(city, nearby\)/);
+  assert.match(localContext, /uniquePublishedNavigation\(site\)/);
+  assert.match(localContext, /pageHref\(site\.slug, candidate\)/);
+  assert.match(localContext, /Pages publiées par l’agence de voyages de \$\{city\}/);
+  assert.doesNotMatch(localContext, /Navigation locale autour de/);
 });
 
 test("MSE-25.123 does not introduce a fake booking promise", () => {
