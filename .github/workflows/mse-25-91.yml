@@ -56,6 +56,7 @@ jobs:
           node --test test/mse-25-158-geo-professional-affiliation-authority.test.mjs
           node --test test/mse-25-159-geo-faq-visible-schema-parity.test.mjs
           node --test test/mse-25-160-geo-faq-canonical-graph-linkage.test.mjs
+          node --test test/mse-25-161-geo-canonical-webpage-semantic-consolidation.test.mjs
 
       - name: Lint canonical public files
         working-directory: frontend
@@ -71,6 +72,7 @@ jobs:
           components/public-site/renderers/FaqRenderer.js
           lib/public-faq.js
           lib/seo/page-faq-schema.js
+          lib/seo/page-semantics-schema.js
           lib/showcase-url.js
 
       - name: Build canonical public frontend
