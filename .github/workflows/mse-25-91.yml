@@ -12,7 +12,6 @@ on:
       - 'scripts/mse-25-91-vm-deploy.sh'
       - 'scripts/mse-25-119-vm-deploy-main.test.mjs'
       - 'scripts/mse-25-91-post-validation-cleanup.sh'
-      - 'scripts/mse-25-91-public-contract-preflight.js'
       - 'scripts/mse-25-91-canonical-drift-check.js'
       - 'scripts/mse-25-124-runtime-verify.js'
       - '.github/workflows/mse-25-91.yml'
@@ -55,6 +54,7 @@ jobs:
           node --test test/mse-25-156-geo-legal-reassurance-runtime.test.mjs
           node --test test/mse-25-157-geo-payment-reassurance-authority.test.mjs
           node --test test/mse-25-158-geo-professional-affiliation-authority.test.mjs
+          node --test test/mse-25-159-geo-faq-visible-schema-parity.test.mjs
 
       - name: Lint canonical public files
         working-directory: frontend
@@ -66,6 +66,9 @@ jobs:
           components/public-site/renderers/HeroV2Renderer.js
           components/public-site/renderers/TeamRenderer.js
           components/public-site/renderers/PartnersRenderer.js
+          components/public-site/renderers/FaqRenderer.js
+          lib/public-faq.js
+          lib/seo/page-faq-schema.js
           lib/showcase-url.js
 
       - name: Build canonical public frontend
