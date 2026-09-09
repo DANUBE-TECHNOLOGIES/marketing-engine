@@ -29,7 +29,8 @@ test("public editorial relation normalization requires manual published same-ten
   assert.match(destinationServiceSource, /target\?\.status[\s\S]*published/);
   assert.match(destinationServiceSource, /target\?\.tenantId/);
   assert.match(destinationServiceSource, /exposed\.has\(normalizedSlug\)/);
-  assert.match(destinationServiceSource, /const \{ relationsFrom: _relationsFrom, \.\.\.publicDestination \} = destination/);
+  assert.match(destinationServiceSource, /const publicDestination = \{ \.\.\.destination \}/);
+  assert.match(destinationServiceSource, /delete publicDestination\.relationsFrom/);
   assert.match(destinationServiceSource, /editorialRelations,/);
 });
 
