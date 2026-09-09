@@ -5,13 +5,12 @@ import {
 } from "./helpers";
 import {
   resolvePublicCtaHref,
-  sitePageHref,
 } from "./ctaLinks";
 
 const NETWORK_HOME_HERO_IMAGE =
   "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=2400&q=85";
 
-function ctaLabel(cta, legacyLabel, fallback) {
+function ctaLabel(cta, legacyLabel, fallback = null) {
   return cta?.label || legacyLabel || fallback;
 }
 
@@ -31,6 +30,17 @@ function defaultHeroTitle(site) {
 function defaultHeroEyebrow(site) {
   const city = siteCity(site);
   return city ? `Agence de voyages · ${city}` : "Agence de voyages";
+}
+
+function factualHeroSubtitle(site) {
+  const city = siteCity(site);
+  return city
+    ? `Retrouvez les informations publiées par votre agence de voyages à ${city}.`
+    : "Retrouvez les informations publiées par votre agence de voyages.";
+}
+
+function resolvedHeroSubtitle({ content, site }) {
+  return content.subtitle || content.text || content.description || site?.agency?.description || factualHeroSubtitle(site);
 }
 
 function pageSlug(page) {
@@ -113,7 +123,7 @@ function isShowcaseCta(cta, legacyLabel) {
 export default function HeroV2Renderer({ section, site, page, forcePageIntent = false, sharedNetworkHero = false }) {
   const content = getSectionContent(section);
   const title = resolvedHeroTitle({ content, section, site, page, forcePageIntent });
-  const subtitle = content.subtitle || content.text || content.description || site?.agency?.description || "Votre agence vous accompagne dans la création de vos plus beaux voyages.";
+  const subtitle = resolvedHeroSubtitle({ content, site });
   const alignment = normalizeAlignment(content.alignment);
   const backgroundImage = resolvedHeroImage({ content, page, sharedNetworkHero });
   const backgroundPosition = content.backgroundPosition || "center";
@@ -133,24 +143,22 @@ export default function HeroV2Renderer({ section, site, page, forcePageIntent = 
 
   const primaryCta = content.primaryCta || null;
   const secondaryCta = content.secondaryCta || null;
-  const primaryLabel = ctaLabel(primaryCta, content.primaryButton, "Demander un devis");
-  const secondaryLabel = ctaLabel(secondaryCta, content.secondaryButton, immersiveNetworkHero ? "Découvrir nos voyages" : "Nous contacter");
-  const primaryShowcase = isShowcaseCta(primaryCta, content.primaryButton);
-  const secondaryShowcase =
-    isShowcaseCta(secondaryCta, content.secondaryButton) ||
-    (!secondaryCta && !content.secondaryButton && immersiveNetworkHero);
-  const primaryHref = primaryShowcase
-    ? getShowcaseUrl(site)
-    : resolvePublicCtaHref(site, primaryCta?.href, "contact", { label: primaryLabel });
-  const secondaryHref = secondaryShowcase
-    ? getShowcaseUrl(site)
-    : secondaryCta
-      ? resolvePublicCtaHref(site, secondaryCta.href, "destinations", { label: secondaryLabel })
-      : immersiveNetworkHero
-        ? sitePageHref(site, "destinations")
-        : content.secondaryButton
-          ? resolvePublicCtaHref(site, "contact", "contact", { label: secondaryLabel })
-          : null;
+  const primaryLabel = ctaLabel(primaryCta, content.primaryButton);
+  const secondaryLabel = ctaLabel(secondaryCta, content.secondaryButton);
+  const primaryShowcase = Boolean(primaryLabel) && isShowcaseCta(primaryCta, content.primaryButton);
+  const secondaryShowcase = Boolean(secondaryLabel) && isShowcaseCta(secondaryCta, content.secondaryButton);
+  const primaryHref = primaryLabel
+    ? primaryShowcase
+      ? getShowcaseUrl(site)
+      : resolvePublicCtaHref(site, primaryCta?.href, "contact", { label: primaryLabel })
+    : null;
+  const secondaryHref = secondaryLabel
+    ? secondaryShowcase
+      ? getShowcaseUrl(site)
+      : secondaryCta
+        ? resolvePublicCtaHref(site, secondaryCta.href, "destinations", { label: secondaryLabel })
+        : resolvePublicCtaHref(site, "contact", "contact", { label: secondaryLabel })
+    : null;
 
   const contentStyle = { textAlign: alignment };
   const centered = alignment === "center";
@@ -222,6 +230,7 @@ export {
   NETWORK_HOME_HERO_IMAGE,
   defaultHeroEyebrow,
   defaultHeroTitle,
+  factualHeroSubtitle,
   genericHeroTitle,
   imageOrigin,
   intentHeroTitle,
@@ -229,5 +238,6 @@ export {
   isShowcaseCta,
   resolvedHeroAlt,
   resolvedHeroImage,
+  resolvedHeroSubtitle,
   resolvedHeroTitle,
 };
