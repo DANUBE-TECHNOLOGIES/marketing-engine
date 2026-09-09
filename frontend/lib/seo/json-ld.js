@@ -269,6 +269,43 @@ export function destinationHighlightProperties(destination) {
     }));
 }
 
+export function destinationPublicProperties(destination) {
+  const type = String(destination?.type || "").replace(/\s+/g, " ").trim();
+
+  return type
+    ? [{
+        "@type": "PropertyValue",
+        name: "Type de voyage",
+        value: type,
+      }]
+    : [];
+}
+
+export function destinationContainedInPlace(destination) {
+  const country = String(destination?.country || "").replace(/\s+/g, " ").trim();
+  const region = String(destination?.region || "").replace(/\s+/g, " ").trim();
+
+  if (region) {
+    return {
+      "@type": "Place",
+      name: region,
+      containedInPlace: country
+        ? {
+            "@type": "Country",
+            name: country,
+          }
+        : undefined,
+    };
+  }
+
+  return country
+    ? {
+        "@type": "Country",
+        name: country,
+      }
+    : undefined;
+}
+
 export function buildTravelAgencySchema(site) {
   const agency = site?.agency || site;
   const address = physicalPostalAddress(site, agency);
@@ -428,6 +465,7 @@ export function buildDestinationSchema(data) {
   const additionalProperty = [
     ...destinationPracticalProperties(destination),
     ...destinationHighlightProperties(destination),
+    ...destinationPublicProperties(destination),
   ];
 
   return compactJsonLd({
@@ -442,7 +480,6 @@ export function buildDestinationSchema(data) {
     url: pageUrl,
     mainEntityOfPage: webPageEntityReference(data.canonicalPath),
     image: destination.heroImageUrl ? absoluteUrl(destination.heroImageUrl) : undefined,
-    touristType: destination.audiences,
     additionalProperty,
     geo:
       destination.latitude != null &&
@@ -453,12 +490,7 @@ export function buildDestinationSchema(data) {
             longitude: destination.longitude,
           }
         : undefined,
-    containedInPlace: destination.country
-      ? {
-          "@type": "Country",
-          name: destination.country,
-        }
-      : undefined,
+    containedInPlace: destinationContainedInPlace(destination),
     provider: site
       ? agencyEntityReference(site)
       : undefined,
