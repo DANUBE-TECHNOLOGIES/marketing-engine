@@ -2,6 +2,8 @@ function clean(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
 }
 
+const PUBLIC_TARGET_CITY_LIMIT = 6;
+
 const LOCAL_AREA_BY_SITE_SLUG = Object.freeze({
   "tui-store-melun": [
     "Dammarie-les-Lys",
@@ -112,7 +114,7 @@ function explicitTargetCities(site) {
   return Array.isArray(values) ? values : [];
 }
 
-export function resolvedTargetCities(site, { limit = 6 } = {}) {
+export function resolvedTargetCities(site, { limit = PUBLIC_TARGET_CITY_LIMIT } = {}) {
   const agency = site?.agency || {};
   const primary = clean(agency.city || site?.city).toLocaleLowerCase("fr-FR");
   const source = explicitTargetCities(site).length
@@ -120,6 +122,10 @@ export function resolvedTargetCities(site, { limit = 6 } = {}) {
     : configuredTargetCities(site);
   const seen = new Set();
   const result = [];
+  const publicLimit = Math.min(
+    PUBLIC_TARGET_CITY_LIMIT,
+    Number.isFinite(limit) && limit >= 0 ? Math.floor(limit) : PUBLIC_TARGET_CITY_LIMIT,
+  );
 
   for (const value of source) {
     const city = clean(
@@ -135,14 +141,14 @@ export function resolvedTargetCities(site, { limit = 6 } = {}) {
     result.push(city);
   }
 
-  return result.slice(0, limit);
+  return result.slice(0, publicLimit);
 }
 
 export function resolvedExtendedTargetCities(site, { limit = 4 } = {}) {
   const agency = site?.agency || {};
   const primary = clean(agency.city || site?.city).toLocaleLowerCase("fr-FR");
   const core = new Set(
-    resolvedTargetCities(site, { limit: Number.MAX_SAFE_INTEGER })
+    resolvedTargetCities(site, { limit: PUBLIC_TARGET_CITY_LIMIT })
       .map((city) => city.toLocaleLowerCase("fr-FR")),
   );
   const seen = new Set();
@@ -164,6 +170,7 @@ export function resolvedExtendedTargetCities(site, { limit = 4 } = {}) {
 export {
   EXTENDED_LOCAL_AREA_BY_SITE_SLUG,
   LOCAL_AREA_BY_SITE_SLUG,
+  PUBLIC_TARGET_CITY_LIMIT,
   configuredExtendedTargetCities,
   configuredTargetCities,
   explicitTargetCities,
