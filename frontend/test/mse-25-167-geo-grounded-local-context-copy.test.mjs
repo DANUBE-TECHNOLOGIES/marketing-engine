@@ -25,8 +25,8 @@ test("MSE-25.167 local context no longer manufactures operational service promis
   assert.doesNotMatch(source, /rester votre interlocuteur jusqu’à votre retour/i);
 });
 
-test("MSE-25.167 internal local links reuse actually published navigation", () => {
-  assert.match(source, /uniquePublishedNavigation\(site\)/);
+test("MSE-25.167 internal local links reuse grounded public navigation", () => {
+  assert.match(source, /uniquePublicNavigation\(site\)/);
   assert.match(source, /pageSlug\(candidate\) !== currentSlug/);
   assert.match(source, /pageHref\(site\.slug, candidate\)/);
   assert.match(source, /title: candidate\.title/);
