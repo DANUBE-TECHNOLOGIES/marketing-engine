@@ -57,18 +57,21 @@ test("MSE-25.194 keeps managed route deduplication slug based", () => {
   assert.doesNotMatch(headerSource, /slugify|titleToSlug|labelToSlug/i);
 });
 
-test("MSE-25.194 manages Construire mon voyage to Contact with an explicit href", () => {
+test("MSE-25.194 manages Construire mon voyage through the explicit quote-route authority", () => {
   assert.match(heroSource, /const MANAGED_HOME_CONTACT_CTA = Object\.freeze\(\{/);
   assert.match(heroSource, /label: "Construire mon voyage"/);
-  assert.match(heroSource, /href: "\/contact"/);
-  assert.match(heroSource, /return configuredHeroCta\(site, MANAGED_HOME_CONTACT_CTA\)/);
+  assert.match(heroSource, /quoteSource: "general"/);
+  assert.match(heroSource, /href: quoteRequestHref\(site, \{ source: MANAGED_HOME_CONTACT_CTA\.quoteSource \}\)/);
   assert.match(heroSource, /if \(!isHomePage\(page\)\) return null/);
   assert.match(heroSource, /configuredPrimaryCta \|\| managedHomeContactCta\(site, page\)/);
 });
 
-test("MSE-25.194 does not restore label-derived hero routing", () => {
+test("MSE-25.194 permits only managed quote intent to derive a hero route", () => {
+  assert.match(heroSource, /if \(!label\) return null/);
+  assert.match(heroSource, /if \(projectCtaLabel\(label\)\) return \{ label, href: quoteRequestHref\(site, \{ source: "general" \}\) \}/);
   assert.match(heroSource, /const explicitHref = String\(cta\?\.href \|\| ""\)\.trim\(\)/);
-  assert.match(heroSource, /if \(!label \|\| !explicitHref\) return null/);
+  assert.match(heroSource, /if \(!explicitHref\) return null/);
+  assert.match(heroSource, /resolvePublicCtaHref\(site, explicitHref, ""\)/);
   assert.doesNotMatch(heroSource, /content\.primaryButton/);
   assert.doesNotMatch(heroSource, /resolvePublicCtaHref\(site, .*label/i);
 });
