@@ -187,7 +187,7 @@ export default function HeroV2Renderer({ section, site, page, forcePageIntent = 
 
   return (
     <section className={heroClassName} data-has-hero-image={backgroundImage ? "true" : "false"} data-page-slug={pageSlug(page) || "home"}>
-      {backgroundImage ? <div className="public-site-hero-media" aria-hidden="true"><img src={backgroundImage} alt={imageAlt} loading="eager" fetchPriority="high" width="1920" height="1080" style={{ objectPosition: backgroundPosition }} /><span className="public-site-hero-overlay" style={{ background: overlayStyle }} /><span className="public-site-hero-fade" /></div> : null}
+      {backgroundImage ? <div className="public-site-hero-media" aria-hidden="true">{/* eslint-disable-next-line @next/next/no-img-element */}<img src={backgroundImage} alt={imageAlt} loading="eager" fetchPriority="high" width="1920" height="1080" style={{ objectPosition: backgroundPosition }} /><span className="public-site-hero-overlay" style={{ background: overlayStyle }} /><span className="public-site-hero-fade" /></div> : null}
       <div className="public-site-container"><div className="public-site-hero-copy" style={contentStyle}>
         <p className="public-site-eyebrow">{content.eyebrow || defaultHeroEyebrow(site)}</p>
         <h1 style={centered ? { marginInline: "auto" } : rightAligned ? { marginLeft: "auto" } : undefined}>{title}</h1>
