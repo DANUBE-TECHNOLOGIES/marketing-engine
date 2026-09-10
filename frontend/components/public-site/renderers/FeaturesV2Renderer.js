@@ -71,8 +71,27 @@ function featureAction(root, item) {
   return managedFeatureAction(root, item);
 }
 
+function isBusinessTravelItem(item) {
+  const searchable = [item?.id, item?.title, item?.label, item?.name, item?.text]
+    .filter(Boolean)
+    .join(" ")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  return MANAGED_FEATURE_ACTIONS[0].pattern.test(searchable);
+}
+
+function managedBusinessTravelItem() {
+  return {
+    id: "business-travel",
+    title: "Voyages d’affaires",
+    text: "Déplacements professionnels, missions, salons ou voyages d’équipe : votre agence vous accompagne dans la préparation de votre projet.",
+  };
+}
+
 function serviceItems(sourceItems) {
-  return Array.isArray(sourceItems) ? sourceItems.filter(Boolean) : [];
+  const items = Array.isArray(sourceItems) ? sourceItems.filter(Boolean) : [];
+  if (items.some(isBusinessTravelItem)) return items;
+  return [...items, managedBusinessTravelItem()];
 }
 
 function defaultFeaturesTitle(site) {
@@ -148,7 +167,9 @@ export {
   defaultFeaturesTitle,
   featureAction,
   featureHref,
+  isBusinessTravelItem,
   localCity,
+  managedBusinessTravelItem,
   managedFeatureAction,
   relatedPublishedPages,
   serviceItems,
