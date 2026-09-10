@@ -59,7 +59,7 @@ test("MSE-25.195 does not regress Group Travel inspirations", () => {
   assert.match(groupSource, /Grèce/);
   assert.match(groupSource, /Méditerranée/);
   assert.match(groupSource, /Ces propositions sont des inspirations/);
-  assert.match(groupSource, /demande-devis\?source=group/);
+  assert.match(groupSource, /quoteRequestHref\(site,\{source:"group"\}\)|quoteRequestHref\(site, \{ source: "group" \}\)/);
 });
 
 test("MSE-25.195 keeps the managed Business Travel route canonical and indexable", () => {
