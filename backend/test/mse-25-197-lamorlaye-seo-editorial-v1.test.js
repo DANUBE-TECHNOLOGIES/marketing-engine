@@ -57,28 +57,26 @@ test("MSE-25.197 carries the local editorial coverage without inventing an airpo
   assert.ok(!/a[eé]roport\s+(?:de|à)\s+Lamorlaye/i.test(source));
 });
 
-test("MSE-25.197 enriches the existing Stéphanie entity and requires its existing photo", () => {
+test("MSE-25.197 enriches the existing Stephanie member on the home without creating or resolving a second media", () => {
   includesAll([
     "findStephanie(site)",
-    "stephanie.photo",
-    "photo existante de Stéphanie introuvable; refus de créer un nouveau média",
-    "Stéphanie — Conseillère voyage à Lamorlaye",
+    "mediaReferenceKeys(member)",
+    '"imageAssetId"',
+    '"imageUrl"',
+    "...originalMember",
     'role: "Conseillère voyage"',
+    "Stéphanie, votre conseillère voyage à Lamorlaye",
+    "preserve all existing media fields",
+    "aucun champ média existant sur Stéphanie",
   ]);
+  assert.ok(!source.includes("lamorlaye-stephanie-v1"), "a second Stephanie image block must not be created");
+  assert.ok(!source.includes("stephanie.photo"), "the script must not require a resolved URL from raw DB data");
 });
 
-test("MSE-25.197 keeps partner and review provenance authoritative", () => {
+test("MSE-25.197 makes the Lamorlaye services grid public and specific", () => {
   includesAll([
-    'blockType: "partners"',
-    "marques et partenaires actuellement référencés par Mondescale",
-    'blockType: "reviews"',
-    "Google Business Profile synchronized renderer only",
-  ]);
-  assert.ok(!source.includes("FRAM, TUI"), "partner brands must not be hardcoded as editorial data");
-});
-
-test("MSE-25.197 contains the requested service families", () => {
-  includesAll([
+    'status: "published"',
+    "serviceContent(contentOf(servicesBlock))",
     "Séjours & clubs",
     "Circuits accompagnés",
     "Voyages sur mesure",
@@ -92,11 +90,22 @@ test("MSE-25.197 contains the requested service families", () => {
   ]);
 });
 
+test("MSE-25.197 keeps partner and review provenance authoritative", () => {
+  includesAll([
+    'blockType: "partners"',
+    "marques et partenaires actuellement référencés par Mondescale",
+    'blockType: "reviews"',
+    "Google Business Profile synchronized renderer only",
+  ]);
+  assert.ok(!source.includes("FRAM, TUI"), "partner brands must not be hardcoded as editorial data");
+});
+
 test("MSE-25.197 is dry-run by default and has guarded apply/rollback", () => {
   includesAll([
     "MSE_25_197_CONFIRM",
     "MSE_25_197_ROLLBACK",
     'mode: APPLY ? "APPLY" : "DRY_RUN"',
     'flag: "wx"',
+    "fs.unlinkSync(SNAPSHOT_PATH)",
   ]);
 });
