@@ -1,0 +1,42 @@
+name: MSE-25.197 Lamorlaye SEO Editorial V1
+
+on:
+  pull_request:
+    paths:
+      - "backend/scripts/mse-25-197-lamorlaye-seo-editorial-v1.js"
+      - "backend/test/mse-25-197-lamorlaye-seo-editorial-v1.test.js"
+      - ".github/workflows/mse-25-197-lamorlaye-seo-editorial-v1.yml"
+
+jobs:
+  lamorlaye-editorial-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Use Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Verify PR scope is data tooling only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin "${GITHUB_BASE_REF}" --depth=1
+          changed="$(git diff --name-only "origin/${GITHUB_BASE_REF}...HEAD")"
+          printf '%s\n' "$changed"
+          unexpected="$(printf '%s\n' "$changed" | grep -Ev '^(backend/scripts/mse-25-197-lamorlaye-seo-editorial-v1\.js|backend/test/mse-25-197-lamorlaye-seo-editorial-v1\.test\.js|\.github/workflows/mse-25-197-lamorlaye-seo-editorial-v1\.yml)$' || true)"
+          if [ -n "$unexpected" ]; then
+            echo "MSE-25.197 scope violation:"
+            printf '%s\n' "$unexpected"
+            exit 1
+          fi
+
+      - name: Syntax check guarded remediation
+        run: node --check backend/scripts/mse-25-197-lamorlaye-seo-editorial-v1.js
+
+      - name: Run Lamorlaye non-regression contract
+        run: node --test backend/test/mse-25-197-lamorlaye-seo-editorial-v1.test.js
