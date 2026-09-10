@@ -6,6 +6,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const source = fs.readFileSync(path.join(__dirname, "../scripts/mse-25-198-lamorlaye-publish-agency-team-pages.js"), "utf8");
+const diagnostic = fs.readFileSync(path.join(__dirname, "../scripts/mse-25-198-lamorlaye-public-route-diagnostic.js"), "utf8");
 
 test("MSE-25.198 targets Lamorlaye and existing agency/team pages only", () => {
   assert.match(source, /mondescale-lamorlaye/);
@@ -32,4 +33,14 @@ test("MSE-25.198 is dry-run by default and has guarded rollback", () => {
   assert.match(source, /mode: "DRY_RUN"/);
   assert.match(source, /fs\.writeFileSync\(SNAPSHOT_PATH/);
   assert.match(source, /await rollback\(site\)/);
+});
+
+test("MSE-25.198 route diagnostic is read-only and probes every public layer", () => {
+  assert.match(diagnostic, /DIAGNOSTIC_ONLY/);
+  assert.match(diagnostic, /writes:\s*0/);
+  assert.match(diagnostic, /api\/public-site-read\/sites/);
+  assert.match(diagnostic, /mle_frontend:3000/);
+  assert.match(diagnostic, /https:\/\/agences\.mondescale\.com/);
+  assert.doesNotMatch(diagnostic, /PrismaClient/);
+  assert.doesNotMatch(diagnostic, /\.update\(|\.create\(|\.delete\(/);
 });
