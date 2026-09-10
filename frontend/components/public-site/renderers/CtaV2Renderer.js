@@ -3,6 +3,8 @@ import {
   getSectionTitle,
 } from "./helpers";
 import {
+  isQuoteCtaLabel,
+  quoteRequestHref,
   resolvePublicCtaHref,
 } from "./ctaLinks";
 
@@ -14,17 +16,17 @@ function explicitCtaHref(site, href) {
 
 function configuredCta(site, cta) {
   const label = String(cta?.label || "").trim();
+  if (!label) return null;
+  if (isQuoteCtaLabel(label)) {
+    return { label, href: quoteRequestHref(site, { source: "general" }) };
+  }
   const href = explicitCtaHref(site, cta?.href);
-  return label && href ? { label, href } : null;
+  return href ? { label, href } : null;
 }
 
 function CtaButton({ cta, className }) {
   if (!cta) return null;
-  return (
-    <a className={className} href={cta.href}>
-      {cta.label}
-    </a>
-  );
+  return <a className={className} href={cta.href}>{cta.label}</a>;
 }
 
 function isHomePage(page) {
@@ -34,11 +36,6 @@ function isHomePage(page) {
 
 export default function CtaV2Renderer({ section, site, page }) {
   const content = getSectionContent(section);
-
-  /*
-   * The home already exposes its configured conversion actions elsewhere.
-   * Historical CTA PageBlocks remain available on inner pages only.
-   */
   if (isHomePage(page)) return null;
 
   const title = getSectionTitle(section, null);

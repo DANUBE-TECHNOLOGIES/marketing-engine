@@ -8,13 +8,16 @@ const source = fs.readFileSync(
   "utf8",
 );
 
-test("MSE-25.189 requires explicit CTA label and href", () => {
+test("MSE-25.189 requires a structured CTA label and keeps non-quote targets explicit", () => {
   assert.match(source, /const label = String\(cta\?\.label \|\| ""\)\.trim\(\)/);
+  assert.match(source, /if \(!label\) return null/);
   assert.match(source, /const href = explicitCtaHref\(site, cta\?\.href\)/);
-  assert.match(source, /return label && href \? \{ label, href \} : null/);
+  assert.match(source, /return href \? \{ label, href \} : null/);
 });
 
-test("MSE-25.189 does not infer contact or quote routes from labels", () => {
+test("MSE-25.189 permits only the managed quote-form exception from a quote CTA label", () => {
+  assert.match(source, /isQuoteCtaLabel\(label\)/);
+  assert.match(source, /quoteRequestHref\(site, \{ source: "general" \}\)/);
   assert.doesNotMatch(source, /fallbackSlug/);
   assert.doesNotMatch(source, /"contact", \{ label:/);
   assert.doesNotMatch(source, /legacyCta/);
