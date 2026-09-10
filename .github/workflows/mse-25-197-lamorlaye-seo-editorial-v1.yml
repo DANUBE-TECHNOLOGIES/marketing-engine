@@ -4,7 +4,9 @@ on:
   pull_request:
     paths:
       - "backend/scripts/mse-25-197-lamorlaye-seo-editorial-v1.js"
+      - "backend/scripts/mse-25-197-lamorlaye-seo-editorial-v1-safe.js"
       - "backend/test/mse-25-197-lamorlaye-seo-editorial-v1.test.js"
+      - "backend/test/mse-25-197-lamorlaye-seo-editorial-v1-safe.test.js"
       - ".github/workflows/mse-25-197-lamorlaye-seo-editorial-v1.yml"
 
 jobs:
@@ -28,7 +30,7 @@ jobs:
           git fetch origin "${GITHUB_BASE_REF}" --depth=1
           changed="$(git diff --name-only "origin/${GITHUB_BASE_REF}...HEAD")"
           printf '%s\n' "$changed"
-          unexpected="$(printf '%s\n' "$changed" | grep -Ev '^(backend/scripts/mse-25-197-lamorlaye-seo-editorial-v1\.js|backend/test/mse-25-197-lamorlaye-seo-editorial-v1\.test\.js|\.github/workflows/mse-25-197-lamorlaye-seo-editorial-v1\.yml)$' || true)"
+          unexpected="$(printf '%s\n' "$changed" | grep -Ev '^(backend/scripts/mse-25-197-lamorlaye-seo-editorial-v1(-safe)?\.js|backend/test/mse-25-197-lamorlaye-seo-editorial-v1(-safe)?\.test\.js|\.github/workflows/mse-25-197-lamorlaye-seo-editorial-v1\.yml)$' || true)"
           if [ -n "$unexpected" ]; then
             echo "MSE-25.197 scope violation:"
             printf '%s\n' "$unexpected"
@@ -36,7 +38,11 @@ jobs:
           fi
 
       - name: Syntax check guarded remediation
-        run: node --check backend/scripts/mse-25-197-lamorlaye-seo-editorial-v1.js
+        run: |
+          node --check backend/scripts/mse-25-197-lamorlaye-seo-editorial-v1.js
+          node --check backend/scripts/mse-25-197-lamorlaye-seo-editorial-v1-safe.js
 
-      - name: Run Lamorlaye non-regression contract
-        run: node --test backend/test/mse-25-197-lamorlaye-seo-editorial-v1.test.js
+      - name: Run Lamorlaye non-regression contracts
+        run: |
+          node --test backend/test/mse-25-197-lamorlaye-seo-editorial-v1.test.js
+          node --test backend/test/mse-25-197-lamorlaye-seo-editorial-v1-safe.test.js
