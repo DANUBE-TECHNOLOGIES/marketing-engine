@@ -1,0 +1,29 @@
+name: MSE-25.198 Lamorlaye Agency Team Navigation V1
+
+on:
+  pull_request:
+    paths:
+      - "backend/scripts/mse-25-198-lamorlaye-publish-agency-team-pages.js"
+      - "backend/scripts/mse-25-198-lamorlaye-public-route-diagnostic.js"
+      - "backend/test/mse-25-198-lamorlaye-publish-agency-team-pages.test.js"
+      - ".github/workflows/mse-25-198-lamorlaye-agency-team-navigation-v1.yml"
+
+jobs:
+  lamorlaye-navigation-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Syntax checks
+        run: |
+          node --check backend/scripts/mse-25-198-lamorlaye-publish-agency-team-pages.js
+          node --check backend/scripts/mse-25-198-lamorlaye-public-route-diagnostic.js
+
+      - name: Run contract
+        run: node --test backend/test/mse-25-198-lamorlaye-publish-agency-team-pages.test.js
