@@ -41,12 +41,12 @@ test("advisor profiles expose optional factual enrichment without invented defau
   assert.doesNotMatch(team, /Céline|Sylvie|Marie-Claire|Stéphanie|Prescillia|Maïlys|Princess|Anisia/);
 });
 
-test("local proximity SEO remains centralized while navigation is publication-grounded", () => {
+test("local proximity SEO remains centralized while navigation is grounded in public sources", () => {
   assert.match(localContext, /resolvedTargetCities\(site, \{ limit: 4 \}\)/);
   assert.match(localContext, /localAreaSentence\(city, nearby\)/);
-  assert.match(localContext, /uniquePublishedNavigation\(site\)/);
+  assert.match(localContext, /uniquePublicNavigation\(site\)/);
   assert.match(localContext, /pageHref\(site\.slug, candidate\)/);
-  assert.match(localContext, /Pages publiées par l’agence de voyages de \$\{city\}/);
+  assert.match(localContext, /Navigation publique de l’agence de voyages de \$\{city\}/);
   assert.doesNotMatch(localContext, /Navigation locale autour de/);
 });
 
