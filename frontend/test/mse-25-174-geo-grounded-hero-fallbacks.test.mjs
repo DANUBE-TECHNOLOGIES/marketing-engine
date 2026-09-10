@@ -21,10 +21,13 @@ test("MSE-25.174 hero does not invent primary or secondary CTA labels", () => {
   assert.doesNotMatch(source, /immersiveNetworkHero \? "Découvrir nos voyages" : "Nous contacter"/);
 });
 
-test("MSE-25.174 hero only renders explicitly configured CTA targets", () => {
-  assert.match(source, /if \(!label \|\| !explicitHref\) return null/);
+test("MSE-25.174 hero allows only explicit targets or managed quote conversion", () => {
+  assert.match(source, /if \(!label\) return null/);
+  assert.match(source, /if \(projectCtaLabel\(label\)\) return \{ label, href: quoteRequestHref\(site, \{ source: "general" \}\) \}/);
+  assert.match(source, /const explicitHref = String\(cta\?\.href \|\| ""\)\.trim\(\)/);
+  assert.match(source, /if \(!explicitHref\) return null/);
   assert.match(source, /resolvePublicCtaHref\(site, explicitHref, ""\)/);
-  assert.match(source, /\{primaryCta \|\| secondaryCta \? \(/);
+  assert.match(source, /\{primaryCta \|\| secondaryCta \? /);
 });
 
 test("MSE-25.174 no longer preserves legacy button-only CTA routes", () => {
