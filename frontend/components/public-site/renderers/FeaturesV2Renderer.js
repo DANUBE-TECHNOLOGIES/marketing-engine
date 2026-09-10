@@ -12,6 +12,19 @@ import {
 
 const RELATED_FEATURE_PAGE_SLUGS = new Set(["destinations", "inspiration", "contact"]);
 
+const MANAGED_FEATURE_ACTIONS = Object.freeze([
+  {
+    pattern: /\b(voyages?\s+d['’]?affaires|business\s+travel|deplacements?\s+professionnels?)\b/i,
+    slug: "business-travel",
+    label: "Découvrir nos solutions Business Travel",
+  },
+  {
+    pattern: /\b(voyages?\s+en\s+groupe|voyages?\s+de\s+groupe|groupes?)\b/i,
+    slug: "voyages-en-groupe",
+    label: "Découvrir les voyages en groupe",
+  },
+]);
+
 function normalizeColumns(value) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return 3;
@@ -41,10 +54,21 @@ function featureHref(root, value) {
   return `${root}/${href.replace(/^\/+|\/+$/g, "")}`;
 }
 
+function managedFeatureAction(root, item) {
+  const searchable = [item?.title, item?.label, item?.name, item?.text]
+    .filter(Boolean)
+    .join(" ")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  const managed = MANAGED_FEATURE_ACTIONS.find((entry) => entry.pattern.test(searchable));
+  return managed ? { href: `${root}/${managed.slug}`, label: managed.label } : null;
+}
+
 function featureAction(root, item) {
   const href = featureHref(root, item?.href || item?.url || item?.link);
   const label = String(item?.ctaLabel || item?.linkLabel || item?.actionLabel || "").trim();
-  return href && label ? { href, label } : null;
+  if (href && label) return { href, label };
+  return managedFeatureAction(root, item);
 }
 
 function serviceItems(sourceItems) {
@@ -118,12 +142,14 @@ export default function FeaturesV2Renderer({ section, site }) {
 }
 
 export {
+  MANAGED_FEATURE_ACTIONS,
   RELATED_FEATURE_PAGE_SLUGS,
   defaultFeaturesIntroduction,
   defaultFeaturesTitle,
   featureAction,
   featureHref,
   localCity,
+  managedFeatureAction,
   relatedPublishedPages,
   serviceItems,
   siteRoot,
