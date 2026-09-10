@@ -8,11 +8,14 @@ const source = fs.readFileSync(
   "utf8",
 );
 
-test("MSE-25.191 hero CTA requires explicit structured label and href", () => {
+test("MSE-25.191 hero CTA requires explicit label and either managed quote intent or explicit href", () => {
   assert.match(source, /function configuredHeroCta\(site, cta\)/);
   assert.match(source, /const label = String\(cta\?\.label \|\| ""\)\.trim\(\)/);
+  assert.match(source, /if \(!label\) return null/);
+  assert.match(source, /projectCtaLabel\(label\)/);
+  assert.match(source, /quoteRequestHref\(site, \{ source: "general" \}\)/);
   assert.match(source, /const explicitHref = String\(cta\?\.href \|\| ""\)\.trim\(\)/);
-  assert.match(source, /if \(!label \|\| !explicitHref\) return null/);
+  assert.match(source, /if \(!explicitHref\) return null/);
 });
 
 test("MSE-25.191 hero does not synthesize contact, destinations or showcase hrefs", () => {
