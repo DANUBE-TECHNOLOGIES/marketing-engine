@@ -11,6 +11,12 @@ const SNAPSHOT_PATH = process.env.MSE_25_197_SNAPSHOT || "/var/tmp/mse-25-197-la
 const APPLY = String(process.env.MSE_25_197_CONFIRM || "").toLowerCase() === "true";
 const ROLLBACK = String(process.env.MSE_25_197_ROLLBACK || "").toLowerCase() === "true";
 const CONTROL_CITIES = ["Bois-Colombes", "Ozoir-la-Ferrière"];
+const MEDIA_KEYS = [
+  "imageAssetId", "imageUrl", "image", "photo", "photoUrl", "photoAsset",
+  "avatar", "avatarUrl", "portrait", "portraitUrl", "portraitAsset", "media",
+  "asset", "picture", "pictureUrl", "profileImage", "profileImageUrl",
+  "profilePhoto", "profilePhotoUrl", "imageAlt",
+];
 
 const HOME_SEO = Object.freeze({
   title: "Agence de voyages à Lamorlaye | Mondescale",
@@ -43,7 +49,6 @@ const PAGE_ALIASES = Object.freeze({
 function normalize(value) {
   return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
-
 function clone(value) { return JSON.parse(JSON.stringify(value)); }
 function typeOf(block) { return normalize(block?.blockType || ""); }
 function contentOf(block) { return block?.content && typeof block.content === "object" && !Array.isArray(block.content) ? clone(block.content) : {}; }
@@ -59,44 +64,34 @@ function pageByKind(site, kind) {
   return (site.pages || []).find((page) => aliases.has(normalize(page.slug))) || null;
 }
 
-function imageUrl(value) {
-  if (!value) return null;
-  if (typeof value === "string") return value.trim() || null;
-  if (Array.isArray(value)) {
-    for (const item of value) { const found = imageUrl(item); if (found) return found; }
-    return null;
-  }
-  if (typeof value !== "object") return null;
-  for (const key of ["publicUrl", "url", "src", "path", "href", "assetUrl", "fileUrl", "file", "asset"]) {
-    const found = imageUrl(value[key]);
-    if (found) return found;
-  }
-  return null;
-}
-
-function memberImage(member) {
-  for (const key of ["image", "imageUrl", "photo", "photoUrl", "photoAsset", "avatar", "avatarUrl", "portrait", "portraitUrl", "portraitAsset", "media", "asset", "picture", "pictureUrl", "profileImage", "profileImageUrl", "profilePhoto", "profilePhotoUrl"]) {
-    const found = imageUrl(member?.[key]);
-    if (found) return found;
-  }
-  return null;
-}
-
 function memberArrays(content) {
   return ["members", "items", "team", "teamMembers"].map((key) => ({ key, value: content?.[key] })).filter((entry) => Array.isArray(entry.value));
 }
 
+function mediaReferenceKeys(member) {
+  return MEDIA_KEYS.filter((key) => Object.prototype.hasOwnProperty.call(member || {}, key));
+}
+
 function findStephanie(site) {
-  for (const page of site.pages || []) {
-    for (const block of page.blocks || []) {
+  const home = pageByKind(site, "home");
+  const orderedPages = [home, ...(site.pages || []).filter((page) => page && page.id !== home?.id)].filter(Boolean);
+  for (const page of orderedPages) {
+    const blocks = [...(page.blocks || [])].sort((a, b) => {
+      const aPublished = String(a?.status || "").toLowerCase() === "published" ? 0 : 1;
+      const bPublished = String(b?.status || "").toLowerCase() === "published" ? 0 : 1;
+      return aPublished - bPublished || Number(a?.displayOrder || 0) - Number(b?.displayOrder || 0);
+    });
+    for (const block of blocks) {
       if (!["team", "equipe", "team-grid", "equipe-grid"].includes(typeOf(block))) continue;
       const content = contentOf(block);
       for (const collection of memberArrays(content)) {
         const index = collection.value.findIndex((member) => normalize(member?.name || member?.title).includes("stephanie"));
         if (index < 0) continue;
         const member = clone(collection.value[index]);
-        const photo = memberImage(member);
-        return { page, block, content, collectionKey: collection.key, index, member, photo };
+        return {
+          page, block, content, collectionKey: collection.key, index, member,
+          mediaKeys: mediaReferenceKeys(member),
+        };
       }
     }
   }
@@ -145,7 +140,7 @@ function sanitizeEditorial(value) {
   return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, sanitizeEditorial(child)]));
 }
 
-function homeBlocks(photo) {
+function homeBlocks() {
   return [
     {
       name: "lamorlaye-editorial-intro-v1", blockType: "rich_text",
@@ -159,15 +154,9 @@ function homeBlocks(photo) {
       content: {
         title: "Quel voyage préparez-vous ?", columns: 3,
         introduction: "Des vacances en club au grand voyage, votre projet est étudié selon vos dates, vos envies, votre budget et les solutions disponibles.",
-        items: SERVICE_ITEMS.slice(0, 7).filter((item) => !["famille"].includes(item.id)).map(({ id, title, text }) => ({ id, title, text })),
-      },
-    },
-    {
-      name: "lamorlaye-stephanie-v1", blockType: "image_text",
-      content: {
-        eyebrow: "Votre conseillère", title: "Stéphanie, votre conseillère voyage à Lamorlaye",
-        text: "Stéphanie vous accompagne pour préparer un séjour, un circuit accompagné, un autotour, un voyage sur mesure ou une croisière. L’objectif est de partir de votre projet réel et d’étudier avec vous les solutions disponibles auprès des partenaires référencés.",
-        imageUrl: photo, imageAlt: "Stéphanie, conseillère voyage à Lamorlaye", imagePosition: "left",
+        items: [
+          SERVICE_ITEMS[0], SERVICE_ITEMS[1], SERVICE_ITEMS[2], SERVICE_ITEMS[3], SERVICE_ITEMS[4], SERVICE_ITEMS[6],
+        ].map(({ id, title, text }) => ({ id, title, text })),
       },
     },
     {
@@ -210,6 +199,13 @@ function agencyContent() {
   };
 }
 
+function teamEditorialContent() {
+  return {
+    title: "Stéphanie — Conseillère voyage à Lamorlaye",
+    html: `<p>${stephaniePresentation()}</p>`,
+  };
+}
+
 function stephaniePresentation() {
   return "Stéphanie accompagne les voyageurs de l’agence de Lamorlaye dans la préparation de leurs séjours, circuits accompagnés, autotours, voyages sur mesure et croisières. Elle prend en compte les dates, le budget, le rythme souhaité et les prestations utiles afin d’étudier les solutions disponibles et de construire le projet avec le client.";
 }
@@ -229,11 +225,14 @@ function assertTarget(site) {
 function existingNamedBlock(page, name) { return (page.blocks || []).find((block) => block.name === name) || null; }
 function firstBlockOfTypes(page, types) { const accepted = new Set(types.map(normalize)); return (page.blocks || []).find((block) => accepted.has(typeOf(block))) || null; }
 function nextOrder(page) { return Math.max(-1, ...(page.blocks || []).map((block) => Number(block.displayOrder) || 0)) + 1; }
+function blockSnapshot(block) {
+  return { id: block.id, pageId: block.pageId, content: clone(block.content), blockType: block.blockType, name: block.name, displayOrder: block.displayOrder, status: block.status, visibleDesktop: block.visibleDesktop, visibleMobile: block.visibleMobile, version: block.version, settings: clone(block.settings), seo: clone(block.seo) };
+}
 
 async function upsertBlock(tx, page, spec, snapshot) {
   const existing = existingNamedBlock(page, spec.name);
   if (existing) {
-    snapshot.updatedBlocks.push({ id: existing.id, pageId: page.id, content: clone(existing.content), blockType: existing.blockType, name: existing.name, displayOrder: existing.displayOrder, status: existing.status, visibleDesktop: existing.visibleDesktop, visibleMobile: existing.visibleMobile, version: existing.version, settings: clone(existing.settings), seo: clone(existing.seo) });
+    snapshot.updatedBlocks.push(blockSnapshot(existing));
     await tx.pageBlock.update({ where: { id: existing.id }, data: { blockType: spec.blockType, content: spec.content, status: "published", visibleDesktop: true, visibleMobile: true, version: existing.version + 1 } });
     return existing.id;
   }
@@ -245,60 +244,62 @@ async function upsertBlock(tx, page, spec, snapshot) {
 async function applyChanges(site, controlsBefore) {
   const home = pageByKind(site, "home");
   const services = pageByKind(site, "services");
+  const teamPage = pageByKind(site, "team");
   const contact = pageByKind(site, "contact");
   const agency = pageByKind(site, "agency");
-  if (!home || !services || !contact) throw new Error("MSE-25.197: home, services ou contact publié/existant introuvable; aucune page ne sera créée");
+  if (!home || !services || !contact) throw new Error("MSE-25.197: home, services ou contact existant introuvable; aucune page ne sera créée");
 
   const stephanie = findStephanie(site);
   if (!stephanie) throw new Error("MSE-25.197: entité Stéphanie existante introuvable dans un bloc Équipe");
-  if (!stephanie.photo) throw new Error("MSE-25.197: photo existante de Stéphanie introuvable; refus de créer un nouveau média");
+  if (!stephanie.mediaKeys.length) throw new Error("MSE-25.197: aucun champ média existant sur Stéphanie; refus de créer un nouveau média");
+  if (normalize(stephanie.page.slug) !== "home") throw new Error(`MSE-25.197: Stéphanie n'est pas issue du bloc Équipe de la home (${stephanie.page.slug})`);
 
-  const snapshot = {
-    mse: "25.197", siteId: site.id, siteSlug: site.slug, createdAt: new Date().toISOString(),
-    pages: [], updatedBlocks: [], createdBlocks: [],
-  };
-
+  const snapshot = { mse: "25.197", siteId: site.id, siteSlug: site.slug, createdAt: new Date().toISOString(), pages: [], updatedBlocks: [], createdBlocks: [] };
   snapshot.pages.push({ id: home.id, seoTitle: home.seoTitle, metaDescription: home.metaDescription, h1: home.h1 });
-  snapshot.updatedBlocks.push({ id: stephanie.block.id, pageId: stephanie.page.id, content: clone(stephanie.block.content), blockType: stephanie.block.blockType, name: stephanie.block.name, displayOrder: stephanie.block.displayOrder, status: stephanie.block.status, visibleDesktop: stephanie.block.visibleDesktop, visibleMobile: stephanie.block.visibleMobile, version: stephanie.block.version, settings: clone(stephanie.block.settings), seo: clone(stephanie.block.seo) });
-
+  snapshot.updatedBlocks.push(blockSnapshot(stephanie.block));
   fs.writeFileSync(SNAPSHOT_PATH, JSON.stringify(snapshot, null, 2), { flag: "wx", mode: 0o600 });
 
-  await prisma.$transaction(async (tx) => {
-    await tx.agencySitePage.update({ where: { id: home.id }, data: { seoTitle: HOME_SEO.title, metaDescription: HOME_SEO.metaDescription, h1: HOME_SEO.h1 } });
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.agencySitePage.update({ where: { id: home.id }, data: { seoTitle: HOME_SEO.title, metaDescription: HOME_SEO.metaDescription, h1: HOME_SEO.h1 } });
 
-    const teamContent = contentOf(stephanie.block);
-    const list = clone(teamContent[stephanie.collectionKey]);
-    list[stephanie.index] = { ...list[stephanie.index], name: list[stephanie.index].name || "Stéphanie", role: "Conseillère voyage", presentation: stephaniePresentation() };
-    await tx.pageBlock.update({ where: { id: stephanie.block.id }, data: { content: { ...teamContent, title: "Stéphanie — Conseillère voyage à Lamorlaye", text: "Un accompagnement en agence pour construire votre projet de voyage.", [stephanie.collectionKey]: list }, version: stephanie.block.version + 1 } });
+      const teamContent = contentOf(stephanie.block);
+      const list = clone(teamContent[stephanie.collectionKey]);
+      const originalMember = clone(list[stephanie.index]);
+      list[stephanie.index] = { ...originalMember, name: originalMember.name || "Stéphanie", role: "Conseillère voyage", presentation: stephaniePresentation() };
+      await tx.pageBlock.update({ where: { id: stephanie.block.id }, data: { content: { ...teamContent, title: "Stéphanie, votre conseillère voyage à Lamorlaye", text: "Un accompagnement en agence pour construire votre projet de voyage.", [stephanie.collectionKey]: list }, version: stephanie.block.version + 1 } });
 
-    for (const spec of homeBlocks(stephanie.photo)) await upsertBlock(tx, home, spec, snapshot);
+      for (const spec of homeBlocks()) await upsertBlock(tx, home, spec, snapshot);
 
-    let servicesBlock = firstBlockOfTypes(services, ["features", "services", "services-grid", "services-highlight", "cards"]);
-    if (!servicesBlock) {
-      const spec = { name: "lamorlaye-services-editorial-v1", blockType: "services-grid", content: serviceContent({}) };
-      await upsertBlock(tx, services, spec, snapshot);
-    } else {
-      snapshot.updatedBlocks.push({ id: servicesBlock.id, pageId: services.id, content: clone(servicesBlock.content), blockType: servicesBlock.blockType, name: servicesBlock.name, displayOrder: servicesBlock.displayOrder, status: servicesBlock.status, visibleDesktop: servicesBlock.visibleDesktop, visibleMobile: servicesBlock.visibleMobile, version: servicesBlock.version, settings: clone(servicesBlock.settings), seo: clone(servicesBlock.seo) });
-      await tx.pageBlock.update({ where: { id: servicesBlock.id }, data: { content: serviceContent(contentOf(servicesBlock)), version: servicesBlock.version + 1 } });
-    }
+      const servicesBlock = firstBlockOfTypes(services, ["features", "services", "services-grid", "services-highlight", "cards"]);
+      if (!servicesBlock) {
+        await upsertBlock(tx, services, { name: "lamorlaye-services-editorial-v1", blockType: "services-grid", content: serviceContent({}) }, snapshot);
+      } else {
+        snapshot.updatedBlocks.push(blockSnapshot(servicesBlock));
+        await tx.pageBlock.update({ where: { id: servicesBlock.id }, data: { content: serviceContent(contentOf(servicesBlock)), status: "published", visibleDesktop: true, visibleMobile: true, version: servicesBlock.version + 1 } });
+      }
 
-    await upsertBlock(tx, contact, { name: "lamorlaye-contact-editorial-v1", blockType: "rich_text", content: contactContent() }, snapshot);
-    if (agency) await upsertBlock(tx, agency, { name: "lamorlaye-agency-editorial-v1", blockType: "rich_text", content: agencyContent() }, snapshot);
+      if (teamPage) await upsertBlock(tx, teamPage, { name: "lamorlaye-team-editorial-v1", blockType: "rich_text", content: teamEditorialContent() }, snapshot);
+      await upsertBlock(tx, contact, { name: "lamorlaye-contact-editorial-v1", blockType: "rich_text", content: contactContent() }, snapshot);
+      if (agency) await upsertBlock(tx, agency, { name: "lamorlaye-agency-editorial-v1", blockType: "rich_text", content: agencyContent() }, snapshot);
 
-    const partners = firstBlockOfTypes(home, ["partners", "logos", "partner-logos"]);
-    if (partners) {
-      snapshot.updatedBlocks.push({ id: partners.id, pageId: home.id, content: clone(partners.content), blockType: partners.blockType, name: partners.name, displayOrder: partners.displayOrder, status: partners.status, visibleDesktop: partners.visibleDesktop, visibleMobile: partners.visibleMobile, version: partners.version, settings: clone(partners.settings), seo: clone(partners.seo) });
-      await tx.pageBlock.update({ where: { id: partners.id }, data: { content: { ...contentOf(partners), title: "Plusieurs voyagistes, un seul conseiller", text: "Votre agence s’appuie uniquement sur les marques et partenaires actuellement référencés par Mondescale pour étudier les solutions correspondant à votre projet." }, version: partners.version + 1 } });
-    } else {
-      await upsertBlock(tx, home, { name: "lamorlaye-partners-v1", blockType: "partners", content: { title: "Plusieurs voyagistes, un seul conseiller", text: "Votre agence s’appuie uniquement sur les marques et partenaires actuellement référencés par Mondescale pour étudier les solutions correspondant à votre projet." } }, snapshot);
-    }
+      const partners = firstBlockOfTypes(home, ["partners", "logos", "partner-logos"]);
+      if (partners) {
+        snapshot.updatedBlocks.push(blockSnapshot(partners));
+        await tx.pageBlock.update({ where: { id: partners.id }, data: { content: { ...contentOf(partners), title: "Plusieurs voyagistes, un seul conseiller", text: "Votre agence s’appuie uniquement sur les marques et partenaires actuellement référencés par Mondescale pour étudier les solutions correspondant à votre projet." }, version: partners.version + 1 } });
+      } else {
+        await upsertBlock(tx, home, { name: "lamorlaye-partners-v1", blockType: "partners", content: { title: "Plusieurs voyagistes, un seul conseiller", text: "Votre agence s’appuie uniquement sur les marques et partenaires actuellement référencés par Mondescale pour étudier les solutions correspondant à votre projet." } }, snapshot);
+      }
 
-    const reviews = firstBlockOfTypes(home, ["reviews"]);
-    if (!reviews) await upsertBlock(tx, home, { name: "lamorlaye-google-reviews-v1", blockType: "reviews", content: { title: "Les avis Google de votre agence à Lamorlaye", limit: 3 } }, snapshot);
-  });
+      const reviews = firstBlockOfTypes(home, ["reviews"]);
+      if (!reviews) await upsertBlock(tx, home, { name: "lamorlaye-google-reviews-v1", blockType: "reviews", content: { title: "Les avis Google de votre agence à Lamorlaye", limit: 3 } }, snapshot);
+    });
+  } catch (error) {
+    if (fs.existsSync(SNAPSHOT_PATH)) fs.unlinkSync(SNAPSHOT_PATH);
+    throw error;
+  }
 
   fs.writeFileSync(SNAPSHOT_PATH, JSON.stringify(snapshot, null, 2), { mode: 0o600 });
-
   const freshSites = await loadSites(site.tenantId);
   const fresh = freshSites.find((candidate) => candidate.id === site.id);
   const controlsAfter = Object.fromEntries(CONTROL_CITIES.map((city) => {
@@ -308,9 +309,7 @@ async function applyChanges(site, controlsBefore) {
 
   if (routeFingerprint(fresh) !== routeFingerprint(site)) throw new Error("MSE-25.197: régression topologie Lamorlaye détectée après écriture");
   if (destinationFingerprint(fresh) !== destinationFingerprint(site)) throw new Error("MSE-25.197: la page Destinations Lamorlaye a changé alors qu’elle est hors périmètre V1");
-  for (const city of CONTROL_CITIES) {
-    if (controlsBefore[city] !== controlsAfter[city]) throw new Error(`MSE-25.197: régression hors Lamorlaye détectée sur ${city}`);
-  }
+  for (const city of CONTROL_CITIES) if (controlsBefore[city] !== controlsAfter[city]) throw new Error(`MSE-25.197: régression hors Lamorlaye détectée sur ${city}`);
   return { fresh, snapshot, controlsAfter };
 }
 
@@ -336,6 +335,7 @@ async function main() {
 
   const home = pageByKind(site, "home");
   const services = pageByKind(site, "services");
+  const team = pageByKind(site, "team");
   const contact = pageByKind(site, "contact");
   const agency = pageByKind(site, "agency");
   const destinations = pageByKind(site, "destinations");
@@ -346,7 +346,9 @@ async function main() {
   }));
 
   if (!home || !services || !contact) throw new Error("MSE-25.197: préconditions pages home/services/contact non satisfaites");
-  if (!stephanie?.photo) throw new Error("MSE-25.197: précondition Stéphanie + photo existante non satisfaite");
+  if (!stephanie) throw new Error("MSE-25.197: précondition Stéphanie existante non satisfaite");
+  if (!stephanie.mediaKeys.length) throw new Error("MSE-25.197: aucun champ média existant sur Stéphanie");
+  if (normalize(stephanie.page.slug) !== "home") throw new Error(`MSE-25.197: le profil Stéphanie attendu sur la home a été trouvé sur ${stephanie.page.slug}`);
   if (Object.values(controlsBefore).some((value) => !value)) throw new Error("MSE-25.197: agence témoin Bois-Colombes ou Ozoir introuvable");
 
   if (ROLLBACK) {
@@ -358,10 +360,10 @@ async function main() {
   const report = {
     mse: "25.197", mode: APPLY ? "APPLY" : "DRY_RUN", tenant: tenant.slug, site: site.slug,
     preconditions: {
-      home: home.slug, services: services.slug, contact: contact.slug,
+      home: home.slug, services: services.slug, team: team?.slug || null, contact: contact.slug,
       agency: agency?.slug || null, destinations: destinations?.slug || null,
       stephaniePage: stephanie.page.slug, stephanieBlockId: stephanie.block.id,
-      stephaniePhoto: stephanie.photo,
+      stephanieMediaKeys: stephanie.mediaKeys,
     },
     protected: {
       siteRouteFingerprint: routeFingerprint(site), destinationFingerprint: destinationFingerprint(site),
@@ -369,9 +371,10 @@ async function main() {
     },
     planned: {
       homeSeo: HOME_SEO,
-      homeEditorialBlocks: homeBlocks(stephanie.photo).map((block) => ({ name: block.name, type: block.blockType, title: block.content.title })),
+      homeEditorialBlocks: homeBlocks().map((block) => ({ name: block.name, type: block.blockType, title: block.content.title })),
+      homeTeam: "enrich existing published Stéphanie member in place; preserve all existing media fields",
       services: SERVICE_ITEMS.map((item) => item.title),
-      team: "enrich existing Stéphanie entity; preserve existing media reference",
+      team: team ? "add editorial profile copy only; no new Person identity or media" : "team page absent; no page creation",
       contact: "local geographic context only; structured NAP untouched",
       partners: "renderer-backed existing Mondescale partner catalog only",
       reviews: "Google Business Profile synchronized renderer only",
