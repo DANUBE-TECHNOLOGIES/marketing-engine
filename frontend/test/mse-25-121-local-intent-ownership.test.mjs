@@ -104,13 +104,13 @@ test("MSE-25.121 rendered shared hero H1 follows the same intent ownership", () 
   assert.doesNotMatch(heroSource, /Avis clients de votre agence de voyages à \$\{city\}/);
 });
 
-test("MSE-25.121 internal linking preserves intent ownership through published navigation only", () => {
+test("MSE-25.121 internal linking preserves intent ownership through grounded public navigation", () => {
   const contextSource = fs.readFileSync(
     new URL("../components/public-site/LocalContentContext.js", import.meta.url),
     "utf8",
   );
 
-  assert.match(contextSource, /uniquePublishedNavigation\(site\)/);
+  assert.match(contextSource, /uniquePublicNavigation\(site\)/);
   assert.match(contextSource, /pageSlug\(candidate\) !== currentSlug/);
   assert.match(contextSource, /pageHref\(site\.slug, candidate\)/);
   assert.match(contextSource, /title: candidate\.title/);
