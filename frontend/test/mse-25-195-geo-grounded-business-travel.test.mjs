@@ -52,14 +52,17 @@ test("MSE-25.195 conversion CTAs converge on the quote form", () => {
   assert.match(ctaSource, /quoteRequestHref\(site/);
 });
 
-test("MSE-25.195 does not regress Group Travel inspirations", () => {
+test("MSE-25.195 does not regress Group Travel inspirations during the stacked rollout", () => {
   assert.match(groupSource, /const TRIPS=/);
   assert.match(groupSource, /id="inspirations"/);
   assert.match(groupSource, /Albanie/);
   assert.match(groupSource, /Grèce/);
   assert.match(groupSource, /Méditerranée/);
   assert.match(groupSource, /Ces propositions sont des inspirations/);
-  assert.match(groupSource, /quoteRequestHref\(site,\{source:"group"\}\)|quoteRequestHref\(site, \{ source: "group" \}\)/);
+  assert.match(
+    groupSource,
+    /demande-devis\?source=group|quoteRequestHref\(site,\s*\{\s*source:\s*"group"\s*\}\)/,
+  );
 });
 
 test("MSE-25.195 keeps the managed Business Travel route canonical and indexable", () => {
