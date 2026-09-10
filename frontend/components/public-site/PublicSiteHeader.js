@@ -12,6 +12,11 @@ const NAVIGATION_ALIASES = Object.freeze({
   inspirations: "inspiration",
 });
 
+const MANAGED_SPECIAL_NAVIGATION = Object.freeze([
+  Object.freeze({ key: "groups", title: "Groupes", slug: "voyages-en-groupe" }),
+  Object.freeze({ key: "business", title: "Voyages d’affaires", slug: "business-travel" }),
+]);
+
 const TUI_SHOWCASE_DISABLED_CITIES = new Set(["amilly", "melun"]);
 
 function normalizeNavigation(site) {
@@ -61,6 +66,27 @@ function uniquePublishedNavigation(site) {
   });
 }
 
+function managedSpecialNavigation(siteSlug) {
+  return MANAGED_SPECIAL_NAVIGATION.map((item) => ({
+    ...item,
+    href: `/agence/${siteSlug}/${item.slug}`,
+  }));
+}
+
+function mainNavigation(site) {
+  const published = uniquePublishedNavigation(site).map((page, index) => ({
+    key: page.id || page.path || `${page.title}-${index}`,
+    title: page.title,
+    href: pageHref(site.slug, page),
+    provenance: "published",
+  }));
+  const seen = new Set(published.map((item) => item.href));
+  const managed = managedSpecialNavigation(site.slug)
+    .filter((item) => !seen.has(item.href))
+    .map((item) => ({ ...item, provenance: "managed" }));
+  return [...published, ...managed];
+}
+
 function publishedPageBySlug(pages, slug) {
   const target = canonicalNavigationSlug(slug);
   return (pages || []).find((page) => pageSlug(page) === target) || null;
@@ -81,6 +107,7 @@ export default function PublicSiteHeader({ site, brand, brandRuntime, brandAsset
     brand || brandRuntime?.runtime?.brand || site?.brand || site?.branding || site?.brandProfile || null;
   const resolvedPublicBrandAssets = brandAssets || resolvedPublicBrand?.assets || {};
   const pages = uniquePublishedNavigation(site);
+  const navigation = mainNavigation(site);
   const contactPage = publishedPageBySlug(pages, "contact");
   const agency = site.agency || {};
   const city = String(agency.city || "").trim();
@@ -162,12 +189,9 @@ export default function PublicSiteHeader({ site, brand, brandRuntime, brandAsset
         <div className="public-site-header-navrow">
           <div className="public-site-container">
             <nav className="public-site-navigation" aria-label={city ? `Navigation de l’agence de voyages de ${city}` : "Navigation principale"}>
-              {pages.map((page, index) => (
-                <Link
-                  key={page.id || page.path || `${page.title}-${index}`}
-                  href={pageHref(site.slug, page)}
-                >
-                  {page.title}
+              {navigation.map((item) => (
+                <Link key={item.key} href={item.href}>
+                  {item.title}
                 </Link>
               ))}
             </nav>
@@ -179,11 +203,14 @@ export default function PublicSiteHeader({ site, brand, brandRuntime, brandAsset
 }
 
 export {
+  MANAGED_SPECIAL_NAVIGATION,
   NAVIGATION_ALIASES,
   TUI_SHOWCASE_DISABLED_CITIES,
   canonicalNavigationSlug,
   extractSlug,
   isTuiShowcaseDisabled,
+  mainNavigation,
+  managedSpecialNavigation,
   normalizeNavigation,
   normalizePageSlug,
   pageHref,
