@@ -110,3 +110,24 @@
     transform-origin: left center !important;
   }
 }
+
+
+/*
+ * MSE-25.202 — Header brand hitbox isolation V1
+ *
+ * The historical visual enlargement of the bundled Mondescale logo may paint
+ * outside the identity link footprint. The image itself must not intercept
+ * pointer events over the independent navigation row.
+ *
+ * Pointer events inside the normal identity footprint still resolve to the
+ * parent anchor, while painted overflow can no longer cover navigation links.
+ */
+.public-site-header-logo-wrap .public-brand-logo,
+.public-site-header__brand-logo {
+  pointer-events: none !important;
+}
+
+.public-site-header-navrow {
+  position: relative;
+  z-index: 4;
+}
