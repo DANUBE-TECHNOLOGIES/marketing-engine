@@ -89,6 +89,7 @@ jobs:
           node --test test/mse-25-191-geo-strict-hero-cta-provenance.test.mjs
           node --test test/mse-25-192-geo-grounded-local-area-navigation.test.mjs
           node --test test/mse-25-193-geo-grounded-local-context-navigation.test.mjs
+          node --test test/mse-25-194-geo-managed-commercial-navigation.test.mjs
 
       - name: Lint canonical public files
         working-directory: frontend

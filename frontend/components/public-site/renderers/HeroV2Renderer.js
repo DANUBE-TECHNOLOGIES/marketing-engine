@@ -9,6 +9,11 @@ import {
 const NETWORK_HOME_HERO_IMAGE =
   "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=2400&q=85";
 
+const MANAGED_HOME_CONTACT_CTA = Object.freeze({
+  label: "Construire mon voyage",
+  href: "/contact",
+});
+
 function ctaLabel(cta, legacyLabel, fallback = null) {
   return cta?.label || legacyLabel || fallback;
 }
@@ -127,6 +132,11 @@ function configuredHeroCta(site, cta) {
   return href ? { label, href } : null;
 }
 
+function managedHomeContactCta(site, page) {
+  if (!isHomePage(page)) return null;
+  return configuredHeroCta(site, MANAGED_HOME_CONTACT_CTA);
+}
+
 export default function HeroV2Renderer({ section, site, page, forcePageIntent = false, sharedNetworkHero = false }) {
   const content = getSectionContent(section);
   const title = resolvedHeroTitle({ content, section, site, page, forcePageIntent });
@@ -148,7 +158,8 @@ export default function HeroV2Renderer({ section, site, page, forcePageIntent = 
     });
   }
 
-  const primaryCta = configuredHeroCta(site, content.primaryCta);
+  const configuredPrimaryCta = configuredHeroCta(site, content.primaryCta);
+  const primaryCta = configuredPrimaryCta || managedHomeContactCta(site, page);
   const secondaryCta = configuredHeroCta(site, content.secondaryCta);
   const primaryShowcase = Boolean(primaryCta) && isShowcaseCta(primaryCta);
   const secondaryShowcase = Boolean(secondaryCta) && isShowcaseCta(secondaryCta);
@@ -222,6 +233,7 @@ export default function HeroV2Renderer({ section, site, page, forcePageIntent = 
 }
 
 export {
+  MANAGED_HOME_CONTACT_CTA,
   NETWORK_HOME_HERO_IMAGE,
   configuredHeroCta,
   ctaLabel,
@@ -233,6 +245,7 @@ export {
   intentHeroTitle,
   isHomePage,
   isShowcaseCta,
+  managedHomeContactCta,
   resolvedHeroAlt,
   resolvedHeroImage,
   resolvedHeroSubtitle,

@@ -20,17 +20,20 @@ test("MSE-25.171 global header no longer auto-claims personalized advice or life
 });
 
 test("MSE-25.171 contact CTA exists only when contact is in published navigation", () => {
-  assert.match(source, /const contactPage = publishedPageBySlug\(pages, "contact"\)/);
+  assert.match(source, /const publishedPages = uniquePublishedNavigation\(site\)/);
+  assert.match(source, /const contactPage = publishedPageBySlug\(publishedPages, "contact"\)/);
   assert.match(source, /\{contactPage \? \(/);
   assert.match(source, /href=\{pageHref\(site\.slug, contactPage\)\}/);
   assert.match(source, /\{contactPage\.title\}/);
   assert.doesNotMatch(source, /href=\{`\/agence\/\$\{site\.slug\}\/contact`\}/);
 });
 
-test("MSE-25.171 contact resolution reuses canonical public navigation semantics", () => {
+test("MSE-25.171 contact resolution remains publication-grounded while main navigation may include managed routes", () => {
   assert.match(source, /function publishedPageBySlug\(pages, slug\)/);
   assert.match(source, /pageSlug\(page\) === target/);
-  assert.match(source, /const pages = uniquePublishedNavigation\(site\)/);
+  assert.match(source, /const publishedPages = uniquePublishedNavigation\(site\)/);
+  assert.match(source, /const pages = uniquePublicNavigation\(site\)/);
+  assert.match(source, /publishedPageBySlug\(publishedPages, "contact"\)/);
 });
 
 test("MSE-25.171 grounded header is the global public agency header", () => {

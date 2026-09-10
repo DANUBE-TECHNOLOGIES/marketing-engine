@@ -8,8 +8,8 @@ const source = fs.readFileSync(
   "utf8",
 );
 
-test("MSE-25.193 local context navigation comes only from published pages", () => {
-  assert.match(source, /uniquePublishedNavigation\(site\)/);
+test("MSE-25.193 local context navigation comes only from grounded public navigation", () => {
+  assert.match(source, /uniquePublicNavigation\(site\)/);
   assert.match(source, /const currentSlug = pageSlug\(currentPage\)/);
   assert.match(source, /pageSlug\(candidate\) !== currentSlug/);
   assert.match(source, /pageHref\(site\.slug, candidate\)/);
@@ -24,7 +24,7 @@ test("MSE-25.193 local context does not manufacture fixed agency subroutes", () 
   assert.doesNotMatch(source, /const root =/);
 });
 
-test("MSE-25.193 related navigation disappears when there is no published alternative", () => {
+test("MSE-25.193 related navigation disappears when there is no grounded alternative", () => {
   assert.match(source, /const relatedPages = publishedContextNavigation\(site, page\)/);
   assert.match(source, /\{relatedPages\.length \? \(/);
   assert.match(source, /relatedPages\.map\(\(candidate\) =>/);

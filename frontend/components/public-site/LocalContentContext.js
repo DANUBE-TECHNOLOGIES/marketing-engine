@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { extractPublishedServices } from "../../lib/seo/json-ld";
 import { resolvedTargetCities } from "../../lib/seo/local-area-config";
-import { pageHref, pageSlug, uniquePublishedNavigation } from "./PublicSiteHeader";
+import { pageHref, pageSlug, uniquePublicNavigation } from "./PublicSiteHeader";
 
 function clean(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
@@ -22,7 +22,7 @@ function publishedServiceNames(page) {
 
 function publishedContextNavigation(site, currentPage, limit = 4) {
   const currentSlug = pageSlug(currentPage);
-  return uniquePublishedNavigation(site)
+  return uniquePublicNavigation(site)
     .filter((candidate) => pageSlug(candidate) !== currentSlug)
     .slice(0, limit)
     .map((candidate) => ({
@@ -111,7 +111,7 @@ export default function LocalContentContext({ site, page, kind, quality }) {
           </p>
         ) : null}
         {relatedPages.length ? (
-          <div className="public-site-related-links" aria-label={`Pages publiées par l’agence de voyages de ${city}`}>
+          <div className="public-site-related-links" aria-label={`Navigation publique de l’agence de voyages de ${city}`}>
             {relatedPages.map((candidate) => (
               <Link key={candidate.href} href={candidate.href}>{candidate.title}</Link>
             ))}
