@@ -1,0 +1,28 @@
+name: MSE-25.200 Lamorlaye Home H1 V1
+
+on:
+  pull_request:
+    paths:
+      - 'backend/scripts/mse-25-200-lamorlaye-home-h1-v1.js'
+      - 'backend/test/mse-25-200-lamorlaye-home-h1-v1.test.js'
+      - '.github/workflows/mse-25-200-lamorlaye-home-h1-v1.yml'
+  push:
+    branches:
+      - feature/lamorlaye-home-h1-v1
+    paths:
+      - 'backend/scripts/mse-25-200-lamorlaye-home-h1-v1.js'
+      - 'backend/test/mse-25-200-lamorlaye-home-h1-v1.test.js'
+      - '.github/workflows/mse-25-200-lamorlaye-home-h1-v1.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --test test/mse-25-200-lamorlaye-home-h1-v1.test.js
