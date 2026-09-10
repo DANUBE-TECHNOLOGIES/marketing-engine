@@ -39,11 +39,11 @@ export async function generateMetadata({ params }) {
   const city = cityName(site);
   const canonical = `${PUBLIC_ORIGIN}${routePath(siteSlug)}`;
   const title = city
-    ? `Business Travel à ${city} | Voyages d’affaires`
-    : "Business Travel | Voyages d’affaires";
+    ? `Voyages d’affaires à ${city} | Mondescale`
+    : "Voyages d’affaires | Mondescale";
   const description = city
-    ? `Organisez les déplacements professionnels de votre entreprise avec notre agence à ${city} : transport, hébergement, assistance, suivi et pilotage.`
-    : "Organisez les déplacements professionnels de votre entreprise : transport, hébergement, assistance, suivi et pilotage.";
+    ? `Informations publiques et coordonnées de l’agence Mondescale à ${city} pour les demandes liées aux voyages d’affaires.`
+    : "Informations publiques et coordonnées de l’agence Mondescale pour les demandes liées aux voyages d’affaires.";
 
   return {
     title,
@@ -65,7 +65,7 @@ export default async function AgencyBusinessTravelRoute({ params }) {
   const currentPath = routePath(siteSlug);
   const homeUrl = `${PUBLIC_ORIGIN}${homePath}`;
   const currentUrl = `${PUBLIC_ORIGIN}${currentPath}`;
-  const label = city ? `Business Travel à ${city}` : "Business Travel";
+  const label = city ? `Voyages d’affaires à ${city}` : "Voyages d’affaires";
 
   return (
     <>
@@ -74,7 +74,7 @@ export default async function AgencyBusinessTravelRoute({ params }) {
         { name: "Accueil", path: homeUrl },
         { name: label, path: currentUrl },
       ])} />
-      <div data-public-page-kind="content" data-content-quality="strong">
+      <div data-public-page-kind="content" data-content-quality="grounded">
         <PublicBreadcrumbs items={[
           { name: city ? `Agence ${city}` : site?.name || "Agence", href: homePath },
           { name: label, href: currentPath },
