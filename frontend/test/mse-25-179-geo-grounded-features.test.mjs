@@ -21,13 +21,19 @@ test("MSE-25.179 keeps published service content and restores the managed Busine
   assert.doesNotMatch(source, /Nous accompagnons également/i);
 });
 
-test("MSE-25.179 allows only explicit actions or approved managed commercial routes", () => {
+test("MSE-25.179 allows explicit actions, approved managed routes or publication-grounded semantic actions", () => {
   assert.match(source, /function managedFeatureAction\(root, item\)/);
   assert.match(source, /MANAGED_FEATURE_ACTIONS/);
   assert.match(source, /slug: "business-travel"/);
   assert.match(source, /slug: "voyages-en-groupe"/);
   assert.match(source, /if \(href && label\) return \{ href, label \}/);
-  assert.match(source, /return managedFeatureAction\(root, item\)/);
+  assert.match(source, /const managed = managedFeatureAction\(root, item\)/);
+  assert.match(source, /if \(managed\) return managed/);
+  assert.match(source, /return semanticFeatureAction\(site, item\)/);
+  assert.match(source, /uniquePublishedNavigation\(site\)\.find/);
+  assert.match(source, /pageSlug\(page\) === semantic\.slug/);
+  assert.match(source, /if \(!publishedPage\) return null/);
+  assert.match(source, /pageHref\(site\.slug, publishedPage\)/);
   assert.doesNotMatch(source, /Parler de votre projet/);
   assert.doesNotMatch(source, /En savoir plus/);
 });
