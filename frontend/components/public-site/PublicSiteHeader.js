@@ -12,6 +12,11 @@ const NAVIGATION_ALIASES = Object.freeze({
   inspirations: "inspiration",
 });
 
+const MANAGED_PUBLIC_ROUTES = Object.freeze([
+  Object.freeze({ id: "managed-voyages-affaires", slug: "voyages-affaires", title: "Voyages d’affaires" }),
+  Object.freeze({ id: "managed-groupes", slug: "groupes", title: "Groupes" }),
+]);
+
 const TUI_SHOWCASE_DISABLED_CITIES = new Set(["amilly", "melun"]);
 
 function normalizeNavigation(site) {
@@ -61,6 +66,19 @@ function uniquePublishedNavigation(site) {
   });
 }
 
+function uniquePublicNavigation(site) {
+  const published = uniquePublishedNavigation(site);
+  const seen = new Set(published.map((page) => pageSlug(page) || "__home__"));
+  const managed = MANAGED_PUBLIC_ROUTES.filter((page) => {
+    const slug = pageSlug(page);
+    if (!slug || seen.has(slug)) return false;
+    seen.add(slug);
+    return true;
+  });
+
+  return [...published, ...managed];
+}
+
 function publishedPageBySlug(pages, slug) {
   const target = canonicalNavigationSlug(slug);
   return (pages || []).find((page) => pageSlug(page) === target) || null;
@@ -80,8 +98,9 @@ export default function PublicSiteHeader({ site, brand, brandRuntime, brandAsset
   const resolvedPublicBrand =
     brand || brandRuntime?.runtime?.brand || site?.brand || site?.branding || site?.brandProfile || null;
   const resolvedPublicBrandAssets = brandAssets || resolvedPublicBrand?.assets || {};
-  const pages = uniquePublishedNavigation(site);
-  const contactPage = publishedPageBySlug(pages, "contact");
+  const publishedPages = uniquePublishedNavigation(site);
+  const pages = uniquePublicNavigation(site);
+  const contactPage = publishedPageBySlug(publishedPages, "contact");
   const agency = site.agency || {};
   const city = String(agency.city || "").trim();
   const showcaseDisabled = isTuiShowcaseDisabled(site);
@@ -179,6 +198,7 @@ export default function PublicSiteHeader({ site, brand, brandRuntime, brandAsset
 }
 
 export {
+  MANAGED_PUBLIC_ROUTES,
   NAVIGATION_ALIASES,
   TUI_SHOWCASE_DISABLED_CITIES,
   canonicalNavigationSlug,
@@ -190,5 +210,6 @@ export {
   pageSlug,
   publishedPageBySlug,
   telephoneHref,
+  uniquePublicNavigation,
   uniquePublishedNavigation,
 };
