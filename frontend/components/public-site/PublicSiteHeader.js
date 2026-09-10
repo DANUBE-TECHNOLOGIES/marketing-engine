@@ -13,8 +13,8 @@ const NAVIGATION_ALIASES = Object.freeze({
 });
 
 const MANAGED_PUBLIC_ROUTES = Object.freeze([
-  Object.freeze({ id: "managed-voyages-affaires", slug: "voyages-affaires", title: "Voyages d’affaires" }),
-  Object.freeze({ id: "managed-groupes", slug: "groupes", title: "Groupes" }),
+  Object.freeze({ id: "managed-business-travel", slug: "business-travel", title: "Voyages d’affaires" }),
+  Object.freeze({ id: "managed-voyages-en-groupe", slug: "voyages-en-groupe", title: "Groupes" }),
 ]);
 
 const TUI_SHOWCASE_DISABLED_CITIES = new Set(["amilly", "melun"]);
