@@ -38,7 +38,7 @@ test("MSE-25.196 labels inspiration content and example durations without presen
 
 test("MSE-25.196 routes every Group Travel conversion through managed quote authority", () => {
   assert.match(pageSource, /import \{ quoteRequestHref \} from "\.\/renderers\/ctaLinks"/);
-  assert.match(pageSource, /quoteRequestHref\(site,\{source:"group"\}\)/);
+  assert.match(pageSource, /quoteRequestHref\(site,\s*\{\s*source:\s*"group"\s*\}\)/);
   assert.doesNotMatch(pageSource, /`\$\{root\}\/demande-devis/);
   assert.match(pageSource, /href=\{quote\}>Parler de mon projet/);
   assert.match(pageSource, /href=\{quote\}>Imaginer ce voyage avec mon agence/);
