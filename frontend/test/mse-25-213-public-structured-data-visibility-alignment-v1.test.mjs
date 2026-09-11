@@ -23,15 +23,76 @@ function between(source, start, end) {
 
 test("ServiceCatalog suit le même contrat de visibilité que le renderer public", () => {
   assert.match(jsonLd, /isSectionVisible/);
-  const extractor = between(jsonLd, "export function extractPublishedServices", "function uniqueUrls");
-  assert.match(extractor, /if \(!isSectionVisible\(entry\)\) continue;/);
-  assert.doesNotMatch(extractor, /status === ["']draft["']/);
-  assert.doesNotMatch(extractor, /status === ["']hidden["'] \|\| status === ["']draft["']/);
 
-  const visibility = between(blockUtils, "export function isSectionVisible", "export function sortSections");
-  assert.match(visibility, /status === "hidden"/);
-  assert.match(visibility, /visibleDesktop === false && section\?\.visibleMobile === false/);
-  assert.doesNotMatch(visibility, /status === "draft"/);
+  const extractor = between(
+    jsonLd,
+    "export function extractPublishedServices",
+    "function uniqueUrls"
+  );
+
+  // Même visibilité que le renderer public.
+  assert.match(
+    extractor,
+    /if \(!isSectionVisible\(entry\)\) continue;/
+  );
+  assert.doesNotMatch(
+    extractor,
+    /status === ["']draft["']/
+  );
+  assert.doesNotMatch(
+    extractor,
+    /status === ["']hidden["'] \|\| status === ["']draft["']/
+  );
+
+  const visibility = between(
+    blockUtils,
+    "export function isSectionVisible",
+    "export function sortSections"
+  );
+
+  assert.match(
+    visibility,
+    /status === "hidden"/
+  );
+  assert.match(
+    visibility,
+    /visibleDesktop === false && section\?\.visibleMobile === false/
+  );
+  assert.doesNotMatch(
+    visibility,
+    /status === "draft"/
+  );
+
+  // Un tableau items générique ne doit plus devenir automatiquement
+  // une liste de services structurés.
+  assert.match(
+    jsonLd,
+    /const SERVICE_SECTION_TYPES = new Set/
+  );
+  assert.match(jsonLd, /"services"/);
+  assert.match(jsonLd, /"services-grid"/);
+  assert.match(jsonLd, /"services-highlight"/);
+
+  // Le contrat de lecture doit suivre celui des renderers publics.
+  assert.match(
+    extractor,
+    /getSectionContent\(entry\)/
+  );
+  assert.match(
+    extractor,
+    /getSectionType\(entry\)/
+  );
+
+  // Un autre type de bloc peut contribuer uniquement s'il expose
+  // explicitement content.services.
+  assert.match(
+    extractor,
+    /Array\.isArray\(content\.services\)/
+  );
+  assert.match(
+    extractor,
+    /!explicitServices && !SERVICE_SECTION_TYPES\.has\(sectionType\)/
+  );
 });
 
 test("FAQPage n'est émis qu'une fois comme entité complète; WebPage ne garde qu'une référence @id", () => {

@@ -5,8 +5,16 @@ import {
   buildGoogleMapsSearchUrl,
 } from "../public-agency-location";
 import {
+  getSectionContent,
+  getSectionType,
   isSectionVisible,
 } from "../../components/page-builder/shared/blockUtils";
+
+const SERVICE_SECTION_TYPES = new Set([
+  "services",
+  "services-grid",
+  "services-highlight",
+]);
 
 export function compactJsonLd(value) {
   return JSON.parse(
@@ -174,9 +182,25 @@ export function extractPublishedServices(page) {
   for (const entry of entries) {
     if (!isSectionVisible(entry)) continue;
 
-    const content = sectionContent(entry);
+    const content = getSectionContent(entry);
+    const explicitServices = Array.isArray(content.services)
+      ? content.services
+      : null;
+    const sectionType = getSectionType(entry);
+
+    /*
+     * A generic visible block can legitimately expose an `items` array
+     * (navigation, introduction, cards, etc.) without those items being
+     * commercial services. Only service-semantic blocks may promote
+     * generic items/cards into Service entities. Other block types must
+     * opt in explicitly through `content.services`.
+     */
+    if (!explicitServices && !SERVICE_SECTION_TYPES.has(sectionType)) {
+      continue;
+    }
+
     const items =
-      content.services ||
+      explicitServices ||
       content.items ||
       content.cards ||
       [];
