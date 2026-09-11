@@ -4,6 +4,9 @@ import { isoDate } from "./page-semantics-schema";
 import {
   buildGoogleMapsSearchUrl,
 } from "../public-agency-location";
+import {
+  isSectionVisible,
+} from "../../components/page-builder/shared/blockUtils";
 
 export function compactJsonLd(value) {
   return JSON.parse(
@@ -169,8 +172,7 @@ export function extractPublishedServices(page) {
   const services = [];
 
   for (const entry of entries) {
-    const status = String(entry?.status || "published").toLowerCase();
-    if (status === "hidden" || status === "draft") continue;
+    if (!isSectionVisible(entry)) continue;
 
     const content = sectionContent(entry);
     const items =
