@@ -3,9 +3,10 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const path = require("node:path");
 
 const source = fs.readFileSync(
-  new URL("../scripts/mse-25-220-melun-local-intent-faq-v1.js", import.meta?.url || `file://${__filename}`),
+  path.resolve(__dirname, "../scripts/mse-25-220-melun-local-intent-faq-v1.js"),
   "utf8"
 );
 
