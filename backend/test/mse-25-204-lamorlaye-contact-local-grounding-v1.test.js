@@ -83,3 +83,10 @@ test("MSE-25.204 keeps draft functional blocks outside publication scope", () =>
   assert.doesNotMatch(script, /blockType:\s*"map"/);
   assert.doesNotMatch(script, /blockType:\s*"faq"/);
 });
+
+test("MSE-25.204 explicitly hides the retired legacy rich text on both viewports", () => {
+  assert.match(
+    script,
+    /where:\s*\{\s*id:\s*legacyPublishedRichText\[0\]\.id\s*\}[\s\S]*status:\s*"draft"[\s\S]*visibleDesktop:\s*false[\s\S]*visibleMobile:\s*false/
+  );
+});

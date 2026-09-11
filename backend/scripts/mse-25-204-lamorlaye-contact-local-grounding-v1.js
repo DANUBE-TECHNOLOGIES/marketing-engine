@@ -280,6 +280,8 @@ async function main() {
       where: { id: legacyPublishedRichText[0].id },
       data: {
         status: "draft",
+        visibleDesktop: false,
+        visibleMobile: false,
         version: { increment: 1 }
       }
     });
