@@ -31,7 +31,7 @@ const replacements = [
     content: { title: 'Marie-Claire, votre conseillère voyage à Gien', members: [{ name: 'Marie-Claire', role: 'Conseillère voyage', imageAlt: "Marie-Claire, conseillère voyage à l'agence Mondescale Gien", imageUrl: null, description: 'Marie-Claire vous accompagne dans la préparation de vos voyages.', imageAssetId: 'cmsrqq206000fmn1acj5f6nt8' }] }
   },
   {
-    page: 'contact', id: 'cmsw1f5is00qtp11a7ng6bfwg', oldMarker: 'Pourquoi passer par une agence pour contact ?',
+    page: 'contact', id: 'cmsw1f5is00qtp11azonfkla0', oldMarker: 'Pourquoi passer par une agence pour contact ?',
     content: {
       items: [
         { question: 'Quelles informations préparer avant de demander un devis ?', answer: 'Vos dates ou période de départ, le nombre de voyageurs, votre budget et vos principales attentes permettent à l’équipe de mieux cadrer la recherche dès le premier échange.' },
@@ -43,7 +43,6 @@ const replacements = [
   }
 ];
 
-function stable(value) { return JSON.stringify(value, Object.keys(value).sort()); }
 function fingerprint(rows) { return crypto.createHash('sha256').update(JSON.stringify(rows.map(r => [r.id, r.content]))).digest('hex'); }
 
 async function main() {
