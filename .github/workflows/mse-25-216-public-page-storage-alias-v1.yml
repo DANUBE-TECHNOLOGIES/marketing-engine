@@ -1,0 +1,19 @@
+name: MSE-25.216 Public Page Storage Alias V1
+
+on:
+  pull_request:
+    paths:
+      - "frontend/lib/public-site-api.js"
+      - "frontend/test/mse-25-216-public-page-storage-alias-v1.test.mjs"
+      - ".github/workflows/mse-25-216-public-page-storage-alias-v1.yml"
+  workflow_dispatch:
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --test frontend/test/mse-25-216-public-page-storage-alias-v1.test.mjs

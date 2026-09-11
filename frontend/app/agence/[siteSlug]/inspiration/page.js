@@ -64,6 +64,13 @@ function inspirationHeading(site) {
     : "Inspirations voyage";
 }
 
+function inspirationPageHeading(site, page, cmsEditorial = null) {
+  const pageH1 = String(page?.h1 || "").replace(/\s+/g, " ").trim();
+  if (pageH1) return pageH1;
+  if (cmsEditorial?.title) return cmsEditorial.title;
+  return inspirationHeading(site);
+}
+
 function inspirationIntroduction(site) {
   const city = String(site?.agency?.city || site?.city || "").trim();
   const nearby = resolvedTargetCities(site, { limit: 3 });
@@ -143,7 +150,7 @@ export async function generateMetadata({ params }) {
   try {
     const [site, inspirationPage] = await Promise.all([
       publicSiteApi.getSite(siteSlug),
-      publicSiteApi.getPage(siteSlug, "inspirations"),
+      publicSiteApi.getPage(siteSlug, "inspiration"),
     ]);
     const agencyId = site?.agencyId || site?.agency?.id || null;
     const items = await publicSiteApi.getInspirations({
@@ -203,7 +210,7 @@ export default async function InspirationIndexPage({ params }) {
   try {
     const loaded = await Promise.all([
       publicSiteApi.getSite(siteSlug),
-      publicSiteApi.getPage(siteSlug, "inspirations"),
+      publicSiteApi.getPage(siteSlug, "inspiration"),
     ]);
     site = loaded[0];
     inspirationPage = loaded[1];
@@ -226,6 +233,7 @@ export default async function InspirationIndexPage({ params }) {
   const seo = inspirationSeo(site, inspirationPage);
 
   const cmsEditorial = inspirationCmsEditorial(site, inspirationPage);
+  const heading = inspirationPageHeading(site, inspirationPage, cmsEditorial);
   const breadcrumb = buildBreadcrumbSchema([
     { name: "Accueil", path: site.basePath },
     { name: "Inspirations voyage", path: canonical },
@@ -234,7 +242,7 @@ export default async function InspirationIndexPage({ params }) {
     site,
     page: {
       slug: "inspiration",
-      title: "Inspirations voyage",
+      title: heading,
     },
     url: canonical,
     title: seo.title,
@@ -261,7 +269,7 @@ export default async function InspirationIndexPage({ params }) {
           </nav>
 
           <p className="public-site-eyebrow">Idées & conseils</p>
-          <h1>{cmsEditorial?.title || inspirationHeading(site)}</h1>
+          <h1>{heading}</h1>
           <p>{cmsEditorial?.text || inspirationIntroduction(site)}</p>
         </div>
       </section>
@@ -349,5 +357,6 @@ export {
   inspirationHeading,
   inspirationIntroduction,
   inspirationCmsEditorial,
+  inspirationPageHeading,
   inspirationSeo,
 };
