@@ -1,0 +1,23 @@
+name: MSE-25.209 Melun Legal Profile Grounding V1
+
+on:
+  pull_request:
+    paths:
+      - "backend/scripts/mse-25-209-melun-legal-profile-grounding-v1.js"
+      - "backend/test/mse-25-209-melun-legal-profile-grounding-v1.test.js"
+      - ".github/workflows/mse-25-209-melun-legal-profile-grounding-v1.yml"
+  workflow_dispatch:
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: node --test test/mse-25-209-melun-legal-profile-grounding-v1.test.js
