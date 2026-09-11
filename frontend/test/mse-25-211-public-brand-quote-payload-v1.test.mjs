@@ -59,13 +59,34 @@ test("demande-devis construit un payload client compact", () => {
   assert.doesNotMatch(compactFunction, /brand/);
 });
 
-test("SmartQuoteRequest n'utilise que slug et city du site public", () => {
-  const sitePropertyMatches = [
+test("SmartQuoteRequest ne consomme que le slug et la ville utiles au formulaire", () => {
+  const directSitePropertyMatches = [
     ...smartQuoteSource.matchAll(/site\?\.([A-Za-z0-9_]+)/g),
   ].map((match) => match[1]);
 
+  // Le composant lit le slug directement pour l'attribution du lead.
   assert.deepEqual(
-    [...new Set(sitePropertyMatches)].sort(),
-    ["city", "slug"]
+    [...new Set(directSitePropertyMatches)].sort(),
+    ["slug"]
   );
+
+  // La ville est volontairement normalisée par agencyCity(). Le helper conserve
+  // la compatibilité avec l'ancien shape complet (agency.city) tout en acceptant
+  // le nouveau payload compact ({ slug, city }).
+  const agencyCityFunction = smartQuoteSource.match(
+    /function agencyCity\(s\)\{[\s\S]*?\}/
+  )?.[0] || "";
+
+  assert.match(agencyCityFunction, /s\?\.city/);
+  assert.match(agencyCityFunction, /s\?\.agency\?\.city/);
+
+  for (const forbidden of [
+    "legal",
+    "legalProfile",
+    "navigation",
+    "pages",
+    "brand",
+  ]) {
+    assert.doesNotMatch(smartQuoteSource, new RegExp(`site\\?\\.${forbidden}\\b`));
+  }
 });
