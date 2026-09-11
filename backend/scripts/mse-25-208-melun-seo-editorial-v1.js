@@ -75,13 +75,37 @@ function stable(v) {
 }
 function hash(v) { return crypto.createHash("sha256").update(JSON.stringify(stable(v))).digest("hex"); }
 
+// IMPORTANT: this must remain byte-for-byte equivalent in data shape to the
+// publicTopologyFingerprint contract introduced by MSE-25.207.  The previous
+// implementation used a different route-only shape, so it could never equal
+// the audited fingerprint even when the database was unchanged.
 function routeFingerprint(site) {
-  return hash((site.pages || []).map((p) => ({
-    id: p.id, slug: p.slug, path: p.path, pageType: p.pageType,
-    menuTitle: p.menuTitle, menuLocation: p.menuLocation,
-    displayOrder: p.displayOrder, schemaType: p.schemaType,
-    status: p.status, published: p.published,
-  })).sort((a, b) => String(a.id).localeCompare(String(b.id))));
+  return hash({
+    site: {
+      id: site.id,
+      slug: site.slug,
+      basePath: site.basePath,
+      status: site.status,
+    },
+    pages: (site.pages || []).map((p) => ({
+      id: p.id,
+      slug: p.slug,
+      path: p.path,
+      pageType: p.pageType,
+      status: p.status,
+      published: p.published,
+      schemaType: p.schemaType,
+      blocks: (p.blocks || []).map((b) => ({
+        id: b.id,
+        name: b.name,
+        blockType: b.blockType,
+        status: b.status,
+        visibleDesktop: b.visibleDesktop,
+        visibleMobile: b.visibleMobile,
+        displayOrder: b.displayOrder,
+      })),
+    })),
+  });
 }
 
 function protectedFingerprint(site) {
