@@ -1,0 +1,10 @@
+-- MSE-25.203 — additive only. Existing PublicLead lifecycle remains authoritative.
+ALTER TABLE "PublicLead" ADD COLUMN IF NOT EXISTS "funnelId" TEXT;
+ALTER TABLE "PublicLead" ADD COLUMN IF NOT EXISTS "funnelVersion" TEXT;
+ALTER TABLE "PublicLead" ADD COLUMN IF NOT EXISTS "qualificationScore" INTEGER;
+ALTER TABLE "PublicLead" ADD COLUMN IF NOT EXISTS "leadTemperature" TEXT;
+ALTER TABLE "PublicLead" ADD COLUMN IF NOT EXISTS "recommendedAction" TEXT;
+ALTER TABLE "PublicLead" ADD COLUMN IF NOT EXISTS "funnelAnswers" JSONB;
+ALTER TABLE "PublicLead" ADD COLUMN IF NOT EXISTS "consentEvidence" JSONB;
+CREATE INDEX IF NOT EXISTS "PublicLead_funnelId_createdAt_idx" ON "PublicLead" ("funnelId", "createdAt");
+CREATE INDEX IF NOT EXISTS "PublicLead_temperature_createdAt_idx" ON "PublicLead" ("leadTemperature", "createdAt");
