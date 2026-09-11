@@ -40,6 +40,12 @@ const LOCAL_AREA = Object.freeze([
   "Vert-Saint-Denis",
 ]);
 
+const PAGE_DB_SLUGS = Object.freeze({
+  home: "",
+  services: "services",
+  contact: "contact",
+});
+
 const FAQ_PATCHES = Object.freeze({
   home: [
     {
@@ -147,6 +153,14 @@ function faqBlocksForPage(page) {
   return (page?.blocks || []).filter((block) => String(block.blockType || "").toLowerCase().includes("faq"));
 }
 
+function pageForPatch(site, patchSlug) {
+  if (!Object.prototype.hasOwnProperty.call(PAGE_DB_SLUGS, patchSlug)) {
+    throw new Error(`${CONTRACT}: clé page FAQ inconnue: ${patchSlug}`);
+  }
+  const dbSlug = PAGE_DB_SLUGS[patchSlug];
+  return (site?.pages || []).find((entry) => String(entry.slug ?? "") === dbSlug) || null;
+}
+
 async function loadState() {
   const tenant = await prisma.tenant.findUnique({ where: { slug: TENANT_SLUG } });
   if (!tenant) throw new Error(`${CONTRACT}: tenant introuvable: ${TENANT_SLUG}`);
@@ -195,8 +209,8 @@ function topologyFingerprint(site) {
 
 function targetFaqBlockIds(site) {
   const ids = new Set();
-  for (const slug of Object.keys(FAQ_PATCHES)) {
-    const page = (site.pages || []).find((entry) => String(entry.slug || "") === slug);
+  for (const patchSlug of Object.keys(FAQ_PATCHES)) {
+    const page = pageForPatch(site, patchSlug);
     for (const block of faqBlocksForPage(page)) ids.add(block.id);
   }
   return ids;
@@ -265,14 +279,14 @@ function assertPreconditions(state) {
     throw new Error(`${CONTRACT}: résidu juridique Maurepas/FRAM encore présent`);
   }
 
-  for (const slug of Object.keys(FAQ_PATCHES)) {
-    const page = (site.pages || []).find((entry) => String(entry.slug || "") === slug);
+  for (const patchSlug of Object.keys(FAQ_PATCHES)) {
+    const page = pageForPatch(site, patchSlug);
     if (!page || page.status !== "published" || page.published !== true) {
-      throw new Error(`${CONTRACT}: page cible absente ou non publiée: ${slug}`);
+      throw new Error(`${CONTRACT}: page cible absente ou non publiée: ${patchSlug}`);
     }
     const faqBlocks = faqBlocksForPage(page);
     if (faqBlocks.length !== 1) {
-      throw new Error(`${CONTRACT}: exactement un bloc FAQ attendu sur ${slug}, trouvé: ${faqBlocks.length}`);
+      throw new Error(`${CONTRACT}: exactement un bloc FAQ attendu sur ${patchSlug}, trouvé: ${faqBlocks.length}`);
     }
   }
 
@@ -293,14 +307,15 @@ function assertPreconditions(state) {
 }
 
 function buildPlan(state) {
-  return Object.entries(FAQ_PATCHES).map(([slug, items]) => {
-    const page = state.site.pages.find((entry) => String(entry.slug || "") === slug);
+  return Object.entries(FAQ_PATCHES).map(([patchSlug, items]) => {
+    const page = pageForPatch(state.site, patchSlug);
     const block = faqBlocksForPage(page)[0];
     const key = faqKey(block.content || {});
     const beforeItems = Array.isArray(block.content?.[key]) ? clone(block.content[key]) : [];
     return {
       pageId: page.id,
-      pageSlug: slug,
+      pageSlug: patchSlug,
+      dbPageSlug: PAGE_DB_SLUGS[patchSlug],
       blockId: block.id,
       blockType: block.blockType,
       faqKey: key,
