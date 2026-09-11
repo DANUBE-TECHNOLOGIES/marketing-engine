@@ -85,18 +85,23 @@ test("la zone locale Melun est identique au contrat SEO public existant", () => 
   }
 });
 
-test("la référence géographique est sourcée mais non mutée sans modèle persistant dédié", () => {
+test("la référence MSE-25.212 reste sourcée et non mutante après ajout de la persistance GEO réseau", () => {
   assert.match(script, /latitude: 48\.53612/);
   assert.match(script, /longitude: 2\.65823/);
   assert.match(script, /OpenStreetMap node 13202447292/);
   assert.match(script, /mutation: false/);
 
+  // MSE-25.214 ajoute désormais la persistance canonique sur Agency.
+  // MSE-25.212 reste data-only pour les FAQ et ne doit jamais écrire ces champs.
   const agencyModel = between(prismaSchema, "model Agency {", "model Notification {");
   const agencySiteModel = between(prismaSchema, "model AgencySite {", "model AgencySitePage {");
-  assert.doesNotMatch(agencyModel, /^\s*latitude\s+/m);
-  assert.doesNotMatch(agencyModel, /^\s*longitude\s+/m);
+  assert.match(agencyModel, /^\s*latitude\s+Float\?/m);
+  assert.match(agencyModel, /^\s*longitude\s+Float\?/m);
   assert.doesNotMatch(agencySiteModel, /^\s*latitude\s+/m);
   assert.doesNotMatch(agencySiteModel, /^\s*longitude\s+/m);
+
+  assert.doesNotMatch(script, /tx\.agency\.update/);
+  assert.doesNotMatch(script, /latitude\s*:/g && /tx\.agency/);
 
   assert.match(jsonLd, /latitude = agency\?\.latitude \?\? site\?\.latitude/);
   assert.match(jsonLd, /longitude = agency\?\.longitude \?\? site\?\.longitude/);
