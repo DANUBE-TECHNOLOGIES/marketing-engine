@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import JsonLd from "../../../../components/JsonLd";
+import RichTextV2Renderer from "../../../../components/public-site/renderers/RichTextV2Renderer";
 import { publicSiteApi } from "../../../../lib/public-site-api";
 import { consolidateCollectionWebPage } from "../../../../lib/seo/collection-webpage-schema";
 import {
@@ -83,12 +84,17 @@ function inspirationIntroduction(site) {
     : local;
 }
 
-function inspirationCmsEditorial(site, page) {
-  const blocks =
+function inspirationPageBlocks(page) {
+  return (
     (Array.isArray(page?.contentBlocks) && page.contentBlocks) ||
     (Array.isArray(page?.sections) && page.sections) ||
     (Array.isArray(page?.blocks) && page.blocks) ||
-    [];
+    []
+  );
+}
+
+function inspirationCmsEditorial(site, page) {
+  const blocks = inspirationPageBlocks(page);
 
   const block = blocks.find((item) => {
     const content =
@@ -142,6 +148,36 @@ function inspirationCmsEditorial(site, page) {
         : inspirationHeading(site),
     text,
   };
+}
+
+function inspirationRichTextBlocks(page) {
+  return inspirationPageBlocks(page).filter((item) => {
+    const content =
+      item?.jsonContent && typeof item.jsonContent === "object"
+        ? item.jsonContent
+        : item?.content && typeof item.content === "object"
+          ? item.content
+          : {};
+
+    const type = String(
+      content?.__builderType ||
+        item?.blockType ||
+        item?.type ||
+        item?.sectionType ||
+        ""
+    )
+      .trim()
+      .toLowerCase();
+
+    const status = String(item?.status || "").trim().toLowerCase();
+    const visible = item?.visibleDesktop !== false || item?.visibleMobile !== false;
+    const html = String(content.html || "").trim();
+
+    return ["text", "rich_text", "rich-text"].includes(type) &&
+      status === "published" &&
+      visible &&
+      Boolean(html);
+  });
 }
 
 export async function generateMetadata({ params }) {
@@ -233,6 +269,7 @@ export default async function InspirationIndexPage({ params }) {
   const seo = inspirationSeo(site, inspirationPage);
 
   const cmsEditorial = inspirationCmsEditorial(site, inspirationPage);
+  const richTextBlocks = inspirationRichTextBlocks(inspirationPage);
   const heading = inspirationPageHeading(site, inspirationPage, cmsEditorial);
   const breadcrumb = buildBreadcrumbSchema([
     { name: "Accueil", path: site.basePath },
@@ -273,6 +310,14 @@ export default async function InspirationIndexPage({ params }) {
           <p>{cmsEditorial?.text || inspirationIntroduction(site)}</p>
         </div>
       </section>
+
+      {richTextBlocks.map((block, index) => (
+        <RichTextV2Renderer
+          key={block?.id || `inspiration-rich-text-${index}`}
+          section={block}
+          page={inspirationPage}
+        />
+      ))}
 
       <section className="public-site-section">
         <div className="public-site-container">
@@ -357,6 +402,8 @@ export {
   inspirationHeading,
   inspirationIntroduction,
   inspirationCmsEditorial,
+  inspirationPageBlocks,
   inspirationPageHeading,
+  inspirationRichTextBlocks,
   inspirationSeo,
 };
