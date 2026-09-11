@@ -105,6 +105,16 @@ test(
 );
 
 test(
+  "MSE-25.207 ignores technical updatedAt changes on targeted blocks",
+  () => {
+    assert.match(
+      script,
+      /delete copy\.updatedAt/
+    );
+  }
+);
+
+test(
   "MSE-25.207 protects page SEO and unrelated blocks",
   () => {
     assert.match(

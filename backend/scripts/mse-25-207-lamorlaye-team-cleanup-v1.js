@@ -78,6 +78,7 @@ function normalizeProtectedBlock(block) {
     delete copy.visibleDesktop;
     delete copy.visibleMobile;
     delete copy.version;
+    delete copy.updatedAt;
   }
 
   if (block.id === LEGACY_CTA_ID) {
@@ -89,6 +90,7 @@ function normalizeProtectedBlock(block) {
     }
 
     delete copy.version;
+    delete copy.updatedAt;
   }
 
   return copy;
