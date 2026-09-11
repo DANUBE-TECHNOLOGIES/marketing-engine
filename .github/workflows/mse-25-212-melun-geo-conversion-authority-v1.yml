@@ -1,0 +1,24 @@
+name: MSE-25.212 Melun GEO Conversion Authority V1
+
+on:
+  pull_request:
+    paths:
+      - "backend/scripts/mse-25-212-melun-geo-conversion-authority-v1.js"
+      - "backend/test/mse-25-212-melun-geo-conversion-authority-v1.test.js"
+      - "frontend/lib/seo/local-area-config.js"
+      - "frontend/lib/seo/json-ld.js"
+      - "backend/prisma/schema.prisma"
+      - ".github/workflows/mse-25-212-melun-geo-conversion-authority-v1.yml"
+  workflow_dispatch:
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run MSE-25.212 regression contract
+        run: node --test backend/test/mse-25-212-melun-geo-conversion-authority-v1.test.js
