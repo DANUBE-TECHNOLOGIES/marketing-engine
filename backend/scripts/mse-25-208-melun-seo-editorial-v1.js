@@ -76,7 +76,7 @@ function stable(v) {
 function hash(v) { return crypto.createHash("sha256").update(JSON.stringify(stable(v))).digest("hex"); }
 
 // IMPORTANT: this must remain byte-for-byte equivalent in data shape to the
-// publicTopologyFingerprint contract introduced by MSE-25.207.  The previous
+// publicTopologyFingerprint contract introduced by MSE-25.207. The previous
 // implementation used a different route-only shape, so it could never equal
 // the audited fingerprint even when the database was unchanged.
 function routeFingerprint(site) {
@@ -132,7 +132,8 @@ function protectedFingerprint(site) {
         } : b.content,
         settings: b.settings, seo: b.seo, displayOrder: b.displayOrder,
         status: b.status, visibleDesktop: b.visibleDesktop,
-        visibleMobile: b.visibleMobile, version: b.version,
+        visibleMobile: b.visibleMobile,
+        version: targetBlockIds.has(b.id) ? "__TARGET__" : b.version,
       })),
     })),
   });
