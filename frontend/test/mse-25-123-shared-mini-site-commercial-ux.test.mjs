@@ -12,11 +12,17 @@ const sharedFaq = read("lib/public-faq.js");
 const team = read("components/public-site/renderers/TeamRenderer.js");
 const localContext = read("components/public-site/LocalContentContext.js");
 
-test("shared service cards preserve explicit actions plus approved managed travel routes", () => {
+test("shared service cards preserve explicit actions, managed routes and publication-grounded semantic actions", () => {
   assert.match(features, /item\?\.href \|\| item\?\.url \|\| item\?\.link/);
   assert.match(features, /item\?\.ctaLabel \|\| item\?\.linkLabel \|\| item\?\.actionLabel/);
   assert.match(features, /if \(href && label\) return \{ href, label \}/);
-  assert.match(features, /return managedFeatureAction\(root, item\)/);
+  assert.match(features, /const managed = managedFeatureAction\(root, item\)/);
+  assert.match(features, /if \(managed\) return managed/);
+  assert.match(features, /return semanticFeatureAction\(site, item\)/);
+  assert.match(features, /uniquePublishedNavigation\(site\)\.find/);
+  assert.match(features, /pageSlug\(page\) === semantic\.slug/);
+  assert.match(features, /if \(!publishedPage\) return null/);
+  assert.match(features, /pageHref\(site\.slug, publishedPage\)/);
   assert.match(features, /slug: "business-travel"/);
   assert.match(features, /slug: "voyages-en-groupe"/);
   assert.match(features, /\[item\?\.title, item\?\.label, item\?\.name, item\?\.text\]/);
