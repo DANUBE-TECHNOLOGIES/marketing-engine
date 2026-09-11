@@ -42,6 +42,7 @@ const minisiteSemanticEngine = require("./minisite-semantic-engine");
 const minisiteStructuredData = require("./minisite-structured-data");
 const searchConsoleSubmission = require("./search-console-submission");
 const flexiblePaymentExperience = require("./flexible-payment-experience");
+const acquisitionFunnel = require("./acquisition-funnel");
 
 module.exports = function registerModules(app, { prisma }) {
   if (tenantCore.routes) app.use(tenantCore.routes({ prisma }));
@@ -99,4 +100,5 @@ module.exports = function registerModules(app, { prisma }) {
     app.use(searchConsoleSubmission.routes({ prisma, provider }));
   }
   if (flexiblePaymentExperience.routes) app.use(flexiblePaymentExperience.routes({ prisma }));
+  if (acquisitionFunnel.routes) app.use(acquisitionFunnel.routes({ prisma }));
 };
