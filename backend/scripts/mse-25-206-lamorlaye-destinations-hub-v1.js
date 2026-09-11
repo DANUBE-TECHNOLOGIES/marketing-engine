@@ -29,6 +29,8 @@ const DESIRED_PAGE = {
 
 const DESIRED_GRID = {
   title: "Nos idées de destinations",
+  text:
+    "Soleil, plages, découvertes ou dépaysement : explorez les destinations actuellement présentées par votre agence.",
   subtitle:
     "Soleil, plages, découvertes ou dépaysement : explorez les destinations actuellement présentées par votre agence."
 };

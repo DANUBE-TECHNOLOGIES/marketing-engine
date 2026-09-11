@@ -108,3 +108,10 @@ test("MSE-25.206 does not introduce USA as a destination record", () => {
   assert.doesNotMatch(script, /destination.*USA/i);
   assert.doesNotMatch(script, /destination.*États-Unis/i);
 });
+
+test("MSE-25.206 exposes grid introduction through renderer-supported text field", () => {
+  assert.match(
+    script,
+    /text:\s*"Soleil, plages, découvertes ou dépaysement : explorez les destinations actuellement présentées par votre agence\."/
+  );
+});
