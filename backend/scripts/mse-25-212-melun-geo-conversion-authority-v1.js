@@ -422,7 +422,7 @@ async function main() {
     const afterPlan = buildPlan(after);
     for (const entry of afterPlan) {
       const expected = FAQ_PATCHES[entry.pageSlug];
-      if (JSON.stringify(entry.before.items) !== JSON.stringify(expected)) {
+      if (hash(entry.before.items) !== hash(expected)) {
         throw new Error(`${CONTRACT}: FAQ inattendue après APPLY: ${entry.pageSlug}`);
       }
     }
