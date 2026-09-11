@@ -54,6 +54,17 @@ test("les FAQ couvrent Home, Services et Contact sans branding FRAM anticipé", 
   assert.doesNotMatch(faqPatchSource, /Mondescale Ambassade FRAM/);
 });
 
+test("la clé logique home cible le slug canonique vide de la page d'accueil", () => {
+  const mappingSource = between(script, "const PAGE_DB_SLUGS", "const FAQ_PATCHES");
+  assert.match(mappingSource, /home:\s*""/);
+  assert.match(mappingSource, /services:\s*"services"/);
+  assert.match(mappingSource, /contact:\s*"contact"/);
+  assert.match(script, /function pageForPatch\(site, patchSlug\)/);
+  assert.match(script, /const page = pageForPatch\(site, patchSlug\)/);
+  assert.match(script, /const page = pageForPatch\(state\.site, patchSlug\)/);
+  assert.match(script, /dbPageSlug: PAGE_DB_SLUGS\[patchSlug\]/);
+});
+
 test("la zone locale Melun est identique au contrat SEO public existant", () => {
   for (const city of [
     "Dammarie-les-Lys",
