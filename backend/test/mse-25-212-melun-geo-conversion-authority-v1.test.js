@@ -65,6 +65,12 @@ test("la clé logique home cible le slug canonique vide de la page d'accueil", (
   assert.match(script, /dbPageSlug: PAGE_DB_SLUGS\[patchSlug\]/);
 });
 
+test("la validation post-APPLY compare le JSON FAQ sémantiquement", () => {
+  assert.match(script, /function stable\(value\)/);
+  assert.match(script, /if \(hash\(entry\.before\.items\) !== hash\(expected\)\)/);
+  assert.doesNotMatch(script, /JSON\.stringify\(entry\.before\.items\) !== JSON\.stringify\(expected\)/);
+});
+
 test("la zone locale Melun est identique au contrat SEO public existant", () => {
   for (const city of [
     "Dammarie-les-Lys",
