@@ -1,0 +1,22 @@
+name: MSE-25.211 Public Brand Quote Payload V1
+
+on:
+  pull_request:
+    paths:
+      - "frontend/app/agence/[siteSlug]/business-travel/page.js"
+      - "frontend/app/agence/[siteSlug]/demande-devis/page.js"
+      - "frontend/components/public-site/SmartQuoteRequest.js"
+      - "frontend/test/mse-25-211-public-brand-quote-payload-v1.test.mjs"
+      - ".github/workflows/mse-25-211-public-brand-quote-payload-v1.yml"
+  workflow_dispatch:
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run MSE-25.211 regression contract
+        run: node --test frontend/test/mse-25-211-public-brand-quote-payload-v1.test.mjs
