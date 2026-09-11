@@ -50,6 +50,8 @@ model Agency {
   website           String?
   googleReviewUrl   String?
   googleLocationId  String?
+  latitude          Float?
+  longitude         Float?
   createdAt         DateTime           @default(now())
   tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   networkActions    NetworkAction[]
