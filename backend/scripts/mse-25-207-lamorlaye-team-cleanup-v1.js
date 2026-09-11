@@ -386,18 +386,7 @@ function assertPreconditions(state) {
 }
 
 async function writeSnapshot(state) {
-  if (
-    fs.existsSync(SNAPSHOT)
-  ) {
-    throw new Error(
-      `Snapshot already exists: ${SNAPSHOT}`
-    );
-  }
-
-  const snapshot = {
-    createdAt:
-      new Date().toISOString(),
-
+  const expected = {
     ticket:
       "MSE-25.207",
 
@@ -411,6 +400,36 @@ async function writeSnapshot(state) {
 
     targets:
       exactTargetContract(state)
+  };
+
+  if (fs.existsSync(SNAPSHOT)) {
+    const existing = JSON.parse(
+      fs.readFileSync(
+        SNAPSHOT,
+        "utf8"
+      )
+    );
+
+    if (
+      existing.ticket !== expected.ticket ||
+      existing.pageId !== expected.pageId ||
+      existing.protectedFingerprint !== expected.protectedFingerprint ||
+      JSON.stringify(stable(existing.targets)) !==
+        JSON.stringify(stable(expected.targets))
+    ) {
+      throw new Error(
+        `Existing snapshot does not match current pre-apply state: ${SNAPSHOT}`
+      );
+    }
+
+    return existing;
+  }
+
+  const snapshot = {
+    createdAt:
+      new Date().toISOString(),
+
+    ...expected
   };
 
   fs.writeFileSync(

@@ -140,6 +140,26 @@ test(
 );
 
 test(
+  "MSE-25.207 reuses only an exact matching pre-apply snapshot",
+  () => {
+    assert.match(
+      script,
+      /Existing snapshot does not match current pre-apply state/
+    );
+
+    assert.match(
+      script,
+      /existing\.protectedFingerprint !== expected\.protectedFingerprint/
+    );
+
+    assert.match(
+      script,
+      /stable\(existing\.targets\)/
+    );
+  }
+);
+
+test(
   "MSE-25.207 supports dry-run snapshot and rollback",
   () => {
     assert.match(
