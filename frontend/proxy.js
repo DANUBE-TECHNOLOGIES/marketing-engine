@@ -62,6 +62,10 @@ export function proxy(request) {
     (pathname === "/acquisition" ||
       pathname.startsWith("/acquisition/"));
 
+  const isPublicAcquisitionApi =
+    pathname === "/api/public/acquisition-funnels" ||
+    pathname.startsWith("/api/public/acquisition-funnels/");
+
   const isPublicRoute =
     pathname === "/healthz" ||
     pathname === "/agence" ||
@@ -86,7 +90,8 @@ export function proxy(request) {
     pathname === "/sitemap.xml" ||
     pathname === "/api/google/callback" ||
     isPublicInspirationRead ||
-    isPublicAcquisitionPage;
+    isPublicAcquisitionPage ||
+    isPublicAcquisitionApi;
 
   if (isPublicRoute) {
     return NextResponse.next();
