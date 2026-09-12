@@ -112,7 +112,6 @@ export default function Funnel() {
           <button type="button" style={S.heroCta} onClick={begin}>Trouver mon voyage <span>→</span></button>
           <div style={S.trustRow}><span>✓ 2 minutes</span><span>✓ Sans engagement</span><span>✓ Conseil humain à Bois-Colombes</span></div>
         </section>
-        <div style={S.heroFoot}>Mondescale Voyages · Des voyages pensés avec vous</div>
       </div>
     </main>
   );
@@ -163,10 +162,10 @@ function Brand({ light = false }) {
         <span
           style={{
             ...S.brandLocation,
-            color: light ? "rgba(255,255,255,.72)" : "#61736d",
+            color: light ? "rgba(255,255,255,.68)" : "#61736d",
           }}
         >
-          Agence de Bois-Colombes
+          Bois-Colombes
         </span>
       </div>
     </header>
@@ -176,40 +175,11 @@ function Brand({ light = false }) {
 const S = {
   heroMain: { minHeight: "100svh", position: "relative", overflow: "hidden", fontFamily: "Arial,sans-serif", color: "white", backgroundImage: "linear-gradient(110deg,rgba(5,35,31,.92) 0%,rgba(8,45,39,.72) 48%,rgba(8,45,39,.18) 100%),url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=2200&q=88')", backgroundSize: "cover", backgroundPosition: "center" },
   heroShade: { position: "absolute", inset: 0, background: "radial-gradient(circle at 78% 30%,rgba(255,215,140,.16),transparent 34%)", pointerEvents: "none" },
-  heroShell: { minHeight: "100svh", maxWidth: 1240, margin: "0 auto", padding: "34px clamp(22px,5vw,64px) 28px", display: "flex", flexDirection: "column", position: "relative", zIndex: 1, boxSizing: "border-box" },
-  brand: {
-    display: "flex",
-    alignItems: "center",
-    minHeight: 72,
-  },
-
-  logoCrop: {
-    width: 178,
-    height: 64,
-    overflow: "hidden",
-    borderRadius: 10,
-    background: "#fff",
-    position: "relative",
-  },
-
-  logoImage: {
-    position: "absolute",
-    width: 260,
-    height: 145,
-    objectFit: "cover",
-    left: "50%",
-    top: "50%",
-    transform: "translate(-50%,-50%)",
-  },
-
-  brandLocation: {
-    display: "block",
-    marginTop: 7,
-    fontSize: 10,
-    fontWeight: 700,
-    letterSpacing: ".12em",
-    textTransform: "uppercase",
-  },
-  heroContent: { margin: "auto 0", maxWidth: 780, padding: "70px 0" }, localPill: { display: "inline-block", border: "1px solid rgba(255,255,255,.3)", background: "rgba(255,255,255,.09)", backdropFilter: "blur(10px)", padding: "9px 14px", borderRadius: 99, fontSize: 13 }, heroKicker: { textTransform: "uppercase", letterSpacing: ".2em", fontSize: 12, fontWeight: 700, margin: "30px 0 12px", color: "#f0d8a8" }, heroTitle: { fontFamily: "Georgia,serif", fontWeight: 400, fontSize: "clamp(48px,7vw,88px)", lineHeight: .94, letterSpacing: "-.045em", margin: 0, maxWidth: 820 }, heroEm: { fontWeight: 400, color: "#f0d8a8" }, heroLead: { fontSize: "clamp(17px,2vw,21px)", lineHeight: 1.55, maxWidth: 650, color: "rgba(255,255,255,.86)", margin: "28px 0" }, heroCta: { border: 0, background: "#f2d8a5", color: "#173b34", borderRadius: 99, padding: "17px 24px", fontSize: 16, fontWeight: 800, cursor: "pointer", display: "inline-flex", gap: 26, alignItems: "center" }, trustRow: { display: "flex", flexWrap: "wrap", gap: "10px 24px", marginTop: 26, color: "rgba(255,255,255,.75)", fontSize: 12 }, heroFoot: { fontSize: 11, letterSpacing: ".08em", color: "rgba(255,255,255,.55)" },
+  heroShell: { minHeight: "100svh", maxWidth: 1240, margin: "0 auto", padding: "34px clamp(22px,5vw,64px) 56px", display: "flex", flexDirection: "column", position: "relative", zIndex: 1, boxSizing: "border-box" },
+  brand: { display: "flex", alignItems: "center", minHeight: 78 },
+  logoCrop: { width: 194, height: 70, overflow: "hidden", borderRadius: 11, background: "#fff", position: "relative" },
+  logoImage: { position: "absolute", width: 286, height: 160, objectFit: "cover", left: "50%", top: "50%", transform: "translate(-50%,-50%)" },
+  brandLocation: { display: "block", marginTop: 6, fontSize: 9, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase" },
+  heroContent: { margin: "clamp(72px,10vh,120px) 0 0", maxWidth: 780, padding: 0 }, localPill: { display: "inline-block", border: "1px solid rgba(255,255,255,.3)", background: "rgba(255,255,255,.09)", backdropFilter: "blur(10px)", padding: "9px 14px", borderRadius: 99, fontSize: 13 }, heroKicker: { textTransform: "uppercase", letterSpacing: ".2em", fontSize: 12, fontWeight: 700, margin: "30px 0 12px", color: "#f0d8a8" }, heroTitle: { fontFamily: "Georgia,serif", fontWeight: 400, fontSize: "clamp(48px,7vw,88px)", lineHeight: .94, letterSpacing: "-.045em", margin: 0, maxWidth: 820 }, heroEm: { fontWeight: 400, color: "#f0d8a8" }, heroLead: { fontSize: "clamp(17px,2vw,21px)", lineHeight: 1.55, maxWidth: 650, color: "rgba(255,255,255,.86)", margin: "28px 0" }, heroCta: { border: 0, background: "#f2d8a5", color: "#173b34", borderRadius: 99, padding: "17px 24px", fontSize: 16, fontWeight: 800, cursor: "pointer", display: "inline-flex", gap: 26, alignItems: "center" }, trustRow: { display: "flex", flexWrap: "wrap", gap: "10px 24px", marginTop: 26, color: "rgba(255,255,255,.75)", fontSize: 12 },
   main: { minHeight: "100svh", background: "radial-gradient(circle at 8% 5%,#f5ead7 0,transparent 30%),linear-gradient(145deg,#f8f5ef,#edf4f0)", padding: "30px 18px 50px", fontFamily: "Arial,sans-serif", color: "#173b34", boxSizing: "border-box" }, shell: { maxWidth: 920, margin: "0 auto" }, quizCard: { marginTop: 30, background: "rgba(255,255,255,.94)", border: "1px solid rgba(23,59,52,.08)", borderRadius: 30, padding: "clamp(24px,5vw,56px)", boxShadow: "0 30px 90px rgba(23,59,52,.11)" }, topline: { display: "flex", justifyContent: "space-between", color: "#73827e", fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".08em" }, track: { height: 4, background: "#e7ece9", borderRadius: 99, overflow: "hidden", marginTop: 12 }, bar: { height: "100%", background: "#c69b57", transition: "width .3s ease" }, questionWrap: { maxWidth: 760, margin: "42px auto 0" }, eyebrow: { color: "#a5793d", textTransform: "uppercase", letterSpacing: ".17em", fontSize: 11, fontWeight: 800, margin: "0 0 12px" }, question: { fontFamily: "Georgia,serif", fontWeight: 400, fontSize: "clamp(34px,5vw,52px)", lineHeight: 1.05, letterSpacing: "-.035em", margin: 0 }, questionLead: { fontSize: 17, color: "#667771", lineHeight: 1.55, margin: "15px 0 28px", maxWidth: 650 }, options: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(250px,1fr))", gap: 12 }, option: { position: "relative", minHeight: 96, padding: "19px 48px 19px 19px", border: "1px solid #dce5e1", background: "#fff", borderRadius: 18, textAlign: "left", cursor: "pointer", color: "#173b34", boxShadow: "0 5px 18px rgba(23,59,52,.035)" }, selected: { border: "1px solid #a5793d", background: "#fbf7ef" }, optionTitle: { display: "block", fontSize: 16, fontWeight: 800 }, optionSub: { display: "block", fontSize: 12, color: "#71817c", marginTop: 6, lineHeight: 1.35 }, optionArrow: { position: "absolute", right: 18, top: "50%", transform: "translateY(-50%)", color: "#a5793d", fontSize: 20 }, back: { border: 0, background: "transparent", padding: "22px 0 0", color: "#71817c", cursor: "pointer", fontSize: 13 }, teaser: { padding: 20, borderRadius: 18, background: "#f7f3ea", border: "1px solid #eee4d2", marginBottom: 24 }, teaserLabel: { fontSize: 11, textTransform: "uppercase", letterSpacing: ".12em", color: "#8c6b38", fontWeight: 800 }, ideaRow: { display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }, idea: { padding: "8px 11px", background: "#fff", borderRadius: 99, fontSize: 13, border: "1px solid #eadfc9" }, teaserNote: { fontSize: 11, color: "#847e73", margin: "12px 0 0" }, fields: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(250px,1fr))", gap: 14 }, fieldLabel: { fontSize: 12, fontWeight: 800, color: "#4c615b" }, optional: { fontWeight: 400, color: "#89958f" }, input: { display: "block", width: "100%", boxSizing: "border-box", marginTop: 7, padding: "15px 14px", border: "1px solid #d3ded9", borderRadius: 12, fontSize: 16, color: "#173b34", background: "#fff" }, honeypot: { position: "absolute", left: -10000, width: 1, height: 1, opacity: 0 }, check: { display: "flex", gap: 10, alignItems: "flex-start", fontSize: 12, lineHeight: 1.5, marginTop: 16, color: "#667771" }, cta: { width: "100%", marginTop: 24, padding: "17px 20px", border: 0, borderRadius: 99, background: "#173b34", color: "#fff", fontWeight: 800, fontSize: 15, cursor: "pointer" }, error: { color: "#9b2c2c", fontSize: 13 }, reassure: { display: "flex", justifyContent: "center", flexWrap: "wrap", gap: 12, color: "#7a8884", fontSize: 11, marginTop: 22 }, resultCard: { marginTop: 40, background: "#fff", borderRadius: 30, padding: "clamp(28px,6vw,64px)", boxShadow: "0 30px 90px rgba(23,59,52,.11)" }, resultTitle: { fontFamily: "Georgia,serif", fontSize: "clamp(42px,6vw,64px)", fontWeight: 400, margin: 0 }, resultLead: { fontSize: 18, lineHeight: 1.55, color: "#60736d", maxWidth: 650 }, profileBox: { background: "#173b34", color: "#fff", padding: "24px", borderRadius: 20, marginTop: 28 }, profileLabel: { display: "block", color: "#e5c68f", fontSize: 11, textTransform: "uppercase", letterSpacing: ".13em" }, profileName: { display: "block", fontFamily: "Georgia,serif", fontSize: 30, fontWeight: 400, marginTop: 8 }, profileText: { color: "rgba(255,255,255,.75)", lineHeight: 1.55, marginBottom: 0 }, humanBox: { display: "flex", gap: 15, alignItems: "center", marginTop: 22, padding: 18, border: "1px solid #e0e7e4", borderRadius: 18 }, avatar: { flex: "0 0 48px", width: 48, height: 48, borderRadius: "50%", display: "grid", placeItems: "center", background: "#f1e4ce", color: "#7b5a2e", fontWeight: 800 }, mini: { fontSize: 12, lineHeight: 1.5, color: "#73827e", margin: "5px 0 0" }, privacy: { fontSize: 11, color: "#85918d", marginTop: 22 },
 };
