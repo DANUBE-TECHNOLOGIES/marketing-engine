@@ -3,11 +3,13 @@ require("dotenv").config();
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
+const PILOT_SITE_SLUG = "ambassade-fram-mondescale-bois-colombes";
+
 async function main(){
   const checks=[];
   function push(name,ok,detail){checks.push({name,ok:Boolean(ok),detail});}
-  const site=await prisma.agencySite.findFirst({where:{slug:"bois-colombes"},select:{id:true,agencyId:true,slug:true}});
-  push("agency-site",site?.slug==="bois-colombes",site?`${site.slug} / ${site.agencyId}`:"missing");
+  const site=await prisma.agencySite.findFirst({where:{slug:PILOT_SITE_SLUG},select:{id:true,agencyId:true,slug:true}});
+  push("agency-site",site?.slug===PILOT_SITE_SLUG,site?`${site.slug} / ${site.agencyId}`:"missing");
   const cols=await prisma.$queryRawUnsafe(`SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='PublicLead'`);
   const names=new Set(cols.map(x=>x.column_name));
   const required=["funnelId","funnelVersion","qualificationScore","leadTemperature","recommendedAction","funnelAnswers","consentEvidence"];
