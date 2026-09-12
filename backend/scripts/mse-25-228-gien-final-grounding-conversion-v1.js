@@ -72,11 +72,11 @@ async function main() {
   fs.writeFileSync(SNAPSHOT, JSON.stringify({ contract: CONTRACT, target: TARGET, guardFingerprint, capturedAt: new Date().toISOString(), blocks: current }, null, 2), { mode: 0o600 });
 
   await prisma.$transaction(async tx => {
-    for (const r of replacements) await tx.block.update({ where: { id: r.id }, data: { content: r.content } });
+    for (const r of replacements) await tx.pageBlock.update({ where: { id: r.id }, data: { content: r.content } });
   });
 
   const ids = replacements.map(r => r.id);
-  const after = await prisma.block.findMany({ where: { id: { in: ids } } });
+  const after = await prisma.pageBlock.findMany({ where: { id: { in: ids } } });
   if (after.length !== replacements.length) throw new Error('Post-apply block count guard failed');
   for (const r of replacements) {
     const hit = after.find(b => b.id === r.id);
