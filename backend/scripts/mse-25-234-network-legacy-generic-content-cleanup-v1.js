@@ -44,10 +44,9 @@ const TARGETS = [
       { id: 'cmsqctsqr006bmn5y5eaohpf0', pageSlug: '', type: 'team', marker: 'Votre équipe' },
       { id: 'cmtpzcp2g0004q9b17ud9f8fh', pageSlug: 'agence', type: 'team', marker: 'Votre équipe' },
       { id: 'cmtpzcp9k000cq9b1bi6s8jxn', pageSlug: 'equipe', type: 'team', marker: 'Votre équipe' },
-      { id: 'cmsqctsr2006hmn5ylp2ep54z', pageSlug: '', type: 'faq', marker: 'Pourquoi passer par une agence pour accueil ?' },
       { id: 'cmtpzcpet000kq9b1h2d6yumo', pageSlug: 'engagements', type: 'faq', marker: 'Pourquoi passer par une agence pour nos engagements ?' },
       { id: 'cmtpzcpje000sq9b1qkayap3i', pageSlug: 'destinations', type: 'faq', marker: 'Pourquoi passer par une agence pour destinations ?' },
-      { id: 'cmtpzcpq3001hq9b16bn9yewv', pageSlug: 'contact', type: 'faq', marker: 'Pourquoi passer par une agence pour contact ?' }
+      { id: 'cmtpzcpq3001hq9b16bn9yewv', pageSlug: 'contact', type: 'faq', marker: 'Questions fréquentes sur contact' }
     ]
   }
 ];
