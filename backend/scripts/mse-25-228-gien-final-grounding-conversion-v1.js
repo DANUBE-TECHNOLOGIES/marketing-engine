@@ -43,6 +43,14 @@ const replacements = [
   }
 ];
 
+function canonicalize(value) {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.keys(value).sort().map(key => [key, canonicalize(value[key])]));
+  }
+  return value;
+}
+function stableJson(value) { return JSON.stringify(canonicalize(value)); }
 function fingerprint(rows) { return crypto.createHash('sha256').update(JSON.stringify(rows.map(r => [r.id, r.content]))).digest('hex'); }
 
 async function main() {
@@ -80,7 +88,7 @@ async function main() {
   if (after.length !== replacements.length) throw new Error('Post-apply block count guard failed');
   for (const r of replacements) {
     const hit = after.find(b => b.id === r.id);
-    if (JSON.stringify(hit.content) !== JSON.stringify(r.content)) throw new Error(`Post-apply validation failed for ${r.id}`);
+    if (!hit || stableJson(hit.content) !== stableJson(r.content)) throw new Error(`Post-apply validation failed for ${r.id}`);
   }
 
   console.log(JSON.stringify({ ...base, mode: 'APPLY', originalGuardFingerprint: guardFingerprint, mutationPerformed: true, snapshot: SNAPSHOT }, null, 2));
