@@ -17,6 +17,14 @@ const MANAGED_PUBLIC_ROUTES = Object.freeze([
   Object.freeze({ id: "managed-voyages-en-groupe", slug: "voyages-en-groupe", title: "Groupes" }),
 ]);
 
+const DOCUMENT_NAVIGATION_SLUGS = new Set([
+  "agence",
+  "equipe",
+  "team",
+  "notre-equipe",
+  "notre_equipe",
+]);
+
 const TUI_SHOWCASE_DISABLED_CITIES = new Set(["amilly", "melun"]);
 
 function normalizeNavigation(site) {
@@ -51,6 +59,10 @@ function pageHref(siteSlug, page) {
   const slug = pageSlug(page);
   if (!slug || page?.title === "Accueil") return `/agence/${siteSlug}`;
   return `/agence/${siteSlug}/${slug}`;
+}
+
+function requiresDocumentNavigation(page) {
+  return DOCUMENT_NAVIGATION_SLUGS.has(pageSlug(page));
 }
 
 function uniquePublishedNavigation(site) {
@@ -181,14 +193,24 @@ export default function PublicSiteHeader({ site, brand, brandRuntime, brandAsset
         <div className="public-site-header-navrow">
           <div className="public-site-container">
             <nav className="public-site-navigation" aria-label={city ? `Navigation de l’agence de voyages de ${city}` : "Navigation principale"}>
-              {pages.map((page, index) => (
-                <Link
-                  key={page.id || page.path || `${page.title}-${index}`}
-                  href={pageHref(site.slug, page)}
-                >
-                  {page.title}
-                </Link>
-              ))}
+              {pages.map((page, index) => {
+                const key = page.id || page.path || `${page.title}-${index}`;
+                const href = pageHref(site.slug, page);
+
+                if (requiresDocumentNavigation(page)) {
+                  return (
+                    <a key={key} href={href} data-document-navigation="true">
+                      {page.title}
+                    </a>
+                  );
+                }
+
+                return (
+                  <Link key={key} href={href}>
+                    {page.title}
+                  </Link>
+                );
+              })}
             </nav>
           </div>
         </div>
@@ -198,6 +220,7 @@ export default function PublicSiteHeader({ site, brand, brandRuntime, brandAsset
 }
 
 export {
+  DOCUMENT_NAVIGATION_SLUGS,
   MANAGED_PUBLIC_ROUTES,
   NAVIGATION_ALIASES,
   TUI_SHOWCASE_DISABLED_CITIES,
@@ -209,6 +232,7 @@ export {
   pageHref,
   pageSlug,
   publishedPageBySlug,
+  requiresDocumentNavigation,
   telephoneHref,
   uniquePublicNavigation,
   uniquePublishedNavigation,
