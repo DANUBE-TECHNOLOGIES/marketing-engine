@@ -14,7 +14,12 @@ test("MSE-25.30 renders published feature item hrefs as crawlable links", () => 
   assert.match(renderer, /function featureAction/);
   assert.match(renderer, /featureHref\(root, item\?\.href \|\| item\?\.url \|\| item\?\.link\)/);
   assert.match(renderer, /if \(href && label\) return \{ href, label \}/);
-  assert.match(renderer, /return managedFeatureAction\(root, item\)/);
+  assert.match(renderer, /const managed = managedFeatureAction\(root, item\)/);
+  assert.match(renderer, /if \(managed\) return managed/);
+  assert.match(renderer, /return semanticFeatureAction\(site, item\)/);
+  assert.match(renderer, /uniquePublishedNavigation\(site\)\.find/);
+  assert.match(renderer, /pageSlug\(page\) === semantic\.slug/);
+  assert.match(renderer, /pageHref\(site\.slug, publishedPage\)/);
   assert.match(renderer, /<Link className="public-site-feature-action" href=\{action\.href\}>\{action\.label\}/);
   assert.doesNotMatch(renderer, /href: configuredHref \|\| `\$\{root\}\/contact`/);
   assert.doesNotMatch(renderer, /Parler de votre projet/);

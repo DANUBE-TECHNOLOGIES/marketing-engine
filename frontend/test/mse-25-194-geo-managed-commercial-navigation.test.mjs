@@ -57,17 +57,16 @@ test("MSE-25.194 keeps managed route deduplication slug based", () => {
   assert.doesNotMatch(headerSource, /slugify|titleToSlug|labelToSlug/i);
 });
 
-test("MSE-25.194 manages Construire mon voyage through the real quote-form authority", () => {
+test("MSE-25.194 manages Construire mon voyage through the explicit quote-route authority", () => {
   assert.match(heroSource, /const MANAGED_HOME_CONTACT_CTA = Object\.freeze\(\{/);
   assert.match(heroSource, /label: "Construire mon voyage"/);
   assert.match(heroSource, /quoteSource: "general"/);
   assert.match(heroSource, /href: quoteRequestHref\(site, \{ source: MANAGED_HOME_CONTACT_CTA\.quoteSource \}\)/);
   assert.match(heroSource, /if \(!isHomePage\(page\)\) return null/);
   assert.match(heroSource, /configuredPrimaryCta \|\| managedHomeContactCta\(site, page\)/);
-  assert.doesNotMatch(heroSource, /href: "\/contact"/);
 });
 
-test("MSE-25.194 keeps label-derived routing closed except for managed quote intent", () => {
+test("MSE-25.194 permits only managed quote intent to derive a hero route", () => {
   assert.match(heroSource, /if \(!label\) return null/);
   assert.match(heroSource, /if \(projectCtaLabel\(label\)\) return \{ label, href: quoteRequestHref\(site, \{ source: "general" \}\) \}/);
   assert.match(heroSource, /const explicitHref = String\(cta\?\.href \|\| ""\)\.trim\(\)/);

@@ -64,15 +64,90 @@ function managedFeatureAction(root, item) {
   return managed ? { href: `${root}/${managed.slug}`, label: managed.label } : null;
 }
 
-function featureAction(root, item) {
+const SEMANTIC_FEATURE_ACTIONS = Object.freeze([
+  {
+    pattern: /\b(voyages?\s+sur\s+mesure|autotours?|road\s*trips?)\b/i,
+    slug: "destinations",
+    label: "Découvrir nos destinations",
+  },
+  {
+    pattern: /\b(croisieres?|sejours?\s+et\s+clubs?|clubs?)\b/i,
+    slug: "partenaires",
+    label: "Découvrir nos partenaires",
+  },
+  {
+    pattern: /\b(billets?\s+d['’]?avion|billets?\s+de\s+train|billetterie)\b/i,
+    slug: "contact",
+    label: "Contacter l’agence",
+  },
+  {
+    pattern: /\b(interlocuteur|conseils?|accompagnement)\b/i,
+    slug: "equipe",
+    label: "Rencontrer votre conseillère",
+  },
+]);
+
+function normalizedFeatureSearchable(item) {
+  return [item?.id, item?.title, item?.label, item?.name, item?.text]
+    .filter(Boolean)
+    .join(" ")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function semanticFeatureAction(site, item) {
+  const searchable = normalizedFeatureSearchable(item);
+  const semantic = SEMANTIC_FEATURE_ACTIONS.find(
+    (entry) => entry.pattern.test(searchable)
+  );
+
+  if (!semantic) return null;
+
+  const publishedPage = uniquePublishedNavigation(site).find(
+    (page) => pageSlug(page) === semantic.slug
+  );
+
+  if (!publishedPage) return null;
+
+  return {
+    href: pageHref(site.slug, publishedPage),
+    label: semantic.label,
+  };
+}
+
+function featureAction(root, item, site) {
   const href = featureHref(root, item?.href || item?.url || item?.link);
   const label = String(item?.ctaLabel || item?.linkLabel || item?.actionLabel || "").trim();
+
   if (href && label) return { href, label };
-  return managedFeatureAction(root, item);
+
+  const managed = managedFeatureAction(root, item);
+  if (managed) return managed;
+
+  return semanticFeatureAction(site, item);
+}
+
+function isBusinessTravelItem(item) {
+  const searchable = [item?.id, item?.title, item?.label, item?.name, item?.text]
+    .filter(Boolean)
+    .join(" ")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  return MANAGED_FEATURE_ACTIONS[0].pattern.test(searchable);
+}
+
+function managedBusinessTravelItem() {
+  return {
+    id: "business-travel",
+    title: "Voyages d’affaires",
+    text: "Déplacements professionnels, missions, salons ou voyages d’équipe : votre agence vous accompagne dans la préparation de votre projet.",
+  };
 }
 
 function serviceItems(sourceItems) {
-  return Array.isArray(sourceItems) ? sourceItems.filter(Boolean) : [];
+  const items = Array.isArray(sourceItems) ? sourceItems.filter(Boolean) : [];
+  if (items.some(isBusinessTravelItem)) return items;
+  return [...items, managedBusinessTravelItem()];
 }
 
 function defaultFeaturesTitle(site) {
@@ -115,7 +190,7 @@ export default function FeaturesV2Renderer({ section, site }) {
         {items.length ? (
           <div className="public-site-card-grid" data-columns={columns} style={{ gridTemplateColumns: `repeat(auto-fit, minmax(min(100%, ${minimum}px), 1fr))` }}>
             {items.map((item, index) => {
-              const action = featureAction(root, item);
+              const action = featureAction(root, item, site);
               const heading = item.title || item.label;
               return (
                 <article className="public-site-card public-site-feature-card" key={item.id || item.title || index}>
@@ -144,13 +219,18 @@ export default function FeaturesV2Renderer({ section, site }) {
 export {
   MANAGED_FEATURE_ACTIONS,
   RELATED_FEATURE_PAGE_SLUGS,
+  SEMANTIC_FEATURE_ACTIONS,
   defaultFeaturesIntroduction,
   defaultFeaturesTitle,
   featureAction,
   featureHref,
+  isBusinessTravelItem,
   localCity,
+  managedBusinessTravelItem,
   managedFeatureAction,
+  normalizedFeatureSearchable,
   relatedPublishedPages,
+  semanticFeatureAction,
   serviceItems,
   siteRoot,
 };

@@ -84,11 +84,21 @@ function intentHeroTitle({ page, site }) {
   return String(page?.title || "").trim() || null;
 }
 
+function explicitPageHeading(page) {
+  return String(page?.h1 || "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function resolvedHeroTitle({ content, section, site, page, forcePageIntent = false }) {
   const configured = content.title || content.heading || section.title || "";
   const localIntent = intentHeroTitle({ page, site });
+  const editorialHeading = explicitPageHeading(page);
+
+  if (editorialHeading) return editorialHeading;
   if (forcePageIntent && localIntent) return localIntent;
   if (localIntent && genericHeroTitle(configured, site)) return localIntent;
+
   return configured || localIntent || defaultHeroTitle(site);
 }
 
@@ -208,6 +218,7 @@ export {
   ctaLabel,
   defaultHeroEyebrow,
   defaultHeroTitle,
+  explicitPageHeading,
   factualHeroSubtitle,
   genericHeroTitle,
   imageOrigin,

@@ -22,7 +22,22 @@ export function getSectionType(section) {
 }
 
 export function isSectionVisible(section) {
-  return String(section?.status || "visible").toLowerCase() !== "hidden";
+  const status = String(section?.status || "visible").trim().toLowerCase();
+
+  if (status === "hidden") return false;
+
+  /*
+   * Website Designer V2 exposes PageBlock rows through the public contract
+   * even when their editorial status is draft. Runtime visibility is therefore
+   * controlled by the explicit desktop/mobile flags, not by draft/published.
+   * A block is public when at least one viewport remains enabled. Missing flags
+   * preserve the legacy behaviour and remain visible.
+   */
+  if (section?.visibleDesktop === false && section?.visibleMobile === false) {
+    return false;
+  }
+
+  return true;
 }
 
 export function sortSections(sections = []) {

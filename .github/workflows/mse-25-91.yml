@@ -91,6 +91,7 @@ jobs:
           node --test test/mse-25-193-geo-grounded-local-context-navigation.test.mjs
           node --test test/mse-25-194-geo-managed-commercial-navigation.test.mjs
           node --test test/mse-25-195-geo-grounded-business-travel.test.mjs
+          node --test test/mse-25-196-geo-grounded-group-travel.test.mjs
 
       - name: Lint canonical public files
         working-directory: frontend
@@ -101,9 +102,11 @@ jobs:
           app/agence/[siteSlug]/inspiration/page.js
           app/agence/[siteSlug]/destination/[destinationSlug]/page.js
           app/agence/[siteSlug]/business-travel/page.js
+          app/agence/[siteSlug]/voyages-en-groupe/page.js
           components/JsonLd.js
           components/destination/DestinationPage.js
           components/public-site/BusinessTravelPage.js
+          components/public-site/GroupTravelPage.js
           components/public-site/LocalContentContext.js
           components/public-site/LocalSeoAreaLinks.js
           components/public-site/PublicAgencyReferenceFacts.js
