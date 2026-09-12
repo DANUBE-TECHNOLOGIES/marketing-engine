@@ -22,7 +22,12 @@ const ADMIN_LINKS = [
 
 function isPublicSurface(pathname) {
   const path = String(pathname || "").trim();
-  return path === "/agence" || path.startsWith("/agence/");
+  return (
+    path === "/agence" ||
+    path.startsWith("/agence/") ||
+    path === "/acquisition" ||
+    path.startsWith("/acquisition/")
+  );
 }
 
 export default function AdminEngineNav() {
