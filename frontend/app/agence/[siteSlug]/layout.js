@@ -5,6 +5,7 @@ import { getPublicBrandTheme } from "../../../lib/public-brand-api";
 import PublicSiteHeader from "../../../components/public-site/PublicSiteHeader";
 import PublicSiteFooter from "../../../components/public-site/PublicSiteFooter";
 import PublicBrandLegalRuntime from "../../../components/public-site/PublicBrandLegalRuntime";
+import WebCallback from "../../../components/public-site/WebCallback";
 import JsonLd from "../../../components/JsonLd";
 import { buildWebSiteSchema } from "../../../lib/seo/json-ld";
 import {
@@ -76,6 +77,7 @@ export default async function PublicAgencySiteLayout({ children, params }) {
         <main>{children}</main>
 
         <PublicSiteFooter site={site} />
+        <WebCallback siteSlug={siteSlug} />
       </div>
     </PublicBrandLegalRuntime>
   );

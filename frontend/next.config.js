@@ -39,6 +39,10 @@ const nextConfig = {
         source: "/api/public/acquisition-funnels/:path*",
         destination: `${origin}/api/public/acquisition-funnels/:path*`,
       },
+      {
+        source: "/api/public/web-callback/:path*",
+        destination: `${origin}/api/public/web-callback/:path*`,
+      },
     ];
   },
 
@@ -54,6 +58,10 @@ const nextConfig = {
       },
       {
         source: "/api/public/acquisition-funnels/:path*",
+        headers: publicSecurityHeaders,
+      },
+      {
+        source: "/api/public/web-callback/:path*",
         headers: publicSecurityHeaders,
       },
       {
