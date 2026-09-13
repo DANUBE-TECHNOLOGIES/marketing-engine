@@ -4,27 +4,65 @@ const express = require("express");
 const { randomUUID } = require("node:crypto");
 const { notifyLead } = require("../../routes/publicLeads");
 
-const FUNNEL_VERSION = "mse-25.205-v1";
+const FUNNEL_VERSION = "mse-25.208-v1";
 const CONSENT_VERSION = "2026-09-v2";
 const CONSENT_WORDING = Object.freeze({
   emailMarketing:"J’accepte de recevoir par e-mail des idées, conseils et offres de Mondescale Voyages.",
   phoneProjectContact:"Je souhaite être contacté(e) par téléphone par Mondescale Voyages au sujet de ce projet de voyage."
 });
-const FUNNELS = Object.freeze({
-  "bois-colombes/soleil-hiver": Object.freeze({
-    id:"bois-colombes-soleil-hiver",version:FUNNEL_VERSION,siteSlug:"ambassade-fram-mondescale-bois-colombes",publicSiteSlug:"bois-colombes",agencyCity:"Bois-Colombes",campaign:"soleil-hiver",
-    title:"Trouvons votre prochain voyage au soleil",subtitle:"Quelques questions suffisent pour orienter nos premières recommandations.",
-    questions:[
-      {id:"departureWindow",type:"single",label:"Quand souhaitez-vous partir ?",required:true,options:["decembre","janvier","fevrier","mars","pas-encore-decide"]},
-      {id:"travellers",type:"single",label:"Combien de voyageurs ?",required:true,options:["1","2","3-4","5-plus"]},
-      {id:"budgetPerPerson",type:"single",label:"Quel budget envisagez-vous par personne ?",required:true,options:["moins-2000","2000-3000","3000-5000","5000-plus","a-definir"]},
-      {id:"travelStyle",type:"single",label:"Quel voyage vous attire ?",required:true,options:["plage","circuit","safari","croisiere","combine","a-decouvrir"]},
-      {id:"departureAirport",type:"single",label:"D'où souhaitez-vous partir ?",required:true,options:["paris","autre","a-definir"]},
-      {id:"maturity",type:"single",label:"Où en êtes-vous dans votre projet ?",required:true,options:["idees","comparaison","reservation-prochaine"]}
-    ],
-    contact:{required:["name","email","postalCode"],optional:["phone"],consentVersion:CONSENT_VERSION,consents:{emailMarketing:{required:false,label:CONSENT_WORDING.emailMarketing},phoneProjectContact:{requiredWhen:"phone",label:CONSENT_WORDING.phoneProjectContact}}}
-  })
-});
+
+const QUESTIONS = Object.freeze([
+  Object.freeze({id:"departureWindow",type:"single",label:"Quand souhaitez-vous partir ?",required:true,options:Object.freeze(["decembre","janvier","fevrier","mars","pas-encore-decide"])}),
+  Object.freeze({id:"travellers",type:"single",label:"Combien de voyageurs ?",required:true,options:Object.freeze(["1","2","3-4","5-plus"])}),
+  Object.freeze({id:"budgetPerPerson",type:"single",label:"Quel budget envisagez-vous par personne ?",required:true,options:Object.freeze(["moins-2000","2000-3000","3000-5000","5000-plus","a-definir"])}),
+  Object.freeze({id:"travelStyle",type:"single",label:"Quel voyage vous attire ?",required:true,options:Object.freeze(["plage","circuit","safari","croisiere","combine","a-decouvrir"])}),
+  Object.freeze({id:"departureAirport",type:"single",label:"D'où souhaitez-vous partir ?",required:true,options:Object.freeze(["paris","autre","a-definir"])}),
+  Object.freeze({id:"maturity",type:"single",label:"Où en êtes-vous dans votre projet ?",required:true,options:Object.freeze(["idees","comparaison","reservation-prochaine"])})
+]);
+
+const NETWORK_AGENCIES = Object.freeze([
+  Object.freeze({publicSiteSlug:"bois-colombes",siteSlug:"ambassade-fram-mondescale-bois-colombes",agencyCity:"Bois-Colombes"}),
+  Object.freeze({publicSiteSlug:"ozoir-la-ferriere",siteSlug:"ambassade-fram-mondescale-ozoir-la-ferriere",agencyCity:"Ozoir-la-Ferrière"}),
+  Object.freeze({publicSiteSlug:"maurepas",siteSlug:"ambassade-fram-mondescale-maurepas",agencyCity:"Maurepas"}),
+  Object.freeze({publicSiteSlug:"gien",siteSlug:"ambassade-fram-mondescale-gien",agencyCity:"Gien"}),
+  Object.freeze({publicSiteSlug:"nevers",siteSlug:"ambassade-fram-mondescale-nevers",agencyCity:"Nevers"}),
+  Object.freeze({publicSiteSlug:"dax",siteSlug:"ambassade-fram-mondescale-dax",agencyCity:"Dax"}),
+  Object.freeze({publicSiteSlug:"lamorlaye",siteSlug:"mondescale-lamorlaye",agencyCity:"Lamorlaye"}),
+  Object.freeze({publicSiteSlug:"amilly",siteSlug:"tui-store-amilly",agencyCity:"Amilly"}),
+  Object.freeze({publicSiteSlug:"melun",siteSlug:"tui-store-melun",agencyCity:"Melun"})
+]);
+
+function createFunnel(agency){
+  const campaign="soleil-hiver";
+  return Object.freeze({
+    id:`${agency.publicSiteSlug}-${campaign}`,
+    version:FUNNEL_VERSION,
+    siteSlug:agency.siteSlug,
+    publicSiteSlug:agency.publicSiteSlug,
+    agencyCity:agency.agencyCity,
+    campaign,
+    title:"Trouvons votre prochain voyage au soleil",
+    subtitle:"Quelques questions suffisent pour orienter nos premières recommandations.",
+    questions:QUESTIONS,
+    contact:Object.freeze({
+      required:Object.freeze(["name","email","postalCode"]),
+      optional:Object.freeze(["phone"]),
+      consentVersion:CONSENT_VERSION,
+      consents:Object.freeze({
+        emailMarketing:Object.freeze({required:false,label:CONSENT_WORDING.emailMarketing}),
+        phoneProjectContact:Object.freeze({requiredWhen:"phone",label:CONSENT_WORDING.phoneProjectContact})
+      })
+    })
+  });
+}
+
+const FUNNELS = Object.freeze(Object.fromEntries(
+  NETWORK_AGENCIES.map((agency)=>[
+    `${agency.publicSiteSlug}/soleil-hiver`,
+    createFunnel(agency)
+  ])
+));
+
 const buckets=new Map();
 function clean(v,max=500){return String(v??"").trim().replace(/\s+/g," ").slice(0,max)}
 function limited(req){const now=Date.now(),key=clean(req.headers["x-forwarded-for"]||req.ip||"unknown",120).split(",")[0];let b=buckets.get(key);if(!b||now-b.start>900000)b={start:now,count:0};b.count+=1;buckets.set(key,b);return b.count>8}
@@ -36,4 +74,4 @@ class DisabledErpConnector{async publish(envelope){return{status:"DISABLED",exte
 function validateSubmission(funnel,body={}){const name=clean(body.name,120),email=clean(body.email,180).toLowerCase(),postalCode=clean(body.postalCode,20),phone=clean(body.phone,50),answers=body.answers||{},consents=body.consents||{};if(clean(body.website,200))return"SPAM";if(name.length<2)return"INVALID_NAME";if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return"INVALID_EMAIL";if(!/^[0-9]{5}$/.test(postalCode))return"INVALID_POSTAL_CODE";if(phone&&phone.replace(/\D/g,"").length<8)return"INVALID_PHONE";if(phone&&consents.phoneProjectContact!==true)return"PHONE_CONSENT_REQUIRED";for(const q of funnel.questions){const value=answers[q.id];if(q.required&&(value==null||value===""))return`MISSING_${q.id.toUpperCase()}`;if(value!=null&&!q.options.includes(value))return`INVALID_${q.id.toUpperCase()}`}return null}
 async function persistQualifiedLead(prisma,{funnel,submission,qualification,consentEvidence,context={}}){const site=await prisma.agencySite.findFirst({where:{slug:funnel.siteSlug},select:{id:true,agencyId:true,slug:true}});if(!site){const e=new Error("SITE_NOT_FOUND");e.code="SITE_NOT_FOUND";throw e}const email=clean(submission.email,180).toLowerCase();const duplicate=await prisma.$queryRawUnsafe(`SELECT "id","status","createdAt" FROM "PublicLead" WHERE "siteSlug"=$1 AND "funnelId"=$2 AND lower("email")=$3 AND "createdAt">NOW()-INTERVAL '15 minutes' ORDER BY "createdAt" DESC LIMIT 1`,site.slug,funnel.id,email);if(duplicate[0])return{...duplicate[0],duplicate:true,erpSyncStatus:"DISABLED"};const id=`lead_${randomUUID().replaceAll("-","")}`,phone=clean(submission.phone,50)||null,a=submission.answers||{},projectSummary=`Funnel ${funnel.id} | ${a.departureWindow||""} | ${a.travelStyle||""} | score ${qualification.score}/${qualification.temperature}`,sourcePath=clean(context.sourcePath,1000)||`/acquisition/${funnel.publicSiteSlug}/${funnel.campaign}`;const rows=await prisma.$queryRawUnsafe(`INSERT INTO "PublicLead" ("id","agencyId","agencySiteId","siteSlug","projectType","source","sourcePage","sourcePath","sourceReferrer","utmSource","utmMedium","utmCampaign","utmContent","utmTerm","name","phone","email","destination","travelDates","travellers","budget","wishes","status","erpSyncStatus","notificationStatus","funnelId","funnelVersion","qualificationScore","leadTemperature","recommendedAction","funnelAnswers","consentEvidence","createdAt","updatedAt") VALUES ($1,$2,$3,$4,'leisure','acquisition-funnel',$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,'NEW','DISABLED','PENDING',$21,$22,$23,$24,$25,$26::jsonb,$27::jsonb,NOW(),NOW()) RETURNING "id","status","erpSyncStatus","createdAt"`,id,site.agencyId,site.id,site.slug,funnel.title,sourcePath,clean(context.referrer,2000)||null,clean(context.utmSource,240)||null,clean(context.utmMedium,240)||null,clean(context.utmCampaign,240)||funnel.campaign,clean(context.utmContent,240)||null,clean(context.utmTerm,240)||null,clean(submission.name,120),phone,email,clean(a.travelStyle,240),clean(a.departureWindow,160),clean(a.travellers,120),clean(a.budgetPerPerson,160),projectSummary,funnel.id,funnel.version,qualification.score,qualification.temperature,qualification.recommendedAction,JSON.stringify(a),JSON.stringify(consentEvidence));return{...rows[0],duplicate:false}}
 function createRoutes({prisma,erpConnector=new DisabledErpConnector()}={}){const router=express.Router();router.get("/api/public/acquisition-funnels/:siteSlug/:campaign",(req,res)=>{const funnel=getFunnel(req.params.siteSlug,req.params.campaign);return funnel?res.json({ok:true,funnel}):res.status(404).json({ok:false,error:"FUNNEL_NOT_FOUND"})});router.post("/api/public/acquisition-funnels/:siteSlug/:campaign/qualify",(req,res)=>{const funnel=getFunnel(req.params.siteSlug,req.params.campaign);if(!funnel)return res.status(404).json({ok:false,error:"FUNNEL_NOT_FOUND"});return res.json({ok:true,funnelId:funnel.id,funnelVersion:funnel.version,qualification:scoreSubmission(req.body||{})})});router.post("/api/public/acquisition-funnels/:siteSlug/:campaign/submit",async(req,res)=>{if(limited(req))return res.status(429).json({ok:false,error:"RATE_LIMITED"});const funnel=getFunnel(req.params.siteSlug,req.params.campaign);if(!funnel)return res.status(404).json({ok:false,error:"FUNNEL_NOT_FOUND"});const error=validateSubmission(funnel,req.body||{});if(error==="SPAM")return res.status(202).json({ok:true});if(error)return res.status(400).json({ok:false,error});if(!prisma)return res.status(503).json({ok:false,error:"PERSISTENCE_UNAVAILABLE"});try{const qualification=scoreSubmission(req.body),consentEvidence=buildConsentEvidence(req.body.consents,{funnelId:funnel.id,siteSlug:funnel.siteSlug,phone:req.body.phone}),lead=await persistQualifiedLead(prisma,{funnel,submission:req.body,qualification,consentEvidence,context:req.body.context||{}}),envelope=buildErpLeadEnvelope({leadId:lead.id,funnel,submission:req.body,qualification,consentEvidence}),erp=await erpConnector.publish(envelope);let notification={sent:false,status:lead.duplicate?"DUPLICATE":"UNKNOWN"};if(!lead.duplicate){const notified=await notifyLead(prisma,lead.id);notification=notified.notification||notification}return res.status(lead.duplicate?200:201).json({ok:true,lead,qualification,notification,erp})}catch(e){if(e.code==="SITE_NOT_FOUND")return res.status(404).json({ok:false,error:e.code});console.error("[acquisition-funnel] submit failed",e);return res.status(500).json({ok:false,error:"ACQUISITION_SUBMIT_FAILED"})}});router.get("/api/leads/acquisition/analytics",async(req,res)=>{if(!prisma)return res.status(503).json({ok:false,error:"PERSISTENCE_UNAVAILABLE"});try{const days=Math.min(Math.max(Number(req.query.days||30),1),365),siteSlug=clean(req.query.siteSlug,160)||null;const rows=await prisma.$queryRawUnsafe(`SELECT "funnelId","siteSlug",COUNT(*)::int AS "leads",COUNT(*) FILTER (WHERE "leadTemperature"='HOT')::int AS "hot",COUNT(*) FILTER (WHERE "leadTemperature"='WARM')::int AS "warm",COUNT(*) FILTER (WHERE "leadTemperature"='COLD')::int AS "cold",COUNT(*) FILTER (WHERE "status"='CONTACTED')::int AS "contacted",COUNT(*) FILTER (WHERE "status"='CONVERTED')::int AS "converted",ROUND(AVG("qualificationScore")::numeric,1) AS "avgScore" FROM "PublicLead" WHERE "funnelId" IS NOT NULL AND "createdAt">=NOW()-($1*INTERVAL '1 day') AND ($2::text IS NULL OR "siteSlug"=$2) GROUP BY "funnelId","siteSlug" ORDER BY COUNT(*) DESC`,days,siteSlug);return res.json({ok:true,days,siteSlug,funnels:rows})}catch(e){console.error("[acquisition-funnel] analytics failed",e);return res.status(500).json({ok:false,error:"ACQUISITION_ANALYTICS_FAILED"})}});return router}
-module.exports={CONSENT_VERSION,CONSENT_WORDING,FUNNEL_VERSION,DisabledErpConnector,buildConsentEvidence,buildErpLeadEnvelope,getFunnel,persistQualifiedLead,routes:({prisma}={})=>createRoutes({prisma}),scoreSubmission,validateSubmission};
+module.exports={CONSENT_VERSION,CONSENT_WORDING,FUNNEL_VERSION,NETWORK_AGENCIES,DisabledErpConnector,buildConsentEvidence,buildErpLeadEnvelope,getFunnel,persistQualifiedLead,routes:({prisma}={})=>createRoutes({prisma}),scoreSubmission,validateSubmission};
