@@ -35,6 +35,10 @@ const nextConfig = {
         source: "/media/brand-assets/:path*",
         destination: `${origin}/media/brand-assets/:path*`,
       },
+      {
+        source: "/api/public/acquisition-funnels/:path*",
+        destination: `${origin}/api/public/acquisition-funnels/:path*`,
+      },
     ];
   },
 
@@ -42,6 +46,14 @@ const nextConfig = {
     return [
       {
         source: "/agence/:path*",
+        headers: publicSecurityHeaders,
+      },
+      {
+        source: "/acquisition/:path*",
+        headers: publicSecurityHeaders,
+      },
+      {
+        source: "/api/public/acquisition-funnels/:path*",
         headers: publicSecurityHeaders,
       },
       {
