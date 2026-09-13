@@ -1,5 +1,6 @@
 import AdminEngineNav from "../components/AdminEngineNav";
 import { getPublicSiteUrl } from "../lib/seo/site-url";
+import AcquisitionAnalyticsBridge from "./components/AcquisitionAnalyticsBridge";
 import "./globals.css";
 
 export const metadata = {
@@ -13,6 +14,7 @@ export default function RootLayout({ children }) {
     <html lang="fr">
       <body>
         <AdminEngineNav />
+        <AcquisitionAnalyticsBridge />
         {children}
       </body>
     </html>
