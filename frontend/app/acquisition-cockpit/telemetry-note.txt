@@ -1,0 +1,1 @@
+MSE-25.212: anonymous first-party funnel telemetry powers visit, start, question, form and lead conversion metrics. No contact data is stored in AcquisitionFunnelEvent.
