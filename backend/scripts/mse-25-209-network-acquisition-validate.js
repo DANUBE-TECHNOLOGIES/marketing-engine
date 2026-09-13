@@ -8,6 +8,7 @@ const {
 
 const BASE_URL = (process.env.ACQUISITION_VALIDATION_BASE_URL || "http://127.0.0.1:4000").replace(/\/$/, "");
 const DAYS = Math.min(Math.max(Number(process.env.ACQUISITION_VALIDATION_DAYS || 30), 1), 365);
+const DATABASE_URL = process.env.ACQUISITION_VALIDATION_DATABASE_URL || process.env.DATABASE_URL || "";
 
 const PERSONAS = Object.freeze({
   HOT: {
@@ -108,8 +109,8 @@ async function readAnalyticsApi() {
 }
 
 async function readDatabaseEvidence() {
-  if (!process.env.DATABASE_URL) return { enabled: false, reason: "DATABASE_URL absent" };
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 1 });
+  if (!DATABASE_URL) return { enabled: false, reason: "DATABASE_URL absent" };
+  const pool = new Pool({ connectionString: DATABASE_URL, max: 1 });
   try {
     const sites = await pool.query(
       `SELECT "slug","agencyId","id" FROM "AgencySite" WHERE "slug" = ANY($1::text[]) ORDER BY "slug"`,
