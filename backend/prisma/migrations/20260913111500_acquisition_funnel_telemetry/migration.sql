@@ -5,7 +5,7 @@ CREATE TABLE "AcquisitionFunnelEvent" (
   "campaign" TEXT NOT NULL,
   "funnelId" TEXT NOT NULL,
   "sessionId" TEXT NOT NULL,
-  "questionNumber" INTEGER,
+  "questionNumber" INTEGER NOT NULL DEFAULT 0,
   "question" TEXT,
   "utmSource" TEXT,
   "utmMedium" TEXT,
