@@ -11,6 +11,7 @@ frontend/.next/
 frontend/node_modules/
 logs/
 *.sql
+!backend/prisma/migrations/**/migration.sql
 *.tar.gz
 *-install-report.txt
 
