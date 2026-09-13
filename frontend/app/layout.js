@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import AdminEngineNav from "../components/AdminEngineNav";
 import { getPublicSiteUrl } from "../lib/seo/site-url";
 import AcquisitionAnalyticsBridge from "./components/AcquisitionAnalyticsBridge";
@@ -14,7 +15,7 @@ export default function RootLayout({ children }) {
     <html lang="fr">
       <body>
         <AdminEngineNav />
-        <AcquisitionAnalyticsBridge />
+        <Suspense fallback={null}><AcquisitionAnalyticsBridge /></Suspense>
         {children}
       </body>
     </html>
