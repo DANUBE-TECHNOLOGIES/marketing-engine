@@ -12,6 +12,19 @@ const NAVIGATION_ALIASES = Object.freeze({
   inspirations: "inspiration",
 });
 
+const MANAGED_PUBLIC_ROUTES = Object.freeze([
+  Object.freeze({ id: "managed-business-travel", slug: "business-travel", title: "Voyages d’affaires" }),
+  Object.freeze({ id: "managed-voyages-en-groupe", slug: "voyages-en-groupe", title: "Groupes" }),
+]);
+
+const DOCUMENT_NAVIGATION_SLUGS = new Set([
+  "agence",
+  "equipe",
+  "team",
+  "notre-equipe",
+  "notre_equipe",
+]);
+
 const TUI_SHOWCASE_DISABLED_CITIES = new Set(["amilly", "melun"]);
 
 function normalizeNavigation(site) {
@@ -48,6 +61,10 @@ function pageHref(siteSlug, page) {
   return `/agence/${siteSlug}/${slug}`;
 }
 
+function requiresDocumentNavigation(page) {
+  return DOCUMENT_NAVIGATION_SLUGS.has(pageSlug(page));
+}
+
 function uniquePublishedNavigation(site) {
   const seen = new Set();
   return normalizeNavigation(site).filter((page) => {
@@ -59,6 +76,24 @@ function uniquePublishedNavigation(site) {
     seen.add(key);
     return true;
   });
+}
+
+function uniquePublicNavigation(site) {
+  const published = uniquePublishedNavigation(site);
+  const seen = new Set(published.map((page) => pageSlug(page) || "__home__"));
+  const managed = MANAGED_PUBLIC_ROUTES.filter((page) => {
+    const slug = pageSlug(page);
+    if (!slug || seen.has(slug)) return false;
+    seen.add(slug);
+    return true;
+  });
+
+  return [...published, ...managed];
+}
+
+function publishedPageBySlug(pages, slug) {
+  const target = canonicalNavigationSlug(slug);
+  return (pages || []).find((page) => pageSlug(page) === target) || null;
 }
 
 function telephoneHref(phone) {
@@ -75,7 +110,9 @@ export default function PublicSiteHeader({ site, brand, brandRuntime, brandAsset
   const resolvedPublicBrand =
     brand || brandRuntime?.runtime?.brand || site?.brand || site?.branding || site?.brandProfile || null;
   const resolvedPublicBrandAssets = brandAssets || resolvedPublicBrand?.assets || {};
-  const pages = uniquePublishedNavigation(site);
+  const publishedPages = uniquePublishedNavigation(site);
+  const pages = uniquePublicNavigation(site);
+  const contactPage = publishedPageBySlug(publishedPages, "contact");
   const agency = site.agency || {};
   const city = String(agency.city || "").trim();
   const showcaseDisabled = isTuiShowcaseDisabled(site);
@@ -90,8 +127,6 @@ export default function PublicSiteHeader({ site, brand, brandRuntime, brandAsset
             <Suspense fallback={null}>
               <PublicOpeningStatus siteSlug={site.slug} />
             </Suspense>
-            <span>Conseils personnalisés</span>
-            <span>Accompagnement avant, pendant et après</span>
           </div>
         </div>
       </div>
@@ -130,13 +165,15 @@ export default function PublicSiteHeader({ site, brand, brandRuntime, brandAsset
               </a>
             ) : null}
 
-            <Link
-              className="public-site-header-cta"
-              href={`/agence/${site.slug}/contact`}
-              aria-label={city ? `Demander un devis voyage à l’agence de ${city}` : "Demander un devis voyage"}
-            >
-              Demander un devis
-            </Link>
+            {contactPage ? (
+              <Link
+                className="public-site-header-cta"
+                href={pageHref(site.slug, contactPage)}
+                aria-label={city ? `${contactPage.title} — agence de ${city}` : contactPage.title}
+              >
+                {contactPage.title}
+              </Link>
+            ) : null}
 
             {showcaseUrl ? (
               <a
@@ -156,14 +193,24 @@ export default function PublicSiteHeader({ site, brand, brandRuntime, brandAsset
         <div className="public-site-header-navrow">
           <div className="public-site-container">
             <nav className="public-site-navigation" aria-label={city ? `Navigation de l’agence de voyages de ${city}` : "Navigation principale"}>
-              {pages.map((page, index) => (
-                <Link
-                  key={page.id || page.path || `${page.title}-${index}`}
-                  href={pageHref(site.slug, page)}
-                >
-                  {page.title}
-                </Link>
-              ))}
+              {pages.map((page, index) => {
+                const key = page.id || page.path || `${page.title}-${index}`;
+                const href = pageHref(site.slug, page);
+
+                if (requiresDocumentNavigation(page)) {
+                  return (
+                    <a key={key} href={href} data-document-navigation="true">
+                      {page.title}
+                    </a>
+                  );
+                }
+
+                return (
+                  <Link key={key} href={href}>
+                    {page.title}
+                  </Link>
+                );
+              })}
             </nav>
           </div>
         </div>
@@ -173,6 +220,8 @@ export default function PublicSiteHeader({ site, brand, brandRuntime, brandAsset
 }
 
 export {
+  DOCUMENT_NAVIGATION_SLUGS,
+  MANAGED_PUBLIC_ROUTES,
   NAVIGATION_ALIASES,
   TUI_SHOWCASE_DISABLED_CITIES,
   canonicalNavigationSlug,
@@ -182,6 +231,9 @@ export {
   normalizePageSlug,
   pageHref,
   pageSlug,
+  publishedPageBySlug,
+  requiresDocumentNavigation,
   telephoneHref,
+  uniquePublicNavigation,
   uniquePublishedNavigation,
 };

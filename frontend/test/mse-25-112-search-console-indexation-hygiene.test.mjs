@@ -105,5 +105,7 @@ test("thin local pages receive differentiated context across public intents", ()
   for (const kind of ["agency", "inspirations", "commitments", "partners"]) {
     assert.match(localContext, new RegExp(`\\b${kind}:`));
   }
-  assert.match(localContext, /kind !== "inspirations"/);
+  assert.match(localContext, /publishedContextNavigation\(site, page\)/);
+  assert.match(localContext, /pageSlug\(candidate\) !== currentSlug/);
+  assert.doesNotMatch(localContext, /kind !== "inspirations"/);
 });

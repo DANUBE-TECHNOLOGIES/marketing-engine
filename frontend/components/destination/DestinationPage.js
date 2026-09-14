@@ -5,9 +5,23 @@ import {
   buildBreadcrumbSchema,
   buildDestinationSchema,
   buildDestinationWebPageSchema,
-  buildTravelAgencySchema,
 } from "../../lib/seo/json-ld";
+import {
+  buildDestinationFaqSchema,
+  destinationFaqItems,
+  linkDestinationFaqToWebPage,
+} from "../../lib/seo/destination-faq-schema";
+import {
+  buildMondescaleNetworkSchema,
+  buildNetworkAwareTravelAgencySchema,
+} from "../../lib/seo/network-entity-schema";
 import { resolvedTargetCities } from "../../lib/seo/local-area-config";
+import { absoluteUrl } from "../../lib/seo/site-url";
+import { destinationAudiences } from "../../lib/seo/destination-audience";
+import {
+  destinationCoordinates,
+  destinationMapUrl,
+} from "../../lib/seo/destination-location";
 import {
   destinationLocalCopy,
   rotateCommercialLinks,
@@ -160,28 +174,13 @@ function SectionContent({ section }) {
   );
 }
 
-function faqSchema(faqs) {
-  if (!Array.isArray(faqs) || !faqs.length) return null;
-  return {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: faqs
-      .filter((faq) => faq?.question && faq?.answer)
-      .map((faq) => ({
-        "@type": "Question",
-        name: faq.question,
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: faq.answer,
-        },
-      })),
-  };
-}
-
 export default function DestinationPage({ data }) {
   const { destination: d, site } = data;
   const sections = Array.isArray(d.sections) ? d.sections : [];
-  const faqs = Array.isArray(d.faqs) ? d.faqs : [];
+  const faqs = destinationFaqItems(data);
+  const editorialRelations = Array.isArray(data.editorialRelations)
+    ? data.editorialRelations.filter((item) => item?.name && item?.href)
+    : [];
   const siteRoot = site.basePath || `/agence/${encodeURIComponent(site.slug)}`;
   const root = siteRoot.replace(/\/$/, "");
   const destinationsPath = `${root}/destinations`;
@@ -193,16 +192,40 @@ export default function DestinationPage({ data }) {
   const localCopy = destinationLocalCopy({ site, destination: d, nearby });
   const commercialLinks = rotateCommercialLinks(commercialPageLinks(site), site, d);
   const destinationHeading = city ? `Voyage à ${d.name} depuis ${city}` : `Voyage à ${d.name}`;
+  const audiences = destinationAudiences(d);
+  const coordinates = destinationCoordinates(d);
+  const mapUrl = destinationMapUrl(d);
 
-  const destinationSchema = buildDestinationSchema(data);
-  const destinationWebPageSchema = buildDestinationWebPageSchema(data);
-  const agencySchema = buildTravelAgencySchema(site);
+  const destinationSchema = {
+    ...buildDestinationSchema(data),
+    touristType: audiences.length ? audiences : undefined,
+    geo: coordinates
+      ? {
+          "@type": "GeoCoordinates",
+          latitude: coordinates.latitude,
+          longitude: coordinates.longitude,
+        }
+      : undefined,
+    hasMap: mapUrl || undefined,
+  };
+  const baseDestinationWebPageSchema = {
+    ...buildDestinationWebPageSchema(data),
+    ...(editorialRelations.length
+      ? { relatedLink: editorialRelations.map((item) => absoluteUrl(item.href)) }
+      : {}),
+  };
+  const networkSchema = buildMondescaleNetworkSchema();
+  const agencySchema = buildNetworkAwareTravelAgencySchema(site);
   const breadcrumbSchema = buildBreadcrumbSchema([
     { name: "Accueil", path: siteRoot },
     { name: "Destinations", path: destinationsPath },
     { name: d.name, path: data.canonicalPath },
   ]);
-  const destinationFaqSchema = faqSchema(faqs);
+  const destinationFaqSchema = buildDestinationFaqSchema(data);
+  const destinationWebPageSchema = linkDestinationFaqToWebPage(
+    baseDestinationWebPageSchema,
+    destinationFaqSchema
+  );
 
   const facts = [
     ["Meilleure période", d.bestTime],
@@ -213,6 +236,7 @@ export default function DestinationPage({ data }) {
 
   return (
     <div className={styles["de-page"]}>
+      <JsonLd data={networkSchema} />
       <JsonLd data={agencySchema} />
       <JsonLd data={destinationWebPageSchema} />
       <JsonLd data={destinationSchema} />
@@ -249,6 +273,11 @@ export default function DestinationPage({ data }) {
           <div className={styles["de-actions"]}>
             <Link href={data.quotePath}>Construire mon voyage</Link>
             <a href="#decouvrir">Découvrir {d.name}</a>
+            {mapUrl ? (
+              <a href={mapUrl} target="_blank" rel="noopener noreferrer">
+                Voir sur la carte
+              </a>
+            ) : null}
           </div>
         </div>
       </section>
@@ -259,6 +288,17 @@ export default function DestinationPage({ data }) {
             {facts.map(([label, value]) => (
               <div key={label}><div><span>{label}</span><strong>{value}</strong></div></div>
             ))}
+          </div>
+        </section>
+      ) : null}
+
+      {audiences.length ? (
+        <section className={styles["de-section"]} aria-label={`Voyage à ${d.name} : profils de voyageurs`}>
+          <div className={styles["de-shell"]}>
+            <p className={styles["de-kicker"]}>Idéal pour</p>
+            <div className={styles["de-pills"]}>
+              {audiences.map((audience) => <span key={audience}>{audience}</span>)}
+            </div>
           </div>
         </section>
       ) : null}
@@ -282,6 +322,22 @@ export default function DestinationPage({ data }) {
       </section>
 
       {sections.map((section) => <SectionContent key={section.id || section.key} section={section} />)}
+
+      {editorialRelations.length ? (
+        <section className={styles["de-section"]} aria-label={`Destinations liées à ${d.name}`}>
+          <div className={styles["de-shell"]}>
+            <p className={styles["de-kicker"]}>Destinations associées</p>
+            <h2>Vous aimerez aussi</h2>
+            <div className={styles["de-actions"]}>
+              {editorialRelations.map((item) => (
+                <Link key={item.href} href={item.href}>
+                  Découvrir {item.name}
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       {faqs.length ? (
         <section className={styles["de-faq"]}>

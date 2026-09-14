@@ -19,8 +19,7 @@ test("MSE-25.89 FeaturesV2 uses canonical inspiration route", () => {
     /\$\{root\}\/inspirations/
   );
 
-  assert.match(
-    source,
-    /\$\{root\}\/inspiration/
-  );
+  assert.match(source, /uniquePublishedNavigation\(site\)/);
+  assert.match(source, /pageHref\(site\.slug,/);
+  assert.doesNotMatch(source, /`\$\{root\}\/inspiration`/);
 });

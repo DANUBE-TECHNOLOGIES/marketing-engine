@@ -104,19 +104,21 @@ test("MSE-25.121 rendered shared hero H1 follows the same intent ownership", () 
   assert.doesNotMatch(heroSource, /Avis clients de votre agence de voyages à \$\{city\}/);
 });
 
-test("MSE-25.121 internal linking sends the generic local anchor back to the home", () => {
+test("MSE-25.121 internal linking preserves intent ownership through grounded public navigation", () => {
   const contextSource = fs.readFileSync(
     new URL("../components/public-site/LocalContentContext.js", import.meta.url),
     "utf8",
   );
 
-  assert.match(contextSource, /<Link href=\{root\}>Agence de voyages à \{city\}<\/Link>/);
-  assert.match(contextSource, /Services voyage et billetterie à \{city\}/);
-  assert.match(contextSource, /Destinations et voyages depuis \{city\}/);
-  assert.match(contextSource, /Inspirations voyage depuis \{city\}/);
-  assert.match(contextSource, /Nous contacter à \{city\}/);
-  assert.doesNotMatch(contextSource, /Services de notre agence de voyages à \{city\}/);
-  assert.doesNotMatch(contextSource, /Contacter notre agence de voyages à \{city\}/);
+  assert.match(contextSource, /uniquePublicNavigation\(site\)/);
+  assert.match(contextSource, /pageSlug\(candidate\) !== currentSlug/);
+  assert.match(contextSource, /pageHref\(site\.slug, candidate\)/);
+  assert.match(contextSource, /title: candidate\.title/);
+  assert.doesNotMatch(contextSource, /<Link href=\{root\}>/);
+  assert.doesNotMatch(contextSource, /`\$\{root\}\/services`/);
+  assert.doesNotMatch(contextSource, /`\$\{root\}\/destinations`/);
+  assert.doesNotMatch(contextSource, /`\$\{root\}\/inspiration`/);
+  assert.doesNotMatch(contextSource, /`\$\{root\}\/contact`/);
 });
 
 test("MSE-25.121 keeps valid local SEO overrides", () => {

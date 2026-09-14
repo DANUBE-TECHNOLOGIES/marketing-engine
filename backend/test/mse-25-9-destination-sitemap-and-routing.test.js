@@ -22,9 +22,47 @@ test("MSE-25.9 sitemap exposes each published destination on each published agen
   const sitemap = buildPublicSitemap({
     publicOrigin: "https://agences.mondescale.com",
     sites: [
-      { id: "site-3", agencyId: 3, slug: "dax", status: "published", pages: [] },
-      { id: "site-6", agencyId: 6, slug: "bois-colombes", status: "published", pages: [] },
-      { id: "site-9", agencyId: 9, slug: "draft", status: "draft", pages: [] },
+      {
+        id: "site-3",
+        agencyId: 3,
+        slug: "dax",
+        status: "published",
+        pages: [
+          {
+            status: "published",
+            blocks: [
+              {
+                blockType: "destinations",
+                content: { items: [{ slug: "sicile" }] },
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: "site-6",
+        agencyId: 6,
+        slug: "bois-colombes",
+        status: "published",
+        pages: [
+          {
+            status: "published",
+            blocks: [
+              {
+                blockType: "destinations",
+                content: { items: [{ slug: "sicile" }] },
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: "site-9",
+        agencyId: 9,
+        slug: "draft",
+        status: "draft",
+        pages: [],
+      },
     ],
     destinations: [
       {
@@ -76,9 +114,11 @@ test("MSE-25.9 destination page uses localized metadata and full content rendere
   assert.match(page, /site\?\.agency\?\.city/);
   assert.match(page, /robots:\s*\{[\s\S]*index:\s*true/);
   assert.match(renderer, /SectionContent/);
-  assert.match(renderer, /FAQPage/);
+  assert.match(renderer, /buildDestinationFaqSchema/);
+  assert.match(renderer, /destinationFaqItems/);
+  assert.match(renderer, /linkDestinationFaqToWebPage/);
   assert.match(renderer, /d\.sections/);
-  assert.match(renderer, /d\.faqs/);
+  assert.match(renderer, /const faqs = destinationFaqItems\(data\)/);
   assert.doesNotMatch(renderer, /<header/);
   assert.doesNotMatch(renderer, /<main/);
 });

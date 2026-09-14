@@ -32,7 +32,8 @@ test("Gien keeps its strong core and exposes a distinct extended catchment", () 
   ]) assert.match(config, new RegExp(city.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
 
   assert.match(area, /resolvedExtendedTargetCities/);
-  assert.match(area, /Au-delà de ce premier cercle/);
+  assert.match(area, /Une zone locale élargie est également présentée/);
+  assert.match(area, /sans modifier l’adresse d’implantation de l’agence/);
   assert.doesNotMatch(metadata, /resolvedExtendedTargetCities/);
   assert.match(metadata, /resolvedTargetCities\(site, \{ limit: 4 \}\)/);
 });

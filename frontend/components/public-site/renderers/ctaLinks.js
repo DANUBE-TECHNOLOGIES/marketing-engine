@@ -67,6 +67,10 @@ function isAllowedAbsoluteHref(value) {
   return /^(https?:|mailto:|tel:)/i.test(value);
 }
 
+function isUnsafeHref(value) {
+  return /^(javascript:|data:|vbscript:)/i.test(value);
+}
+
 function isAgencyScopedPublicPath(value) {
   return /^\/(?:contact|services|equipe|team|destinations|partenaires|partners|inspiration|inspirations|demande-devis)(?:\/|$)/i.test(value);
 }
@@ -74,22 +78,16 @@ function isAgencyScopedPublicPath(value) {
 export function resolvePublicCtaHref(
   site,
   href,
-  fallbackSlug = "contact",
+  fallbackSlug = "",
   options = {}
 ) {
-  const label = options?.label || "";
-  if (isQuoteCtaLabel(label)) {
-    return quoteRequestHref(site, { source: options?.source || "general" });
-  }
-
   const value = String(href || "").trim();
-  const fallback = sitePageHref(site, fallbackSlug);
+  const fallback = String(fallbackSlug || "").trim()
+    ? sitePageHref(site, fallbackSlug)
+    : null;
 
   if (!value) return fallback;
-
-  if (/^(javascript:|data:|vbscript:)/i.test(value)) {
-    return fallback;
-  }
+  if (isUnsafeHref(value)) return null;
 
   if (value.startsWith("#")) {
     return value;
@@ -120,6 +118,7 @@ export {
   QUOTE_LABEL_PATTERN,
   canonicalPublicSlug,
   isQuoteCtaLabel,
+  isUnsafeHref,
   quoteRequestHref,
   sitePageHref,
   siteRoot,

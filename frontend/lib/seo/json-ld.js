@@ -1,5 +1,6 @@
 import { absoluteUrl } from "./site-url";
 import { resolvedTargetCities } from "./local-area-config";
+import { isoDate } from "./page-semantics-schema";
 import {
   buildGoogleMapsSearchUrl,
 } from "../public-agency-location";
@@ -200,6 +201,111 @@ function uniqueUrls(values) {
   return [...new Set(values.filter(Boolean).map((value) => String(value).trim()).filter(Boolean))];
 }
 
+function agencyEntityReference(site) {
+  return {
+    "@type": "TravelAgency",
+    "@id": `${absoluteUrl(site.basePath)}#travel-agency`,
+    name: site.name || site?.agency?.name,
+    url: absoluteUrl(site.basePath),
+  };
+}
+
+function webPageEntityReference(url) {
+  const pageUrl = absoluteUrl(url);
+  return {
+    "@type": "WebPage",
+    "@id": `${pageUrl}#webpage`,
+    url: pageUrl,
+  };
+}
+
+function serviceEntityId(url, name) {
+  const key = String(name || "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .toLocaleLowerCase("fr-FR");
+
+  return key ? `${url}#service-${encodeURIComponent(key)}` : undefined;
+}
+
+export function destinationPracticalProperties(destination) {
+  const facts = [
+    ["Meilleure période", destination?.bestTime],
+    ["Durée idéale", destination?.idealDuration],
+    ["Langue", destination?.language],
+    ["Monnaie", destination?.currency],
+  ];
+
+  return facts
+    .map(([name, rawValue]) => [name, String(rawValue || "").trim()])
+    .filter(([, value]) => value)
+    .map(([name, value]) => ({
+      "@type": "PropertyValue",
+      name,
+      value,
+    }));
+}
+
+export function destinationHighlightProperties(destination) {
+  const highlights = Array.isArray(destination?.highlights)
+    ? destination.highlights
+    : [];
+  const seen = new Set();
+
+  return highlights
+    .map((value) => String(value || "").replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .filter((value) => {
+      const key = value.toLocaleLowerCase("fr-FR");
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 12)
+    .map((value) => ({
+      "@type": "PropertyValue",
+      name: "Point fort",
+      value,
+    }));
+}
+
+export function destinationPublicProperties(destination) {
+  const type = String(destination?.type || "").replace(/\s+/g, " ").trim();
+
+  return type
+    ? [{
+        "@type": "PropertyValue",
+        name: "Type de voyage",
+        value: type,
+      }]
+    : [];
+}
+
+export function destinationContainedInPlace(destination) {
+  const country = String(destination?.country || "").replace(/\s+/g, " ").trim();
+  const region = String(destination?.region || "").replace(/\s+/g, " ").trim();
+
+  if (region) {
+    return {
+      "@type": "Place",
+      name: region,
+      containedInPlace: country
+        ? {
+            "@type": "Country",
+            name: country,
+          }
+        : undefined,
+    };
+  }
+
+  return country
+    ? {
+        "@type": "Country",
+        name: country,
+      }
+    : undefined;
+}
+
 export function buildTravelAgencySchema(site) {
   const agency = site?.agency || site;
   const address = physicalPostalAddress(site, agency);
@@ -237,6 +343,7 @@ export function buildTravelAgencySchema(site) {
     "@id": `${absoluteUrl(site.basePath)}#travel-agency`,
     name: site.name || agency.name,
     url: absoluteUrl(site.basePath),
+    mainEntityOfPage: webPageEntityReference(site.basePath),
     telephone: phone,
     email,
     logo: logo ? absoluteUrl(logo) : undefined,
@@ -277,7 +384,7 @@ export function buildLocalWebPageSchema({
   image,
 }) {
   const pageUrl = absoluteUrl(url);
-  const agencyId = `${absoluteUrl(site.basePath)}#travel-agency`;
+  const agency = agencyEntityReference(site);
   const pageImage = image ? absoluteUrl(image) : schemaImage(page, site);
 
   return compactJsonLd({
@@ -300,16 +407,9 @@ export function buildLocalWebPageSchema({
       url: absoluteUrl("/"),
       name: "Mondescale Voyages",
     },
-    about: {
-      "@type": "TravelAgency",
-      "@id": agencyId,
-      name: site.name || site?.agency?.name,
-      url: absoluteUrl(site.basePath),
-    },
-    mainEntity: {
-      "@type": "TravelAgency",
-      "@id": agencyId,
-    },
+    publisher: agency,
+    about: agency,
+    mainEntity: agency,
   });
 }
 
@@ -331,6 +431,7 @@ export function buildServiceCatalogSchema(site, page) {
       position: index + 1,
       itemOffered: {
         "@type": "Service",
+        "@id": serviceEntityId(url, service.name),
         name: service.name,
         description: service.description,
         provider: {
@@ -360,19 +461,26 @@ export function buildBreadcrumbSchema(items) {
 export function buildDestinationSchema(data) {
   const destination = data.destination;
   const site = data.site;
+  const pageUrl = absoluteUrl(data.canonicalPath);
+  const additionalProperty = [
+    ...destinationPracticalProperties(destination),
+    ...destinationHighlightProperties(destination),
+    ...destinationPublicProperties(destination),
+  ];
 
   return compactJsonLd({
     "@context": "https://schema.org",
     "@type": "TouristDestination",
-    "@id": `${absoluteUrl(data.canonicalPath)}#destination`,
+    "@id": `${pageUrl}#destination`,
     name: destination.name,
     description:
       destination.seoDescription ||
       destination.summary ||
       destination.tagline,
-    url: absoluteUrl(data.canonicalPath),
+    url: pageUrl,
+    mainEntityOfPage: webPageEntityReference(data.canonicalPath),
     image: destination.heroImageUrl ? absoluteUrl(destination.heroImageUrl) : undefined,
-    touristType: destination.audiences,
+    additionalProperty,
     geo:
       destination.latitude != null &&
       destination.longitude != null
@@ -382,19 +490,9 @@ export function buildDestinationSchema(data) {
             longitude: destination.longitude,
           }
         : undefined,
-    containedInPlace: destination.country
-      ? {
-          "@type": "Country",
-          name: destination.country,
-        }
-      : undefined,
+    containedInPlace: destinationContainedInPlace(destination),
     provider: site
-      ? {
-          "@type": "TravelAgency",
-          "@id": `${absoluteUrl(site.basePath)}#travel-agency`,
-          name: site.name,
-          url: absoluteUrl(site.basePath),
-        }
+      ? agencyEntityReference(site)
       : undefined,
   });
 }
@@ -404,11 +502,19 @@ export function buildDestinationWebPageSchema(data) {
   const site = data?.site || {};
   const pageUrl = absoluteUrl(data?.canonicalPath);
   const destinationId = `${pageUrl}#destination`;
-  const agencyId = `${absoluteUrl(site.basePath)}#travel-agency`;
+  const agency = agencyEntityReference(site);
+  const destinationEntity = {
+    "@type": "TouristDestination",
+    "@id": destinationId,
+    name: destination.name,
+    url: pageUrl,
+  };
   const description =
     destination.seoDescription ||
     destination.summary ||
     destination.tagline;
+  const datePublished = isoDate(destination.publishedAt || destination.createdAt);
+  const dateModified = isoDate(destination.updatedAt || destination.publishedAt || destination.createdAt);
 
   return compactJsonLd({
     "@context": "https://schema.org",
@@ -420,6 +526,8 @@ export function buildDestinationWebPageSchema(data) {
       : undefined,
     description,
     inLanguage: "fr-FR",
+    datePublished,
+    dateModified,
     isPartOf: {
       "@type": "WebSite",
       "@id": `${absoluteUrl("/")}#website`,
@@ -432,24 +540,20 @@ export function buildDestinationWebPageSchema(data) {
           url: absoluteUrl(destination.heroImageUrl),
         }
       : undefined,
-    about: {
-      "@type": "TravelAgency",
-      "@id": agencyId,
-      name: site.name || site?.agency?.name,
-      url: absoluteUrl(site.basePath),
-    },
-    mainEntity: {
-      "@type": "TouristDestination",
-      "@id": destinationId,
-    },
+    publisher: agency,
+    about: [destinationEntity, agency],
+    mainEntity: destinationEntity,
   });
 }
 
 export {
+  agencyEntityReference,
   internationalPhone,
   openingHoursSpecification,
   physicalPostalAddress,
   schemaImage,
   servedAreas,
+  serviceEntityId,
   uniqueUrls,
+  webPageEntityReference,
 };

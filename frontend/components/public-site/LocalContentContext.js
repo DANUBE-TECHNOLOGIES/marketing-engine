@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { extractPublishedServices } from "../../lib/seo/json-ld";
 import { resolvedTargetCities } from "../../lib/seo/local-area-config";
+import { pageHref, pageSlug, uniquePublicNavigation } from "./PublicSiteHeader";
 
 function clean(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
@@ -12,70 +14,80 @@ function joinCities(values) {
   return `${values.slice(0, -1).join(", ")} et ${values[values.length - 1]}`;
 }
 
+function publishedServiceNames(page) {
+  return extractPublishedServices(page)
+    .map((service) => clean(service?.name))
+    .filter(Boolean);
+}
+
+function publishedContextNavigation(site, currentPage, limit = 4) {
+  const currentSlug = pageSlug(currentPage);
+  return uniquePublicNavigation(site)
+    .filter((candidate) => pageSlug(candidate) !== currentSlug)
+    .slice(0, limit)
+    .map((candidate) => ({
+      title: candidate.title,
+      href: pageHref(site.slug, candidate),
+    }));
+}
+
+function localAreaSentence(city, nearby) {
+  return nearby.length
+    ? `Ce mini-site présente également l’agence pour les secteurs de ${joinCities(nearby.slice(0, 2))}, en complément de son implantation à ${city}.`
+    : `Ce mini-site présente l’agence implantée à ${city}.`;
+}
+
 const COPY = {
   agency: ({ city, nearby }) => ({
-    title: `Notre implantation et notre accompagnement à ${city}`,
-    text: nearby.length
-      ? `Notre agence de ${city} accompagne aussi les voyageurs de ${joinCities(nearby.slice(0, 2))}. Sur place, l’équipe prend le temps de comprendre le projet, de comparer les solutions et de suivre le dossier avant, pendant et après le départ.`
-      : `Notre agence de ${city} privilégie un accompagnement de proximité : compréhension du projet, comparaison des solutions et suivi du dossier avant, pendant et après le départ.`,
+    title: `Repères sur votre agence à ${city}`,
+    text: `${localAreaSentence(city, nearby)} Retrouvez sur cette page les informations publiées sur l’agence et les moyens de la contacter.`,
   }),
-  services: ({ city, nearby }) => ({
-    title: `Des conseils voyage personnalisés à ${city}`,
-    text: nearby.length
-      ? `Depuis ${city}, notre équipe accompagne aussi les voyageurs de ${joinCities(nearby.slice(0, 2))}. Séjours, circuits, croisières, autotours ou voyages sur mesure : nous comparons les solutions selon vos dates, votre budget et votre façon de voyager.`
-      : `À ${city}, notre équipe vous accompagne pour comparer séjours, circuits, croisières, autotours et voyages sur mesure selon vos dates, votre budget et votre façon de voyager.`,
-  }),
+  services: ({ city, nearby, services }) => {
+    const published = services.slice(0, 4);
+    const serviceSentence = published.length
+      ? `Les services actuellement publiés sur cette page comprennent ${joinCities(published)}.`
+      : "Cette page présente les services actuellement publiés par l’agence.";
+
+    return {
+      title: `Services publiés par l’agence de ${city}`,
+      text: `${localAreaSentence(city, nearby)} ${serviceSentence} Contactez l’agence pour préciser votre projet et obtenir les informations correspondant à votre demande.`,
+    };
+  },
   destinations: ({ city, nearby }) => ({
-    title: `Choisir votre prochaine destination depuis ${city}`,
-    text: nearby.length
-      ? `Pour les voyageurs de ${city} et du secteur de ${joinCities(nearby.slice(0, 2))}, nous comparons les destinations selon la saison, la durée du trajet, le rythme recherché, les formalités et le type d’hébergement. L’objectif est de retenir une destination adaptée au projet, pas seulement une offre attractive.`
-      : `À ${city}, nous comparons les destinations selon la saison, la durée du trajet, le rythme recherché, les formalités et le type d’hébergement afin de retenir une solution réellement adaptée à votre projet.`,
+    title: `Destinations publiées par l’agence de ${city}`,
+    text: `${localAreaSentence(city, nearby)} Cette page rassemble les destinations actuellement publiées sur le mini-site ; chaque fiche présente les informations éditoriales disponibles pour préparer votre projet.`,
   }),
   inspirations: ({ city, nearby }) => ({
-    title: `Des idées de voyage adaptées aux départs depuis ${city}`,
-    text: nearby.length
-      ? `Nos inspirations sont pensées pour les voyageurs de ${city} et du secteur de ${joinCities(nearby.slice(0, 2))}. Elles permettent de comparer les périodes de départ, les styles de séjour et les itinéraires avant d’affiner le projet avec un conseiller de l’agence.`
-      : `Nos inspirations voyage à ${city} servent de point de départ pour comparer les périodes, les styles de séjour et les itinéraires avant d’affiner votre projet avec un conseiller de l’agence.`,
+    title: `Inspirations voyage publiées depuis ${city}`,
+    text: `${localAreaSentence(city, nearby)} Les contenus affichés ici correspondent aux conseils et inspirations actuellement publiés sur le mini-site de l’agence.`,
   }),
   offers: ({ city, nearby }) => ({
-    title: `Trouver une offre de voyage à ${city}`,
-    text: nearby.length
-      ? `Notre agence de ${city} recherche pour les voyageurs du secteur, notamment ${joinCities(nearby.slice(0, 2))}, des solutions correspondant à leurs dates et à leur budget. Les offres publiées servent de point de départ : votre conseiller peut contrôler les disponibilités et comparer d’autres possibilités.`
-      : `Notre agence de ${city} vérifie les disponibilités et compare les prestations selon vos dates, votre budget et vos préférences ; les offres publiées constituent un point de départ pour votre recherche.`,
+    title: `Offres voyage publiées à ${city}`,
+    text: `${localAreaSentence(city, nearby)} Cette page présente les offres actuellement publiées ; contactez l’agence pour toute information complémentaire relative à votre projet.`,
   }),
   reviews: ({ city, nearby }) => ({
-    title: `Les avis de nos voyageurs à ${city}`,
-    text: nearby.length
-      ? `Les voyageurs de ${city}, ${joinCities(nearby.slice(0, 2))} et des communes voisines peuvent compter sur un interlocuteur de proximité pour préparer leur dossier. Les avis clients témoignent notamment de l’écoute, du conseil et du suivi apportés avant, pendant et après le voyage.`
-      : `À ${city}, les avis de nos voyageurs témoignent de l’importance d’un interlocuteur de proximité pour le conseil, la préparation du dossier et le suivi avant, pendant et après le voyage.`,
+    title: `Avis publiés pour l’agence de ${city}`,
+    text: `${localAreaSentence(city, nearby)} Cette page présente les avis publics associés à l’agence selon la source indiquée sur le mini-site.`,
   }),
   team: ({ city, nearby }) => ({
-    title: `Votre conseiller voyage de proximité à ${city}`,
-    text: nearby.length
-      ? `Notre équipe de ${city} reçoit et accompagne également les voyageurs venant de ${joinCities(nearby.slice(0, 2))}. Chaque projet commence par un échange sur vos attentes afin de construire une proposition adaptée et de conserver un interlocuteur jusqu’à votre retour.`
-      : `Notre équipe de ${city} prend le temps d’échanger sur vos attentes afin de construire une proposition adaptée et de rester votre interlocuteur jusqu’à votre retour.`,
+    title: `Équipe présentée par l’agence de ${city}`,
+    text: `${localAreaSentence(city, nearby)} Retrouvez les conseillers présentés par l’agence et les informations publiées sur leur rôle et leur parcours.`,
   }),
   commitments: ({ city, nearby }) => ({
-    title: `Nos engagements auprès des voyageurs de ${city}`,
-    text: nearby.length
-      ? `À ${city}, comme pour les voyageurs de ${joinCities(nearby.slice(0, 2))}, notre accompagnement repose sur l’écoute du projet, la clarté des solutions proposées et la disponibilité de l’agence lorsqu’un dossier nécessite un suivi.`
-      : `À ${city}, notre accompagnement repose sur l’écoute du projet, la clarté des solutions proposées et la disponibilité de l’agence lorsqu’un dossier nécessite un suivi.`,
+    title: `Engagements publiés par l’agence de ${city}`,
+    text: `${localAreaSentence(city, nearby)} Cette page présente les engagements et informations actuellement publiés par l’agence ; elle ne complète pas ces éléments par des promesses de service non renseignées.`,
   }),
   partners: ({ city, nearby }) => ({
-    title: `Des partenaires voyage sélectionnés à ${city}`,
-    text: nearby.length
-      ? `Pour les voyageurs de ${city} et des communes de ${joinCities(nearby.slice(0, 2))}, l’agence s’appuie sur différents voyagistes et partenaires afin de comparer les produits, les prestations et les conditions correspondant au projet.`
-      : `Notre agence de ${city} s’appuie sur différents voyagistes et partenaires afin de comparer les produits, les prestations et les conditions correspondant à votre projet.`,
+    title: `Partenaires voyage publiés à ${city}`,
+    text: `${localAreaSentence(city, nearby)} Cette page présente les partenaires actuellement publiés dans le catalogue Mondescale ainsi que, lorsqu’elle existe, la sélection complémentaire configurée pour cette agence.`,
   }),
   contact: ({ city, nearby }) => ({
-    title: `Préparez votre voyage avec notre équipe à ${city}`,
-    text: nearby.length
-      ? `Vous habitez ${city}, ${joinCities(nearby.slice(0, 2))} ou une commune voisine ? Contactez l’agence avec vos dates, votre budget, le nombre de voyageurs et vos premières envies : ces informations nous permettent d’orienter efficacement la recherche.`
-      : `Contactez notre agence de ${city} avec vos dates, votre budget, le nombre de voyageurs et vos premières envies afin que nous puissions orienter efficacement la recherche.`,
+    title: `Coordonnées publiques de l’agence de ${city}`,
+    text: `${localAreaSentence(city, nearby)} Retrouvez les coordonnées publiques de l’agence pour échanger avec un conseiller au sujet de votre projet.`,
   }),
 };
 
-export default function LocalContentContext({ site, kind, quality }) {
+export default function LocalContentContext({ site, page, kind, quality }) {
   const agency = site?.agency || {};
   const city = clean(agency.city || site?.city);
   const builder = COPY[kind];
@@ -83,36 +95,31 @@ export default function LocalContentContext({ site, kind, quality }) {
   if (quality?.strong && !quality?.needsLocalContext) return null;
 
   const nearby = resolvedTargetCities(site, { limit: 4 });
-  const copy = builder({ city, nearby });
-  const root = clean(site?.basePath) || `/agence/${encodeURIComponent(site?.slug || "")}`;
+  const services = kind === "services" ? publishedServiceNames(page) : [];
+  const copy = builder({ city, nearby, services });
+  const relatedPages = publishedContextNavigation(site, page);
 
   return (
     <section className="public-site-section public-site-local-context" aria-labelledby="local-context-title">
       <div className="public-site-container public-site-prose">
-        <p className="public-site-eyebrow">Conseil local Mondescale</p>
+        <p className="public-site-eyebrow">Repères locaux Mondescale</p>
         <h2 id="local-context-title">{copy.title}</h2>
         <p>{copy.text}</p>
         {nearby.length > 2 ? (
           <p>
-            Notre zone de proximité comprend également {joinCities(nearby.slice(2))}.
+            Ce mini-site présente aussi l’agence pour les secteurs de {joinCities(nearby.slice(2))}.
           </p>
         ) : null}
-        <div className="public-site-related-links" aria-label={`Navigation locale autour de ${city}`}>
-          <Link href={root}>Agence de voyages à {city}</Link>
-          {kind !== "services" ? (
-            <Link href={`${root}/services`}>Services voyage et billetterie à {city}</Link>
-          ) : null}
-          {kind !== "destinations" ? (
-            <Link href={`${root}/destinations`}>Destinations et voyages depuis {city}</Link>
-          ) : null}
-          {kind !== "inspirations" ? (
-            <Link href={`${root}/inspiration`}>Inspirations voyage depuis {city}</Link>
-          ) : null}
-          {kind !== "contact" ? (
-            <Link href={`${root}/contact`}>Nous contacter à {city}</Link>
-          ) : null}
-        </div>
+        {relatedPages.length ? (
+          <div className="public-site-related-links" aria-label={`Navigation publique de l’agence de voyages de ${city}`}>
+            {relatedPages.map((candidate) => (
+              <Link key={candidate.href} href={candidate.href}>{candidate.title}</Link>
+            ))}
+          </div>
+        ) : null}
       </div>
     </section>
   );
 }
+
+export { COPY, joinCities, localAreaSentence, publishedContextNavigation, publishedServiceNames };

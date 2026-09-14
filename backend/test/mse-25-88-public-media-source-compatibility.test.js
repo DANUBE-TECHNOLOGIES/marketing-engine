@@ -25,7 +25,8 @@ test("MSE-25.88 destination renderer accepts travel-core media field variants", 
   }
   assert.ok(file.includes('loading="lazy"'));
   assert.ok(file.includes('fetchPriority="low"'));
-  assert.ok(file.includes('width="960" height="640"'));
+  assert.ok(file.includes('width="960"'));
+  assert.ok(file.includes('height="640"'));
 });
 
 test("MSE-25.88 team renderer accepts portrait/avatar/media field variants", () => {
@@ -34,13 +35,17 @@ test("MSE-25.88 team renderer accepts portrait/avatar/media field variants", () 
     "member.avatarUrl",
     "member.portraitUrl",
     "member.photoUrl",
-    "member.media?.url",
-    "member.image?.url",
+    "member.media",
+    "member.image",
   ]) {
     assert.ok(file.includes(token), `missing team portrait source ${token}`);
   }
+  assert.ok(file.includes("function assetUrl(value)"));
+  assert.ok(file.includes("value.url"));
+  assert.ok(file.includes("value.src"));
   assert.ok(file.includes("function memberImage(member)"));
   assert.ok(file.includes('loading="lazy"'));
   assert.ok(file.includes('fetchPriority="low"'));
-  assert.ok(file.includes('width="720" height="720"'));
+  assert.ok(file.includes('width="720"'));
+  assert.ok(file.includes('height="720"'));
 });

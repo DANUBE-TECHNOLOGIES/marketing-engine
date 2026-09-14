@@ -8,6 +8,17 @@ import {
 import {
   getPublicReviews,
 } from "../../../lib/public-reviews-api";
+import {
+  normalizeGoogleReviewSummary,
+  visibleReviewFreshness,
+} from "../../../lib/seo/google-review-provenance";
+import {
+  pageHref,
+  pageSlug,
+  uniquePublishedNavigation,
+} from "../PublicSiteHeader";
+
+const RELATED_REVIEW_PAGE_SLUGS = new Set(["services", "contact"]);
 
 function stars(rating) {
   const normalized = Math.max(0, Math.min(5, Math.round(Number(rating) || 0)));
@@ -24,17 +35,11 @@ function formatDate(value) {
 }
 
 function latestPublishedAt(reviews = []) {
-  const dates = reviews
-    .map((review) => review?.publishedAt)
-    .filter(Boolean)
-    .map((value) => new Date(value))
-    .filter((date) => !Number.isNaN(date.getTime()));
-  if (!dates.length) return null;
-  return new Date(Math.max(...dates.map((date) => date.getTime()))).toISOString();
+  return visibleReviewFreshness(null, reviews).value;
 }
 
 function reviewInitial(authorName) {
-  return String(authorName || "V").trim().charAt(0).toUpperCase();
+  return String(authorName || "").trim().charAt(0).toUpperCase();
 }
 
 function compactText(value, limit = 260) {
@@ -58,14 +63,8 @@ function defaultReviewsIntro(site, total) {
   const city = String(site?.agency?.city || site?.city || "").trim();
   if (!total) return null;
   return city
-    ? `Découvrez les retours publiés sur Google par les voyageurs accompagnés par notre agence de ${city}.`
-    : "Découvrez les retours publiés sur Google par les voyageurs accompagnés par notre agence.";
-}
-
-function siteHref(site, slug = "") {
-  const root = String(site?.basePath || `/agence/${encodeURIComponent(site?.slug || "")}`).replace(/\/$/, "");
-  const normalized = String(slug || "").trim().replace(/^\/+|\/+$/g, "");
-  return normalized ? `${root}/${normalized}` : root;
+    ? `Découvrez les avis Google publiés pour notre agence de ${city}.`
+    : "Découvrez les avis Google publiés pour notre agence.";
 }
 
 function isHomePage(page) {
@@ -79,6 +78,16 @@ function reviewLimit(content, page) {
   return isHomePage(page) ? 3 : 6;
 }
 
+function relatedPublishedPages(site) {
+  return uniquePublishedNavigation(site)
+    .filter((page) => RELATED_REVIEW_PAGE_SLUGS.has(pageSlug(page)))
+    .map((page) => ({
+      slug: pageSlug(page),
+      title: page.title,
+      href: pageHref(site.slug, page),
+    }));
+}
+
 export default async function ReviewsRenderer({ section, site, page }) {
   const content = getSectionContent(section);
   let data = null;
@@ -90,14 +99,24 @@ export default async function ReviewsRenderer({ section, site, page }) {
   }
 
   const reviews = Array.isArray(data?.reviews) ? data.reviews : [];
-  const averageRating = Number(data?.summary?.averageRating) || 0;
-  const total = Number(data?.summary?.total) || 0;
+  const summary = normalizeGoogleReviewSummary(data?.summary);
+  const averageRating = summary.averageRating;
+  const total = summary.total;
   const introduction = content.text || defaultReviewsIntro(site, total);
-  const latestReview = data?.summary?.latestPublishedAt || latestPublishedAt(reviews);
+  const freshness = visibleReviewFreshness(data?.summary, reviews);
+  const latestReview = freshness.value;
   const latestReviewLabel = formatDate(latestReview);
+  const freshnessLabel = freshness.scope === "synchronized-summary"
+    ? "Dernier avis Google synchronisé"
+    : "Dernier avis affiché";
+  const relatedPages = relatedPublishedPages(site);
+  const reviewUrl = String(data?.reviewUrl || "").trim();
+  const hasPublishedReviewData = total > 0 || reviews.length > 0;
+
+  if (!hasPublishedReviewData && !reviewUrl && !introduction) return null;
 
   return (
-    <section className="public-site-section public-site-reviews">
+    <section className="public-site-section public-site-reviews" data-review-source="google-business-profile">
       <div className="public-site-container">
         <div className="public-site-reviews-heading">
           <div className="public-site-reviews-heading-copy">
@@ -114,7 +133,8 @@ export default async function ReviewsRenderer({ section, site, page }) {
                 <div className="public-site-google-summary-rating"><strong>{averageRating.toFixed(1)}</strong><span>/ 5</span></div>
                 <span className="public-site-google-stars" aria-hidden="true">{stars(averageRating)}</span>
                 <small>{total} avis clients</small>
-                {latestReviewLabel ? <small>Dernier avis affiché : <time dateTime={latestReview}>{latestReviewLabel}</time></small> : null}
+                <small>Source : Google Business Profile</small>
+                {latestReviewLabel ? <small>{freshnessLabel} : <time dateTime={latestReview}>{latestReviewLabel}</time></small> : null}
               </div>
             </div>
           ) : null}
@@ -126,12 +146,14 @@ export default async function ReviewsRenderer({ section, site, page }) {
               const longComment = isLongText(review.comment);
               const hasReply = Boolean(review.reply);
               const publishedLabel = formatDate(review.publishedAt);
+              const authorName = String(review.authorName || "").trim();
+              const initial = reviewInitial(authorName);
               return (
                 <article className="public-site-review-card" key={review.id}>
                   <div className="public-site-review-card-top">
-                    <span className="public-site-review-avatar">{reviewInitial(review.authorName)}</span>
+                    {initial ? <span className="public-site-review-avatar">{initial}</span> : null}
                     <div className="public-site-review-author">
-                      <strong>{review.authorName || "Voyageur"}</strong>
+                      {authorName ? <strong>{authorName}</strong> : null}
                       {publishedLabel ? <time dateTime={review.publishedAt}>{publishedLabel}</time> : null}
                     </div>
                     <span className="public-site-review-google-mark" aria-label="Avis Google">G</span>
@@ -149,34 +171,33 @@ export default async function ReviewsRenderer({ section, site, page }) {
               );
             })}
           </div>
-        ) : (
-          <div className="public-site-empty-premium">
-            <strong>Les avis Google seront bientôt affichés ici.</strong>
-            <p>L’agence est en cours de synchronisation avec Google Business Profile.</p>
-          </div>
-        )}
+        ) : null}
 
-        {data?.reviewUrl ? (
+        {reviewUrl ? (
           <div className="public-site-review-actions">
-            <a className="public-site-button" href={data.reviewUrl} target="_blank" rel="noopener noreferrer">Déposer un avis Google</a>
+            <a className="public-site-button" href={reviewUrl} target="_blank" rel="noopener noreferrer">Déposer un avis Google</a>
           </div>
         ) : null}
 
-        <div className="public-site-related-links" aria-label="Découvrir votre agence">
-          <Link href={siteHref(site)}>Découvrir votre agence</Link>
-          <Link href={siteHref(site, "services")}>Découvrir nos services voyage</Link>
-          <Link href={siteHref(site, "contact")}>Contacter votre agence</Link>
-        </div>
+        {relatedPages.length ? (
+          <nav className="public-site-related-links" aria-label="Pages publiées associées">
+            {relatedPages.map((relatedPage) => (
+              <Link href={relatedPage.href} key={relatedPage.slug}>{relatedPage.title}</Link>
+            ))}
+          </nav>
+        ) : null}
       </div>
     </section>
   );
 }
 
 export {
+  RELATED_REVIEW_PAGE_SLUGS,
   defaultReviewsIntro,
   defaultReviewsTitle,
   isHomePage,
   latestPublishedAt,
+  relatedPublishedPages,
+  reviewInitial,
   reviewLimit,
-  siteHref,
 };

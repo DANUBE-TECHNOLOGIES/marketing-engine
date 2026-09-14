@@ -1,61 +1,35 @@
-function asObject(value) {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? value
-    : {};
-}
-
-function sectionType(section) {
-  return String(section?.type || section?.blockType || "").trim().toLowerCase();
-}
-
-function sectionContent(section) {
-  return asObject(
-    section?.content ||
-    section?.jsonContent ||
-    section?.props ||
-    section?.data
-  );
-}
+import { faqItemsForPage } from "../public-faq";
 
 function faqItems(page) {
-  const sections = Array.isArray(page?.blocks)
-    ? page.blocks
-    : Array.isArray(page?.sections)
-      ? page.sections
-      : [];
-  const result = [];
-  const seen = new Set();
-
-  for (const section of sections) {
-    if (!sectionType(section).includes("faq")) continue;
-    if (["draft", "hidden"].includes(String(section?.status || "").toLowerCase())) continue;
-
-    const content = sectionContent(section);
-    const items = content.items || content.questions || content.faqs || [];
-    if (!Array.isArray(items)) continue;
-
-    for (const item of items) {
-      const question = String(item?.question || item?.title || "").replace(/\s+/g, " ").trim();
-      const answer = String(item?.answer || item?.text || item?.content || "").replace(/\s+/g, " ").trim();
-      if (!question || !answer) continue;
-
-      const key = question.toLocaleLowerCase("fr-FR");
-      if (seen.has(key)) continue;
-      seen.add(key);
-      result.push({ question, answer });
-    }
-  }
-
-  return result.slice(0, 20);
+  return faqItemsForPage(page);
 }
 
-export function buildPageFaqSchema(page) {
+function faqReference(faqSchema) {
+  if (!faqSchema?.["@id"]) return null;
+  return {
+    "@type": "FAQPage",
+    "@id": faqSchema["@id"],
+    url: faqSchema.url,
+  };
+}
+
+export function buildPageFaqSchema(page, url) {
   const items = faqItems(page);
   if (!items.length) return null;
 
+  const canonicalUrl = String(url || "").trim();
   return {
     "@context": "https://schema.org",
     "@type": "FAQPage",
+    ...(canonicalUrl ? {
+      "@id": `${canonicalUrl}#faq`,
+      url: canonicalUrl,
+      isPartOf: {
+        "@type": "WebPage",
+        "@id": `${canonicalUrl}#webpage`,
+        url: canonicalUrl,
+      },
+    } : {}),
     mainEntity: items.map((item) => ({
       "@type": "Question",
       name: item.question,
@@ -67,4 +41,21 @@ export function buildPageFaqSchema(page) {
   };
 }
 
-export { faqItems, sectionContent, sectionType };
+export function linkFaqToWebPage(webPage, faqSchema) {
+  const faq = faqReference(faqSchema);
+  if (!webPage || !faq) return webPage;
+
+  const existingParts = Array.isArray(webPage.hasPart)
+    ? webPage.hasPart
+    : webPage.hasPart
+      ? [webPage.hasPart]
+      : [];
+
+  const hasSameFaq = existingParts.some((part) => part?.["@id"] === faq["@id"]);
+  return {
+    ...webPage,
+    hasPart: hasSameFaq ? existingParts : [...existingParts, faq],
+  };
+}
+
+export { faqItems, faqReference };

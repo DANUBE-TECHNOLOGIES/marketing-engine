@@ -39,7 +39,7 @@ test(
 
     assert.match(
       offers,
-      /resolvePublicCtaHref\([\s\S]*?site,[\s\S]*?item\.href,[\s\S]*?["']contact["'][\s\S]*?\)/
+      /resolvePublicCtaHref\([\s\S]*?site,[\s\S]*?item\?\.href,[\s\S]*?["']["'][\s\S]*?\)/
     );
 
     assert.doesNotMatch(
@@ -63,7 +63,12 @@ test(
 
     assert.match(
       sections,
-      /publicPageHref\(site, ["']contact["']\)/
+      /publishedNavigationPage\(site,["']contact["']\)/
+    );
+
+    assert.match(
+      sections,
+      /publishedPageHref\(site\.slug,contactPage\)/
     );
   }
 );
@@ -77,12 +82,12 @@ test(
 
     assert.match(
       destinations,
-      /`\/agence\/\$\{encodeURIComponent\(site\.slug\)\}`/
+      /destinationHref\(site, item\)/
     );
 
     assert.match(
       destinations,
-      /`\/destination\/\$\{encodeURIComponent\(item\.slug\)\}`/
+      /from ["']\.\.\/\.\.\/\.\.\/lib\/seo\/destination-public-collection["']/
     );
 
     assert.doesNotMatch(

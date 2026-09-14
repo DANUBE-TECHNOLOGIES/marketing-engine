@@ -46,8 +46,9 @@ test("Maurepas keeps separate core and extended catchment tiers", () => {
 
 test("extended catchment is rendered only as a visible home-area signal", () => {
   assert.match(areaLinksSource, /resolvedExtendedTargetCities/);
-  assert.match(areaLinksSource, /Au-delà de ce premier cercle/);
-  assert.match(areaLinksSource, /zone élargie/);
+  assert.match(areaLinksSource, /Une zone locale élargie est également présentée/);
+  assert.match(areaLinksSource, /contexte géographique du mini-site/);
+  assert.match(areaLinksSource, /sans modifier l’adresse d’implantation de l’agence/);
 
   assert.doesNotMatch(pageSeoSource, /resolvedExtendedTargetCities/);
   assert.match(pageSeoSource, /resolvedTargetCities\(site, \{ limit: 4 \}\)/);

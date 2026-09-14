@@ -66,7 +66,8 @@ test("MSE-25.9 registers a dedicated public team renderer", () => {
   const team = read("frontend/components/public-site/renderers/TeamRenderer.js");
 
   assert.match(registry, /team:\s*TeamRenderer/);
-  assert.match(team, /public-site-team-grid/);
+  assert.match(team, /styles\.grid/);
+  assert.match(team, /public-site-team/);
   assert.match(team, /showWhenEmpty/);
 });
 
@@ -74,6 +75,9 @@ test("MSE-25.9 does not render empty destination or inspiration placeholders by 
   const destinations = read("frontend/components/public-site/renderers/DestinationsRenderer.js");
   const inspirations = read("frontend/components/public-site/renderers/InspirationsRenderer.js");
 
-  assert.match(destinations, /if \(!items\.length && content\.showWhenEmpty !== true\)/);
+  assert.match(
+    destinations,
+    /if \(!items\.length && content\.showWhenEmpty !== true && !introduction\)/
+  );
   assert.match(inspirations, /if \(!items\.length && content\.showWhenEmpty !== true\)/);
 });

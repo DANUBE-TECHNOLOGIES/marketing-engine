@@ -9,12 +9,29 @@ const renderer = fs.readFileSync(
   "utf8"
 );
 
-test("MSE-25.30 renders feature item hrefs as crawlable links", () => {
+test("MSE-25.30 renders published feature item hrefs as crawlable links", () => {
   assert.match(renderer, /function featureHref/);
   assert.match(renderer, /function featureAction/);
-  assert.match(renderer, /const configuredHref = featureHref\(root, item\?\.href \|\| item\?\.url \|\| item\?\.link\)/);
-  assert.match(renderer, /href: configuredHref \|\| `\$\{root\}\/contact`/);
+  assert.match(renderer, /featureHref\(root, item\?\.href \|\| item\?\.url \|\| item\?\.link\)/);
+  assert.match(renderer, /if \(href && label\) return \{ href, label \}/);
+  assert.match(renderer, /const managed = managedFeatureAction\(root, item\)/);
+  assert.match(renderer, /if \(managed\) return managed/);
+  assert.match(renderer, /return semanticFeatureAction\(site, item\)/);
+  assert.match(renderer, /uniquePublishedNavigation\(site\)\.find/);
+  assert.match(renderer, /pageSlug\(page\) === semantic\.slug/);
+  assert.match(renderer, /pageHref\(site\.slug, publishedPage\)/);
   assert.match(renderer, /<Link className="public-site-feature-action" href=\{action\.href\}>\{action\.label\}/);
+  assert.doesNotMatch(renderer, /href: configuredHref \|\| `\$\{root\}\/contact`/);
+  assert.doesNotMatch(renderer, /Parler de votre projet/);
+});
+
+test("MSE-25.30 permits only the explicit managed Business and Group feature routes", () => {
+  assert.match(renderer, /const MANAGED_FEATURE_ACTIONS = Object\.freeze/);
+  assert.match(renderer, /slug: "business-travel"/);
+  assert.match(renderer, /slug: "voyages-en-groupe"/);
+  assert.match(renderer, /MANAGED_FEATURE_ACTIONS\.find\(\(entry\) => entry\.pattern\.test\(searchable\)\)/);
+  assert.doesNotMatch(renderer, /slugify|titleToSlug|labelToSlug/i);
+  assert.doesNotMatch(renderer, /`\$\{root\}\/\$\{(?:item\?\.)?(?:title|label|name)/);
 });
 
 test("MSE-25.30 resolves relative Website Designer page slugs under the agency root", () => {

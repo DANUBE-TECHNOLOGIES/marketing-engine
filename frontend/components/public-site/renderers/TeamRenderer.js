@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { absoluteUrl } from "../../../lib/seo/site-url";
+import { contextualJourneyItems } from "../PublicContextualJourney";
 import { getSectionContent, getSectionTitle } from "./helpers";
 import styles from "./TeamRenderer.module.css";
 
@@ -25,13 +27,27 @@ function localTeamTitle(site) {
 function localTeamIntro(site) {
   const city = clean(site?.agency?.city || site?.city);
   return city
-    ? `Des conseillers qui connaissent vos projets, vos envies et les solutions disponibles pour construire votre voyage depuis ${city}.`
-    : "Des conseillers disponibles pour écouter votre projet et construire avec vous un voyage réellement adapté.";
+    ? `Retrouvez les conseillers présentés par votre agence de voyages à ${city} et les informations publiées sur leur rôle et leur parcours.`
+    : "Retrouvez les conseillers présentés par votre agence et les informations publiées sur leur rôle et leur parcours.";
+}
+
+function siteRoot(site) {
+  return String(site?.basePath || `/agence/${encodeURIComponent(site?.slug || "")}`).replace(/\/$/, "");
 }
 
 function siteHref(site, slug) {
-  const root = String(site?.basePath || `/agence/${encodeURIComponent(site?.slug || "")}`).replace(/\/$/, "");
-  return `${root}/${slug}`;
+  return `${siteRoot(site)}/${slug}`;
+}
+
+function agencyEntityId(site) {
+  return `${absoluteUrl(siteRoot(site))}#travel-agency`;
+}
+
+function memberEntityId(site, member, index) {
+  const rawKey = clean(member?.id || member?.email || member?.name || member?.title || `member-${index + 1}`)
+    .toLocaleLowerCase("fr-FR")
+    .replace(/\s+/g, "-");
+  return `${absoluteUrl(siteRoot(site))}#person-${encodeURIComponent(rawKey)}`;
 }
 
 function firstText(...values) {
@@ -185,7 +201,7 @@ function MemberFacts({ member }) {
   );
 }
 
-export default function TeamRenderer({ section, site }) {
+export default function TeamRenderer({ section, site, page }) {
   const content = getSectionContent(section);
   const city = clean(site?.agency?.city || site?.city);
   const members = memberCollection(content, site);
@@ -198,6 +214,9 @@ export default function TeamRenderer({ section, site }) {
 
   if (!uniqueMembers.length && content.showWhenEmpty !== true) return null;
   const singleMember = uniqueMembers.length === 1;
+  const agencyId = agencyEntityId(site);
+  const agencyName = clean(site?.name || site?.agency?.name) || "Mondescale Voyages";
+  const navigationItems = contextualJourneyItems(site, page?.slug, 3);
 
   return (
     <section className={`public-site-section public-site-team ${styles.section}`} data-team-size={uniqueMembers.length}>
@@ -217,16 +236,25 @@ export default function TeamRenderer({ section, site }) {
               const image = memberImage(member);
               const presentation = memberPresentation(member);
               return (
-                <article className={styles.card} key={member.id || member.email || name || index}>
+                <article
+                  className={styles.card}
+                  key={member.id || member.email || name || index}
+                  itemScope
+                  itemType="https://schema.org/Person"
+                  itemID={memberEntityId(site, member, index)}
+                >
+                  <span itemProp="worksFor" itemScope itemType="https://schema.org/TravelAgency" itemID={agencyId}>
+                    <meta itemProp="name" content={agencyName} />
+                  </span>
                   <div className={styles.portrait}>
                     {image ? (
-                      <img src={image} alt={memberImageAlt(member, name)} loading="lazy" decoding="async" fetchPriority="low" width="720" height="720" />
+                      <img itemProp="image" src={image} alt={memberImageAlt(member, name)} loading="lazy" decoding="async" fetchPriority="low" width="720" height="720" />
                     ) : <span>{initials(name)}</span>}
                   </div>
                   <div className={styles.copy}>
-                    <h3>{name}</h3>
-                    <p className={styles.role}>{city ? `${role} à ${city}` : role}</p>
-                    {presentation ? <p>{presentation}</p> : null}
+                    <h3 itemProp="name">{name}</h3>
+                    <p className={styles.role}>{city ? <><span itemProp="jobTitle">{role}</span> à {city}</> : <span itemProp="jobTitle">{role}</span>}</p>
+                    {presentation ? <p itemProp="description">{presentation}</p> : null}
                     <MemberFacts member={member} />
                   </div>
                 </article>
@@ -234,23 +262,27 @@ export default function TeamRenderer({ section, site }) {
             })}
           </div>
         ) : null}
-        <nav className={styles.links} aria-label={city ? `Préparer votre voyage avec l’équipe de ${city}` : "Préparer votre voyage avec notre équipe"}>
-          <Link href={siteHref(site, "services")}>Découvrir nos services</Link>
-          <Link href={siteHref(site, "destinations")}>Explorer nos destinations</Link>
-          <Link href={siteHref(site, "contact")}>Échanger avec un conseiller</Link>
-        </nav>
+        {navigationItems.length ? (
+          <nav className={styles.links} aria-label={city ? `Pages publiées par l’agence de ${city}` : "Pages publiées par notre agence"}>
+            {navigationItems.map((item) => (
+              <Link key={item.slug} href={item.href}>{item.title}</Link>
+            ))}
+          </nav>
+        ) : null}
       </div>
     </section>
   );
 }
 
 export {
+  agencyEntityId,
   assetUrl,
   firstText,
   localTeamIntro,
   localTeamTitle,
   memberCollection,
   memberDestinations,
+  memberEntityId,
   memberExperience,
   memberImage,
   memberImageAlt,

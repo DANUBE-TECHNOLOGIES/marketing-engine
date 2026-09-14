@@ -18,9 +18,10 @@ test("MSE-25.30 destination structured data forms a WebPage -> TouristDestinatio
 });
 
 test("MSE-25.30 destination renderer emits agency, webpage, destination and breadcrumb schemas", () => {
-  assert.match(renderer, /buildTravelAgencySchema/);
+  assert.match(renderer, /build(?:NetworkAware)?TravelAgencySchema/);
   assert.match(renderer, /buildDestinationWebPageSchema/);
   assert.match(renderer, /buildDestinationSchema/);
   assert.match(renderer, /buildBreadcrumbSchema/);
+  assert.match(renderer, /<JsonLd data=\{agencySchema\}/);
   assert.match(renderer, /<JsonLd data=\{destinationWebPageSchema\}/);
 });

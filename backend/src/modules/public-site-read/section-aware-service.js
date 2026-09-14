@@ -86,6 +86,7 @@ function normalizePublicPage(page) {
     displayOrder: page.displayOrder ?? 0,
     seoTitle: page.seoTitle ?? null,
     metaDescription: page.metaDescription ?? null,
+    h1: page.h1 ?? null,
     path: page.path ?? null,
     blocks,
     contentSource: v2Blocks.length

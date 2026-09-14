@@ -12,7 +12,6 @@ on:
       - 'scripts/mse-25-91-vm-deploy.sh'
       - 'scripts/mse-25-119-vm-deploy-main.test.mjs'
       - 'scripts/mse-25-91-post-validation-cleanup.sh'
-      - 'scripts/mse-25-91-public-contract-preflight.js'
       - 'scripts/mse-25-91-canonical-drift-check.js'
       - 'scripts/mse-25-124-runtime-verify.js'
       - '.github/workflows/mse-25-91.yml'
@@ -50,17 +49,100 @@ jobs:
         run: |
           node --test test/mse-25-91-canonical-public-reconvergence.test.mjs
           node --test test/mse-25-85-sitemap-cache-safety.test.mjs
+          node --test test/mse-25-152-geo-team-person-entities.test.mjs
+          node --test test/mse-25-155-geo-institutional-reassurance-authority.test.mjs
+          node --test test/mse-25-156-geo-legal-reassurance-runtime.test.mjs
+          node --test test/mse-25-157-geo-payment-reassurance-authority.test.mjs
+          node --test test/mse-25-158-geo-professional-affiliation-authority.test.mjs
+          node --test test/mse-25-159-geo-faq-visible-schema-parity.test.mjs
+          node --test test/mse-25-160-geo-faq-canonical-graph-linkage.test.mjs
+          node --test test/mse-25-161-geo-canonical-webpage-semantic-consolidation.test.mjs
+          node --test test/mse-25-162-geo-collection-webpage-consolidation.test.mjs
+          node --test test/mse-25-163-geo-canonical-breadcrumb-linkage.test.mjs
+          node --test test/mse-25-164-geo-destination-faq-parity-canonical-linkage.test.mjs
+          node --test test/mse-25-165-geo-grounded-destination-metadata.test.mjs
+          node --test test/mse-25-166-geo-area-served-visible-parity.test.mjs
+          node --test test/mse-25-167-geo-grounded-local-context-copy.test.mjs
+          node --test test/mse-25-168-geo-grounded-home-local-area-copy.test.mjs
+          node --test test/mse-25-169-geo-canonical-team-person-identity.test.mjs
+          node --test test/mse-25-170-geo-grounded-team-navigation.test.mjs
+          node --test test/mse-25-171-geo-grounded-global-header.test.mjs
+          node --test test/mse-25-172-geo-grounded-generic-section-fallbacks.test.mjs
+          node --test test/mse-25-173-geo-grounded-global-footer.test.mjs
+          node --test test/mse-25-174-geo-grounded-hero-fallbacks.test.mjs
+          node --test test/mse-25-175-geo-grounded-cta-fallbacks.test.mjs
+          node --test test/mse-25-176-geo-grounded-appointment.test.mjs
+          node --test test/mse-25-177-geo-grounded-offers.test.mjs
+          node --test test/mse-25-178-geo-grounded-inspirations.test.mjs
+          node --test test/mse-25-179-geo-grounded-features.test.mjs
+          node --test test/mse-25-180-geo-grounded-flexible-payment.test.mjs
+          node --test test/mse-25-181-geo-grounded-stats.test.mjs
+          node --test test/mse-25-182-geo-grounded-contact.test.mjs
+          node --test test/mse-25-183-geo-grounded-hours.test.mjs
+          node --test test/mse-25-184-geo-grounded-reviews.test.mjs
+          node --test test/mse-25-185-geo-grounded-testimonials.test.mjs
+          node --test test/mse-25-186-geo-grounded-map.test.mjs
+          node --test test/mse-25-187-geo-grounded-image-text.test.mjs
+          node --test test/mse-25-188-geo-grounded-destinations.test.mjs
+          node --test test/mse-25-189-geo-strict-cta-href-provenance.test.mjs
+          node --test test/mse-25-190-geo-strict-shared-cta-resolution.test.mjs
+          node --test test/mse-25-191-geo-strict-hero-cta-provenance.test.mjs
+          node --test test/mse-25-192-geo-grounded-local-area-navigation.test.mjs
+          node --test test/mse-25-193-geo-grounded-local-context-navigation.test.mjs
+          node --test test/mse-25-194-geo-managed-commercial-navigation.test.mjs
+          node --test test/mse-25-195-geo-grounded-business-travel.test.mjs
+          node --test test/mse-25-196-geo-grounded-group-travel.test.mjs
 
       - name: Lint canonical public files
         working-directory: frontend
         run: >-
           npx eslint
           app/agence/[siteSlug]/layout.js
+          app/agence/[siteSlug]/[[...pageSlug]]/page.js
+          app/agence/[siteSlug]/inspiration/page.js
+          app/agence/[siteSlug]/destination/[destinationSlug]/page.js
+          app/agence/[siteSlug]/business-travel/page.js
+          app/agence/[siteSlug]/voyages-en-groupe/page.js
+          components/JsonLd.js
+          components/destination/DestinationPage.js
+          components/public-site/BusinessTravelPage.js
+          components/public-site/GroupTravelPage.js
+          components/public-site/LocalContentContext.js
+          components/public-site/LocalSeoAreaLinks.js
+          components/public-site/PublicAgencyReferenceFacts.js
           components/public-site/PublicBrandLogo.js
           components/public-site/PublicReassuranceBand.js
+          components/public-site/PublicContextualJourney.js
+          components/public-site/PublicSiteHeader.js
+          components/public-site/PublicSiteFooter.js
+          components/public-site/PublicSiteSections.js
           components/public-site/renderers/HeroV2Renderer.js
+          components/public-site/renderers/CtaV2Renderer.js
+          components/public-site/renderers/AppointmentRenderer.js
+          components/public-site/renderers/OffersRenderer.js
+          components/public-site/renderers/InspirationsRenderer.js
+          components/public-site/renderers/FeaturesV2Renderer.js
+          components/public-site/renderers/FlexiblePaymentRenderer.js
+          components/public-site/renderers/StatsRenderer.js
+          components/public-site/renderers/ContactRenderer.js
+          components/public-site/renderers/HoursRenderer.js
+          components/public-site/renderers/ReviewsRenderer.js
+          components/public-site/renderers/TestimonialsRenderer.js
+          components/public-site/renderers/MapRenderer.js
+          components/public-site/renderers/ImageTextV2Renderer.js
           components/public-site/renderers/TeamRenderer.js
           components/public-site/renderers/PartnersRenderer.js
+          components/public-site/renderers/FaqRenderer.js
+          components/public-site/renderers/DestinationsRenderer.js
+          components/public-site/renderers/ctaLinks.js
+          lib/public-faq.js
+          lib/seo/canonical-jsonld.js
+          lib/seo/collection-webpage-schema.js
+          lib/seo/destination-faq-schema.js
+          lib/seo/destination-public-collection.js
+          lib/seo/local-area-config.js
+          lib/seo/page-faq-schema.js
+          lib/seo/page-semantics-schema.js
           lib/showcase-url.js
 
       - name: Build canonical public frontend
@@ -73,7 +155,9 @@ jobs:
 
       - name: MSE-25.124 Google review sync contract tests
         working-directory: backend
-        run: node --test test/mse-25-124-google-business-reviews.test.js
+        run: |
+          node --test test/mse-25-124-google-business-reviews.test.js
+          node --test test/mse-25-151-google-review-summary-authority.test.js
 
       - name: MSE-25.91 public media contract tests
         working-directory: backend

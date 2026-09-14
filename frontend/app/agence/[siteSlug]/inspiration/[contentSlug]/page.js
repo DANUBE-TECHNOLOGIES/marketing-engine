@@ -213,6 +213,7 @@ export default async function InspirationPage({ params }) {
   const schemaOrg = data.content?.schemaOrg && typeof data.content.schemaOrg === "object"
     ? {
         ...data.content.schemaOrg,
+        "@id": data.content.schemaOrg["@id"] || `${canonical}#article`,
         url: canonical,
         mainEntityOfPage: canonical,
         description: data.content.schemaOrg.description || description,
@@ -223,6 +224,7 @@ export default async function InspirationPage({ params }) {
     : {
         "@context": "https://schema.org",
         "@type": "Article",
+        "@id": `${canonical}#article`,
         headline: data.content.title,
         description,
         image: image || undefined,

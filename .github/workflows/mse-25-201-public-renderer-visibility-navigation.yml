@@ -1,0 +1,22 @@
+name: MSE-25.201 Public Renderer Visibility Navigation V1
+
+on:
+  pull_request:
+    branches:
+      - feature/lamorlaye-home-h1-v1
+    paths:
+      - 'frontend/components/page-builder/shared/blockUtils.js'
+      - 'frontend/components/public-site/PublicSiteHeader.js'
+      - 'backend/test/mse-25-201-public-renderer-visibility-navigation.test.js'
+      - '.github/workflows/mse-25-201-public-renderer-visibility-navigation.yml'
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run MSE-25.201 regression tests
+        run: node --test backend/test/mse-25-201-public-renderer-visibility-navigation.test.js

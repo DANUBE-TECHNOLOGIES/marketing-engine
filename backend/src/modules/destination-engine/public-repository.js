@@ -27,6 +27,22 @@ class PublicDestinationRepository {
             position: "asc",
           },
         },
+        relationsFrom: {
+          where: {
+            origin: "manual",
+          },
+          select: {
+            origin: true,
+            target: {
+              select: {
+                name: true,
+                slug: true,
+                status: true,
+                tenantId: true,
+              },
+            },
+          },
+        },
       },
     });
   }

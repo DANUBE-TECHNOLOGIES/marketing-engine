@@ -29,6 +29,41 @@ function requireTenantId(value) {
   return tenantId;
 }
 
+function normalizeEditorialRelations(destination, exposedSlugs, tenantId, siteSlug) {
+  const relations = Array.isArray(destination?.relationsFrom)
+    ? destination.relationsFrom
+    : [];
+  const exposed = new Set(
+    (exposedSlugs || [])
+      .map((slug) => String(slug || '').trim().toLowerCase())
+      .filter(Boolean)
+  );
+  const sourceSlug = String(destination?.slug || '').trim().toLowerCase();
+  const seen = new Set();
+  const result = [];
+
+  for (const relation of relations) {
+    const target = relation?.target;
+    const slug = String(target?.slug || '').trim();
+    const normalizedSlug = slug.toLowerCase();
+    const name = String(target?.name || '').trim();
+
+    if (String(relation?.origin || '').toLowerCase() !== 'manual') continue;
+    if (String(target?.status || '').toLowerCase() !== 'published') continue;
+    if (String(target?.tenantId || '') !== String(tenantId)) continue;
+    if (!slug || !name || normalizedSlug === sourceSlug) continue;
+    if (!exposed.has(normalizedSlug) || seen.has(normalizedSlug)) continue;
+
+    seen.add(normalizedSlug);
+    result.push({
+      name,
+      href: `/agence/${siteSlug}/destination/${slug}`,
+    });
+  }
+
+  return result;
+}
+
 class DestinationService {
   constructor(prisma) {
     this.repo = new DestinationRepository(prisma);
@@ -82,13 +117,17 @@ class DestinationService {
       throw e;
     }
 
-    const exposed = await this.exposureResolver.exposes(
+    const exposedDestinationSlugs = await this.exposureResolver.resolve(
       siteSlug,
-      destination.slug,
       normalizedTenantId
     );
+    const exposed = new Set(
+      (exposedDestinationSlugs || []).map((slug) =>
+        String(slug || '').trim().toLowerCase()
+      )
+    );
 
-    if (!exposed) {
+    if (!exposed.has(String(destination.slug || '').trim().toLowerCase())) {
       const e = new Error(
         `Destination ${destination.slug} non exposée par le mini-site ${siteSlug}`
       );
@@ -96,6 +135,15 @@ class DestinationService {
       e.code = 'PUBLIC_DESTINATION_NOT_EXPOSED';
       throw e;
     }
+
+    const editorialRelations = normalizeEditorialRelations(
+      destination,
+      exposedDestinationSlugs,
+      normalizedTenantId,
+      site.slug
+    );
+    const publicDestination = { ...destination };
+    delete publicDestination.relationsFrom;
 
     const pages = Array.isArray(site.pages)
       ? site.pages
@@ -119,7 +167,8 @@ class DestinationService {
         agency: site.agency,
         pages,
       },
-      destination,
+      destination: publicDestination,
+      editorialRelations,
       quotePath: `/agence/${site.slug}/contact?destination=${destination.slug}`,
       canonicalPath: `/agence/${site.slug}/destination/${destination.slug}`,
     };
@@ -129,3 +178,4 @@ class DestinationService {
 module.exports = DestinationService;
 module.exports.sitePublished = sitePublished;
 module.exports.requireTenantId = requireTenantId;
+module.exports.normalizeEditorialRelations = normalizeEditorialRelations;

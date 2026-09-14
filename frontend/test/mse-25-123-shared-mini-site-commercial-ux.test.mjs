@@ -8,24 +8,38 @@ const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 
 const features = read("components/public-site/renderers/FeaturesV2Renderer.js");
 const faq = read("components/public-site/renderers/FaqRenderer.js");
+const sharedFaq = read("lib/public-faq.js");
 const team = read("components/public-site/renderers/TeamRenderer.js");
 const localContext = read("components/public-site/LocalContentContext.js");
 
-test("shared service cards preserve configured links and fall back to contact", () => {
+test("shared service cards preserve explicit actions, managed routes and publication-grounded semantic actions", () => {
   assert.match(features, /item\?\.href \|\| item\?\.url \|\| item\?\.link/);
-  assert.match(features, /configuredHref \|\| `\$\{root\}\/contact`/);
-  assert.match(features, /Parler de votre projet/);
   assert.match(features, /item\?\.ctaLabel \|\| item\?\.linkLabel \|\| item\?\.actionLabel/);
+  assert.match(features, /if \(href && label\) return \{ href, label \}/);
+  assert.match(features, /const managed = managedFeatureAction\(root, item\)/);
+  assert.match(features, /if \(managed\) return managed/);
+  assert.match(features, /return semanticFeatureAction\(site, item\)/);
+  assert.match(features, /uniquePublishedNavigation\(site\)\.find/);
+  assert.match(features, /pageSlug\(page\) === semantic\.slug/);
+  assert.match(features, /if \(!publishedPage\) return null/);
+  assert.match(features, /pageHref\(site\.slug, publishedPage\)/);
+  assert.match(features, /slug: "business-travel"/);
+  assert.match(features, /slug: "voyages-en-groupe"/);
+  assert.match(features, /\[item\?\.title, item\?\.label, item\?\.name, item\?\.text\]/);
+  assert.doesNotMatch(features, /configuredHref \|\| `\$\{root\}\/contact`/);
+  assert.doesNotMatch(features, /Parler de votre projet/);
+  assert.doesNotMatch(features, /En savoir plus/);
   assert.doesNotMatch(features, /Bois-Colombes|Dax|Gien|Lamorlaye|Maurepas|Nevers|Ozoir/);
 });
 
 test("shared FAQ keeps configured content and suppresses incomplete rows", () => {
-  assert.match(faq, /getItems\(section, \["items", "questions", "faqs"\]\)/);
-  assert.match(faq, /item\?\.question \|\| item\?\.title/);
-  assert.match(faq, /item\?\.answer \|\| item\?\.text \|\| item\?\.description/);
-  assert.match(faq, /filter\(\(item\) => item\.question && item\.answer\)/);
+  assert.match(faq, /faqItemsForSection\(section\)/);
+  assert.match(sharedFaq, /\["items", "questions", "faqs"\]/);
+  assert.match(sharedFaq, /item\?\.question \|\| item\?\.title/);
+  assert.match(sharedFaq, /item\?\.answer \|\| item\?\.text \|\| item\?\.description \|\| item\?\.content/);
+  assert.match(sharedFaq, /filter\(\(item\) => item\.question && item\.answer\)/);
   assert.match(faq, /questions\\s\+fr\[eé\]quentes/);
-  assert.doesNotMatch(faq, /parking|garantie du meilleur prix|sans risque/);
+  assert.doesNotMatch(`${faq}\n${sharedFaq}`, /parking|garantie du meilleur prix|sans risque/);
 });
 
 test("advisor profiles expose optional factual enrichment without invented defaults", () => {
@@ -37,10 +51,13 @@ test("advisor profiles expose optional factual enrichment without invented defau
   assert.doesNotMatch(team, /Céline|Sylvie|Marie-Claire|Stéphanie|Prescillia|Maïlys|Princess|Anisia/);
 });
 
-test("local proximity SEO remains centralized and unchanged in principle", () => {
+test("local proximity SEO remains centralized while navigation is grounded in public sources", () => {
   assert.match(localContext, /resolvedTargetCities\(site, \{ limit: 4 \}\)/);
-  assert.match(localContext, /Navigation locale autour de/);
-  assert.match(localContext, /Agence de voyages à \{city\}/);
+  assert.match(localContext, /localAreaSentence\(city, nearby\)/);
+  assert.match(localContext, /uniquePublicNavigation\(site\)/);
+  assert.match(localContext, /pageHref\(site\.slug, candidate\)/);
+  assert.match(localContext, /Navigation publique de l’agence de voyages de \$\{city\}/);
+  assert.doesNotMatch(localContext, /Navigation locale autour de/);
 });
 
 test("MSE-25.123 does not introduce a fake booking promise", () => {

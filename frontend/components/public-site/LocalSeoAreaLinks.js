@@ -1,4 +1,6 @@
 import Link from "next/link";
+import PublicAgencyReferenceFacts from "./PublicAgencyReferenceFacts";
+import { pageHref, pageSlug, uniquePublishedNavigation } from "./PublicSiteHeader";
 import {
   resolvedExtendedTargetCities,
   resolvedTargetCities,
@@ -23,51 +25,62 @@ function joinCities(values) {
   return `${values.slice(0, -1).join(", ")} et ${values[values.length - 1]}`;
 }
 
+function publishedLocalNavigation(site, limit = 4) {
+  return uniquePublishedNavigation(site)
+    .filter((page) => pageSlug(page))
+    .slice(0, limit)
+    .map((page) => ({
+      title: page.title,
+      href: pageHref(site.slug, page),
+    }));
+}
+
 export default function LocalSeoAreaLinks({ site }) {
   const agency = site?.agency || {};
   const city = clean(agency.city || site?.city);
   const nearby = targetCities(site);
   const extended = extendedTargetCities(site);
 
-  if (!city || !nearby.length) return null;
+  if (!city || !nearby.length) {
+    return <PublicAgencyReferenceFacts site={site} />;
+  }
 
-  const basePath = clean(site?.basePath) || `/agence/${encodeURIComponent(site?.slug || "")}`;
-  const root = basePath.replace(/\/$/, "");
   const closeArea = nearby.slice(0, 3);
   const extendedArea = nearby.slice(3);
+  const relatedPages = publishedLocalNavigation(site);
 
   return (
-    <section className="public-site-section" aria-labelledby="local-area-title">
-      <div className="public-site-container public-site-prose">
-        <p className="public-site-eyebrow">Votre agence de proximité</p>
-        <h2 id="local-area-title">Votre agence de voyages à {city} et dans les communes voisines</h2>
-        <p>
-          Installée à {city}, notre agence accompagne aussi les voyageurs de {joinCities(closeArea)}
-          pour préparer séjours, circuits, croisières, autotours et voyages sur mesure. Vous pouvez
-          échanger avec un conseiller qui suit votre projet depuis les premières recherches jusqu’au retour.
-        </p>
-        {extendedArea.length ? (
+    <>
+      <section className="public-site-section" aria-labelledby="local-area-title">
+        <div className="public-site-container public-site-prose">
+          <p className="public-site-eyebrow">Zone locale publiée</p>
+          <h2 id="local-area-title">Votre agence de voyages à {city} et les secteurs présentés sur ce mini-site</h2>
           <p>
-            Notre secteur de proximité s’étend également à {joinCities(extendedArea)} : vous pouvez
-            contacter l’équipe de {city} pour une recherche, un devis ou un rendez-vous en agence.
+            L’agence est implantée à {city}. Ce mini-site présente également l’agence pour les secteurs de {joinCities(closeArea)}.
           </p>
-        ) : null}
-        {extended.length ? (
-          <p>
-            Au-delà de ce premier cercle, l’équipe de {city} accompagne également des projets de voyageurs
-            situés à {joinCities(extended)}. Cette zone élargie complète notre bassin de clientèle sans
-            remplacer l’ancrage de proximité autour de {city}.
-          </p>
-        ) : null}
-        <div className="public-site-related-links" aria-label={`Découvrir l’agence de voyages de ${city}`}>
-          <Link href={`${root}/services`}>Services de l’agence de voyages de {city}</Link>
-          <Link href={`${root}/destinations`}>Destinations conseillées depuis {city}</Link>
-          <Link href={`${root}/inspiration`}>Conseils et inspirations voyage à {city}</Link>
-          <Link href={`${root}/contact`}>Contacter l’agence de voyages de {city}</Link>
+          {extendedArea.length ? (
+            <p>
+              Les autres secteurs de proximité publiés sur ce mini-site sont {joinCities(extendedArea)}.
+            </p>
+          ) : null}
+          {extended.length ? (
+            <p>
+              Une zone locale élargie est également présentée pour {joinCities(extended)}. Ces communes complètent
+              le contexte géographique du mini-site sans modifier l’adresse d’implantation de l’agence à {city}.
+            </p>
+          ) : null}
+          {relatedPages.length ? (
+            <div className="public-site-related-links" aria-label={`Pages publiées par l’agence de voyages de ${city}`}>
+              {relatedPages.map((page) => (
+                <Link key={page.href} href={page.href}>{page.title}</Link>
+              ))}
+            </div>
+          ) : null}
         </div>
-      </div>
-    </section>
+      </section>
+      <PublicAgencyReferenceFacts site={site} />
+    </>
   );
 }
 
-export { extendedTargetCities, joinCities, targetCities };
+export { extendedTargetCities, joinCities, publishedLocalNavigation, targetCities };

@@ -58,7 +58,9 @@ function serviceWithExposure(exposed) {
       status: "published",
     }),
   };
-  service.exposureResolver = { exposes: async () => exposed };
+  service.exposureResolver = {
+    resolve: async () => (exposed ? ["sicile"] : []),
+  };
   return service;
 }
 

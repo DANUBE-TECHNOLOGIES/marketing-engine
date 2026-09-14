@@ -41,7 +41,7 @@ test("MSE-25.3 applique la limite aux témoignages manuels comme aux avis Google
   );
 
   assert.match(renderer, /normalizeLimit\(content\.limit\)/);
-  assert.match(renderer, /content\.items\.slice\(0, limit\)/);
+  assert.match(renderer, /\.filter\([\s\S]*?\.slice\(0, limit\)/);
 });
 
 test("MSE-25.3 le séparateur public respecte taille et ligne", () => {

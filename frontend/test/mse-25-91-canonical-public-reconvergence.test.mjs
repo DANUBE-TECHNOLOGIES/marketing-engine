@@ -47,16 +47,23 @@ test("MSE-25.91 preserves home partner network and agency partner selection", ()
   assert.match(source, /getCommonPartners/);
   assert.match(source, /NetworkPartnerGrid/);
   assert.match(source, /selectAgencyPartners/);
-  assert.match(source, /Notre sélection principale/);
+  assert.match(source, /Partenaires réseau publiés/);
 });
 
-test("MSE-25.91 keeps the home hero contained and guarantees complete copy plus CTAs", () => {
+test("MSE-25.91 keeps the home hero contained and complete without invented CTA copy", () => {
   const renderer = read("components/public-site/renderers/HeroV2Renderer.js");
   const css = read("components/public-site/network-home-hero.css");
   assert.match(renderer, /public-site-hero--immersive/);
   assert.match(renderer, /NETWORK_HOME_HERO_IMAGE/);
-  assert.match(renderer, /getShowcaseUrl\(site\)/);
-  assert.match(renderer, /Découvrir nos voyages/);
+  assert.match(renderer, /configuredHeroCta\(site, content\.primaryCta\)/);
+  assert.match(renderer, /configuredHeroCta\(site, content\.secondaryCta\)/);
+  assert.match(renderer, /resolvePublicCtaHref\(site, explicitHref, ""\)/);
+  assert.match(renderer, /factualHeroSubtitle/);
+  assert.doesNotMatch(renderer, /getShowcaseUrl\(site\)/);
+  assert.doesNotMatch(renderer, /content\.primaryButton/);
+  assert.doesNotMatch(renderer, /content\.secondaryButton/);
+  assert.doesNotMatch(renderer, /Découvrir nos voyages/);
+  assert.doesNotMatch(renderer, /"Demander un devis"/);
   assert.match(css, /width: min\(1480px, calc\(100% - 48px\)\)/);
   assert.match(css, /height: 460px/);
   assert.match(css, /margin: 18px auto 0/);
@@ -68,13 +75,14 @@ test("MSE-25.91 keeps the home hero contained and guarantees complete copy plus 
   assert.doesNotMatch(css, /52vh/);
 });
 
-test("MSE-25.91 exposes payment reassurance once and keeps Visa resilient", () => {
+test("MSE-25.91 exposes payment reassurance only from configured public authority", () => {
   const layout = read("app/agence/[siteSlug]/layout.js");
   const reassurance = read("components/public-site/PublicReassuranceBand.js");
   assert.doesNotMatch(layout, /PublicPaymentMethodsBand/);
-  assert.match(reassurance, /id: "visa"/);
-  assert.match(reassurance, /Visa_2021\.svg/);
-  assert.match(reassurance, /fallback: "VISA"/);
+  assert.match(reassurance, /settings\.paymentMethods/);
+  assert.match(reassurance, /normalizedPaymentMethods/);
+  assert.match(reassurance, /Moyens de paiement publiés/);
+  assert.doesNotMatch(reassurance, /Visa_2021\.svg/);
 });
 
 test("MSE-25.91 uses the canonical backend service DNS", () => {

@@ -25,20 +25,37 @@ import {
   fetchPublicBrandLegalRuntime,
   mergePublicMetadata,
   resolveLegalPageHtml,
+  runtimeLegalValues,
 } from "../../../../lib/public-brand-legal-runtime";
 
+import { consolidateCollectionWebPage } from "../../../../lib/seo/collection-webpage-schema";
+import { buildDestinationCollectionSchemas } from "../../../../lib/seo/destination-collection-schema";
+import { publicDestinationCollectionSections } from "../../../../lib/seo/destination-public-collection";
 import {
   buildBreadcrumbSchema,
-  buildLocalWebPageSchema,
   buildServiceCatalogSchema,
-  buildTravelAgencySchema,
 } from "../../../../lib/seo/json-ld";
-import { buildPageFaqSchema } from "../../../../lib/seo/page-faq-schema";
-import { buildPageSemanticsSchema } from "../../../../lib/seo/page-semantics-schema";
+import {
+  buildMondescaleNetworkSchema,
+  buildNetworkAwareTravelAgencySchema,
+} from "../../../../lib/seo/network-entity-schema";
+import {
+  buildPageFaqSchema,
+  linkFaqToWebPage,
+} from "../../../../lib/seo/page-faq-schema";
+import {
+  buildPageSemanticsSchema,
+  mergePageSemanticsIntoWebPage,
+} from "../../../../lib/seo/page-semantics-schema";
 import { assessLocalContentQuality } from "../../../../lib/seo/local-content-quality";
 import {
   buildLocalPageSeo,
 } from "../../../../lib/seo/local-page-seo";
+import { buildPartnerDirectorySchemas } from "../../../../lib/seo/partner-directory-schema";
+import {
+  buildServiceAwareWebPageSchema,
+  linkServiceCatalogToPage,
+} from "../../../../lib/seo/service-page-schema";
 import { absoluteUrl } from "../../../../lib/seo/site-url";
 
 const PUBLIC_ORIGIN = String(
@@ -90,6 +107,16 @@ function isHomePage(pageSlug) {
 function isServicesPage(pageSlug, page) {
   const slug = normalizePageSlug(pageSlug || page?.slug);
   return slug === "services";
+}
+
+function isPartnersPage(pageSlug, page) {
+  const slug = normalizePageSlug(pageSlug || page?.slug);
+  return ["partenaires", "partners", "nos-partenaires"].includes(slug);
+}
+
+function isDestinationsPage(pageSlug, page) {
+  const slug = normalizePageSlug(pageSlug || page?.slug);
+  return slug === "destinations";
 }
 
 function isLegalPage(pageSlug, page) {
@@ -233,11 +260,13 @@ export default async function AgencySitePage({ params }) {
   let site;
   let page;
   let homePage;
+  let runtime;
   try {
-    [site, page, homePage] = await Promise.all([
+    [site, page, homePage, runtime] = await Promise.all([
       publicSiteApi.getSite(resolved.siteSlug),
       loadPage({ siteSlug: resolved.siteSlug, pageSlug }),
       isHomePage(pageSlug) ? Promise.resolve(null) : publicSiteApi.getHome(resolved.siteSlug),
+      fetchPublicBrandLegalRuntime(resolved.siteSlug),
     ]);
   } catch (error) {
     if (error?.statusCode === 404) notFound();
@@ -251,6 +280,7 @@ export default async function AgencySitePage({ params }) {
   const currentUrl = canonicalUrl({ siteSlug: resolved.siteSlug, pageSlug });
   const localSeo = buildLocalPageSeo({ site, page, pageSlug });
   const quality = assessLocalContentQuality({ site, page });
+  const legalValues = runtimeLegalValues(runtime);
   const breadcrumbItems = [{ name: "Accueil", path: homeUrl }];
   const visibleBreadcrumbItems = [{ name: `Agence ${site?.agency?.city || site?.city || site.name}`, href: homePath }];
   if (currentUrl !== homeUrl) {
@@ -260,32 +290,49 @@ export default async function AgencySitePage({ params }) {
 
   const legalPage = isLegalPage(pageSlug, page);
   const servicesPage = isServicesPage(pageSlug, page);
-  const serviceCatalog = servicesPage ? buildServiceCatalogSchema(site, page) : null;
-  const faqSchema = legalPage ? null : buildPageFaqSchema(page);
-  const webPageSchema = buildLocalWebPageSchema({
+  const partnersPage = isPartnersPage(pageSlug, page);
+  const destinationsPage = isDestinationsPage(pageSlug, page);
+  const rawServiceCatalog = servicesPage ? buildServiceCatalogSchema(site, page) : null;
+  const serviceCatalog = linkServiceCatalogToPage(rawServiceCatalog, currentUrl);
+  const partnerDirectorySchemas = partnersPage ? buildPartnerDirectorySchemas({ site, pageUrl: currentUrl }) : [];
+  const destinationCollectionSchemas = destinationsPage
+    ? buildDestinationCollectionSchemas({
+        site,
+        sections: publicDestinationCollectionSections(page),
+      })
+    : [];
+  const faqSchema = legalPage ? null : buildPageFaqSchema(page, currentUrl);
+  const baseWebPageSchema = buildServiceAwareWebPageSchema({
     site,
     page,
     url: currentUrl,
     title: localSeo.title,
     description: localSeo.description,
     image: localSeo.image,
+    serviceCatalog,
   });
+  const faqAwareWebPageSchema = linkFaqToWebPage(baseWebPageSchema, faqSchema);
   const pageSemanticsSchema = buildPageSemanticsSchema({ page, url: currentUrl });
+  const semanticWebPageSchema = mergePageSemanticsIntoWebPage(faqAwareWebPageSchema, pageSemanticsSchema);
+  const destinationCollectionGraph = consolidateCollectionWebPage(
+    semanticWebPageSchema,
+    destinationCollectionSchemas
+  );
+  const webPageSchema = destinationCollectionGraph.webPage;
+  const remainingDestinationSchemas = destinationCollectionGraph.schemas;
   const sharedHero = !isHomePage(pageSlug) ? homeHeroSection(homePage) : null;
   const needsFallbackHeading = !legalPage && !pageHasHero(page) && !sharedHero;
-  let legalRuntimeHtml = null;
-  if (legalPage) {
-    const runtime = await fetchPublicBrandLegalRuntime(resolved.siteSlug);
-    legalRuntimeHtml = resolveLegalPageHtml(pageSlug, runtime);
-  }
+  const legalRuntimeHtml = legalPage ? resolveLegalPageHtml(pageSlug, runtime) : null;
 
   return (
     <>
-      <JsonLd data={buildTravelAgencySchema(site)} />
+      <JsonLd data={buildMondescaleNetworkSchema()} />
+      <JsonLd data={buildNetworkAwareTravelAgencySchema(site)} />
       <JsonLd data={buildBreadcrumbSchema(breadcrumbItems)} />
       <JsonLd data={webPageSchema} />
-      {pageSemanticsSchema ? <JsonLd data={pageSemanticsSchema} /> : null}
       {serviceCatalog ? <JsonLd data={serviceCatalog} /> : null}
+      {partnerDirectorySchemas.map((schema) => <JsonLd key={schema["@id"]} data={schema} />)}
+      {remainingDestinationSchemas.map((schema) => <JsonLd key={schema["@id"]} data={schema} />)}
       {faqSchema ? <JsonLd data={faqSchema} /> : null}
 
       <div
@@ -326,14 +373,14 @@ export default async function AgencySitePage({ params }) {
 
         {!legalPage && isHomePage(pageSlug) ? <LocalSeoAreaLinks site={site} /> : null}
         {!legalPage && !isHomePage(pageSlug) ? (
-          <LocalContentContext site={site} kind={localSeo.kind} quality={quality} />
+          <LocalContentContext site={site} page={page} kind={localSeo.kind} quality={quality} />
         ) : null}
         {!legalPage && !isHomePage(pageSlug) ? (
           <PublicContextualJourney site={site} currentSlug={canonicalPageSlug(pageSlug || page?.slug)} />
         ) : null}
         {legalPage ? <LegalJourneyCta site={site} /> : null}
 
-        <PublicReassuranceBand />
+        <PublicReassuranceBand legalValues={legalValues} />
       </div>
     </>
   );
@@ -347,9 +394,11 @@ export {
   canonicalUrl,
   homeHeroSection,
   isAliasPage,
+  isDestinationsPage,
   isHomePage,
   isLegalPage,
   isNonCanonicalPageSlug,
+  isPartnersPage,
   isServicesPage,
   pageHasHero,
   pageSections,

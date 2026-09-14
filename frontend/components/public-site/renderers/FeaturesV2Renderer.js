@@ -4,10 +4,26 @@ import {
   getSectionContent,
   getSectionTitle,
 } from "./helpers";
-import { resolvedTargetCities } from "../../../lib/seo/local-area-config";
+import {
+  pageHref,
+  pageSlug,
+  uniquePublishedNavigation,
+} from "../PublicSiteHeader";
 
-const BUSINESS_TRAVEL_MARKERS = ["business travel", "voyage d'affaire", "voyages d'affaire", "voyage d’affaires", "voyages d’affaires"];
-const GROUP_TRAVEL_MARKERS = ["groupe", "groupes", "voyage en groupe", "voyages en groupe"];
+const RELATED_FEATURE_PAGE_SLUGS = new Set(["destinations", "inspiration", "contact"]);
+
+const MANAGED_FEATURE_ACTIONS = Object.freeze([
+  {
+    pattern: /\b(voyages?\s+d['’]?affaires|business\s+travel|deplacements?\s+professionnels?)\b/i,
+    slug: "business-travel",
+    label: "Découvrir nos solutions Business Travel",
+  },
+  {
+    pattern: /\b(voyages?\s+en\s+groupe|voyages?\s+de\s+groupe|groupes?)\b/i,
+    slug: "voyages-en-groupe",
+    label: "Découvrir les voyages en groupe",
+  },
+]);
 
 function normalizeColumns(value) {
   const parsed = Number(value);
@@ -20,13 +36,6 @@ function minimumCardWidth(columns) {
   if (columns === 3) return 250;
   if (columns === 2) return 340;
   return 520;
-}
-
-function joinCities(values) {
-  if (!values.length) return "";
-  if (values.length === 1) return values[0];
-  if (values.length === 2) return `${values[0]} et ${values[1]}`;
-  return `${values.slice(0, -1).join(", ")} et ${values[values.length - 1]}`;
 }
 
 function siteRoot(site) {
@@ -45,119 +54,183 @@ function featureHref(root, value) {
   return `${root}/${href.replace(/^\/+|\/+$/g, "")}`;
 }
 
-function featureAction(root, item) {
-  const configuredHref = featureHref(root, item?.href || item?.url || item?.link);
+function managedFeatureAction(root, item) {
+  const searchable = [item?.title, item?.label, item?.name, item?.text]
+    .filter(Boolean)
+    .join(" ")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  const managed = MANAGED_FEATURE_ACTIONS.find((entry) => entry.pattern.test(searchable));
+  return managed ? { href: `${root}/${managed.slug}`, label: managed.label } : null;
+}
+
+const SEMANTIC_FEATURE_ACTIONS = Object.freeze([
+  {
+    pattern: /\b(voyages?\s+sur\s+mesure|autotours?|road\s*trips?)\b/i,
+    slug: "destinations",
+    label: "Découvrir nos destinations",
+  },
+  {
+    pattern: /\b(croisieres?|sejours?\s+et\s+clubs?|clubs?)\b/i,
+    slug: "partenaires",
+    label: "Découvrir nos partenaires",
+  },
+  {
+    pattern: /\b(billets?\s+d['’]?avion|billets?\s+de\s+train|billetterie)\b/i,
+    slug: "contact",
+    label: "Contacter l’agence",
+  },
+  {
+    pattern: /\b(interlocuteur|conseils?|accompagnement)\b/i,
+    slug: "equipe",
+    label: "Rencontrer votre conseillère",
+  },
+]);
+
+function normalizedFeatureSearchable(item) {
+  return [item?.id, item?.title, item?.label, item?.name, item?.text]
+    .filter(Boolean)
+    .join(" ")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function semanticFeatureAction(site, item) {
+  const searchable = normalizedFeatureSearchable(item);
+  const semantic = SEMANTIC_FEATURE_ACTIONS.find(
+    (entry) => entry.pattern.test(searchable)
+  );
+
+  if (!semantic) return null;
+
+  const publishedPage = uniquePublishedNavigation(site).find(
+    (page) => pageSlug(page) === semantic.slug
+  );
+
+  if (!publishedPage) return null;
+
   return {
-    href: configuredHref || `${root}/contact`,
-    label: String(item?.ctaLabel || item?.linkLabel || item?.actionLabel || "").trim() || (configuredHref ? "En savoir plus" : "Parler de votre projet"),
+    href: pageHref(site.slug, publishedPage),
+    label: semantic.label,
   };
 }
 
-function hasBusinessTravel(items) {
-  return items.some((item) => {
-    const value = `${item?.id || ""} ${item?.title || ""} ${item?.label || ""} ${item?.text || ""} ${item?.description || ""}`.toLowerCase();
-    return BUSINESS_TRAVEL_MARKERS.some((marker) => value.includes(marker));
-  });
+function featureAction(root, item, site) {
+  const href = featureHref(root, item?.href || item?.url || item?.link);
+  const label = String(item?.ctaLabel || item?.linkLabel || item?.actionLabel || "").trim();
+
+  if (href && label) return { href, label };
+
+  const managed = managedFeatureAction(root, item);
+  if (managed) return managed;
+
+  return semanticFeatureAction(site, item);
 }
 
-function isGroupTravelItem(item) {
-  const value = `${item?.id || ""} ${item?.title || ""} ${item?.label || ""}`.toLowerCase();
-  return GROUP_TRAVEL_MARKERS.some((marker) => value.includes(marker));
+function isBusinessTravelItem(item) {
+  const searchable = [item?.id, item?.title, item?.label, item?.name, item?.text]
+    .filter(Boolean)
+    .join(" ")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  return MANAGED_FEATURE_ACTIONS[0].pattern.test(searchable);
 }
 
-function businessTravelItem(site) {
-  const city = localCity(site);
+function managedBusinessTravelItem() {
   return {
     id: "business-travel",
-    title: "Business Travel",
-    text: city
-      ? `Voyages d’affaires : organisation et suivi de vos déplacements professionnels depuis ${city}.`
-      : "Voyages d’affaires : organisation et suivi de vos déplacements professionnels.",
-    href: "business-travel",
+    title: "Voyages d’affaires",
+    text: "Déplacements professionnels, missions, salons ou voyages d’équipe : votre agence vous accompagne dans la préparation de votre projet.",
   };
 }
 
-function serviceItems(site, sourceItems) {
-  const source = Array.isArray(sourceItems) ? sourceItems : [];
-  const items = source.map((item) => isGroupTravelItem(item) ? { ...item, href: "voyages-en-groupe" } : item);
-  if (hasBusinessTravel(items)) return items;
-  return [...items, businessTravelItem(site)];
+function serviceItems(sourceItems) {
+  const items = Array.isArray(sourceItems) ? sourceItems.filter(Boolean) : [];
+  if (items.some(isBusinessTravelItem)) return items;
+  return [...items, managedBusinessTravelItem()];
 }
 
 function defaultFeaturesTitle(site) {
   const city = localCity(site);
-  return city ? `Nos services voyage à ${city}` : "Nos services voyage";
+  return city ? `Services publiés à ${city}` : "Services publiés";
 }
 
 function defaultFeaturesIntroduction(site) {
   const city = localCity(site);
-  const nearby = resolvedTargetCities(site, { limit: 3 });
+  return city
+    ? `Retrouvez les services publiés par votre agence de voyages à ${city}.`
+    : "Retrouvez les services publiés par votre agence de voyages.";
+}
 
-  if (!city) {
-    return "Notre équipe vous conseille selon votre projet, votre budget et votre façon de voyager.";
-  }
-
-  const area = nearby.length
-    ? ` Nous accompagnons également les voyageurs de ${joinCities(nearby)}.`
-    : "";
-
-  return `Notre équipe à ${city} vous conseille selon votre projet, votre budget et votre façon de voyager.${area}`;
+function relatedPublishedPages(site) {
+  return uniquePublishedNavigation(site)
+    .filter((page) => RELATED_FEATURE_PAGE_SLUGS.has(pageSlug(page)))
+    .map((page) => ({
+      slug: pageSlug(page),
+      title: page.title,
+      href: pageHref(site.slug, page),
+    }));
 }
 
 export default function FeaturesV2Renderer({ section, site }) {
   const content = getSectionContent(section);
-  const items = serviceItems(site, content.items);
+  const items = serviceItems(content.items);
   const introduction = content.introduction || content.text || content.description || defaultFeaturesIntroduction(site);
   const columns = normalizeColumns(content.columns);
   const minimum = minimumCardWidth(columns);
   const root = siteRoot(site);
-  const city = localCity(site);
+  const relatedPages = relatedPublishedPages(site);
 
   return (
     <section className="public-site-section public-site-features">
       <div className="public-site-container">
-        <p className="public-site-section-kicker">Votre projet</p>
+        <p className="public-site-section-kicker">Services publiés</p>
         <h2>{getSectionTitle(section, defaultFeaturesTitle(site))}</h2>
         {introduction ? <p className="public-site-section-intro">{introduction}</p> : null}
         {items.length ? (
           <div className="public-site-card-grid" data-columns={columns} style={{ gridTemplateColumns: `repeat(auto-fit, minmax(min(100%, ${minimum}px), 1fr))` }}>
             {items.map((item, index) => {
-              const action = featureAction(root, item);
+              const action = featureAction(root, item, site);
               const heading = item.title || item.label;
               return (
                 <article className="public-site-card public-site-feature-card" key={item.id || item.title || index}>
                   {item.icon ? <span className="public-site-feature-icon" aria-hidden="true">{item.icon}</span> : null}
-                  <h3>{heading}</h3>
+                  {heading ? <h3>{heading}</h3> : null}
                   {item.text ? <p>{item.text}</p> : null}
                   {item.description ? <p>{item.description}</p> : null}
-                  <Link className="public-site-feature-action" href={action.href}>{action.label} <span aria-hidden="true">→</span></Link>
+                  {action ? <Link className="public-site-feature-action" href={action.href}>{action.label} <span aria-hidden="true">→</span></Link> : null}
                 </article>
               );
             })}
           </div>
         ) : null}
-        <div className="public-site-related-links" aria-label={city ? `Poursuivre votre projet avec l’agence de ${city}` : "Préparer votre voyage avec l’agence"}>
-          <Link href={`${root}/destinations`}>{city ? `Destinations conseillées par notre agence à ${city}` : "Explorer nos destinations"}</Link>
-          <Link href={`${root}/inspiration`}>{city ? `Conseils voyage de notre équipe à ${city}` : "Lire nos conseils voyage"}</Link>
-          <Link href={`${root}/contact`}>{city ? `Demander conseil à notre agence de voyages à ${city}` : "Demander un conseil personnalisé"}</Link>
-        </div>
+        {relatedPages.length ? (
+          <nav className="public-site-related-links" aria-label="Pages publiées associées">
+            {relatedPages.map((page) => (
+              <Link href={page.href} key={page.slug}>{page.title}</Link>
+            ))}
+          </nav>
+        ) : null}
       </div>
     </section>
   );
 }
 
 export {
-  BUSINESS_TRAVEL_MARKERS,
-  GROUP_TRAVEL_MARKERS,
-  businessTravelItem,
+  MANAGED_FEATURE_ACTIONS,
+  RELATED_FEATURE_PAGE_SLUGS,
+  SEMANTIC_FEATURE_ACTIONS,
   defaultFeaturesIntroduction,
   defaultFeaturesTitle,
   featureAction,
   featureHref,
-  hasBusinessTravel,
-  isGroupTravelItem,
-  joinCities,
+  isBusinessTravelItem,
   localCity,
+  managedBusinessTravelItem,
+  managedFeatureAction,
+  normalizedFeatureSearchable,
+  relatedPublishedPages,
+  semanticFeatureAction,
   serviceItems,
   siteRoot,
 };

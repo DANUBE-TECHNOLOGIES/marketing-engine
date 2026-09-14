@@ -217,7 +217,7 @@ class PublicSiteReadService {
       slug: true,
       ...pickFields(pageFields, [
         "title", "status", "published", "isPublished", "publishedAt",
-        "displayOrder", "seoTitle", "metaDescription", "path",
+        "displayOrder", "seoTitle", "metaDescription", "h1", "path",
       ]),
     };
 

@@ -1,4 +1,10 @@
 import Link from "next/link";
+import { absoluteUrl } from "../../lib/seo/site-url";
+import {
+  pageHref,
+  pageSlug,
+  uniquePublishedNavigation,
+} from "./PublicSiteHeader";
 
 function telephoneHref(phone) {
   return `tel:${String(phone || "").replace(/\s+/g, "")}`;
@@ -27,6 +33,14 @@ const SOCIAL_LINKS = Object.freeze([
     href: "https://www.linkedin.com/company/109186262",
     icon: "linkedin",
   },
+]);
+
+const FOOTER_PUBLIC_PAGE_SLUGS = new Set([
+  "services",
+  "destinations",
+  "inspiration",
+  "avis",
+  "contact",
 ]);
 
 function SocialIcon({ icon }) {
@@ -63,17 +77,15 @@ function canonicalFooterSlug(value) {
 }
 
 function publishedNavigationSlugs(site) {
-  const navigation = Array.isArray(site?.navigation)
-    ? site.navigation
-    : Array.isArray(site?.navigation?.main)
-      ? site.navigation.main
-      : [];
-
   return new Set(
-    navigation
-      .map((page) => canonicalFooterSlug(page?.slug))
+    uniquePublishedNavigation(site)
+      .map((page) => pageSlug(page))
       .filter(Boolean)
   );
+}
+
+function publishedFooterPages(site) {
+  return uniquePublishedNavigation(site).filter((page) => FOOTER_PUBLIC_PAGE_SLUGS.has(pageSlug(page)));
 }
 
 function localAnchor(label, city) {
@@ -81,18 +93,33 @@ function localAnchor(label, city) {
   return locality ? `${label} à ${locality}` : label;
 }
 
+function canonicalAgencyEntityId(site) {
+  const basePath = site?.basePath || `/agence/${encodeURIComponent(site?.slug || "")}`;
+  return `${absoluteUrl(basePath)}#travel-agency`;
+}
+
+function factualAgencyFooterDescription(site) {
+  const city = String(site?.agency?.city || site?.city || "").trim();
+  return city
+    ? `Retrouvez les coordonnées publiques et les contenus publiés par votre agence de voyages à ${city}.`
+    : "Retrouvez les coordonnées publiques et les contenus publiés par votre agence de voyages.";
+}
+
 export default function PublicSiteFooter({ site }) {
   const agency = site.agency || {};
   const basePath = `/agence/${site.slug}`;
-  const navigationSlugs = publishedNavigationSlugs(site);
-  const hasServicesPage = navigationSlugs.has("services");
-  const hasDestinationsPage = navigationSlugs.has("destinations");
-  const hasReviewsPage = navigationSlugs.has("avis");
-  const hasContactPage = navigationSlugs.has("contact");
+  const footerPages = publishedFooterPages(site);
   const city = agency.city || site.city;
+  const agencyEntityId = canonicalAgencyEntityId(site);
 
   return (
-    <footer className="public-site-footer">
+    <footer
+      className="public-site-footer"
+      itemScope
+      itemType="https://schema.org/TravelAgency"
+      itemID={agencyEntityId}
+      data-geo-reference="canonical-agency-footer"
+    >
       <div className="public-site-footer-decoration" />
 
       <div className="public-site-container public-site-social-row" aria-label="Réseaux sociaux Mondescale Voyages">
@@ -119,66 +146,51 @@ export default function PublicSiteFooter({ site }) {
           <span className="public-site-footer-mark">M</span>
 
           <div>
-            <strong>{site.name}</strong>
-            <p>
-              {city
-                ? `Votre agence de voyages à ${city} vous accompagne dans la création de voyages uniques, adaptés à vos envies.`
-                : "Votre agence vous accompagne dans la création de voyages uniques, adaptés à vos envies."}
-            </p>
+            <strong itemProp="name">{site.name}</strong>
+            <p>{factualAgencyFooterDescription(site)}</p>
           </div>
         </div>
 
         <div>
           <h3>Votre agence</h3>
 
-          <address className="public-site-footer-address">
+          <address
+            className="public-site-footer-address"
+            itemProp="address"
+            itemScope
+            itemType="https://schema.org/PostalAddress"
+          >
             <strong>{site.name}</strong>
 
             {agency.address ? (
               <span>
-                {agency.address}
+                <span itemProp="streetAddress">{agency.address}</span>
                 <br />
-                {agency.postalCode} {agency.city}
+                <span itemProp="postalCode">{agency.postalCode}</span>{" "}
+                <span itemProp="addressLocality">{agency.city}</span>
+                <meta itemProp="addressCountry" content="FR" />
               </span>
             ) : null}
 
             {agency.phone ? (
-              <a href={telephoneHref(agency.phone)}>{agency.phone}</a>
+              <a itemProp="telephone" href={telephoneHref(agency.phone)}>{agency.phone}</a>
             ) : null}
 
             {agency.email ? (
-              <a href={`mailto:${agency.email}`}>{agency.email}</a>
+              <a itemProp="email" href={`mailto:${agency.email}`}>{agency.email}</a>
             ) : null}
           </address>
         </div>
 
         <div>
-          <h3>Préparer votre voyage</h3>
+          <h3>Pages publiées</h3>
 
           <div className="public-site-footer-links">
-            {hasServicesPage ? (
-              <Link href={`${basePath}/services`}>
-                {localAnchor("Services de votre agence de voyages", city)}
+            {footerPages.map((page) => (
+              <Link key={pageSlug(page)} href={pageHref(site.slug, page)}>
+                {page.title}
               </Link>
-            ) : null}
-            {hasDestinationsPage ? (
-              <Link href={`${basePath}/destinations`}>
-                {localAnchor("Destinations conseillées par notre agence", city)}
-              </Link>
-            ) : null}
-            <Link href={`${basePath}/inspiration`}>
-              {localAnchor("Inspirations et conseils voyage", city)}
-            </Link>
-            {hasReviewsPage ? (
-              <Link href={`${basePath}/avis`}>
-                {localAnchor("Avis clients de notre agence", city)}
-              </Link>
-            ) : null}
-            {hasContactPage ? (
-              <Link href={`${basePath}/contact`}>
-                {localAnchor("Contacter notre agence de voyages", city)}
-              </Link>
-            ) : null}
+            ))}
           </div>
         </div>
 
@@ -196,7 +208,7 @@ export default function PublicSiteFooter({ site }) {
 
       <div className="public-site-container public-site-footer-bottom">
         <span>© {new Date().getFullYear()} {site.name}</span>
-        <span>Voyages, conseils et accompagnement personnalisé</span>
+        <span>Coordonnées et contenus publiés par l’agence</span>
       </div>
     </footer>
   );
@@ -204,9 +216,13 @@ export default function PublicSiteFooter({ site }) {
 
 export {
   FOOTER_ALIASES,
+  FOOTER_PUBLIC_PAGE_SLUGS,
   SOCIAL_LINKS,
+  canonicalAgencyEntityId,
   canonicalFooterSlug,
+  factualAgencyFooterDescription,
   localAnchor,
+  publishedFooterPages,
   publishedNavigationSlugs,
   telephoneHref,
 };

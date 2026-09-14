@@ -1,17 +1,22 @@
 import { preconnect, preload } from "react-dom";
-import { getShowcaseUrl } from "../../../lib/showcase-url";
 import {
   getSectionContent,
 } from "./helpers";
 import {
+  isQuoteCtaLabel,
+  quoteRequestHref,
   resolvePublicCtaHref,
-  sitePageHref,
 } from "./ctaLinks";
 
 const NETWORK_HOME_HERO_IMAGE =
   "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=2400&q=85";
 
-function ctaLabel(cta, legacyLabel, fallback) {
+const MANAGED_HOME_CONTACT_CTA = Object.freeze({
+  label: "Construire mon voyage",
+  quoteSource: "general",
+});
+
+function ctaLabel(cta, legacyLabel, fallback = null) {
   return cta?.label || legacyLabel || fallback;
 }
 
@@ -31,6 +36,17 @@ function defaultHeroTitle(site) {
 function defaultHeroEyebrow(site) {
   const city = siteCity(site);
   return city ? `Agence de voyages · ${city}` : "Agence de voyages";
+}
+
+function factualHeroSubtitle(site) {
+  const city = siteCity(site);
+  return city
+    ? `Retrouvez les informations publiées par votre agence de voyages à ${city}.`
+    : "Retrouvez les informations publiées par votre agence de voyages.";
+}
+
+function resolvedHeroSubtitle({ content, site }) {
+  return content.subtitle || content.text || content.description || site?.agency?.description || factualHeroSubtitle(site);
 }
 
 function pageSlug(page) {
@@ -68,11 +84,21 @@ function intentHeroTitle({ page, site }) {
   return String(page?.title || "").trim() || null;
 }
 
+function explicitPageHeading(page) {
+  return String(page?.h1 || "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function resolvedHeroTitle({ content, section, site, page, forcePageIntent = false }) {
   const configured = content.title || content.heading || section.title || "";
   const localIntent = intentHeroTitle({ page, site });
+  const editorialHeading = explicitPageHeading(page);
+
+  if (editorialHeading) return editorialHeading;
   if (forcePageIntent && localIntent) return localIntent;
   if (localIntent && genericHeroTitle(configured, site)) return localIntent;
+
   return configured || localIntent || defaultHeroTitle(site);
 }
 
@@ -110,10 +136,38 @@ function isShowcaseCta(cta, legacyLabel) {
   return /\bdecouvrir\b/.test(label) && /\b(nos|vos)?\s*voyages?\b/.test(label);
 }
 
+function projectCtaLabel(label) {
+  const normalized = String(label || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+  return isQuoteCtaLabel(label) || /\b(construire|creer|imaginer|presenter)\b.*\b(mon|notre|votre)?\s*(voyage|projet)\b/.test(normalized);
+}
+
+function configuredHeroCta(site, cta) {
+  const label = String(cta?.label || "").trim();
+  if (!label) return null;
+  if (projectCtaLabel(label)) return { label, href: quoteRequestHref(site, { source: "general" }) };
+  const explicitHref = String(cta?.href || "").trim();
+  if (!explicitHref) return null;
+  const href = resolvePublicCtaHref(site, explicitHref, "");
+  return href ? { label, href } : null;
+}
+
+function managedHomeContactCta(site, page) {
+  if (!isHomePage(page)) return null;
+  return {
+    label: MANAGED_HOME_CONTACT_CTA.label,
+    href: quoteRequestHref(site, { source: MANAGED_HOME_CONTACT_CTA.quoteSource }),
+  };
+}
+
 export default function HeroV2Renderer({ section, site, page, forcePageIntent = false, sharedNetworkHero = false }) {
   const content = getSectionContent(section);
   const title = resolvedHeroTitle({ content, section, site, page, forcePageIntent });
-  const subtitle = content.subtitle || content.text || content.description || site?.agency?.description || "Votre agence vous accompagne dans la création de vos plus beaux voyages.";
+  const subtitle = resolvedHeroSubtitle({ content, site });
   const alignment = normalizeAlignment(content.alignment);
   const backgroundImage = resolvedHeroImage({ content, page, sharedNetworkHero });
   const backgroundPosition = content.backgroundPosition || "center";
@@ -125,109 +179,56 @@ export default function HeroV2Renderer({ section, site, page, forcePageIntent = 
   if (backgroundImage) {
     const origin = imageOrigin(backgroundImage);
     if (origin) preconnect(origin);
-    preload(backgroundImage, {
-      as: "image",
-      fetchPriority: "high",
-    });
+    preload(backgroundImage, { as: "image", fetchPriority: "high" });
   }
 
-  const primaryCta = content.primaryCta || null;
-  const secondaryCta = content.secondaryCta || null;
-  const primaryLabel = ctaLabel(primaryCta, content.primaryButton, "Demander un devis");
-  const secondaryLabel = ctaLabel(secondaryCta, content.secondaryButton, immersiveNetworkHero ? "Découvrir nos voyages" : "Nous contacter");
-  const primaryShowcase = isShowcaseCta(primaryCta, content.primaryButton);
-  const secondaryShowcase =
-    isShowcaseCta(secondaryCta, content.secondaryButton) ||
-    (!secondaryCta && !content.secondaryButton && immersiveNetworkHero);
-  const primaryHref = primaryShowcase
-    ? getShowcaseUrl(site)
-    : resolvePublicCtaHref(site, primaryCta?.href, "contact", { label: primaryLabel });
-  const secondaryHref = secondaryShowcase
-    ? getShowcaseUrl(site)
-    : secondaryCta
-      ? resolvePublicCtaHref(site, secondaryCta.href, "destinations", { label: secondaryLabel })
-      : immersiveNetworkHero
-        ? sitePageHref(site, "destinations")
-        : content.secondaryButton
-          ? resolvePublicCtaHref(site, "contact", "contact", { label: secondaryLabel })
-          : null;
-
+  const configuredPrimaryCta = configuredHeroCta(site, content.primaryCta);
+  const primaryCta = configuredPrimaryCta || managedHomeContactCta(site, page);
+  const secondaryCta = configuredHeroCta(site, content.secondaryCta);
+  const primaryShowcase = Boolean(primaryCta) && isShowcaseCta(primaryCta);
+  const secondaryShowcase = Boolean(secondaryCta) && isShowcaseCta(secondaryCta);
   const contentStyle = { textAlign: alignment };
   const centered = alignment === "center";
   const rightAligned = alignment === "right";
-  const heroClassName = [
-    "public-site-hero",
-    "public-site-hero--immersive",
-    immersiveNetworkHero ? "public-site-hero--home" : "public-site-hero--inner",
-  ].filter(Boolean).join(" ");
-
+  const heroClassName = ["public-site-hero", "public-site-hero--immersive", immersiveNetworkHero ? "public-site-hero--home" : "public-site-hero--inner"].filter(Boolean).join(" ");
   const overlayStyle = immersiveNetworkHero
     ? `linear-gradient(90deg, rgba(7,29,48,${overlayOpacity}) 0%, rgba(7,29,48,${Math.max(overlayOpacity - 0.16, 0.38)}) 34%, rgba(7,29,48,0.18) 58%, rgba(7,29,48,0.04) 76%, rgba(7,29,48,0) 100%)`
     : `linear-gradient(90deg, rgba(7,29,48,${overlayOpacity}) 0%, rgba(7,29,48,${Math.max(overlayOpacity - 0.12, 0.42)}) 46%, rgba(7,29,48,0.12) 78%, rgba(7,29,48,0.04) 100%)`;
 
   return (
     <section className={heroClassName} data-has-hero-image={backgroundImage ? "true" : "false"} data-page-slug={pageSlug(page) || "home"}>
-      {backgroundImage ? (
-        <div className="public-site-hero-media" aria-hidden="true">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={backgroundImage}
-            alt={imageAlt}
-            loading="eager"
-            fetchPriority="high"
-            width="1920"
-            height="1080"
-            style={{ objectPosition: backgroundPosition }}
-          />
-          <span
-            className="public-site-hero-overlay"
-            style={{ background: overlayStyle }}
-          />
-          <span className="public-site-hero-fade" />
-        </div>
-      ) : null}
-
-      <div className="public-site-container">
-        <div className="public-site-hero-copy" style={contentStyle}>
-          <p className="public-site-eyebrow">{content.eyebrow || defaultHeroEyebrow(site)}</p>
-          <h1 style={centered ? { marginInline: "auto" } : rightAligned ? { marginLeft: "auto" } : undefined}>{title}</h1>
-          <p className="public-site-hero-text" style={centered ? { marginInline: "auto" } : rightAligned ? { marginLeft: "auto" } : undefined}>{subtitle}</p>
-          <div className="public-site-hero-actions" style={{ justifyContent: centered ? "center" : rightAligned ? "flex-end" : "flex-start" }}>
-            {primaryHref ? (
-              <a
-                className="public-site-button"
-                href={primaryHref}
-                {...(primaryShowcase ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-              >
-                {primaryLabel}
-              </a>
-            ) : null}
-            {secondaryHref ? (
-              <a
-                className="public-site-button public-site-button-secondary"
-                href={secondaryHref}
-                {...(secondaryShowcase ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-              >
-                {secondaryLabel}
-              </a>
-            ) : null}
-          </div>
-        </div>
-      </div>
+      {backgroundImage ? <div className="public-site-hero-media" aria-hidden="true">{/* eslint-disable-next-line @next/next/no-img-element */}<img src={backgroundImage} alt={imageAlt} loading="eager" fetchPriority="high" width="1920" height="1080" style={{ objectPosition: backgroundPosition }} /><span className="public-site-hero-overlay" style={{ background: overlayStyle }} /><span className="public-site-hero-fade" /></div> : null}
+      <div className="public-site-container"><div className="public-site-hero-copy" style={contentStyle}>
+        <p className="public-site-eyebrow">{content.eyebrow || defaultHeroEyebrow(site)}</p>
+        <h1 style={centered ? { marginInline: "auto" } : rightAligned ? { marginLeft: "auto" } : undefined}>{title}</h1>
+        <p className="public-site-hero-text" style={centered ? { marginInline: "auto" } : rightAligned ? { marginLeft: "auto" } : undefined}>{subtitle}</p>
+        {primaryCta || secondaryCta ? <div className="public-site-hero-actions" style={{ justifyContent: centered ? "center" : rightAligned ? "flex-end" : "flex-start" }}>
+          {primaryCta ? <a className="public-site-button" href={primaryCta.href} {...(primaryShowcase ? { target: "_blank", rel: "noopener noreferrer" } : {})}>{primaryCta.label}</a> : null}
+          {secondaryCta ? <a className="public-site-button public-site-button-secondary" href={secondaryCta.href} {...(secondaryShowcase ? { target: "_blank", rel: "noopener noreferrer" } : {})}>{secondaryCta.label}</a> : null}
+        </div> : null}
+      </div></div>
     </section>
   );
 }
 
 export {
+  MANAGED_HOME_CONTACT_CTA,
   NETWORK_HOME_HERO_IMAGE,
+  configuredHeroCta,
+  ctaLabel,
   defaultHeroEyebrow,
   defaultHeroTitle,
+  explicitPageHeading,
+  factualHeroSubtitle,
   genericHeroTitle,
   imageOrigin,
   intentHeroTitle,
   isHomePage,
   isShowcaseCta,
+  managedHomeContactCta,
+  projectCtaLabel,
   resolvedHeroAlt,
   resolvedHeroImage,
+  resolvedHeroSubtitle,
   resolvedHeroTitle,
 };

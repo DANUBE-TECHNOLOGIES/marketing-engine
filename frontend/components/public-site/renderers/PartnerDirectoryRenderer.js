@@ -1,12 +1,11 @@
-import { getSectionContent, getSectionTitle, getSectionType } from "./helpers";
+import { getSectionContent, getSectionTitle } from "./helpers";
 import { getPartnerDirectoryCategories } from "../../page-builder/shared/fullPartners";
 import { getPartnerProfile, getPublishablePartnerProfiles } from "../../page-builder/shared/partnerProfile";
 import { getCommonPartners } from "../../page-builder/shared/commonPartners";
-import { resolveAgencyPartnerCandidates } from "../../page-builder/shared/agencyPartnerCatalog";
-import { safePartnerAssetUrl, safePartnerHref, selectAgencyPartners } from "../../page-builder/shared/partnerSelection";
+import { selectedAgencyPartners } from "../../page-builder/shared/agencyPartnerSelection";
+import { safePartnerAssetUrl, safePartnerHref } from "../../page-builder/shared/partnerSelection";
 import styles from "./PartnerDirectoryRenderer.module.css";
 
-const AGENCY_PARTNER_SECTION_TYPES = Object.freeze(new Set(["partner-logos", "partners", "logos"]));
 const DIRECTORY_LOGO_WIDTH = 180;
 const DIRECTORY_LOGO_HEIGHT = 90;
 
@@ -28,24 +27,11 @@ function PartnerCard({ partner }) {
       </div>
       <div className={styles.cardBody}>
         <h3>{profile.name}</h3><p>{profile.summary}</p>
-        {visibleTags.length ? <div className={styles.tags} aria-label={`Spécialités de ${profile.name}`}>{visibleTags.map((tag) => <span key={tag}>{tag}</span>)}</div> : null}
-        {profile.details ? <details className={styles.details}><summary>Découvrir ses spécialités</summary><div className={styles.metadata}><MetadataGroup label="Destinations" values={profile.details.destinations} /><MetadataGroup label="Types de voyages" values={profile.details.travelTypes} /><MetadataGroup label="Marques" values={profile.details.brands} />{profile.details.note ? <p className={styles.note}>{profile.details.note}</p> : null}{website ? <a className={styles.website} href={website} target="_blank" rel="noopener noreferrer">Site du partenaire</a> : null}</div></details> : null}
+        {visibleTags.length ? <div className={styles.tags} aria-label={`Thèmes publiés pour ${profile.name}`}>{visibleTags.map((tag) => <span key={tag}>{tag}</span>)}</div> : null}
+        {profile.details ? <details className={styles.details}><summary>Voir les informations publiées</summary><div className={styles.metadata}><MetadataGroup label="Destinations" values={profile.details.destinations} /><MetadataGroup label="Types de voyages" values={profile.details.travelTypes} /><MetadataGroup label="Marques" values={profile.details.brands} />{profile.details.note ? <p className={styles.note}>{profile.details.note}</p> : null}{website ? <a className={styles.website} href={website} target="_blank" rel="noopener noreferrer">Site du partenaire</a> : null}</div></details> : null}
       </div>
     </article>
   );
-}
-
-function findAgencyPartnerSelection(site) {
-  const pages = Array.isArray(site?.pages) ? site.pages : [];
-  for (const page of pages) {
-    const sections = Array.isArray(page?.sections) && page.sections.length ? page.sections : Array.isArray(page?.blocks) ? page.blocks : [];
-    for (const candidate of sections) {
-      if (!AGENCY_PARTNER_SECTION_TYPES.has(getSectionType(candidate))) continue;
-      const content = getSectionContent(candidate);
-      if (Array.isArray(content.agencyPartners) && content.agencyPartners.length) return content.agencyPartners;
-    }
-  }
-  return [];
 }
 
 function PreferredPartnerCard({ item, agency = false }) {
@@ -58,9 +44,8 @@ function PreferredPartnerCard({ item, agency = false }) {
 
 function PreferredPartners({ site }) {
   const networkItems = getCommonPartners();
-  const candidates = resolveAgencyPartnerCandidates(findAgencyPartnerSelection(site));
-  const agencyItems = selectAgencyPartners(candidates, { networkItems, max: 3 });
-  return <section className={styles.preferred} aria-labelledby="partenaires-selection-title"><div className={styles.preferredHeading}><span>La sélection Mondescale</span><h2 id="partenaires-selection-title">Nos partenaires de référence</h2><p>Les grandes marques que nous mobilisons régulièrement, complétées lorsque nécessaire par des spécialistes adaptés à votre projet.</p></div><div className={styles.networkPreferredGrid}>{networkItems.map((item) => <PreferredPartnerCard key={item.id} item={item} />)}</div>{agencyItems.length ? <div className={styles.agencyPreferred}><h3>Les spécialistes complémentaires de votre agence</h3><div className={styles.agencyPreferredGrid}>{agencyItems.map((item) => <PreferredPartnerCard key={item.id} item={item} agency />)}</div></div> : null}</section>;
+  const agencyItems = selectedAgencyPartners(site, { max: 3 });
+  return <section className={styles.preferred} aria-labelledby="partenaires-selection-title"><div className={styles.preferredHeading}><span>Sélection publiée</span><h2 id="partenaires-selection-title">Partenaires mis en avant sur ce mini-site</h2><p>Cette sélection reprend les partenaires réseau publiés et, lorsqu’ils sont configurés, les partenaires complémentaires affichés pour cette agence.</p></div><div className={styles.networkPreferredGrid}>{networkItems.map((item) => <PreferredPartnerCard key={item.id} item={item} />)}</div>{agencyItems.length ? <div className={styles.agencyPreferred}><h3>Partenaires complémentaires publiés pour cette agence</h3><div className={styles.agencyPreferredGrid}>{agencyItems.map((item) => <PreferredPartnerCard key={item.id} item={item} agency />)}</div></div> : null}</section>;
 }
 
 function CategoryPanel({ category, index }) {
@@ -71,7 +56,7 @@ export default function PartnerDirectoryRenderer({ section, site }) {
   const content = getSectionContent(section);
   const categories = getPartnerDirectoryCategories().map((category) => ({ ...category, partners: getPublishablePartnerProfiles(category.partners) })).filter((category) => category.partners.length);
   const totalPartners = new Set(categories.flatMap((category) => category.partners.map((partner) => partner.id || partner.name))).size;
-  return <section className={`public-site-section ${styles.section}`} data-partner-directory="full"><div className="public-site-container"><header className={styles.header}><div><span className={styles.eyebrow}>Catalogue partenaires</span><h2>{getSectionTitle(section, "Tous nos partenaires voyage")}</h2></div><div className={styles.headerAside}><strong>{totalPartners}</strong><span>références disponibles</span></div><p>{content.text || "Tour-opérateurs, croisiéristes, clubs, circuits et spécialistes : parcourez notre catalogue puis échangez avec votre conseiller pour identifier la solution la plus adaptée à votre projet."}</p></header><PreferredPartners site={site} /><div className={styles.directoryIntro}><div><span className={styles.eyebrow}>Explorer le catalogue</span><h2>Choisissez votre univers de voyage</h2></div><p>Ouvrez un univers pour découvrir les partenaires correspondants. Les détails restent accessibles à la demande pour conserver une lecture claire.</p></div><nav className={styles.categoryNav} aria-label="Univers de partenaires">{categories.map((category) => <a key={category.id} href={`#partenaires-${category.id}`}><span><small>{category.eyebrow}</small><strong>{category.label}</strong></span><b>{category.partners.length}</b></a>)}</nav><div className={styles.directory}>{categories.map((category, index) => <CategoryPanel key={category.id} category={category} index={index} />)}</div></div></section>;
+  return <section className={`public-site-section ${styles.section}`} data-partner-directory="full"><div className="public-site-container"><header className={styles.header}><div><span className={styles.eyebrow}>Catalogue partenaires</span><h2>{getSectionTitle(section, "Partenaires voyage publiés")}</h2></div><div className={styles.headerAside}><strong>{totalPartners}</strong><span>références publiées</span></div><p>{content.text || "Cette page présente les partenaires actuellement publiés dans le catalogue Mondescale, avec leurs informations de référence disponibles sur le mini-site."}</p></header><PreferredPartners site={site} /><div className={styles.directoryIntro}><div><span className={styles.eyebrow}>Explorer le catalogue</span><h2>Parcourir les univers de voyage publiés</h2></div><p>Ouvrez un univers pour consulter les partenaires et les informations actuellement publiés dans cette catégorie.</p></div><nav className={styles.categoryNav} aria-label="Univers de partenaires">{categories.map((category) => <a key={category.id} href={`#partenaires-${category.id}`}><span><small>{category.eyebrow}</small><strong>{category.label}</strong></span><b>{category.partners.length}</b></a>)}</nav><div className={styles.directory}>{categories.map((category, index) => <CategoryPanel key={category.id} category={category} index={index} />)}</div></div></section>;
 }
 
 export { DIRECTORY_LOGO_HEIGHT, DIRECTORY_LOGO_WIDTH };

@@ -3,19 +3,30 @@ import {
   getSectionTitle,
 } from "./helpers";
 import {
+  isQuoteCtaLabel,
+  quoteRequestHref,
   resolvePublicCtaHref,
 } from "./ctaLinks";
 
-function CtaButton({ cta, site, className }) {
-  if (!cta?.label) return null;
-  return (
-    <a
-      className={className}
-      href={resolvePublicCtaHref(site, cta.href, "contact", { label: cta.label })}
-    >
-      {cta.label}
-    </a>
-  );
+function explicitCtaHref(site, href) {
+  const value = String(href || "").trim();
+  if (!value || /^(javascript:|data:|vbscript:)/i.test(value)) return null;
+  return resolvePublicCtaHref(site, value, "", { label: "" });
+}
+
+function configuredCta(site, cta) {
+  const label = String(cta?.label || "").trim();
+  if (!label) return null;
+  if (isQuoteCtaLabel(label)) {
+    return { label, href: quoteRequestHref(site, { source: "general" }) };
+  }
+  const href = explicitCtaHref(site, cta?.href);
+  return href ? { label, href } : null;
+}
+
+function CtaButton({ cta, className }) {
+  if (!cta) return null;
+  return <a className={className} href={cta.href}>{cta.label}</a>;
 }
 
 function isHomePage(page) {
@@ -25,32 +36,31 @@ function isHomePage(page) {
 
 export default function CtaV2Renderer({ section, site, page }) {
   const content = getSectionContent(section);
-
-  /*
-   * The home already exposes a primary CTA in the hero and conversion actions
-   * in the contact block. Historical CTA PageBlocks duplicated that journey
-   * and made the page unnecessarily long, so they remain available on inner
-   * pages but are intentionally suppressed on the home.
-   */
   if (isHomePage(page)) return null;
 
-  const primaryCta = content.primaryCta || (content.primaryButton
-    ? { label: content.primaryButton, href: "contact" }
-    : { label: "Demander un devis", href: "contact" });
-  const secondaryCta = content.secondaryCta || null;
+  const title = getSectionTitle(section, null);
+  const primaryCta = configuredCta(site, content.primaryCta);
+  const secondaryCta = configuredCta(site, content.secondaryCta);
+  const text = content.text || null;
+  const hasPrimaryCta = Boolean(primaryCta);
+  const hasSecondaryCta = Boolean(secondaryCta);
+
+  if (!title && !text && !hasPrimaryCta && !hasSecondaryCta) return null;
 
   return (
     <section className="public-site-section public-site-cta">
       <div className="public-site-container">
-        <h2>{getSectionTitle(section, "Préparons votre prochain voyage")}</h2>
-        {content.text ? <p>{content.text}</p> : null}
-        <div className="public-site-hero-actions">
-          <CtaButton cta={primaryCta} site={site} className="public-site-button" />
-          <CtaButton cta={secondaryCta} site={site} className="public-site-button public-site-button-secondary" />
-        </div>
+        {title ? <h2>{title}</h2> : null}
+        {text ? <p>{text}</p> : null}
+        {hasPrimaryCta || hasSecondaryCta ? (
+          <div className="public-site-hero-actions">
+            <CtaButton cta={primaryCta} className="public-site-button" />
+            <CtaButton cta={secondaryCta} className="public-site-button public-site-button-secondary" />
+          </div>
+        ) : null}
       </div>
     </section>
   );
 }
 
-export { isHomePage };
+export { configuredCta, explicitCtaHref, isHomePage };

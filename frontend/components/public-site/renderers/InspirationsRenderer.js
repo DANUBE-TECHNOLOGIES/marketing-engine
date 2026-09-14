@@ -5,19 +5,13 @@ import {
   getSectionContent,
   getSectionTitle,
 } from "./helpers";
-import { resolvedTargetCities } from "../../../lib/seo/local-area-config";
+import {
+  pageHref,
+  pageSlug,
+  uniquePublishedNavigation,
+} from "../PublicSiteHeader";
 
-function siteRoot(site) {
-  return String(site?.basePath || `/agence/${encodeURIComponent(site?.slug || "")}`)
-    .replace(/\/$/, "");
-}
-
-function joinCities(values) {
-  if (!values.length) return "";
-  if (values.length === 1) return values[0];
-  if (values.length === 2) return `${values[0]} et ${values[1]}`;
-  return `${values.slice(0, -1).join(", ")} et ${values[values.length - 1]}`;
-}
+const RELATED_INSPIRATION_PAGE_SLUGS = new Set(["destinations", "services", "contact"]);
 
 function inspirationHref(site, item) {
   if (!site?.slug || !item?.slug) return null;
@@ -25,7 +19,7 @@ function inspirationHref(site, item) {
 }
 
 function inspirationTitle(item) {
-  return String(item?.title || item?.name || "Inspiration voyage").trim();
+  return String(item?.title || item?.name || "Contenu publié").trim();
 }
 
 function inspirationImage(item) {
@@ -37,24 +31,32 @@ function inspirationImageAlt(item) {
     item?.imageAlt || item?.altText || item?.media?.altText || ""
   ).trim();
   if (configured) return configured;
-  return `Inspiration voyage : ${inspirationTitle(item)}`;
+  const title = inspirationTitle(item);
+  return title ? `Illustration : ${title}` : "";
 }
 
-function localIntroduction(site) {
+function factualIntroduction(site) {
   const city = String(site?.agency?.city || site?.city || "").trim();
-  if (!city) return "";
-  const nearby = resolvedTargetCities(site, { limit: 3 });
-  const area = nearby.length
-    ? ` Ces contenus s’adressent aussi aux voyageurs de ${joinCities(nearby)} accompagnés par notre équipe.`
-    : "";
-  return `Préparez votre prochain voyage avec les conseils, idées de destinations et sélections de votre agence de voyages à ${city}.${area}`;
+  return city
+    ? `Retrouvez les contenus d’inspiration publiés par votre agence de voyages à ${city}.`
+    : "Retrouvez les contenus d’inspiration publiés par votre agence de voyages.";
+}
+
+function relatedPublishedPages(site) {
+  return uniquePublishedNavigation(site)
+    .filter((page) => RELATED_INSPIRATION_PAGE_SLUGS.has(pageSlug(page)))
+    .map((page) => ({
+      slug: pageSlug(page),
+      title: page.title,
+      href: pageHref(site.slug, page),
+    }));
 }
 
 export default function InspirationsRenderer({ section, site }) {
   const content = getSectionContent(section);
   const items = getItems(section, ["items", "articles", "inspirations"]);
-  const root = siteRoot(site);
   const city = String(site?.agency?.city || site?.city || "").trim();
+  const relatedPages = relatedPublishedPages(site);
 
   if (!items.length && content.showWhenEmpty !== true) {
     return null;
@@ -63,20 +65,20 @@ export default function InspirationsRenderer({ section, site }) {
   return (
     <section className="public-site-section public-site-inspirations">
       <div className="public-site-container">
-        <p className="public-site-section-kicker">Conseils voyageurs</p>
+        <p className="public-site-section-kicker">Inspirations publiées</p>
 
         <h2>
           {getSectionTitle(
             section,
-            city ? `Conseils voyage de votre agence à ${city}` : "Laissez-vous inspirer"
+            city ? `Inspirations voyage à ${city}` : "Inspirations voyage"
           )}
         </h2>
 
         {content.text ? (
           <p>{content.text}</p>
-        ) : city ? (
-          <p className="public-site-section-intro">{localIntroduction(site)}</p>
-        ) : null}
+        ) : (
+          <p className="public-site-section-intro">{factualIntroduction(site)}</p>
+        )}
 
         {items.length ? (
           <div className="public-site-editorial-grid">
@@ -115,7 +117,7 @@ export default function InspirationsRenderer({ section, site }) {
                   href={href}
                   key={item.id || item.slug || index}
                   className="public-site-editorial-link"
-                  aria-label={city ? `Lire ${title}, conseil de notre agence de voyages à ${city}` : `Lire l'inspiration ${title}`}
+                  aria-label={`Lire ${title}`}
                 >
                   {card}
                 </Link>
@@ -124,31 +126,27 @@ export default function InspirationsRenderer({ section, site }) {
           </div>
         ) : null}
 
-        <nav
-          className="public-site-related-links"
-          aria-label={city ? `Explorer les conseils et services de notre agence à ${city}` : "Explorer les conseils et services de l'agence"}
-        >
-          <Link href={`${root}/destinations`}>
-            {city ? `Destinations conseillées par notre agence à ${city}` : "Découvrir les destinations proposées par votre agence"}
-          </Link>
-          <Link href={`${root}/services`}>
-            {city ? `Services de notre agence de voyages à ${city}` : "Voir les services de votre agence de voyages"}
-          </Link>
-          <Link href={`${root}/contact`}>
-            {city ? `Contacter notre agence de voyages à ${city}` : "Contacter votre agence de voyages"}
-          </Link>
-        </nav>
+        {relatedPages.length ? (
+          <nav
+            className="public-site-related-links"
+            aria-label="Pages publiées associées"
+          >
+            {relatedPages.map((page) => (
+              <Link href={page.href} key={page.slug}>{page.title}</Link>
+            ))}
+          </nav>
+        ) : null}
       </div>
     </section>
   );
 }
 
 export {
+  RELATED_INSPIRATION_PAGE_SLUGS,
+  factualIntroduction,
   inspirationHref,
   inspirationImage,
   inspirationImageAlt,
   inspirationTitle,
-  joinCities,
-  localIntroduction,
-  siteRoot,
+  relatedPublishedPages,
 };
