@@ -1,0 +1,40 @@
+"use strict";
+const fs=require("node:fs"),crypto=require("node:crypto");
+const{PrismaClient}=require("@prisma/client");const prisma=new PrismaClient();
+const CONTRACT="MSE-25.227",TENANT_SLUG=process.env.TENANT_SLUG||"mondescale",TARGET_SLUG="ambassade-fram-mondescale-bois-colombes",SITE_ID="cms8n8gzt00fdn91akx6kbjjn",AGENCY_ID=6;
+const APPLY=String(process.env.MSE_25_227_CONFIRM||"").toLowerCase()==="true",ROLLBACK=String(process.env.MSE_25_227_ROLLBACK||"").toLowerCase()==="true",SNAPSHOT=process.env.MSE_25_227_SNAPSHOT||"/var/tmp/mse-25-227-bois-colombes-final-grounding-conversion-v1.snapshot.json";
+const C={
+ homeContact:"cmsztn0tm0020tdhdqxuq3vnk",homeMap:"cmsztn0tn0022tdhdeb269wdo",homeFaq:"cmsztn0tm001ztdhdf8qa14q0",agencyTeam:"cmtpxlbmi0003q9pzfo8jgnac",contactContact:"cmsztn0l6000otdhdbljkjjhr",contactMap:"cmsztn0l6000qtdhd24d4d2nq",contactFaq:"cmsztn0l6000rtdhdklar9kv0"};
+const EXPECTED={
+ [C.homeContact]:{postalCode:"92700"},[C.homeMap]:{address:"41 Rue des Bourguignons 92700 Bois-Colombes"},[C.contactContact]:{postalCode:"92700"},[C.contactMap]:{address:"41 Rue des Bourguignons 92700 Bois-Colombes"},
+ [C.homeFaq]:{title:"Questions fréquentes sur accueil",question:"Pourquoi passer par une agence pour accueil ?"},
+ [C.contactFaq]:{title:"Questions fréquentes sur contact",question:"Pourquoi passer par une agence pour contact ?"},
+ [C.agencyTeam]:{member:"Votre équipe",role:"Conseillers voyages"}
+};
+const NEW={
+ [C.homeContact]:c=>({...c,postalCode:"92270"}),
+ [C.homeMap]:c=>({...c,address:"41 Rue des Bourguignons 92270 Bois-Colombes"}),
+ [C.contactContact]:c=>({...c,postalCode:"92270"}),
+ [C.contactMap]:c=>({...c,address:"41 Rue des Bourguignons 92270 Bois-Colombes"}),
+ [C.homeFaq]:c=>({...c,title:"Questions fréquentes sur votre agence de voyages à Bois-Colombes",items:[
+  {question:"Pourquoi préparer son voyage avec une agence à Bois-Colombes ?",answer:"Un échange en agence permet de préciser vos dates, votre budget et vos priorités avant de comparer les solutions de voyage. L’équipe de Bois-Colombes reste ensuite votre point de contact pour la réservation et le suivi du dossier."},
+  {question:"Comment demander un devis à l’agence de Bois-Colombes ?",answer:"Vous pouvez contacter l’agence par téléphone, utiliser le formulaire de contact ou venir au 41 Rue des Bourguignons à Bois-Colombes pour présenter votre projet."},
+  {question:"L’agence peut-elle adapter les recherches à mon budget ?",answer:"Oui. Indiquer votre budget et vos priorités dès le premier échange aide l’équipe à concentrer ses recherches sur les solutions correspondant réellement à votre demande."}
+ ]}),
+ [C.contactFaq]:c=>({...c,title:"Questions fréquentes avant de contacter l’agence de Bois-Colombes",items:[
+  {question:"Quelles informations préparer avant de demander un devis ?",answer:"Vos dates ou période de départ, le nombre de voyageurs, votre budget et vos principales attentes permettent à l’équipe de mieux cadrer la recherche dès le premier échange."},
+  {question:"Comment contacter l’agence Mondescale Bois-Colombes ?",answer:"Vous pouvez joindre l’agence par téléphone, utiliser le formulaire de cette page ou vous rendre au 41 Rue des Bourguignons, 92270 Bois-Colombes."},
+  {question:"Puis-je contacter l’agence pour un billet d’avion uniquement ?",answer:"Oui. La billetterie fait partie des services proposés par l’agence de Bois-Colombes, qui peut étudier avec vous les horaires, correspondances, bagages et conditions tarifaires disponibles au moment de la recherche."}
+ ]}),
+ [C.agencyTeam]:c=>({...c,title:"Céline vous accueille à Bois-Colombes",members:[{name:"Céline",role:"Conseillère voyage",imageAlt:"Céline, conseillère voyage à l'agence Mondescale Bois-Colombes",imageUrl:null,description:"Céline vous accompagne dans la préparation de vos voyages.",imageAssetId:"cmsrn3oj30000mn1atl1dyvud"}]})
+};
+function stable(v){if(Array.isArray(v))return v.map(stable);if(v&&typeof v==="object"&&!(v instanceof Date))return Object.keys(v).sort().reduce((a,k)=>(a[k]=stable(v[k]),a),{});return v}function hash(v){return crypto.createHash("sha256").update(JSON.stringify(stable(v))).digest("hex")}
+async function load(){const tenant=await prisma.tenant.findUnique({where:{slug:TENANT_SLUG}});const site=tenant&&await prisma.agencySite.findFirst({where:{id:SITE_ID,tenantId:tenant.id,slug:TARGET_SLUG},include:{agency:true,pages:{include:{blocks:true}}}});return{tenant,site}}
+function blocks(site){return new Map(site.pages.flatMap(p=>p.blocks.map(b=>[b.id,{...b,pageSlug:p.slug}])))}
+function assertBase(s){if(!s.tenant||!s.site)throw Error(`${CONTRACT}: cible introuvable`);if(Number(s.site.agencyId)!==AGENCY_ID)throw Error(`${CONTRACT}: agencyId inattendu`);if(s.site.agency?.city!=="Bois-Colombes"||s.site.agency?.postalCode!=="92270")throw Error(`${CONTRACT}: identité agence inattendue`);if(s.site.agency?.address!=="41 Rue des Bourguignons")throw Error(`${CONTRACT}: adresse agence inattendue`);const m=blocks(s.site);for(const id of Object.values(C))if(!m.has(id))throw Error(`${CONTRACT}: bloc absent ${id}`);const checks=[[C.homeContact,x=>x.postalCode==="92700"],[C.homeMap,x=>x.address==="41 Rue des Bourguignons 92700 Bois-Colombes"],[C.contactContact,x=>x.postalCode==="92700"],[C.contactMap,x=>x.address==="41 Rue des Bourguignons 92700 Bois-Colombes"],[C.homeFaq,x=>x.title===EXPECTED[C.homeFaq].title&&x.items?.[0]?.question===EXPECTED[C.homeFaq].question],[C.contactFaq,x=>x.title===EXPECTED[C.contactFaq].title&&x.items?.[0]?.question===EXPECTED[C.contactFaq].question],[C.agencyTeam,x=>x.members?.[0]?.name===EXPECTED[C.agencyTeam].member&&x.members?.[0]?.role===EXPECTED[C.agencyTeam].role]];for(const[id,fn]of checks)if(!fn(m.get(id).content||{}))throw Error(`${CONTRACT}: garde source refusée ${id}`);return m}
+function fingerprint(m){return hash(Object.values(C).map(id=>({id,content:m.get(id).content,pageSlug:m.get(id).pageSlug,status:m.get(id).status}))) }
+function plan(m){return Object.values(C).map(id=>({blockId:id,pageSlug:m.get(id).pageSlug,oldContent:m.get(id).content,newContent:NEW[id](m.get(id).content||{})}))}
+async function main(){if(APPLY&&ROLLBACK)throw Error(`${CONTRACT}: APPLY/ROLLBACK exclusifs`);if(ROLLBACK){const s=JSON.parse(fs.readFileSync(SNAPSHOT,"utf8"));if(s.contract!==CONTRACT||s.target!==TARGET_SLUG)throw Error(`${CONTRACT}: snapshot invalide`);await prisma.$transaction(s.blocks.map(x=>prisma.pageBlock.update({where:{id:x.id},data:{content:x.content}})));console.log(JSON.stringify({contract:CONTRACT,mode:"ROLLBACK",restored:true,mutationPerformed:true},null,2));return}
+ const before=await load(),m=assertBase(before),fp=fingerprint(m),p=plan(m);if(!APPLY){console.log(JSON.stringify({contract:CONTRACT,mode:"DRY_RUN",target:TARGET_SLUG,agencyId:AGENCY_ID,guardFingerprint:fp,blockUpdates:p.length,targetPages:[...new Set(p.map(x=>x.pageSlug))].length,routeWrites:0,agencyWrites:0,pageSeoWrites:0,plan:p.map(x=>({blockId:x.blockId,pageSlug:x.pageSlug,oldContent:x.oldContent,newContent:x.newContent})),mutationPerformed:false},null,2));return}
+ const again=await load(),m2=assertBase(again);if(fingerprint(m2)!==fp)throw Error(`${CONTRACT}: état modifié avant APPLY`);fs.writeFileSync(SNAPSHOT,JSON.stringify({contract:CONTRACT,createdAt:new Date().toISOString(),target:TARGET_SLUG,agencyId:AGENCY_ID,guardFingerprint:fp,blocks:p.map(x=>({id:x.blockId,content:x.oldContent}))},null,2),{mode:0o600});await prisma.$transaction(async tx=>{for(const x of p)await tx.pageBlock.update({where:{id:x.blockId},data:{content:x.newContent}})});const after=await load(),am=blocks(after.site);for(const x of p)if(hash(am.get(x.blockId).content)!==hash(x.newContent))throw Error(`${CONTRACT}: validation post-APPLY échouée ${x.blockId}`);console.log(JSON.stringify({contract:CONTRACT,mode:"APPLY",target:TARGET_SLUG,agencyId:AGENCY_ID,originalGuardFingerprint:fp,blockUpdates:p.length,targetPages:[...new Set(p.map(x=>x.pageSlug))].length,routeWrites:0,agencyWrites:0,pageSeoWrites:0,mutationPerformed:true,snapshot:SNAPSHOT},null,2))}
+main().catch(e=>{console.error(e);process.exitCode=1}).finally(()=>prisma.$disconnect());
