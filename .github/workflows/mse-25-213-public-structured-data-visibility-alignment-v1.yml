@@ -1,0 +1,27 @@
+name: MSE-25.213 Public Structured Data Visibility Alignment V1
+
+on:
+  pull_request:
+    paths:
+      - "frontend/lib/seo/json-ld.js"
+      - "frontend/lib/seo/page-faq-schema.js"
+      - "frontend/components/page-builder/shared/blockUtils.js"
+      - "frontend/app/agence/[siteSlug]/[[...pageSlug]]/page.js"
+      - "frontend/lib/seo/local-area-config.js"
+      - "frontend/test/mse-25-213-public-structured-data-visibility-alignment-v1.test.mjs"
+      - ".github/workflows/mse-25-213-public-structured-data-visibility-alignment-v1.yml"
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Structured data visibility regression tests
+        run: node --test test/mse-25-213-public-structured-data-visibility-alignment-v1.test.mjs

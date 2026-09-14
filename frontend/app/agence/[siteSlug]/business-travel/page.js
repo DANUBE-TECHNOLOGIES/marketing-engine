@@ -17,6 +17,14 @@ function cityName(site) {
   return String(site?.agency?.city || site?.city || "").trim();
 }
 
+function agencyName(site) {
+  const configured = String(site?.name || "").trim();
+  if (configured) return configured;
+
+  const city = cityName(site);
+  return city ? `Agence de voyages à ${city}` : "Agence de voyages";
+}
+
 async function loadSite(siteSlug) {
   try {
     const site = await publicSiteApi.getSite(siteSlug);
@@ -37,20 +45,21 @@ export async function generateMetadata({ params }) {
   }
 
   const city = cityName(site);
+  const agency = agencyName(site);
   const canonical = `${PUBLIC_ORIGIN}${routePath(siteSlug)}`;
   const title = city
-    ? `Voyages d’affaires à ${city} | Mondescale`
-    : "Voyages d’affaires | Mondescale";
+    ? `Voyages d’affaires à ${city} | ${agency}`
+    : `Voyages d’affaires | ${agency}`;
   const description = city
-    ? `Informations publiques et coordonnées de l’agence Mondescale à ${city} pour les demandes liées aux voyages d’affaires.`
-    : "Informations publiques et coordonnées de l’agence Mondescale pour les demandes liées aux voyages d’affaires.";
+    ? `Informations publiques et coordonnées de ${agency} pour les demandes liées aux voyages d’affaires à ${city}.`
+    : `Informations publiques et coordonnées de ${agency} pour les demandes liées aux voyages d’affaires.`;
 
   return {
     title,
     description,
     alternates: { canonical },
     robots: { index: true, follow: true },
-    openGraph: { title, description, url: canonical, type: "website", locale: "fr_FR", siteName: site?.name || "Mondescale Voyages" },
+    openGraph: { title, description, url: canonical, type: "website", locale: "fr_FR", siteName: agency },
     twitter: { card: "summary", title, description },
   };
 }
@@ -86,4 +95,4 @@ export default async function AgencyBusinessTravelRoute({ params }) {
   );
 }
 
-export { cityName, loadSite, routePath };
+export { agencyName, cityName, loadSite, routePath };

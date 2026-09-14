@@ -18,6 +18,13 @@ async function loadSite(siteSlug) {
   }
 }
 
+function compactQuoteSite(site, fallbackSlug = "") {
+  return {
+    slug: String(site?.slug || fallbackSlug || "").trim(),
+    city: String(site?.agency?.city || site?.city || "").trim(),
+  };
+}
+
 export async function generateMetadata({ params }) {
   const { siteSlug } = await params;
   const site = await loadSite(siteSlug);
@@ -43,5 +50,8 @@ export default async function QuoteRequestPage({ params, searchParams }) {
   const query = await searchParams;
   const site = await loadSite(siteSlug);
   const source = ["group", "business", "general"].includes(String(query?.source || "")) ? String(query.source) : "general";
-  return <SmartQuoteRequest site={site} source={source} />;
+  const quoteSite = compactQuoteSite(site, siteSlug);
+  return <SmartQuoteRequest site={quoteSite} source={source} />;
 }
+
+export { compactQuoteSite, loadSite };
