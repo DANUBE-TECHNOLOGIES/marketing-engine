@@ -17,7 +17,10 @@ test("MSE-25.71 SSR uses the shared direct compact render contract", () => {
 
   assert.match(source, /loadPublicRenderContract\(siteSlug\)/);
   assert.match(source, /const getContract = cache\(async \(siteSlug\) =>\s*loadPublicRenderContract/s);
-  assert.match(source, /await loadPublicRenderContract\(siteSlug, pageSlug\)/);
+  assert.match(
+    source,
+    /await loadPublicRenderContract\(siteSlug,\s*resolveStoredPageSlug\(pageSlug\)\)/
+  );
   assert.doesNotMatch(source, /requestFrom\("\/api\/public-render-sites"/);
   assert.doesNotMatch(source, /requestRender\(/);
 });

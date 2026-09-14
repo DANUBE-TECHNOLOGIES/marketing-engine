@@ -1,0 +1,21 @@
+name: MSE-25.218 Inspiration Rich Text Runtime V1
+
+on:
+  pull_request:
+    paths:
+      - "frontend/app/agence/[siteSlug]/inspiration/page.js"
+      - "frontend/test/mse-25-218-inspiration-rich-text-runtime-v1.test.mjs"
+      - ".github/workflows/mse-25-218-inspiration-rich-text-runtime-v1.yml"
+  workflow_dispatch:
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run MSE-25.218 regression contract
+        run: node --test frontend/test/mse-25-218-inspiration-rich-text-runtime-v1.test.mjs

@@ -1,0 +1,20 @@
+name: MSE-25.220 Melun Local Intent FAQ V1
+
+on:
+  pull_request:
+    paths:
+      - 'backend/scripts/mse-25-220-melun-local-intent-faq-v1.js'
+      - 'backend/test/mse-25-220-melun-local-intent-faq-v1.test.js'
+      - '.github/workflows/mse-25-220-melun-local-intent-faq-v1.yml'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run MSE-25.220 regression tests
+        run: node --test backend/test/mse-25-220-melun-local-intent-faq-v1.test.js

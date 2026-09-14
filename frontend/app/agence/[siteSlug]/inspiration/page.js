@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import JsonLd from "../../../../components/JsonLd";
+import RichTextV2Renderer from "../../../../components/public-site/renderers/RichTextV2Renderer";
 import { publicSiteApi } from "../../../../lib/public-site-api";
 import { consolidateCollectionWebPage } from "../../../../lib/seo/collection-webpage-schema";
 import {
@@ -64,6 +65,13 @@ function inspirationHeading(site) {
     : "Inspirations voyage";
 }
 
+function inspirationPageHeading(site, page, cmsEditorial = null) {
+  const pageH1 = String(page?.h1 || "").replace(/\s+/g, " ").trim();
+  if (pageH1) return pageH1;
+  if (cmsEditorial?.title) return cmsEditorial.title;
+  return inspirationHeading(site);
+}
+
 function inspirationIntroduction(site) {
   const city = String(site?.agency?.city || site?.city || "").trim();
   const nearby = resolvedTargetCities(site, { limit: 3 });
@@ -76,12 +84,17 @@ function inspirationIntroduction(site) {
     : local;
 }
 
-function inspirationCmsEditorial(site, page) {
-  const blocks =
+function inspirationPageBlocks(page) {
+  return (
     (Array.isArray(page?.contentBlocks) && page.contentBlocks) ||
     (Array.isArray(page?.sections) && page.sections) ||
     (Array.isArray(page?.blocks) && page.blocks) ||
-    [];
+    []
+  );
+}
+
+function inspirationCmsEditorial(site, page) {
+  const blocks = inspirationPageBlocks(page);
 
   const block = blocks.find((item) => {
     const content =
@@ -137,13 +150,43 @@ function inspirationCmsEditorial(site, page) {
   };
 }
 
+function inspirationRichTextBlocks(page) {
+  return inspirationPageBlocks(page).filter((item) => {
+    const content =
+      item?.jsonContent && typeof item.jsonContent === "object"
+        ? item.jsonContent
+        : item?.content && typeof item.content === "object"
+          ? item.content
+          : {};
+
+    const type = String(
+      content?.__builderType ||
+        item?.blockType ||
+        item?.type ||
+        item?.sectionType ||
+        ""
+    )
+      .trim()
+      .toLowerCase();
+
+    const status = String(item?.status || "").trim().toLowerCase();
+    const visible = item?.visibleDesktop !== false || item?.visibleMobile !== false;
+    const html = String(content.html || "").trim();
+
+    return ["text", "rich_text", "rich-text"].includes(type) &&
+      status === "published" &&
+      visible &&
+      Boolean(html);
+  });
+}
+
 export async function generateMetadata({ params }) {
   const { siteSlug } = await params;
 
   try {
     const [site, inspirationPage] = await Promise.all([
       publicSiteApi.getSite(siteSlug),
-      publicSiteApi.getPage(siteSlug, "inspirations"),
+      publicSiteApi.getPage(siteSlug, "inspiration"),
     ]);
     const agencyId = site?.agencyId || site?.agency?.id || null;
     const items = await publicSiteApi.getInspirations({
@@ -203,7 +246,7 @@ export default async function InspirationIndexPage({ params }) {
   try {
     const loaded = await Promise.all([
       publicSiteApi.getSite(siteSlug),
-      publicSiteApi.getPage(siteSlug, "inspirations"),
+      publicSiteApi.getPage(siteSlug, "inspiration"),
     ]);
     site = loaded[0];
     inspirationPage = loaded[1];
@@ -226,6 +269,8 @@ export default async function InspirationIndexPage({ params }) {
   const seo = inspirationSeo(site, inspirationPage);
 
   const cmsEditorial = inspirationCmsEditorial(site, inspirationPage);
+  const richTextBlocks = inspirationRichTextBlocks(inspirationPage);
+  const heading = inspirationPageHeading(site, inspirationPage, cmsEditorial);
   const breadcrumb = buildBreadcrumbSchema([
     { name: "Accueil", path: site.basePath },
     { name: "Inspirations voyage", path: canonical },
@@ -234,7 +279,7 @@ export default async function InspirationIndexPage({ params }) {
     site,
     page: {
       slug: "inspiration",
-      title: "Inspirations voyage",
+      title: heading,
     },
     url: canonical,
     title: seo.title,
@@ -261,10 +306,18 @@ export default async function InspirationIndexPage({ params }) {
           </nav>
 
           <p className="public-site-eyebrow">Idées & conseils</p>
-          <h1>{cmsEditorial?.title || inspirationHeading(site)}</h1>
+          <h1>{heading}</h1>
           <p>{cmsEditorial?.text || inspirationIntroduction(site)}</p>
         </div>
       </section>
+
+      {richTextBlocks.map((block, index) => (
+        <RichTextV2Renderer
+          key={block?.id || `inspiration-rich-text-${index}`}
+          section={block}
+          page={inspirationPage}
+        />
+      ))}
 
       <section className="public-site-section">
         <div className="public-site-container">
@@ -349,5 +402,8 @@ export {
   inspirationHeading,
   inspirationIntroduction,
   inspirationCmsEditorial,
+  inspirationPageBlocks,
+  inspirationPageHeading,
+  inspirationRichTextBlocks,
   inspirationSeo,
 };

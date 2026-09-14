@@ -23,7 +23,10 @@ const registry = fs.readFileSync(
 
 test("MSE-25.71 SSR public rendering no longer self-fetches the Next public-render API", () => {
   assert.match(publicSiteApi, /loadPublicRenderContract\(siteSlug\)/);
-  assert.match(publicSiteApi, /loadPublicRenderContract\(siteSlug, pageSlug\)/);
+  assert.match(
+    publicSiteApi,
+    /loadPublicRenderContract\(siteSlug,\s*resolveStoredPageSlug\(pageSlug\)\)/
+  );
   assert.doesNotMatch(publicSiteApi, /requestFrom\("\/api\/public-render-sites"/);
   assert.doesNotMatch(publicSiteApi, /requestRender\(/);
 });

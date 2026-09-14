@@ -85,6 +85,10 @@ const SECONDARY_PAGE_INHERITANCE = Object.freeze({
   }),
 });
 
+const PUBLIC_PAGE_STORAGE_ALIASES = Object.freeze({
+  inspiration: "inspirations",
+});
+
 const GENERIC_TEAM_IDENTITIES = Object.freeze(new Set([
   "equipe",
   "l equipe",
@@ -132,6 +136,11 @@ function normalizePageSlug(value) {
   return String(value || "").trim().toLowerCase();
 }
 
+function resolveStoredPageSlug(value) {
+  const normalized = normalizePageSlug(value);
+  return PUBLIC_PAGE_STORAGE_ALIASES[normalized] || normalized;
+}
+
 function isHomeSlug(value) {
   return ["", "home", "accueil", "index"].includes(normalizePageSlug(value));
 }
@@ -170,9 +179,9 @@ function homeFromContract(payload) {
 function pageBySlugFromContract(payload, pageSlug) {
   if (isHomeSlug(pageSlug)) return homeFromContract(payload);
 
-  const normalizedSlug = normalizePageSlug(pageSlug);
+  const storedSlug = resolveStoredPageSlug(pageSlug);
   const page = pagesFromContract(payload).find(
-    (candidate) => normalizePageSlug(candidate?.slug) === normalizedSlug
+    (candidate) => normalizePageSlug(candidate?.slug) === storedSlug
   );
 
   return page ? pageFromContract(page) : null;
@@ -239,13 +248,6 @@ function pageFromContract(payload) {
   const sections = Array.isArray(page.sections) ? page.sections : [];
   const blocks = Array.isArray(page.blocks) ? page.blocks : [];
 
-  /*
-   * Website Designer V2 PageBlock rows are the canonical public rendering
-   * source whenever they exist. AgencySiteSection is retained only as the
-   * legacy fallback for pages that have not yet been migrated to V2.
-   * Presentation order is applied in memory only: stored PageBlock ordering
-   * stays untouched in the Website Designer and database.
-   */
   if (blocks.length) {
     const publicBlocks = withHomePresentationOrder(page, blocks);
     return {
@@ -471,7 +473,7 @@ const getPage = cache(async (siteSlug, pageSlug) => {
   if (page) return page;
 
   return pageFromContract(
-    await loadPublicRenderContract(siteSlug, pageSlug)
+    await loadPublicRenderContract(siteSlug, resolveStoredPageSlug(pageSlug))
   );
 });
 
@@ -552,6 +554,7 @@ export const publicSiteApi = {
 export {
   GENERIC_TEAM_IDENTITIES,
   HOME_PRESENTATION_RANK,
+  PUBLIC_PAGE_STORAGE_ALIASES,
   SECONDARY_PAGE_INHERITANCE,
   blockHasAuthoritativeData,
   collectionBlockHasData,
@@ -564,6 +567,7 @@ export {
   pageIsHome,
   publicBlockContent,
   publicBlockType,
+  resolveStoredPageSlug,
   selectInheritanceSourceBlock,
   siteFromContract,
   teamBlockHasMembers,

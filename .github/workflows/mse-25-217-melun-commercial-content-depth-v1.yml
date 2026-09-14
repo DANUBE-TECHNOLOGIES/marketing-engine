@@ -1,0 +1,21 @@
+name: MSE-25.217 Melun Commercial Content Depth V1
+
+on:
+  pull_request:
+    paths:
+      - "backend/scripts/mse-25-217-melun-commercial-content-depth-v1.js"
+      - "backend/test/mse-25-217-melun-commercial-content-depth-v1.test.js"
+      - ".github/workflows/mse-25-217-melun-commercial-content-depth-v1.yml"
+  workflow_dispatch:
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run MSE-25.217 regression contract
+        run: node --test backend/test/mse-25-217-melun-commercial-content-depth-v1.test.js
