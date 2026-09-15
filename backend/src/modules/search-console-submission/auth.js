@@ -102,6 +102,19 @@ function createPersistentOAuthAccessTokenProvider({ prisma, env = process.env, f
     });
     const data = await response.json();
     if (!response.ok || !data?.access_token) {
+      const googleError = String(data?.error || "").trim();
+
+      if (googleError === "invalid_grant") {
+        const error = new Error(
+          "La connexion Google Search Console a expiré ou a été révoquée. Une nouvelle autorisation est nécessaire."
+        );
+        error.code = "SEARCH_CONSOLE_REAUTH_REQUIRED";
+        error.statusCode = 401;
+        error.reauthRequired = true;
+        error.reauthUrl = "/api/search-console/auth";
+        throw error;
+      }
+
       const error = new Error("Impossible de rafraîchir le jeton OAuth Search Console persistant.");
       error.code = "SEARCH_CONSOLE_TOKEN_REFRESH_FAILED";
       error.statusCode = Number(response.status || 503);

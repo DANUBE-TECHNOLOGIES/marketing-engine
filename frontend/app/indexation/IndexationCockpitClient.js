@@ -51,6 +51,26 @@ function readableIssue(item) {
   return item?.message || item?.code || JSON.stringify(item);
 }
 
+const SEARCH_CONSOLE_REAUTH_CODE = "SEARCH_CONSOLE_REAUTH_REQUIRED";
+const SEARCH_CONSOLE_REAUTH_URL = "/api/search-console/auth";
+
+function searchConsoleErrorPayload(error) {
+  return error?.payload || null;
+}
+
+function requiresSearchConsoleReauth(error) {
+  const payload = searchConsoleErrorPayload(error);
+
+  return [
+    payload?.error,
+    payload?.code,
+    payload?.details?.error,
+    payload?.details?.code,
+    payload?.details?.details?.error,
+    payload?.details?.details?.code,
+  ].includes(SEARCH_CONSOLE_REAUTH_CODE);
+}
+
 function StatusBadge({ status }) {
   return (
     <span className={`indexation-status indexation-status-${status}`}>
@@ -79,6 +99,7 @@ export default function IndexationCockpitClient() {
   const [busy, setBusy] = useState({});
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const [reauthRequired, setReauthRequired] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
@@ -93,7 +114,15 @@ export default function IndexationCockpitClient() {
         indexationApi.properties(),
       ]);
 
-    if (healthResult.status === "fulfilled") setHealth(healthResult.value);
+    if (healthResult.status === "fulfilled") {
+      setHealth(healthResult.value);
+      if (
+        healthResult.value?.tokenReadiness?.configured === true &&
+        healthResult.value?.tokenReadiness?.searchConsoleTokenConfigured === true
+      ) {
+        setReauthRequired(false);
+      }
+    }
     if (candidatesResult.status === "fulfilled") setCandidates(candidatesResult.value || { sites: [] });
     if (historyResult.status === "fulfilled") setHistory(historyResult.value || { runs: [] });
 
@@ -126,7 +155,15 @@ export default function IndexationCockpitClient() {
     ]).then(([healthResult, candidatesResult, historyResult, propertiesResult]) => {
       if (cancelled) return;
 
-      if (healthResult.status === "fulfilled") setHealth(healthResult.value);
+      if (healthResult.status === "fulfilled") {
+        setHealth(healthResult.value);
+        if (
+          healthResult.value?.tokenReadiness?.configured === true &&
+          healthResult.value?.tokenReadiness?.searchConsoleTokenConfigured === true
+        ) {
+          setReauthRequired(false);
+        }
+      }
       if (candidatesResult.status === "fulfilled") setCandidates(candidatesResult.value || { sites: [] });
       if (historyResult.status === "fulfilled") setHistory(historyResult.value || { runs: [] });
 
@@ -189,7 +226,12 @@ export default function IndexationCockpitClient() {
       setNotice(successMessage);
       return result;
     } catch (actionError) {
-      setError(actionError.message);
+      if (requiresSearchConsoleReauth(actionError)) {
+        setReauthRequired(true);
+        setError("La connexion Google Search Console a expiré ou a été révoquée.");
+      } else {
+        setError(actionError.message);
+      }
       return null;
     } finally {
       setBusy((current) => ({ ...current, [key]: false }));
@@ -288,6 +330,19 @@ export default function IndexationCockpitClient() {
         </div>
         <small>Approbation explicite obligatoire · Soumission automatique désactivée</small>
       </section>
+
+      {reauthRequired ? (
+        <section className="search-console-reauth" role="alert">
+          <div>
+            <strong>Connexion Search Console expirée ou révoquée</strong>
+            <span>
+              Google demande une nouvelle autorisation. Reconnectez Search Console pour reprendre
+              les opérations d’indexation.
+            </span>
+          </div>
+          <a href={SEARCH_CONSOLE_REAUTH_URL}>Reconnecter Search Console</a>
+        </section>
+      ) : null}
 
       <section className="indexation-controls">
         <label>
