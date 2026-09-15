@@ -6,6 +6,12 @@ const MODE = "seo-opportunity-work-queue";
 const ACTION_TYPE = "seo-opportunity-work-item";
 const ALLOWED_STATUSES = new Set(["planned", "succeeded", "measured"]);
 
+function metricOrNull(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
 function opportunityKey({ siteSlug, query, workKey } = {}) {
   const identity = String(workKey || query || "").trim().toLowerCase();
   return `${String(siteSlug || "").trim().toLowerCase()}::${identity}`;
@@ -54,7 +60,12 @@ class SeoOpportunityWorkQueueService {
         label,
         score: opportunity?.score || 0,
         action: opportunity?.action || null,
-        baseline: { clicks: opportunity?.clicks || 0, impressions: opportunity?.impressions || 0, ctr: opportunity?.ctr || 0, position: opportunity?.position || 0 },
+        baseline: {
+          clicks: metricOrNull(opportunity?.clicks),
+          impressions: metricOrNull(opportunity?.impressions),
+          ctr: metricOrNull(opportunity?.ctr),
+          position: metricOrNull(opportunity?.position),
+        },
       },
     }]);
     await repository.createAuditEvent({ runId: run.id, eventType: "seo-opportunity-created", message: "Opportunité SEO ajoutée à la file de travail.", data: { siteSlug, query: query || null, workKey, sourceType: opportunity?.sourceType || "search-console", score: opportunity?.score || 0 } });
