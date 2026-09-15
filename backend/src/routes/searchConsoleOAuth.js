@@ -123,14 +123,24 @@ function createSearchConsoleOAuthRoutes(prisma, { fetchImpl = fetch } = {}) {
   router.get(["/search-console/token-status", "/api/search-console/token-status"], async (req, res) => {
     try {
       const token = await prisma.googleToken.findFirst({ where: { provider: SEARCH_CONSOLE_PROVIDER }, orderBy: { createdAt: "desc" } });
+      const exists = Boolean(token);
+      const hasAccessToken = Boolean(token?.accessToken);
+      const hasRefreshToken = Boolean(token?.refreshToken);
+      const expired = token?.expiryDate
+        ? Number(token.expiryDate) < Date.now()
+        : true;
+
       return res.json({
         ok: true,
         provider: SEARCH_CONSOLE_PROVIDER,
-        exists: Boolean(token),
-        hasAccessToken: Boolean(token?.accessToken),
-        hasRefreshToken: Boolean(token?.refreshToken),
+        exists,
+        hasAccessToken,
+        hasRefreshToken,
         expiryDate: token?.expiryDate ? String(token.expiryDate) : null,
-        expired: token?.expiryDate ? Number(token.expiryDate) < Date.now() : true,
+        expired,
+        connected: exists && hasRefreshToken,
+        reauthRequired: !exists || !hasRefreshToken,
+        reauthUrl: "/api/search-console/auth",
       });
     } catch (error) {
       return res.status(500).json({ ok: false, error: "SEARCH_CONSOLE_TOKEN_STATUS_FAILED", message: error.message });
