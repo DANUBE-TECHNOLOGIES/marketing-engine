@@ -79,8 +79,17 @@ function areaPhrase(site) {
   return ` Nous accompagnons aussi les voyageurs de ${first} et ${last}.`;
 }
 
+function normalizeLocalSignal(value) {
+  return clean(value)
+    .toLocaleLowerCase("fr-FR")
+    .replace(/[’'\u2010-\u2015-]+/g, " ")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function containsLocalSignal(value, site) {
-  const text = clean(value).toLocaleLowerCase("fr-FR");
+  const text = normalizeLocalSignal(value);
   if (!text) return false;
 
   const locations = [
@@ -91,7 +100,7 @@ function containsLocalSignal(value, site) {
   if (!locations.length) return true;
 
   return locations.some((city) =>
-    text.includes(city.toLocaleLowerCase("fr-FR"))
+    text.includes(normalizeLocalSignal(city))
   );
 }
 
