@@ -1,5 +1,6 @@
 const {
   paragraphFragments,
+  safeHref,
 } = require("./safe-rich-text");
 import {
   getSectionContent,
@@ -188,6 +189,35 @@ export default function RichTextV2Renderer({ section, page }) {
   const paragraphs =
     paragraphFragments(content.html);
 
+  const singularParagraph =
+    String(content.paragraph || "").trim();
+
+  const structuredParagraphs = singularParagraph
+    ? [singularParagraph]
+    : Array.isArray(content.paragraphs)
+      ? content.paragraphs
+          .map((paragraph) => String(paragraph || "").trim())
+          .filter(Boolean)
+      : [];
+
+  const actionHref =
+    content.link && typeof content.link === "object"
+      ? safeHref(content.link.href)
+      : null;
+
+  const actionLabel =
+    content.link && typeof content.link === "object"
+      ? String(content.link.label || "").trim()
+      : "";
+
+  const action =
+    actionHref && actionLabel
+      ? {
+          href: actionHref,
+          label: actionLabel,
+        }
+      : null;
+
   return (
     <section className="public-site-section public-site-rich-text">
       <div
@@ -204,6 +234,11 @@ export default function RichTextV2Renderer({ section, page }) {
           <p>{content.description}</p>
         ) : null}
 
+        {structuredParagraphs.map((paragraph, index) => (
+          <p key={`structured-paragraph-${index}`}>
+            {paragraph}
+          </p>
+        ))}
         {paragraphs.map((fragments, index) => (
           <p key={`paragraph-${index}`}>
             {fragments.map((fragment, fragmentIndex) =>
@@ -222,6 +257,11 @@ export default function RichTextV2Renderer({ section, page }) {
             )}
           </p>
         ))}
+        {action ? (
+          <p className="public-site-rich-text-action">
+            <a href={action.href}>{action.label}</a>
+          </p>
+        ) : null}
       </div>
     </section>
   );
