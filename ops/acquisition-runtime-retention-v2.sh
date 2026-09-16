@@ -72,37 +72,42 @@ for wt in "${WTS[@]}"; do
   branch="$(git -C "$wt" symbolic-ref -q --short HEAD 2>/dev/null || true)"
   if [[ -n "$branch" ]]; then WORKTREE_KEEP+=("$wt"); WORKTREE_REASONS+=("BRANCH_PROTECTED:$branch"); continue; fi
   case "$wt" in
-    "$LEGACY_ROOT"/acquisition-*|"$RUNTIME"/worktrees/mse-25-*) ;;
+    "$LEGACY_ROOT"/acquisition-*)
+      WORKTREE_KEEP+=("$wt")
+      WORKTREE_REASONS+=("ACQUISITION_CHAIN_PROTECTED")
+      continue
+      ;;
+    "$RUNTIME"/worktrees/mse-25-*) ;;
     *) WORKTREE_KEEP+=("$wt"); WORKTREE_REASONS+=("OUTSIDE_MANAGED_SCOPE"); continue ;;
   esac
 done
 
-for rootkind in legacy runtime; do
-  candidates=()
-  for wt in "${WTS[@]}"; do
-    case "$rootkind:$wt" in
-      legacy:"$LEGACY_ROOT"/acquisition-*) ;;
-      runtime:"$RUNTIME"/worktrees/mse-25-*) ;;
-      *) continue ;;
-    esac
-    already=0; for k in "${WORKTREE_KEEP[@]}"; do [[ "$wt" == "$k" ]] && already=1; done
-    (( already == 0 )) || continue
-    ts="$(git -C "$wt" show -s --format=%ct HEAD 2>/dev/null || echo 0)"
-    candidates+=("$ts|$wt")
-  done
-  mapfile -t sorted < <(printf '%s\n' "${candidates[@]:-}" | sed '/^$/d' | sort -t'|' -k1,1nr)
-  n=0
-  for row in "${sorted[@]}"; do
-    wt="${row#*|}"
-    if (( n < DETACHED_KEEP_PER_ROOT )); then WORKTREE_KEEP+=("$wt"); WORKTREE_REASONS+=("DETACHED_ROLLBACK"); else WORKTREE_DELETE+=("$wt"); fi
-    n=$((n+1))
-  done
+# Only detached, clean, non-live runtime mse-25-* worktrees are retention candidates.
+# Legacy acquisition-* worktrees remain protected until their PR chain is explicitly
+# merged/reconverged and a future policy deliberately releases them.
+candidates=()
+for wt in "${WTS[@]}"; do
+  case "$wt" in
+    "$RUNTIME"/worktrees/mse-25-*) ;;
+    *) continue ;;
+  esac
+  already=0; for k in "${WORKTREE_KEEP[@]}"; do [[ "$wt" == "$k" ]] && already=1; done
+  (( already == 0 )) || continue
+  ts="$(git -C "$wt" show -s --format=%ct HEAD 2>/dev/null || echo 0)"
+  candidates+=("$ts|$wt")
+done
+mapfile -t sorted < <(printf '%s\n' "${candidates[@]:-}" | sed '/^$/d' | sort -t'|' -k1,1nr)
+n=0
+for row in "${sorted[@]}"; do
+  wt="${row#*|}"
+  if (( n < DETACHED_KEEP_PER_ROOT )); then WORKTREE_KEEP+=("$wt"); WORKTREE_REASONS+=("DETACHED_ROLLBACK"); else WORKTREE_DELETE+=("$wt"); fi
+  n=$((n+1))
 done
 
 python3 - "$MANIFEST" "$MODE" "$FRONTEND_BEFORE" "$BACKEND_BEFORE" "$FH" "$BH" "$PH" "$FRONTEND_KEEP" "$DETACHED_KEEP_PER_ROOT" "${FRONTEND_KEEP_TAGS[*]}" "${FRONTEND_DELETE[*]}" "${WORKTREE_KEEP[*]}" "${WORKTREE_DELETE[*]}" "${WORKTREE_REASONS[*]}" <<'PY'
 import json,sys
 (path,mode,frontend,backend,fh,bh,ph,fkeep,wkeep,fi,fd,wk,wd,reasons)=sys.argv[1:]
-data={"version":"MSE-25.215-v2","mode":mode,"activeFrontendImage":frontend,"activeBackendSource":backend,"healthBefore":{"frontend":fh,"backend":bh,"postgres":ph},"policy":{"frontendKeep":int(fkeep),"detachedKeepPerRoot":int(wkeep)},"frontendKeep":fi.split() if fi else [],"frontendDelete":fd.split() if fd else [],"worktreeKeep":wk.split() if wk else [],"worktreeDelete":wd.split() if wd else [],"worktreeKeepReasons":reasons.split() if reasons else []}
+data={"version":"MSE-25.215-v2","mode":mode,"activeFrontendImage":frontend,"activeBackendSource":backend,"healthBefore":{"frontend":fh,"backend":bh,"postgres":ph},"policy":{"frontendKeep":int(fkeep),"detachedKeepPerRoot":int(wkeep),"legacyAcquisitionWorktrees":"protected-until-explicit-reconvergence"},"frontendKeep":fi.split() if fi else [],"frontendDelete":fd.split() if fd else [],"worktreeKeep":wk.split() if wk else [],"worktreeDelete":wd.split() if wd else [],"worktreeKeepReasons":reasons.split() if reasons else []}
 with open(path,"w") as f: json.dump(data,f,indent=2,ensure_ascii=False)
 print("Manifest:",path)
 PY
@@ -113,6 +118,7 @@ echo "Active backend source   : $BACKEND_BEFORE"
 echo "Frontend keep           : ${FRONTEND_KEEP_TAGS[*]:-NONE}"
 echo "Frontend delete         : ${FRONTEND_DELETE[*]:-NONE}"
 echo "Worktree delete         : ${WORKTREE_DELETE[*]:-NONE}"
+echo "Legacy acquisition WTs  : PROTECTED"
 echo "Database writes         : NONE"
 echo "Container restart       : NONE"
 
@@ -129,6 +135,9 @@ if [[ "$MODE" == apply ]]; then
   done
 
   for wt in "${WORKTREE_DELETE[@]}"; do
+    case "$wt" in
+      "$LEGACY_ROOT"/acquisition-*) echo "ABORT: legacy acquisition worktree reached delete phase: $wt" >&2; exit 1 ;;
+    esac
     is_live_path "$wt" && { echo "ABORT: candidate became live: $wt" >&2; exit 1; }
     [[ -z "$(git -C "$wt" status --porcelain --untracked-files=normal 2>/dev/null || true)" ]] || { echo "SKIP dirty: $wt"; continue; }
     [[ -z "$(git -C "$wt" symbolic-ref -q --short HEAD 2>/dev/null || true)" ]] || { echo "SKIP branch: $wt"; continue; }
