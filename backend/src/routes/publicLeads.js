@@ -6,6 +6,8 @@ const { sendLeadNotification } = require("../lib/leadNotifications");
 const PROJECTS = new Set(["leisure", "group", "business"]);
 const SOURCES = new Set(["general", "group", "business"]);
 const STATUSES = new Set(["NEW", "CONTACTED", "CONVERTED", "CLOSED"]);
+const PHONE_CONSENT_TEXT = "Je souhaite être contacté(e) par téléphone par Mondescale Voyages au sujet de ce projet de voyage.";
+const PHONE_CONSENT_VERSION = "quote-phone-project-v1-2026-09-17";
 const buckets = new Map();
 
 function clean(value, max = 500) {
@@ -30,6 +32,9 @@ function validate(body = {}) {
     name: clean(body.name, 120), phone: clean(body.phone, 50), email: clean(body.email, 180).toLowerCase(),
     destination: clean(body.destination, 240), dates: clean(body.dates, 160), travellers: clean(body.travellers, 120),
     budget: clean(body.budget, 160), wishes: clean(body.wishes, 2500),
+    phoneProjectContact: body.phoneProjectContact === true,
+    phoneConsentText: clean(body.phoneConsentText, 500),
+    phoneConsentVersion: clean(body.phoneConsentVersion, 120),
   };
   if (clean(body.website, 200)) return { spam: true };
   if (!PROJECTS.has(data.project)) return { error: "INVALID_PROJECT" };
@@ -38,6 +43,8 @@ function validate(body = {}) {
   if (data.name.length < 2) return { error: "INVALID_NAME" };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) return { error: "INVALID_EMAIL" };
   if (data.phone.replace(/\D/g, "").length < 8) return { error: "INVALID_PHONE" };
+  if (!data.phoneProjectContact) return { error: "PHONE_PROJECT_CONTACT_CONSENT_REQUIRED" };
+  if (data.phoneConsentText !== PHONE_CONSENT_TEXT || data.phoneConsentVersion !== PHONE_CONSENT_VERSION) return { error: "INVALID_PHONE_CONSENT_PROOF" };
   if (!data.destination || !data.dates || !data.travellers) return { error: "MISSING_PROJECT_DETAILS" };
   return { data };
 }
@@ -85,8 +92,8 @@ function createPublicLeadsRoutes(prisma) {
       const site = await prisma.agencySite.findFirst({ where: { slug: checked.data.siteSlug }, select: { id: true, agencyId: true, slug: true } });
       if (!site) return res.status(404).json({ ok: false, error: "SITE_NOT_FOUND" });
       const rows = await prisma.$queryRaw`
-        INSERT INTO "PublicLead" ("id","agencyId","agencySiteId","siteSlug","projectType","source","sourcePage","sourcePath","sourceReferrer","utmSource","utmMedium","utmCampaign","utmContent","utmTerm","name","phone","email","destination","travelDates","travellers","budget","wishes","status","erpSyncStatus","notificationStatus","createdAt","updatedAt")
-        VALUES (concat('lead_',replace(gen_random_uuid()::text,'-','')),${site.agencyId},${site.id},${site.slug},${checked.data.project},${checked.data.source},${checked.data.sourcePage || null},${checked.data.sourcePath || null},${checked.data.sourceReferrer || null},${checked.data.utmSource || null},${checked.data.utmMedium || null},${checked.data.utmCampaign || null},${checked.data.utmContent || null},${checked.data.utmTerm || null},${checked.data.name},${checked.data.phone},${checked.data.email},${checked.data.destination},${checked.data.dates},${checked.data.travellers},${checked.data.budget || null},${checked.data.wishes || null},'NEW','DISABLED','PENDING',NOW(),NOW()) RETURNING "id","status","createdAt"`;
+        INSERT INTO "PublicLead" ("id","agencyId","agencySiteId","siteSlug","projectType","source","sourcePage","sourcePath","sourceReferrer","utmSource","utmMedium","utmCampaign","utmContent","utmTerm","name","phone","email","destination","travelDates","travellers","budget","wishes","phoneProjectContact","phoneConsentAt","phoneConsentText","phoneConsentVersion","status","erpSyncStatus","notificationStatus","createdAt","updatedAt")
+        VALUES (concat('lead_',replace(gen_random_uuid()::text,'-','')),${site.agencyId},${site.id},${site.slug},${checked.data.project},${checked.data.source},${checked.data.sourcePage || null},${checked.data.sourcePath || null},${checked.data.sourceReferrer || null},${checked.data.utmSource || null},${checked.data.utmMedium || null},${checked.data.utmCampaign || null},${checked.data.utmContent || null},${checked.data.utmTerm || null},${checked.data.name},${checked.data.phone},${checked.data.email},${checked.data.destination},${checked.data.dates},${checked.data.travellers},${checked.data.budget || null},${checked.data.wishes || null},TRUE,NOW(),${PHONE_CONSENT_TEXT},${PHONE_CONSENT_VERSION},'NEW','DISABLED','PENDING',NOW(),NOW()) RETURNING "id","status","createdAt","phoneProjectContact","phoneConsentAt","phoneConsentVersion"`;
       const notificationResult = await notifyLead(prisma, rows[0].id);
       return res.status(201).json({ ok: true, lead: rows[0], notification: notificationResult.notification || { sent: false, status: "UNKNOWN" } });
     } catch (error) { console.error("[public-leads] intake failed", error); return res.status(500).json({ ok: false, error: "LEAD_INTAKE_FAILED" }); }
@@ -119,7 +126,7 @@ function createPublicLeadsRoutes(prisma) {
   router.get("/api/leads/:id/notes", async (req,res)=>{
     const id=clean(req.params.id,120); if(!validLeadId(id)) return res.status(400).json({ok:false,error:"INVALID_LEAD_ID"});
     try { const notes=await prisma.$queryRaw`SELECT "id","leadId","content","author","createdAt" FROM "PublicLeadNote" WHERE "leadId"=${id} ORDER BY "createdAt" DESC LIMIT 100`; return res.json({ok:true,notes}); }
-    catch(error){ console.error("[leads] notes list failed",error); return res.status(500).json({ok:false,error:"LEAD_NOTES_FAILED"}); }
+    catch(error){ console.error("[leads] notes list failed",error); return res.status(500).json({ok:false,error:"LEADS_NOTES_FAILED"}); }
   });
   router.post("/api/leads/:id/notes", async (req,res)=>{
     const id=clean(req.params.id,120), content=clean(req.body?.content,3000), author=clean(req.body?.author,120)||null;
@@ -145,4 +152,4 @@ function createPublicLeadsRoutes(prisma) {
   router.post("/api/leads/:id/notify", async(req,res)=>{ const id=clean(req.params.id,120); if(!validLeadId(id)) return res.status(400).json({ok:false,error:"INVALID_LEAD_ID"}); try{const result=await notifyLead(prisma,id);if(!result.ok)return res.status(result.statusCode||500).json(result);return res.json(result);}catch(error){console.error("[leads] notify retry failed",error);return res.status(500).json({ok:false,error:"LEAD_NOTIFY_FAILED"});} });
   return router;
 }
-module.exports=createPublicLeadsRoutes; module.exports.validate=validate; module.exports.STATUSES=STATUSES; module.exports.notifyLead=notifyLead;
+module.exports=createPublicLeadsRoutes; module.exports.validate=validate; module.exports.STATUSES=STATUSES; module.exports.notifyLead=notifyLead; module.exports.PHONE_CONSENT_TEXT=PHONE_CONSENT_TEXT; module.exports.PHONE_CONSENT_VERSION=PHONE_CONSENT_VERSION;
