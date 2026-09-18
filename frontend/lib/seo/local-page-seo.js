@@ -217,7 +217,17 @@ function descriptionForKind({ kind, site, page }) {
       lead = `${brand}, agence de voyages${where} : conseils personnalisés, séjours, circuits, croisières et voyages sur mesure.`;
   }
 
-  return truncateSentence(`${lead}${areaPhrase(site)}`);
+  const localArea = areaPhrase(site);
+  const combined = `${lead}${localArea}`;
+
+  // Never truncate a local-area sentence halfway through.
+  // If the complete local signal does not fit in the meta-description,
+  // keep the primary description intact instead.
+  if (localArea && clean(combined).length > MAX_DESCRIPTION_LENGTH) {
+    return truncateSentence(lead);
+  }
+
+  return truncateSentence(combined);
 }
 
 function extractPageImage(page, site) {
