@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireRole } from "../lib/access";
 import MainLayout from "../components/MainLayout";
 import TerritorialSeoPanel from "./TerritorialSeoPanel";
+import DirectionalIntelligencePanel from "./DirectionalIntelligencePanel";
 
 const BACKEND_URL = process.env.BACKEND_INTERNAL_URL || "http://backend:4000";
 const TENANT_SLUG = process.env.TENANT_SLUG || process.env.NEXT_PUBLIC_TENANT_SLUG || "mondescale";
@@ -165,7 +166,14 @@ export default async function RankingGridPage({ searchParams }) {
 
   let heatmap = null;
   let comparison = null;
-  if (latest) heatmap = await getJson(`/rankings/grid/campaigns/${latest.id}/heatmap`);
+  let directionalIntelligence = null;
+  if (latest) {
+    heatmap = await getJson(`/rankings/grid/campaigns/${latest.id}/heatmap`);
+
+    directionalIntelligence = await getJsonOrNull(
+      `/rankings/grid/directional-intelligence?campaignId=${latest.id}`
+    );
+  }
   if (completed.length >= 2) {
     // Legacy 15z and calibrated 14z campaigns are intentionally non-comparable.
     comparison = await getJsonOrNull(`/rankings/grid/compare?fromCampaignId=${completed[1].id}&toCampaignId=${completed[0].id}`);
@@ -212,6 +220,10 @@ export default async function RankingGridPage({ searchParams }) {
         <Heatmap heatmap={heatmap} />
         <Comparison comparison={comparison} />
       </div>
+
+      <DirectionalIntelligencePanel
+        intelligence={directionalIntelligence}
+      />
 
       <TerritorialSeoPanel
         campaignId={latest.id}

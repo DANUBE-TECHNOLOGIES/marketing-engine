@@ -7,6 +7,9 @@ const { methodologyMetadata } = require("./dataforseo-provider");
 const { methodologyKey } = require("./service");
 const { buildSpatialReport } = require("./spatial-analysis");
 const { analyzeGeoPriorities } = require("./geo-priority");
+const {
+  analyzeDirectionalIntelligence,
+} = require("./directional-intelligence");
 const { enrichPriorityCells } = require("./territory-resolver");
 const { buildTerritorialActionPlan, actionsFor } = require("./territorial-action-plan");
 const {
@@ -139,6 +142,43 @@ module.exports = function createRankingGridSpatialRoutes({ prisma }) {
         methodology,
         methodologyKey: key,
         ...buildSpatialReport(campaigns),
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.get("/rankings/grid/directional-intelligence", async (req, res, next) => {
+    try {
+      const scope = await tenantId(req);
+      const requestedCampaignId = Number(req.query?.campaignId);
+
+      if (!Number.isInteger(requestedCampaignId) || requestedCampaignId <= 0) {
+        return res.status(400).json({
+          error: "ranking_grid_campaign_id_required",
+        });
+      }
+
+      const { methodology, key, rows } =
+        await latestCalibratedCampaignRows(scope);
+
+      const campaigns = await loadSelectedCampaigns(
+        scope,
+        rows,
+        requestedCampaignId
+      );
+
+      const intelligence =
+        analyzeDirectionalIntelligence(campaigns[0]);
+
+      res.json({
+        mode: "read_only",
+        databaseWrites: 0,
+        providerCalls: 0,
+        executionTriggered: false,
+        methodology,
+        methodologyKey: key,
+        ...intelligence,
       });
     } catch (error) {
       next(error);
