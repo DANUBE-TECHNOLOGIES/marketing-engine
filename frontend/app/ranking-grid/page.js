@@ -230,6 +230,7 @@ export default async function RankingGridPage({ searchParams }) {
         agencyId={agencyId}
         keywordId={keywordId}
         loadPlan={loadTerritorialPlan}
+        directionalIntelligence={directionalIntelligence}
       />
 
       <section className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">

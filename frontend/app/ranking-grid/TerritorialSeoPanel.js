@@ -24,6 +24,13 @@ function urgencyClasses(urgency) {
   return "bg-slate-100 text-slate-700 border-slate-200";
 }
 
+function urgencyLabel(urgency) {
+  if (urgency === "critical") return "Critique";
+  if (urgency === "high") return "Élevée";
+  if (urgency === "medium") return "Modérée";
+  return "Surveillance";
+}
+
 function priorityClasses(priority) {
   if (priority === "p1") return "bg-rose-100 text-rose-900";
   if (priority === "p2") return "bg-orange-100 text-orange-900";
@@ -40,7 +47,13 @@ function planHref({ agencyId, keywordId, loadPlan }) {
   return `/ranking-grid?${query.toString()}`;
 }
 
-export default async function TerritorialSeoPanel({ campaignId, agencyId, keywordId, loadPlan = false }) {
+export default async function TerritorialSeoPanel({
+  campaignId,
+  agencyId,
+  keywordId,
+  loadPlan = false,
+  directionalIntelligence = null,
+}) {
   const [priorityPayload, trackingPayload] = await Promise.all([
     getJsonOrNull(`/rankings/grid/spatial-priorities?campaignId=${campaignId}`),
     getJsonOrNull(`/rankings/grid/territorial-actions?agencyId=${agencyId}&keywordId=${keywordId}`),
@@ -57,7 +70,21 @@ export default async function TerritorialSeoPanel({ campaignId, agencyId, keywor
   }
 
   const summary = priority.summary || {};
-  const hasUrgentTerritories = Number(summary.p1 || 0) + Number(summary.p2 || 0) > 0;
+  const directional = directionalIntelligence || {};
+  const directionalProfile = directional.profile || {};
+  const directionalDecay = directional.decay || {};
+  const worstQuadrant =
+    directional.asymmetry?.worstQuadrant || null;
+
+  const directionLabel =
+    worstQuadrant?.label ||
+    summary.dominantPriorityDirection ||
+    "—";
+
+  const hasUrgentTerritories =
+    Number(summary.p1 || 0) +
+      Number(summary.p2 || 0) >
+    0;
   let plan = null;
 
   // Intentionally lazy: IGN reverse geocoding only runs after the explicit territorialPlan=1 navigation.
@@ -87,8 +114,13 @@ export default async function TerritorialSeoPanel({ campaignId, agencyId, keywor
           <div className="mt-1 text-3xl font-black text-[#0f2e46]">{summary.actionableCells || 0}</div>
         </div>
         <div className="rounded-xl bg-slate-50 p-4">
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Direction prioritaire</div>
-          <div className="mt-1 text-xl font-black capitalize text-[#0f2e46]">{summary.dominantPriorityDirection || "—"}</div>
+          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Zone de faiblesse prioritaire</div>
+          <div className="mt-1 text-xl font-black text-[#0f2e46]">{directionLabel}</div>
+          <div className="mt-1 text-xs text-slate-500">
+            {worstQuadrant?.averagePosition != null
+              ? `Position moyenne #${worstQuadrant.averagePosition}`
+              : "Diagnostic territorial"}
+          </div>
         </div>
         <div className="rounded-xl bg-slate-50 p-4">
           <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Actions suivies</div>
@@ -98,6 +130,54 @@ export default async function TerritorialSeoPanel({ campaignId, agencyId, keywor
           </div>
         </div>
       </div>
+
+      {directionalProfile.label ? (
+        <div className="border-t px-6 py-5">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Diagnostic
+              </div>
+              <div className="mt-1 font-black text-slate-900">
+                {directionalProfile.label}
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Position au centre
+              </div>
+              <div className="mt-1 text-2xl font-black text-[#0f2e46]">
+                {directionalDecay.centerRank != null
+                  ? `#${directionalDecay.centerRank}`
+                  : "—"}
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Moyenne périphérique
+              </div>
+              <div className="mt-1 text-2xl font-black text-[#0f2e46]">
+                {directionalDecay.peripheralAveragePosition != null
+                  ? `#${directionalDecay.peripheralAveragePosition}`
+                  : "—"}
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Décrochage territorial
+              </div>
+              <div className="mt-1 text-2xl font-black text-[#0f2e46]">
+                {directionalDecay.peripheralMinusCenter != null
+                  ? `+${directionalDecay.peripheralMinusCenter}`
+                  : "—"}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {hasUrgentTerritories && !plan ? (
         <div className="border-t p-6">
@@ -141,7 +221,7 @@ export default async function TerritorialSeoPanel({ campaignId, agencyId, keywor
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 className="font-black text-slate-900">{territory.city}</h3>
                   <span className={`rounded-full border px-2 py-1 text-[10px] font-bold uppercase ${urgencyClasses(territory.urgency)}`}>
-                    {territory.urgency}
+                    {urgencyLabel(territory.urgency)}
                   </span>
                 </div>
                 <div className="mt-2 text-xs text-slate-500">
