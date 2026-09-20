@@ -60,7 +60,7 @@ export function proxy(request) {
   const isPublicAcquisitionPage =
     (request.method === "GET" || request.method === "HEAD") &&
     (pathname === "/acquisition" ||
-      pathname.startsWith("/acquisition/"));
+      (pathname.startsWith("/acquisition/") || pathname.startsWith("/groupes/")));
 
   const isPublicAcquisitionApi =
     pathname === "/api/public/acquisition-funnels" ||
