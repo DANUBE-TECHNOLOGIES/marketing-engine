@@ -64,7 +64,9 @@ export function proxy(request) {
 
   const isPublicAcquisitionApi =
     pathname === "/api/public/acquisition-funnels" ||
-    pathname.startsWith("/api/public/acquisition-funnels/");
+    (pathname.startsWith("/api/public/acquisition-funnels/") ||
+      pathname === "/api/public/group-campaigns" ||
+      pathname.startsWith("/api/public/group-campaigns/"));
 
   const isPublicWebCallbackApi =
     pathname === "/api/public/web-callback" ||

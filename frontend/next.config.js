@@ -43,6 +43,10 @@ const nextConfig = {
         source: "/api/public/web-callback/:path*",
         destination: `${origin}/api/public/web-callback/:path*`,
       },
+      {
+        source: "/api/public/group-campaigns/:path*",
+        destination: `${origin}/api/public/group-campaigns/:path*`,
+      },
     ];
   },
 
@@ -54,6 +58,10 @@ const nextConfig = {
       },
       {
         source: "/acquisition/:path*",
+        headers: publicSecurityHeaders,
+      },
+      {
+        source: "/groupes/:path*",
         headers: publicSecurityHeaders,
       },
       {
