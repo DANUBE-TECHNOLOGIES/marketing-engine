@@ -1602,3 +1602,30 @@ model TemplateAssignment {
   @@index([tenantId, pageType, active])
   @@index([agencyId, pageType, active])
 }
+
+
+model GroupPreRegistration {
+  id                      String   @id
+  campaignSlug            String
+  name                    String
+  email                   String
+  phone                   String?
+  adults                  Int      @default(1)
+  children                Int      @default(0)
+  infants                 Int      @default(0)
+  travellerCount          Int      @default(1)
+  origins                 Json     @default("[]")
+  departures              Json     @default("[]")
+  preferredDeparture      String?
+  intent                  String
+  source                  String?
+  emailMarketingConsent   Boolean  @default(false)
+  projectContactConsent   Boolean  @default(true)
+  consentVersion          String
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  @@index([campaignSlug])
+  @@index([email])
+  @@index([createdAt])
+}
