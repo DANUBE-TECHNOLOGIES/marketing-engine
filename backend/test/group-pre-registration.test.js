@@ -1,0 +1,2 @@
+const test=require("node:test");const assert=require("node:assert/strict");const {CAMPAIGN}=require("../src/modules/group-pre-registration");
+test("group campaign is network scoped and price/date contract is stable",()=>{assert.equal(CAMPAIGN.partner,null);assert.equal(CAMPAIGN.price,1070);assert.deepEqual(CAMPAIGN.origins,["PARIS","LYON"]);assert.deepEqual(CAMPAIGN.departures,["2027-01-02","2027-01-09","2027-01-16","2027-01-23","2027-01-30","2027-02-06"]);assert.ok(CAMPAIGN.included.includes("Visa et frais de services obligatoires"))});
