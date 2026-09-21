@@ -47,6 +47,10 @@ const nextConfig = {
         source: "/api/public/group-campaigns/:path*",
         destination: `${origin}/api/public/group-campaigns/:path*`,
       },
+      {
+        source: "/api/group-campaigns/:path*",
+        destination: `${origin}/api/group-campaigns/:path*`,
+      },
     ];
   },
 
