@@ -46,6 +46,7 @@ items:[
 label:"Agences",
 items:[
 ["🏢 Agences","/agencies"],
+["👥 Groupes","/admin/groupes/gloire-des-pharaons-2027"],
 ["📊 Performance","/direction"]
 ]
 },
