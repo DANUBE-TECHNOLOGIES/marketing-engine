@@ -1666,3 +1666,18 @@ model GroupPreRegistrationNote {
 
   @@index([preRegistrationId, createdAt])
 }
+
+
+model GroupCampaignSettings {
+  id                  String    @id
+  campaignSlug        String    @unique
+  status              String    @default("DRAFT")
+  objectiveTravellers Int?
+  minimumTravellers   Int?
+  decisionDeadline    DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([status])
+  @@index([decisionDeadline])
+}
