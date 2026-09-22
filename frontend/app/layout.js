@@ -1,4 +1,4 @@
-import AdminEngineNav from "../components/AdminEngineNav";
+import RouteAwareAdminEngineNav from "../components/RouteAwareAdminEngineNav";
 import { getPublicSiteUrl } from "../lib/seo/site-url";
 import "./globals.css";
 
@@ -12,7 +12,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="fr">
       <body>
-        <AdminEngineNav />
+        <RouteAwareAdminEngineNav />
         {children}
       </body>
     </html>
