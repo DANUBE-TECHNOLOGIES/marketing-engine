@@ -670,6 +670,9 @@ function routes({ prisma } = {}) {
               "source",
               "emailMarketingConsent",
               "projectContactConsent",
+              "phoneMarketingConsent",
+              "phoneMarketingConsentAt",
+              "phoneMarketingConsentVersion",
               "consentVersion",
               "createdAt",
               "updatedAt"
@@ -677,7 +680,7 @@ function routes({ prisma } = {}) {
             VALUES (
               $1,$2,$3,$4,$5,$6,$7,$8,$9,
               $10::jsonb,$11::jsonb,$12,$13,$14,
-              $15,$16,$17,NOW(),NOW()
+              $15,$16,$17,$18,$19,$20,NOW(),NOW()
             )
           `,
           id,
@@ -696,7 +699,10 @@ function routes({ prisma } = {}) {
           source,
           body.emailMarketingConsent === true,
           true,
-          "2026-09-groups-v1"
+          body.phoneMarketingConsent === true,
+          body.phoneMarketingConsent === true ? new Date() : null,
+          "PHONE-PROSPECTION-2026-08-11-V1",
+          "2026-09-groups-v2"
         );
 
         return res.status(201).json({
