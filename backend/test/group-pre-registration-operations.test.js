@@ -5,6 +5,8 @@ const assert = require("node:assert/strict");
 
 const {
   OPERATIONAL_STATUSES,
+  GROUP_CAMPAIGN_STATUSES,
+  buildCampaignPilot,
   buildOperationalAnalytics,
   validateAllocation,
   buildAnalytics,
@@ -250,4 +252,41 @@ test("V1.3 compatibility remains distinct from operational allocation", () => {
   assert.equal(result.dates["2027-01-09"].origins.PARIS.travellers, 5);
   assert.equal(result.operations.allocation.matrix["2027-01-09"].PARIS.allocatedTravellers, 0);
   assert.equal(result.operations.allocation.matrix["2027-01-09"].PARIS.capacity, 30);
+});
+
+
+test("V1.4 campaign pilot aggregates capacity and commercial progress", () => {
+  assert.deepEqual(GROUP_CAMPAIGN_STATUSES, ["DRAFT","OPEN","GUARANTEED","FULL","CLOSED"]);
+  const rows = [
+    { travellerCount: 4, status: "OPTION", allocatedDeparture: "2027-01-16", allocatedOrigin: "PARIS" },
+    { travellerCount: 6, status: "CONFIRMED", allocatedDeparture: "2027-01-16", allocatedOrigin: "PARIS" },
+    { travellerCount: 3, status: "QUALIFIED", allocatedDeparture: "2027-01-16", allocatedOrigin: "PARIS" },
+  ];
+  const capacities = [
+    { departure: "2027-01-16", origin: "PARIS", capacity: 20, target: 15 },
+    { departure: "2027-01-23", origin: "LYON", capacity: 10, target: 8 },
+  ];
+  const pilot = buildCampaignPilot(rows, capacities, {
+    status: "OPEN", objectiveTravellers: 25, minimumTravellers: 10, decisionDeadline: "2026-10-15T00:00:00Z",
+  }, new Date("2026-09-22T12:00:00Z"));
+  assert.equal(pilot.totalCapacity, 30);
+  assert.equal(pilot.totalTarget, 23);
+  assert.equal(pilot.optionTravellers, 4);
+  assert.equal(pilot.confirmedTravellers, 6);
+  assert.equal(pilot.committedTravellers, 10);
+  assert.equal(pilot.remainingCapacity, 20);
+  assert.equal(pilot.objectiveProgress, 0.4);
+  assert.equal(pilot.minimumProgress, 0.6);
+  assert.equal(pilot.alerts.some((item) => item.code === "MINIMUM_WITH_OPTIONS"), true);
+});
+
+test("V1.4 campaign pilot raises threshold and deadline alerts deterministically", () => {
+  const pilot = buildCampaignPilot([
+    { travellerCount: 12, status: "CONFIRMED", allocatedDeparture: "2027-01-16", allocatedOrigin: "PARIS" },
+  ], [{ departure: "2027-01-16", origin: "PARIS", capacity: 13, target: 12 }], {
+    status: "OPEN", objectiveTravellers: 13, minimumTravellers: 10, decisionDeadline: "2026-09-20T00:00:00Z",
+  }, new Date("2026-09-22T12:00:00Z"));
+  assert.equal(pilot.alerts.some((item) => item.code === "MINIMUM_REACHED"), true);
+  assert.equal(pilot.alerts.some((item) => item.code === "CAPACITY_NEAR_FULL"), true);
+  assert.equal(pilot.alerts.some((item) => item.code === "DECISION_DEADLINE_PASSED"), true);
 });
