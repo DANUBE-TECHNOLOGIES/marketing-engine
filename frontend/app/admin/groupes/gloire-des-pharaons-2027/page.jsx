@@ -253,6 +253,11 @@ export default function GroupsAdmin() {
   const [noteSaving, setNoteSaving] =
     useState({});
 
+  const [capacityDrafts, setCapacityDrafts] =
+    useState({});
+  const [capacitySaving, setCapacitySaving] =
+    useState("");
+
   const loadData = useCallback(
     async ({ quiet = false } = {}) => {
       if (quiet) {
@@ -267,6 +272,7 @@ export default function GroupsAdmin() {
         const [
           analyticsResponse,
           listResponse,
+          capacityResponse,
         ] = await Promise.all([
           fetch(
             `${API}/api/group-campaigns/${SLUG}/analytics`,
@@ -282,11 +288,19 @@ export default function GroupsAdmin() {
               cache: "no-store",
             }
           ),
+          fetch(
+            `${API}/api/group-campaigns/${SLUG}/capacities`,
+            {
+              credentials: "include",
+              cache: "no-store",
+            }
+          ),
         ]);
 
         if (
           !analyticsResponse.ok ||
-          !listResponse.ok
+          !listResponse.ok ||
+          !capacityResponse.ok
         ) {
           throw new Error("API");
         }
@@ -296,6 +310,18 @@ export default function GroupsAdmin() {
 
         const listPayload =
           await listResponse.json();
+
+        const capacityPayload =
+          await capacityResponse.json();
+
+        const capacityMap = {};
+        for (const item of capacityPayload.items || []) {
+          capacityMap[`${item.departure}::${item.origin}`] = {
+            capacity: String(item.capacity ?? 0),
+            target: item.target == null ? "" : String(item.target),
+          };
+        }
+        setCapacityDrafts(capacityMap);
 
         const nextItems =
           listPayload.items || [];
@@ -707,6 +733,37 @@ export default function GroupsAdmin() {
   const operationalSummary =
     operations.summary || operations;
 
+  async function saveCapacity(departureValue, originValue) {
+    const key = `${departureValue}::${originValue}`;
+    const draft = capacityDrafts[key] || { capacity: "0", target: "" };
+    setCapacitySaving(key);
+    setError("");
+    try {
+      const response = await fetch(
+        `${API}/api/group-campaigns/${SLUG}/capacities`,
+        {
+          method: "PUT",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            departure: departureValue,
+            origin: originValue,
+            capacity: Number(draft.capacity || 0),
+            target: draft.target === "" ? null : Number(draft.target),
+          }),
+        }
+      );
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Enregistrement de capacité impossible.");
+      await loadData({ quiet: true });
+    } catch (capacityError) {
+      setError(capacityError.message || "Enregistrement de capacité impossible.");
+    } finally {
+      setCapacitySaving("");
+    }
+  }
+
+
   return (
     <main style={S.main}>
       <header style={S.header}>
@@ -767,7 +824,94 @@ export default function GroupsAdmin() {
 
       {analytics ? (
         <>
-          <section style={S.metrics}>
+          
+      <section style={S.section}>
+        <div style={S.sectionHead}>
+          <div>
+            <h2 style={S.h2}>Pilotage du remplissage</h2>
+            <p style={S.help}>
+              Capacité commerciale par départ et aéroport. Seuls OPTION et CONFIRMÉ consomment la capacité.
+            </p>
+          </div>
+        </div>
+
+        <div style={S.secondaryMetrics}>
+          <Metric value={analytics?.operations?.attention?.overdueNextActions || 0} label="Relances en retard" />
+          <Metric value={analytics?.operations?.attention?.unassignedRegistrations || 0} label="Non affectés" />
+          <Metric value={analytics?.operations?.attention?.unallocatedQualifiedOrLater || 0} label="Qualifiés+ non alloués" />
+        </div>
+
+        <div style={{ ...S.tableWrap, marginTop: 16 }}>
+          <table style={S.table}>
+            <thead>
+              <tr>
+                <th style={S.th}>Départ</th>
+                {(analytics?.campaign?.origins || []).map((airport) => (
+                  <th key={airport} style={S.th}>{airport}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {(analytics?.campaign?.departures || []).map((date) => (
+                <tr key={date}>
+                  <td style={S.td}><strong>{DATE_LABELS[date] || date}</strong></td>
+                  {(analytics?.campaign?.origins || []).map((airport) => {
+                    const key = `${date}::${airport}`;
+                    const cell = analytics?.operations?.allocation?.matrix?.[date]?.[airport] || {};
+                    const draft = capacityDrafts[key] || {
+                      capacity: String(cell.capacity ?? 0),
+                      target: cell.target == null ? "" : String(cell.target),
+                    };
+                    return (
+                      <td key={key} style={S.td}>
+                        <div><strong>{cell.confirmedTravellers || 0}</strong> confirmés · <strong>{cell.optionTravellers || 0}</strong> options</div>
+                        <small style={S.cellNote}>
+                          {cell.committedTravellers || 0} / {cell.capacity || 0} engagés · {cell.remainingCapacity ?? 0} restantes · {cell.fillRate == null ? "—" : `${Math.round(cell.fillRate * 100)} %`}
+                        </small>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 6, marginTop: 8 }}>
+                          <input
+                            style={S.input}
+                            type="number"
+                            min="0"
+                            aria-label={`Capacité ${date} ${airport}`}
+                            value={draft.capacity}
+                            onChange={(event) => setCapacityDrafts((current) => ({
+                              ...current,
+                              [key]: { ...draft, capacity: event.target.value },
+                            }))}
+                          />
+                          <input
+                            style={S.input}
+                            type="number"
+                            min="0"
+                            placeholder="Objectif"
+                            aria-label={`Objectif ${date} ${airport}`}
+                            value={draft.target}
+                            onChange={(event) => setCapacityDrafts((current) => ({
+                              ...current,
+                              [key]: { ...draft, target: event.target.value },
+                            }))}
+                          />
+                          <button
+                            type="button"
+                            style={S.secondaryButton}
+                            disabled={capacitySaving === key}
+                            onClick={() => saveCapacity(date, airport)}
+                          >
+                            {capacitySaving === key ? "…" : "Enregistrer"}
+                          </button>
+                        </div>
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+<section style={S.metrics}>
             <Metric
               value={
                 analytics.summary

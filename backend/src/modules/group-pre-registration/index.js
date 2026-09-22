@@ -149,114 +149,95 @@ function validateAllocation(
   return { ok: true };
 }
 
-function buildOperationalAnalytics(rows) {
+function buildOperationalAnalytics(rows, capacities = [], nowValue = Date.now()) {
   const statuses = Object.fromEntries(
-    OPERATIONAL_STATUSES.map((status) => [
-      status,
-      {
-        registrations: 0,
-        travellers: 0,
-      },
+    OPERATIONAL_STATUSES.map((status) => [status, { registrations: 0, travellers: 0 }])
+  );
+  const capacityByCell = new Map(
+    capacities.map((item) => [
+      `${item.departure}::${item.origin}`,
+      { capacity: Number(item.capacity || 0), target: item.target == null ? null : Number(item.target) },
     ])
   );
-
   const matrix = Object.fromEntries(
     CAMPAIGN.departures.map((departure) => [
       departure,
       Object.fromEntries(
-        CAMPAIGN.origins.map((origin) => [
-          origin,
-          {
-            allocatedRegistrations: 0,
-            allocatedTravellers: 0,
-            optionRegistrations: 0,
-            optionTravellers: 0,
-            confirmedRegistrations: 0,
-            confirmedTravellers: 0,
-          },
-        ])
+        CAMPAIGN.origins.map((origin) => {
+          const configured = capacityByCell.get(`${departure}::${origin}`) || { capacity: 0, target: null };
+          return [origin, {
+            allocatedRegistrations: 0, allocatedTravellers: 0,
+            optionRegistrations: 0, optionTravellers: 0,
+            confirmedRegistrations: 0, confirmedTravellers: 0,
+            capacity: configured.capacity, target: configured.target,
+            committedTravellers: 0, remainingCapacity: configured.capacity,
+            confirmedRemaining: configured.capacity, fillRate: null, confirmedFillRate: null,
+          }];
+        })
       ),
     ])
   );
 
-  let allocatedRegistrations = 0;
-  let allocatedTravellers = 0;
-  let optionRegistrations = 0;
-  let optionTravellers = 0;
-  let confirmedRegistrations = 0;
-  let confirmedTravellers = 0;
-  let followUpsDue = 0;
-
-  const now = Date.now();
+  let allocatedRegistrations = 0, allocatedTravellers = 0;
+  let optionRegistrations = 0, optionTravellers = 0;
+  let confirmedRegistrations = 0, confirmedTravellers = 0;
+  let overdueNextActions = 0, todayNextActions = 0;
+  let unassignedRegistrations = 0, unallocatedQualifiedOrLater = 0;
+  const now = new Date(nowValue);
+  const todayKey = [now.getFullYear(), now.getMonth(), now.getDate()].join("-");
 
   for (const row of rows) {
-    const travellers =
-      Number(row.travellerCount || 0);
-
-    const status =
-      OPERATIONAL_STATUS_SET.has(row.status)
-        ? row.status
-        : "NEW";
-
+    const travellers = Number(row.travellerCount || 0);
+    const status = OPERATIONAL_STATUS_SET.has(row.status) ? row.status : "NEW";
     statuses[status].registrations += 1;
     statuses[status].travellers += travellers;
 
-    if (
-      row.nextActionAt &&
-      new Date(row.nextActionAt).getTime() <= now &&
-      !["CONFIRMED", "CLOSED"].includes(status)
-    ) {
-      followUpsDue += 1;
+    const actionTime = row.nextActionAt ? new Date(row.nextActionAt) : null;
+    if (actionTime && !Number.isNaN(actionTime.getTime()) && !["CONFIRMED", "CLOSED"].includes(status)) {
+      if (actionTime.getTime() < now.getTime()) overdueNextActions += 1;
+      const actionKey = [actionTime.getFullYear(), actionTime.getMonth(), actionTime.getDate()].join("-");
+      if (actionKey === todayKey) todayNextActions += 1;
     }
+    if (status !== "CLOSED" && !clean(row.assignedTo, 120)) unassignedRegistrations += 1;
 
     const departure = row.allocatedDeparture;
     const origin = row.allocatedOrigin;
-
-    if (
-      !departure ||
-      !origin ||
-      !matrix[departure] ||
-      !matrix[departure][origin]
-    ) {
-      continue;
+    const completeAllocation = Boolean(departure && origin && matrix[departure] && matrix[departure][origin]);
+    if (["QUALIFIED", "OPTION", "CONFIRMED"].includes(status) && !completeAllocation) {
+      unallocatedQualifiedOrLater += 1;
     }
+    if (!completeAllocation) continue;
 
     const cell = matrix[departure][origin];
-
-    allocatedRegistrations += 1;
-    allocatedTravellers += travellers;
-
-    cell.allocatedRegistrations += 1;
-    cell.allocatedTravellers += travellers;
-
+    allocatedRegistrations += 1; allocatedTravellers += travellers;
+    cell.allocatedRegistrations += 1; cell.allocatedTravellers += travellers;
     if (status === "OPTION") {
-      optionRegistrations += 1;
-      optionTravellers += travellers;
-
-      cell.optionRegistrations += 1;
-      cell.optionTravellers += travellers;
+      optionRegistrations += 1; optionTravellers += travellers;
+      cell.optionRegistrations += 1; cell.optionTravellers += travellers;
     }
-
     if (status === "CONFIRMED") {
-      confirmedRegistrations += 1;
-      confirmedTravellers += travellers;
+      confirmedRegistrations += 1; confirmedTravellers += travellers;
+      cell.confirmedRegistrations += 1; cell.confirmedTravellers += travellers;
+    }
+  }
 
-      cell.confirmedRegistrations += 1;
-      cell.confirmedTravellers += travellers;
+  for (const departure of CAMPAIGN.departures) {
+    for (const origin of CAMPAIGN.origins) {
+      const cell = matrix[departure][origin];
+      cell.committedTravellers = cell.optionTravellers + cell.confirmedTravellers;
+      cell.remainingCapacity = Math.max(cell.capacity - cell.committedTravellers, 0);
+      cell.confirmedRemaining = Math.max(cell.capacity - cell.confirmedTravellers, 0);
+      cell.fillRate = cell.capacity > 0 ? cell.committedTravellers / cell.capacity : null;
+      cell.confirmedFillRate = cell.capacity > 0 ? cell.confirmedTravellers / cell.capacity : null;
     }
   }
 
   return {
     statuses,
+    attention: { overdueNextActions, todayNextActions, unassignedRegistrations, unallocatedQualifiedOrLater },
     allocation: {
-      allocatedRegistrations,
-      allocatedTravellers,
-      optionRegistrations,
-      optionTravellers,
-      confirmedRegistrations,
-      confirmedTravellers,
-      followUpsDue,
-      matrix,
+      allocatedRegistrations, allocatedTravellers, optionRegistrations, optionTravellers,
+      confirmedRegistrations, confirmedTravellers, followUpsDue: overdueNextActions, matrix,
     },
   };
 }
@@ -381,7 +362,7 @@ function emptyDateBucket() {
   };
 }
 
-function buildAnalytics(rows) {
+function buildAnalytics(rows, capacities = [], nowValue = Date.now()) {
   const dates = Object.fromEntries(
     CAMPAIGN.departures.map((date) => [
       date,
@@ -528,7 +509,7 @@ function buildAnalytics(rows) {
     origins,
     sources,
     dates,
-    operations: buildOperationalAnalytics(rows),
+    operations: buildOperationalAnalytics(rows, capacities, nowValue),
   };
 }
 
@@ -797,6 +778,7 @@ function routes({ prisma } = {}) {
                 "travellerCount",
                 "source",
                 "status",
+                "assignedTo",
                 "nextActionAt",
                 "allocatedDeparture",
                 "allocatedOrigin"
@@ -806,7 +788,13 @@ function routes({ prisma } = {}) {
             CAMPAIGN.slug
           );
 
-        return res.json(buildAnalytics(rows));
+        const capacities = await prisma.$queryRawUnsafe(
+          `SELECT "departure", "origin", "capacity", "target"
+           FROM "GroupCampaignCapacity"
+           WHERE "campaignSlug" = $1`,
+          CAMPAIGN.slug
+        );
+        return res.json(buildAnalytics(rows, capacities));
       } catch (error) {
         console.error(
           "[group-pre-registration:analytics]",
@@ -819,6 +807,61 @@ function routes({ prisma } = {}) {
             ok: false,
             error: "GROUP_ANALYTICS_FAILED",
           });
+      }
+    }
+  );
+
+
+  router.get(
+    "/api/group-campaigns/:slug/capacities",
+    async (req, res) => {
+      if (req.params.slug !== CAMPAIGN.slug) return res.status(404).json({ ok: false, error: "CAMPAIGN_NOT_FOUND" });
+      if (!prisma) return res.status(503).json({ ok: false, error: "PERSISTENCE_UNAVAILABLE" });
+      try {
+        const items = await prisma.$queryRawUnsafe(
+          `SELECT "id", "departure", "origin", "capacity", "target", "updatedAt"
+           FROM "GroupCampaignCapacity"
+           WHERE "campaignSlug" = $1
+           ORDER BY "departure", "origin"`,
+          CAMPAIGN.slug
+        );
+        return res.json({ ok: true, items });
+      } catch (error) {
+        console.error("[group-capacities:list]", error);
+        return res.status(500).json({ ok: false, error: "GROUP_CAPACITIES_FAILED" });
+      }
+    }
+  );
+
+  router.put(
+    "/api/group-campaigns/:slug/capacities",
+    async (req, res) => {
+      if (req.params.slug !== CAMPAIGN.slug) return res.status(404).json({ ok: false, error: "CAMPAIGN_NOT_FOUND" });
+      if (!prisma) return res.status(503).json({ ok: false, error: "PERSISTENCE_UNAVAILABLE" });
+      const departure = clean(req.body?.departure, 20);
+      const origin = clean(req.body?.origin, 20);
+      const capacity = Number(req.body?.capacity);
+      const target = req.body?.target === null || req.body?.target === "" || req.body?.target === undefined
+        ? null : Number(req.body.target);
+      if (!CAMPAIGN.departures.includes(departure)) return res.status(400).json({ ok: false, error: "INVALID_DEPARTURE" });
+      if (!CAMPAIGN.origins.includes(origin)) return res.status(400).json({ ok: false, error: "INVALID_ORIGIN" });
+      if (!Number.isInteger(capacity) || capacity < 0) return res.status(400).json({ ok: false, error: "INVALID_CAPACITY" });
+      if (target !== null && (!Number.isInteger(target) || target < 0)) return res.status(400).json({ ok: false, error: "INVALID_TARGET" });
+      try {
+        const id = "gcc_" + randomUUID().replaceAll("-", "");
+        const rows = await prisma.$queryRawUnsafe(
+          `INSERT INTO "GroupCampaignCapacity"
+            ("id","campaignSlug","departure","origin","capacity","target","createdAt","updatedAt")
+           VALUES ($1,$2,$3,$4,$5,$6,NOW(),NOW())
+           ON CONFLICT ("campaignSlug","departure","origin")
+           DO UPDATE SET "capacity"=EXCLUDED."capacity","target"=EXCLUDED."target","updatedAt"=NOW()
+           RETURNING "id","departure","origin","capacity","target","updatedAt"`,
+          id, CAMPAIGN.slug, departure, origin, capacity, target
+        );
+        return res.json({ ok: true, item: rows[0] });
+      } catch (error) {
+        console.error("[group-capacities:upsert]", error);
+        return res.status(500).json({ ok: false, error: "GROUP_CAPACITY_UPDATE_FAILED" });
       }
     }
   );

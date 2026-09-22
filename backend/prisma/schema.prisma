@@ -1641,6 +1641,20 @@ model GroupPreRegistration {
   @@index([campaignSlug, allocatedDeparture, allocatedOrigin])
 }
 
+model GroupCampaignCapacity {
+  id           String   @id
+  campaignSlug String
+  departure    String
+  origin       String
+  capacity     Int      @default(0)
+  target       Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([campaignSlug, departure, origin])
+  @@index([campaignSlug])
+}
+
 model GroupPreRegistrationNote {
   id                String   @id
   preRegistrationId String
