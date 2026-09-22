@@ -9,7 +9,118 @@ export default function GroupPage(){
  async function submit(e){e.preventDefault();if(!origins.length||!deps.length)return setState("missing");setState("loading");try{const q=new URLSearchParams(location.search);const r=await fetch(API+"/api/public/group-campaigns/gloire-des-pharaons-2027/pre-register",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({...f,origins,departures:deps,preferredDeparture:preferred||null,intent,source:q.get("src")||q.get("utm_source")||null})});if(!r.ok)throw new Error((await r.json()).error);setState("done")}catch(e){setState("error")}}
  if(state==="done")return <main style={S.main}><section style={S.card}><div style={S.kicker}>MONDESCALE VOYAGES</div><h1 style={S.h1}>Votre préinscription est enregistrée</h1><p style={S.lead}>Merci. Nous vous contacterons lorsque la date réunissant le groupe aura été déterminée.</p><p style={S.note}>Cette préinscription est gratuite et sans engagement.</p></section></main>;
  return <main style={S.main}><section style={S.hero}><div style={S.kicker}>ÉGYPTE · CROISIÈRE SUR LE NIL</div><h1 style={S.h1}>Gloire des Pharaons <span style={{whiteSpace:"nowrap"}}>5★</span></h1><p style={S.lead}>8 jours / 7 nuits à bord du Caprice 5★ ou similaire · Formule tout inclus</p><div style={S.price}>1 070 € <small style={S.small}>/ personne</small></div><p style={S.note}>Paris ou Lyon · Départs en janvier et février 2027 · Visa et frais de services inclus</p></section>
- <form onSubmit={submit} style={S.card}><h2 style={S.h2}>Choisissez vos possibilités de départ</h2><p style={S.text}>Sélectionnez tous les aéroports et toutes les dates qui vous conviennent. Cela nous permettra de retenir la combinaison réunissant le plus de voyageurs.</p>
+
+      <section
+        style={{
+          maxWidth: 900,
+          margin: "0 auto 28px",
+          padding: "24px",
+          background: "#ffffff",
+          border: "1px solid #e5e7eb",
+          borderRadius: 16,
+          boxShadow: "0 8px 28px rgba(15,23,42,.06)",
+        }}
+      >
+        <div
+          style={{
+            fontSize: 24,
+            fontWeight: 800,
+            color: "#0b315b",
+            marginBottom: 8,
+          }}
+        >
+          Programme détaillé de votre croisière
+        </div>
+
+        <p style={{ lineHeight: 1.6, marginBottom: 20 }}>
+          De Louxor à Assouan, découvrez les grands sites de Haute-Égypte,
+          accompagnés par des guides égyptologues francophones.
+        </p>
+
+        <div
+          style={{
+            display: "grid",
+            gap: 12,
+            lineHeight: 1.5,
+            marginBottom: 22,
+          }}
+        >
+          <div>
+            <strong>Jour 1 — France → Louxor</strong><br />
+            Accueil, transfert au bateau et installation à bord.
+          </div>
+
+          <div>
+            <strong>Jour 2 — Louxor → Esna → Edfou</strong><br />
+            Visite du temple de Karnak puis navigation vers Edfou.
+          </div>
+
+          <div>
+            <strong>Jour 3 — Edfou → Kom Ombo</strong><br />
+            Visite du temple d'Horus à Edfou puis du temple de Kom Ombo.
+          </div>
+
+          <div>
+            <strong>Jour 4 — Assouan</strong><br />
+            Découverte des barrages d'Assouan puis temps libre.
+          </div>
+
+          <div>
+            <strong>Jour 5 — Assouan</strong><br />
+            Journée de découverte libre avec possibilité d'excursions
+            facultatives.
+          </div>
+
+          <div>
+            <strong>Jour 6 — Assouan → Louxor</strong><br />
+            Navigation vers Louxor et visite du temple de Louxor.
+          </div>
+
+          <div>
+            <strong>Jour 7 — Louxor</strong><br />
+            Découverte de la nécropole de Thèbes et visite du temple
+            de Médinet Habou.
+          </div>
+
+          <div>
+            <strong>Jour 8 — Louxor → France</strong><br />
+            Temps libre selon les horaires de vol, transfert à l'aéroport
+            et retour en France.
+          </div>
+        </div>
+
+        <div
+          style={{
+            padding: "16px 18px",
+            background: "#fff7e6",
+            borderLeft: "4px solid #d6a23d",
+            borderRadius: 8,
+            lineHeight: 1.6,
+            marginBottom: 12,
+          }}
+        >
+          <strong>Important :</strong> les Pyramides de Gizeh et le Sphinx
+          ne font pas partie du programme de cette croisière.
+          Les photographies de destination éventuellement présentes sur
+          certains supports de présentation sont utilisées à titre
+          d'illustration et ne constituent pas la liste des visites incluses.
+        </div>
+
+        <p
+          style={{
+            margin: 0,
+            fontSize: 14,
+            lineHeight: 1.55,
+            color: "#4b5563",
+          }}
+        >
+          L'ordre des visites peut être adapté en fonction des horaires de
+          vol, des conditions de navigation ou des contraintes locales.
+          Certaines excursions complémentaires sont proposées en option.
+        </p>
+      </section>
+
+<form onSubmit={submit} style={S.card}><h2 style={S.h2}>Choisissez vos possibilités de départ</h2><p style={S.text}>Sélectionnez tous les aéroports et toutes les dates qui vous conviennent. Cela nous permettra de retenir la combinaison réunissant le plus de voyageurs.</p>
  <h3 style={S.h3}>1. Aéroport(s) possible(s)</h3><div style={S.grid}>{["PARIS","LYON"].map(x=><button type="button" key={x} onClick={()=>toggle(x,origins,setOrigins)} style={origins.includes(x)?S.selected:S.choice}>{x==="PARIS"?"Paris":"Lyon"}</button>)}</div>
  <h3 style={S.h3}>2. Toutes vos dates disponibles</h3><div style={S.dateGrid}>{dates.map(([v,l])=><button type="button" key={v} onClick={()=>toggle(v,deps,setDeps)} style={deps.includes(v)?S.selected:S.choice}>Samedi {l} 2027</button>)}</div>
  {deps.length>0&&<><h3 style={S.h3}>3. Votre date préférée</h3><select value={preferred} onChange={e=>setPreferred(e.target.value)} style={S.input}><option value="">Peu importe, je privilégie le groupe</option>{dates.filter(([v])=>deps.includes(v)).map(([v,l])=><option key={v} value={v}>{l} 2027</option>)}</select></>}
