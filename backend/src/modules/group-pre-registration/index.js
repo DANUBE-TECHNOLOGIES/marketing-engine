@@ -1385,7 +1385,9 @@ function routes({ prisma } = {}) {
 module.exports = {
   CAMPAIGN,
   OPERATIONAL_STATUSES,
+  GROUP_CAMPAIGN_STATUSES,
   buildAnalytics,
+  buildCampaignPilot,
   buildOperationalAnalytics,
   validateAllocation,
   routes,
