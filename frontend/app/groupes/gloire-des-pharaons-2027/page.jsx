@@ -118,6 +118,25 @@ export default function GroupPage(){
           vol, des conditions de navigation ou des contraintes locales.
           Certaines excursions complémentaires sont proposées en option.
         </p>
+
+        <div style={{ marginTop: 18 }}>
+          <a
+            href="/documents/groupes/gloire-des-pharaons-fiche-technique-fram.pdf"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: "inline-block",
+              padding: "13px 18px",
+              background: "#0b315b",
+              color: "#ffffff",
+              borderRadius: 9,
+              textDecoration: "none",
+              fontWeight: 700,
+            }}
+          >
+            Consulter la fiche technique complète FRAM
+          </a>
+        </div>
       </section>
 
 <form onSubmit={submit} style={S.card}><h2 style={S.h2}>Choisissez vos possibilités de départ</h2><p style={S.text}>Sélectionnez tous les aéroports et toutes les dates qui vous conviennent. Cela nous permettra de retenir la combinaison réunissant le plus de voyageurs.</p>
