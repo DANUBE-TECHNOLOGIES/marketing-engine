@@ -1620,6 +1620,9 @@ model GroupPreRegistration {
   source                String?
   emailMarketingConsent Boolean                    @default(false)
   projectContactConsent Boolean                    @default(true)
+  phoneMarketingConsent Boolean                    @default(false)
+  phoneMarketingConsentAt DateTime?
+  phoneMarketingConsentVersion String?
   consentVersion        String
   status                String                     @default("NEW")
   assignedTo            String?
