@@ -37,6 +37,230 @@ const CAMPAIGN = {
     "Préinscription gratuite et sans engagement. La date définitive reste soumise à la constitution du groupe et à la disponibilité des places.",
 };
 
+
+const OPERATIONAL_STATUSES = Object.freeze([
+  "NEW",
+  "CONTACTED",
+  "QUALIFIED",
+  "OPTION",
+  "CONFIRMED",
+  "CLOSED",
+]);
+
+const OPERATIONAL_STATUS_SET =
+  new Set(OPERATIONAL_STATUSES);
+
+function normalizeOperationalStatus(value) {
+  const status = clean(value, 40).toUpperCase();
+
+  return OPERATIONAL_STATUS_SET.has(status)
+    ? status
+    : null;
+}
+
+function normalizeOptional(value, max = 300) {
+  const result = clean(value, max);
+  return result || null;
+}
+
+function normalizeDateTime(value) {
+  if (
+    value === null ||
+    value === undefined ||
+    value === ""
+  ) {
+    return {
+      ok: true,
+      value: null,
+    };
+  }
+
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return {
+      ok: false,
+      value: null,
+    };
+  }
+
+  return {
+    ok: true,
+    value: parsed,
+  };
+}
+
+function validateAllocation(
+  row,
+  departure,
+  origin
+) {
+  if (!departure && !origin) {
+    return { ok: true };
+  }
+
+  if (!departure || !origin) {
+    return {
+      ok: false,
+      error: "INCOMPLETE_ALLOCATION",
+    };
+  }
+
+  if (!CAMPAIGN.departures.includes(departure)) {
+    return {
+      ok: false,
+      error: "INVALID_ALLOCATED_DEPARTURE",
+    };
+  }
+
+  if (!CAMPAIGN.origins.includes(origin)) {
+    return {
+      ok: false,
+      error: "INVALID_ALLOCATED_ORIGIN",
+    };
+  }
+
+  const departures =
+    Array.isArray(row.departures)
+      ? row.departures
+      : [];
+
+  const origins =
+    Array.isArray(row.origins)
+      ? row.origins
+      : [];
+
+  if (!departures.includes(departure)) {
+    return {
+      ok: false,
+      error:
+        "ALLOCATION_OUTSIDE_SELECTED_DEPARTURES",
+    };
+  }
+
+  if (!origins.includes(origin)) {
+    return {
+      ok: false,
+      error:
+        "ALLOCATION_OUTSIDE_SELECTED_ORIGINS",
+    };
+  }
+
+  return { ok: true };
+}
+
+function buildOperationalAnalytics(rows) {
+  const statuses = Object.fromEntries(
+    OPERATIONAL_STATUSES.map((status) => [
+      status,
+      {
+        registrations: 0,
+        travellers: 0,
+      },
+    ])
+  );
+
+  const matrix = Object.fromEntries(
+    CAMPAIGN.departures.map((departure) => [
+      departure,
+      Object.fromEntries(
+        CAMPAIGN.origins.map((origin) => [
+          origin,
+          {
+            allocatedRegistrations: 0,
+            allocatedTravellers: 0,
+            optionRegistrations: 0,
+            optionTravellers: 0,
+            confirmedRegistrations: 0,
+            confirmedTravellers: 0,
+          },
+        ])
+      ),
+    ])
+  );
+
+  let allocatedRegistrations = 0;
+  let allocatedTravellers = 0;
+  let optionRegistrations = 0;
+  let optionTravellers = 0;
+  let confirmedRegistrations = 0;
+  let confirmedTravellers = 0;
+  let followUpsDue = 0;
+
+  const now = Date.now();
+
+  for (const row of rows) {
+    const travellers =
+      Number(row.travellerCount || 0);
+
+    const status =
+      OPERATIONAL_STATUS_SET.has(row.status)
+        ? row.status
+        : "NEW";
+
+    statuses[status].registrations += 1;
+    statuses[status].travellers += travellers;
+
+    if (
+      row.nextActionAt &&
+      new Date(row.nextActionAt).getTime() <= now &&
+      !["CONFIRMED", "CLOSED"].includes(status)
+    ) {
+      followUpsDue += 1;
+    }
+
+    const departure = row.allocatedDeparture;
+    const origin = row.allocatedOrigin;
+
+    if (
+      !departure ||
+      !origin ||
+      !matrix[departure] ||
+      !matrix[departure][origin]
+    ) {
+      continue;
+    }
+
+    const cell = matrix[departure][origin];
+
+    allocatedRegistrations += 1;
+    allocatedTravellers += travellers;
+
+    cell.allocatedRegistrations += 1;
+    cell.allocatedTravellers += travellers;
+
+    if (status === "OPTION") {
+      optionRegistrations += 1;
+      optionTravellers += travellers;
+
+      cell.optionRegistrations += 1;
+      cell.optionTravellers += travellers;
+    }
+
+    if (status === "CONFIRMED") {
+      confirmedRegistrations += 1;
+      confirmedTravellers += travellers;
+
+      cell.confirmedRegistrations += 1;
+      cell.confirmedTravellers += travellers;
+    }
+  }
+
+  return {
+    statuses,
+    allocation: {
+      allocatedRegistrations,
+      allocatedTravellers,
+      optionRegistrations,
+      optionTravellers,
+      confirmedRegistrations,
+      confirmedTravellers,
+      followUpsDue,
+      matrix,
+    },
+  };
+}
+
 const buckets = new Map();
 
 function clean(value, max = 300) {
@@ -304,6 +528,7 @@ function buildAnalytics(rows) {
     origins,
     sources,
     dates,
+    operations: buildOperationalAnalytics(rows),
   };
 }
 
@@ -513,6 +738,13 @@ function routes({ prisma } = {}) {
                 "preferredDeparture",
                 "intent",
                 "source",
+                "status",
+                "assignedTo",
+                "nextActionAt",
+                "allocatedDeparture",
+                "allocatedOrigin",
+                "lastNote",
+                "lastNoteAt",
                 "createdAt"
               FROM "GroupPreRegistration"
               WHERE "campaignSlug" = $1
@@ -563,7 +795,11 @@ function routes({ prisma } = {}) {
                 "preferredDeparture",
                 "intent",
                 "travellerCount",
-                "source"
+                "source",
+                "status",
+                "nextActionAt",
+                "allocatedDeparture",
+                "allocatedOrigin"
               FROM "GroupPreRegistration"
               WHERE "campaignSlug" = $1
             `,
@@ -587,11 +823,448 @@ function routes({ prisma } = {}) {
     }
   );
 
+
+  router.patch(
+    "/api/group-campaigns/:slug/pre-registrations/:id/operations",
+    async (req, res) => {
+      if (req.params.slug !== CAMPAIGN.slug) {
+        return res.status(404).json({
+          ok: false,
+          error: "CAMPAIGN_NOT_FOUND",
+        });
+      }
+
+      if (!prisma) {
+        return res.status(503).json({
+          ok: false,
+          error: "PERSISTENCE_UNAVAILABLE",
+        });
+      }
+
+      const id = clean(req.params.id, 160);
+
+      try {
+        const currentRows =
+          await prisma.$queryRawUnsafe(
+            `
+              SELECT
+                "id",
+                "campaignSlug",
+                "origins",
+                "departures",
+                "allocatedDeparture",
+                "allocatedOrigin"
+              FROM "GroupPreRegistration"
+              WHERE "id" = $1
+                AND "campaignSlug" = $2
+              LIMIT 1
+            `,
+            id,
+            CAMPAIGN.slug
+          );
+
+        const current = currentRows[0];
+
+        if (!current) {
+          return res.status(404).json({
+            ok: false,
+            error:
+              "PRE_REGISTRATION_NOT_FOUND",
+          });
+        }
+
+        const body = req.body || {};
+        const updates = [];
+        const values = [];
+
+        function setColumn(column, value) {
+          values.push(value);
+          updates.push(
+            `"${column}" = $${values.length}`
+          );
+        }
+
+        if (
+          Object.prototype.hasOwnProperty.call(
+            body,
+            "status"
+          )
+        ) {
+          const status =
+            normalizeOperationalStatus(body.status);
+
+          if (!status) {
+            return res.status(400).json({
+              ok: false,
+              error:
+                "INVALID_OPERATIONAL_STATUS",
+            });
+          }
+
+          setColumn("status", status);
+        }
+
+        if (
+          Object.prototype.hasOwnProperty.call(
+            body,
+            "assignedTo"
+          )
+        ) {
+          setColumn(
+            "assignedTo",
+            normalizeOptional(
+              body.assignedTo,
+              120
+            )
+          );
+        }
+
+        if (
+          Object.prototype.hasOwnProperty.call(
+            body,
+            "nextActionAt"
+          )
+        ) {
+          const parsed =
+            normalizeDateTime(body.nextActionAt);
+
+          if (!parsed.ok) {
+            return res.status(400).json({
+              ok: false,
+              error:
+                "INVALID_NEXT_ACTION_AT",
+            });
+          }
+
+          setColumn(
+            "nextActionAt",
+            parsed.value
+          );
+        }
+
+        const hasDeparture =
+          Object.prototype.hasOwnProperty.call(
+            body,
+            "allocatedDeparture"
+          );
+
+        const hasOrigin =
+          Object.prototype.hasOwnProperty.call(
+            body,
+            "allocatedOrigin"
+          );
+
+        if (hasDeparture || hasOrigin) {
+          const departure = hasDeparture
+            ? normalizeOptional(
+                body.allocatedDeparture,
+                20
+              )
+            : current.allocatedDeparture;
+
+          const origin = hasOrigin
+            ? normalizeOptional(
+                body.allocatedOrigin,
+                20
+              )
+            : current.allocatedOrigin;
+
+          const allocation =
+            validateAllocation(
+              current,
+              departure,
+              origin
+            );
+
+          if (!allocation.ok) {
+            return res.status(400).json(
+              allocation
+            );
+          }
+
+          setColumn(
+            "allocatedDeparture",
+            departure
+          );
+
+          setColumn(
+            "allocatedOrigin",
+            origin
+          );
+        }
+
+        if (updates.length === 0) {
+          return res.status(400).json({
+            ok: false,
+            error: "NO_OPERATIONAL_CHANGE",
+          });
+        }
+
+        values.push(id);
+        const idPosition = values.length;
+
+        values.push(CAMPAIGN.slug);
+        const campaignPosition =
+          values.length;
+
+        const rows =
+          await prisma.$queryRawUnsafe(
+            `
+              UPDATE "GroupPreRegistration"
+              SET
+                ${updates.join(", ")},
+                "updatedAt" = NOW()
+              WHERE "id" = $${idPosition}
+                AND "campaignSlug" =
+                    $${campaignPosition}
+              RETURNING
+                "id",
+                "status",
+                "assignedTo",
+                "nextActionAt",
+                "allocatedDeparture",
+                "allocatedOrigin",
+                "lastNote",
+                "lastNoteAt",
+                "updatedAt"
+            `,
+            ...values
+          );
+
+        return res.json({
+          ok: true,
+          item: rows[0],
+        });
+      } catch (error) {
+        console.error(
+          "[group-pre-registration:operations]",
+          error
+        );
+
+        return res.status(500).json({
+          ok: false,
+          error:
+            "GROUP_OPERATIONS_UPDATE_FAILED",
+        });
+      }
+    }
+  );
+
+  router.get(
+    "/api/group-campaigns/:slug/pre-registrations/:id/notes",
+    async (req, res) => {
+      if (req.params.slug !== CAMPAIGN.slug) {
+        return res.status(404).json({
+          ok: false,
+          error: "CAMPAIGN_NOT_FOUND",
+        });
+      }
+
+      if (!prisma) {
+        return res.status(503).json({
+          ok: false,
+          error: "PERSISTENCE_UNAVAILABLE",
+        });
+      }
+
+      const id = clean(req.params.id, 160);
+
+      try {
+        const exists =
+          await prisma.$queryRawUnsafe(
+            `
+              SELECT "id"
+              FROM "GroupPreRegistration"
+              WHERE "id" = $1
+                AND "campaignSlug" = $2
+              LIMIT 1
+            `,
+            id,
+            CAMPAIGN.slug
+          );
+
+        if (!exists[0]) {
+          return res.status(404).json({
+            ok: false,
+            error:
+              "PRE_REGISTRATION_NOT_FOUND",
+          });
+        }
+
+        const notes =
+          await prisma.$queryRawUnsafe(
+            `
+              SELECT
+                "id",
+                "content",
+                "author",
+                "createdAt"
+              FROM "GroupPreRegistrationNote"
+              WHERE "preRegistrationId" = $1
+              ORDER BY "createdAt" DESC
+              LIMIT 100
+            `,
+            id
+          );
+
+        return res.json({
+          ok: true,
+          notes,
+        });
+      } catch (error) {
+        console.error(
+          "[group-pre-registration:notes]",
+          error
+        );
+
+        return res.status(500).json({
+          ok: false,
+          error: "GROUP_NOTES_FAILED",
+        });
+      }
+    }
+  );
+
+  router.post(
+    "/api/group-campaigns/:slug/pre-registrations/:id/notes",
+    async (req, res) => {
+      if (req.params.slug !== CAMPAIGN.slug) {
+        return res.status(404).json({
+          ok: false,
+          error: "CAMPAIGN_NOT_FOUND",
+        });
+      }
+
+      if (!prisma) {
+        return res.status(503).json({
+          ok: false,
+          error: "PERSISTENCE_UNAVAILABLE",
+        });
+      }
+
+      const id = clean(req.params.id, 160);
+      const content =
+        clean(req.body?.content, 4000);
+      const author =
+        normalizeOptional(
+          req.body?.author,
+          120
+        );
+
+      if (content.length < 2) {
+        return res.status(400).json({
+          ok: false,
+          error: "INVALID_NOTE",
+        });
+      }
+
+      try {
+        const exists =
+          await prisma.$queryRawUnsafe(
+            `
+              SELECT "id"
+              FROM "GroupPreRegistration"
+              WHERE "id" = $1
+                AND "campaignSlug" = $2
+              LIMIT 1
+            `,
+            id,
+            CAMPAIGN.slug
+          );
+
+        if (!exists[0]) {
+          return res.status(404).json({
+            ok: false,
+            error:
+              "PRE_REGISTRATION_NOT_FOUND",
+          });
+        }
+
+        const noteId =
+          "gprn_" +
+          randomUUID().replaceAll("-", "");
+
+        const note =
+          await prisma.$transaction(
+            async (tx) => {
+              const notes =
+                await tx.$queryRawUnsafe(
+                  `
+                    INSERT INTO
+                      "GroupPreRegistrationNote" (
+                        "id",
+                        "preRegistrationId",
+                        "content",
+                        "author",
+                        "createdAt"
+                      )
+                    VALUES (
+                      $1,
+                      $2,
+                      $3,
+                      $4,
+                      NOW()
+                    )
+                    RETURNING
+                      "id",
+                      "content",
+                      "author",
+                      "createdAt"
+                  `,
+                  noteId,
+                  id,
+                  content,
+                  author
+                );
+
+              await tx.$executeRawUnsafe(
+                `
+                  UPDATE "GroupPreRegistration"
+                  SET
+                    "lastNote" = $1,
+                    "lastNoteAt" =
+                      $2::timestamp,
+                    "updatedAt" = NOW()
+                  WHERE "id" = $3
+                    AND "campaignSlug" = $4
+                `,
+                content,
+                notes[0].createdAt,
+                id,
+                CAMPAIGN.slug
+              );
+
+              return notes[0];
+            }
+          );
+
+        return res.status(201).json({
+          ok: true,
+          note,
+        });
+      } catch (error) {
+        console.error(
+          "[group-pre-registration:note-create]",
+          error
+        );
+
+        return res.status(500).json({
+          ok: false,
+          error:
+            "GROUP_NOTE_CREATE_FAILED",
+        });
+      }
+    }
+  );
+
   return router;
 }
 
 module.exports = {
   CAMPAIGN,
+  OPERATIONAL_STATUSES,
   buildAnalytics,
+  buildOperationalAnalytics,
+  validateAllocation,
   routes,
 };
