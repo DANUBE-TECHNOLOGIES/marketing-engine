@@ -89,22 +89,6 @@ export default function GroupPage(){
           </div>
         </div>
 
-        <div
-          style={{
-            padding: "16px 18px",
-            background: "#fff7e6",
-            borderLeft: "4px solid #d6a23d",
-            borderRadius: 8,
-            lineHeight: 1.6,
-            marginBottom: 12,
-          }}
-        >
-          <strong>Important :</strong> les Pyramides de Gizeh et le Sphinx
-          ne font pas partie du programme de cette croisière.
-          Les photographies de destination éventuellement présentes sur
-          certains supports de présentation sont utilisées à titre
-          d'illustration et ne constituent pas la liste des visites incluses.
-        </div>
 
         <p
           style={{
