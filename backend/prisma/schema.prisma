@@ -1620,6 +1620,9 @@ model GroupPreRegistration {
   source                String?
   emailMarketingConsent Boolean                    @default(false)
   projectContactConsent Boolean                    @default(true)
+  phoneMarketingConsent Boolean                    @default(false)
+  phoneMarketingConsentAt DateTime?
+  phoneMarketingConsentVersion String?
   consentVersion        String
   status                String                     @default("NEW")
   assignedTo            String?
@@ -1665,4 +1668,19 @@ model GroupPreRegistrationNote {
   preRegistration GroupPreRegistration @relation(fields: [preRegistrationId], references: [id], onDelete: Cascade)
 
   @@index([preRegistrationId, createdAt])
+}
+
+
+model GroupCampaignSettings {
+  id                  String    @id
+  campaignSlug        String    @unique
+  status              String    @default("DRAFT")
+  objectiveTravellers Int?
+  minimumTravellers   Int?
+  decisionDeadline    DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([status])
+  @@index([decisionDeadline])
 }

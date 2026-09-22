@@ -38,6 +38,9 @@ const CAMPAIGN = {
 };
 
 
+const GROUP_CAMPAIGN_STATUSES = Object.freeze(["DRAFT", "OPEN", "GUARANTEED", "FULL", "CLOSED"]);
+const GROUP_CAMPAIGN_STATUS_SET = new Set(GROUP_CAMPAIGN_STATUSES);
+
 const OPERATIONAL_STATUSES = Object.freeze([
   "NEW",
   "CONTACTED",
@@ -362,7 +365,7 @@ function emptyDateBucket() {
   };
 }
 
-function buildAnalytics(rows, capacities = [], nowValue = Date.now()) {
+function buildAnalytics(rows, capacities = [], campaignSettings = null, nowValue = Date.now()) {
   const dates = Object.fromEntries(
     CAMPAIGN.departures.map((date) => [
       date,
@@ -510,7 +513,36 @@ function buildAnalytics(rows, capacities = [], nowValue = Date.now()) {
     sources,
     dates,
     operations: buildOperationalAnalytics(rows, capacities, nowValue),
+    campaignPilot: buildCampaignPilot(rows, capacities, campaignSettings, nowValue),
   };
+}
+
+function buildCampaignPilot(rows, capacities = [], settings = null, nowValue = Date.now()) {
+  const status = GROUP_CAMPAIGN_STATUS_SET.has(settings?.status) ? settings.status : "DRAFT";
+  const objectiveTravellers = settings?.objectiveTravellers == null ? null : Number(settings.objectiveTravellers);
+  const minimumTravellers = settings?.minimumTravellers == null ? null : Number(settings.minimumTravellers);
+  const decisionDeadline = settings?.decisionDeadline || null;
+  const totalCapacity = capacities.reduce((sum, item) => sum + Number(item.capacity || 0), 0);
+  const totalTarget = capacities.reduce((sum, item) => sum + Number(item.target || 0), 0);
+  let optionTravellers = 0;
+  let confirmedTravellers = 0;
+  for (const row of rows) {
+    const travellers = Number(row.travellerCount || 0);
+    const allocated = Boolean(row.allocatedDeparture && row.allocatedOrigin);
+    if (!allocated) continue;
+    if (row.status === "OPTION") optionTravellers += travellers;
+    if (row.status === "CONFIRMED") confirmedTravellers += travellers;
+  }
+  const committedTravellers = optionTravellers + confirmedTravellers;
+  const remainingCapacity = Math.max(totalCapacity - committedTravellers, 0);
+  const objectiveProgress = objectiveTravellers && objectiveTravellers > 0 ? committedTravellers / objectiveTravellers : null;
+  const minimumProgress = minimumTravellers && minimumTravellers > 0 ? confirmedTravellers / minimumTravellers : null;
+  const alerts = [];
+  if (minimumTravellers && confirmedTravellers >= minimumTravellers && !["GUARANTEED","FULL","CLOSED"].includes(status)) alerts.push({ code: "MINIMUM_REACHED", level: "success", message: "Le seuil minimum de voyageurs confirmés est atteint." });
+  if (minimumTravellers && confirmedTravellers < minimumTravellers && confirmedTravellers + optionTravellers >= minimumTravellers) alerts.push({ code: "MINIMUM_WITH_OPTIONS", level: "warning", message: "Le seuil minimum peut être atteint en convertissant les options." });
+  if (totalCapacity > 0 && remainingCapacity <= Math.max(2, Math.ceil(totalCapacity * 0.1))) alerts.push({ code: "CAPACITY_NEAR_FULL", level: "warning", message: "La capacité commerciale est presque pleine." });
+  if (decisionDeadline && new Date(decisionDeadline).getTime() < Number(nowValue) && !["GUARANTEED","CLOSED"].includes(status)) alerts.push({ code: "DECISION_DEADLINE_PASSED", level: "danger", message: "La date limite de décision est dépassée." });
+  return { status, objectiveTravellers, minimumTravellers, decisionDeadline, totalCapacity, totalTarget, optionTravellers, confirmedTravellers, committedTravellers, remainingCapacity, objectiveProgress, minimumProgress, alerts };
 }
 
 function routes({ prisma } = {}) {
@@ -638,6 +670,9 @@ function routes({ prisma } = {}) {
               "source",
               "emailMarketingConsent",
               "projectContactConsent",
+              "phoneMarketingConsent",
+              "phoneMarketingConsentAt",
+              "phoneMarketingConsentVersion",
               "consentVersion",
               "createdAt",
               "updatedAt"
@@ -645,7 +680,7 @@ function routes({ prisma } = {}) {
             VALUES (
               $1,$2,$3,$4,$5,$6,$7,$8,$9,
               $10::jsonb,$11::jsonb,$12,$13,$14,
-              $15,$16,$17,NOW(),NOW()
+              $15,$16,$17,$18,$19,$20,NOW(),NOW()
             )
           `,
           id,
@@ -664,7 +699,10 @@ function routes({ prisma } = {}) {
           source,
           body.emailMarketingConsent === true,
           true,
-          "2026-09-groups-v1"
+          body.phoneMarketingConsent === true,
+          body.phoneMarketingConsent === true ? new Date() : null,
+          "PHONE-PROSPECTION-2026-08-11-V1",
+          "2026-09-groups-v2"
         );
 
         return res.status(201).json({
@@ -794,7 +832,13 @@ function routes({ prisma } = {}) {
            WHERE "campaignSlug" = $1`,
           CAMPAIGN.slug
         );
-        return res.json(buildAnalytics(rows, capacities));
+        const campaignSettingsRows = await prisma.$queryRawUnsafe(
+          `SELECT "status", "objectiveTravellers", "minimumTravellers", "decisionDeadline"
+           FROM "GroupCampaignSettings"
+           WHERE "campaignSlug" = $1 LIMIT 1`,
+          CAMPAIGN.slug
+        );
+        return res.json(buildAnalytics(rows, capacities, campaignSettingsRows[0] || null));
       } catch (error) {
         console.error(
           "[group-pre-registration:analytics]",
@@ -811,6 +855,47 @@ function routes({ prisma } = {}) {
     }
   );
 
+
+  router.get("/api/group-campaigns/:slug/settings", async (req, res) => {
+    if (req.params.slug !== CAMPAIGN.slug) return res.status(404).json({ ok: false, error: "CAMPAIGN_NOT_FOUND" });
+    if (!prisma) return res.status(503).json({ ok: false, error: "PERSISTENCE_UNAVAILABLE" });
+    try {
+      const rows = await prisma.$queryRawUnsafe(
+        `SELECT "status", "objectiveTravellers", "minimumTravellers", "decisionDeadline", "updatedAt" FROM "GroupCampaignSettings" WHERE "campaignSlug" = $1 LIMIT 1`, CAMPAIGN.slug
+      );
+      return res.json({ ok: true, item: rows[0] || { status: "DRAFT", objectiveTravellers: null, minimumTravellers: null, decisionDeadline: null } });
+    } catch (error) {
+      console.error("[group-campaign-settings:list]", error);
+      return res.status(500).json({ ok: false, error: "GROUP_CAMPAIGN_SETTINGS_FAILED" });
+    }
+  });
+
+  router.put("/api/group-campaigns/:slug/settings", async (req, res) => {
+    if (req.params.slug !== CAMPAIGN.slug) return res.status(404).json({ ok: false, error: "CAMPAIGN_NOT_FOUND" });
+    if (!prisma) return res.status(503).json({ ok: false, error: "PERSISTENCE_UNAVAILABLE" });
+    const status = clean(req.body?.status, 30).toUpperCase();
+    const objective = req.body?.objectiveTravellers === null || req.body?.objectiveTravellers === "" || req.body?.objectiveTravellers === undefined ? null : Number(req.body.objectiveTravellers);
+    const minimum = req.body?.minimumTravellers === null || req.body?.minimumTravellers === "" || req.body?.minimumTravellers === undefined ? null : Number(req.body.minimumTravellers);
+    const deadlineParsed = normalizeDateTime(req.body?.decisionDeadline);
+    if (!GROUP_CAMPAIGN_STATUS_SET.has(status)) return res.status(400).json({ ok: false, error: "INVALID_CAMPAIGN_STATUS" });
+    if (objective !== null && (!Number.isInteger(objective) || objective < 0)) return res.status(400).json({ ok: false, error: "INVALID_OBJECTIVE_TRAVELLERS" });
+    if (minimum !== null && (!Number.isInteger(minimum) || minimum < 0)) return res.status(400).json({ ok: false, error: "INVALID_MINIMUM_TRAVELLERS" });
+    if (!deadlineParsed.ok) return res.status(400).json({ ok: false, error: "INVALID_DECISION_DEADLINE" });
+    try {
+      const id = "gcs_" + randomUUID().replaceAll("-", "");
+      const rows = await prisma.$queryRawUnsafe(
+        `INSERT INTO "GroupCampaignSettings" ("id","campaignSlug","status","objectiveTravellers","minimumTravellers","decisionDeadline","createdAt","updatedAt")
+         VALUES ($1,$2,$3,$4,$5,$6,NOW(),NOW())
+         ON CONFLICT ("campaignSlug") DO UPDATE SET "status"=EXCLUDED."status","objectiveTravellers"=EXCLUDED."objectiveTravellers","minimumTravellers"=EXCLUDED."minimumTravellers","decisionDeadline"=EXCLUDED."decisionDeadline","updatedAt"=NOW()
+         RETURNING "status","objectiveTravellers","minimumTravellers","decisionDeadline","updatedAt"`,
+        id, CAMPAIGN.slug, status, objective, minimum, deadlineParsed.value
+      );
+      return res.json({ ok: true, item: rows[0] });
+    } catch (error) {
+      console.error("[group-campaign-settings:upsert]", error);
+      return res.status(500).json({ ok: false, error: "GROUP_CAMPAIGN_SETTINGS_UPDATE_FAILED" });
+    }
+  });
 
   router.get(
     "/api/group-campaigns/:slug/capacities",
@@ -1306,7 +1391,9 @@ function routes({ prisma } = {}) {
 module.exports = {
   CAMPAIGN,
   OPERATIONAL_STATUSES,
+  GROUP_CAMPAIGN_STATUSES,
   buildAnalytics,
+  buildCampaignPilot,
   buildOperationalAnalytics,
   validateAllocation,
   routes,

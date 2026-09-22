@@ -258,6 +258,9 @@ export default function GroupsAdmin() {
   const [capacitySaving, setCapacitySaving] =
     useState("");
 
+  const [campaignSettings, setCampaignSettings] = useState({ status: "DRAFT", objectiveTravellers: "", minimumTravellers: "", decisionDeadline: "" });
+  const [campaignSaving, setCampaignSaving] = useState(false);
+
   const loadData = useCallback(
     async ({ quiet = false } = {}) => {
       if (quiet) {
@@ -273,6 +276,7 @@ export default function GroupsAdmin() {
           analyticsResponse,
           listResponse,
           capacityResponse,
+          settingsResponse,
         ] = await Promise.all([
           fetch(
             `${API}/api/group-campaigns/${SLUG}/analytics`,
@@ -295,12 +299,17 @@ export default function GroupsAdmin() {
               cache: "no-store",
             }
           ),
+          fetch(
+            `${API}/api/group-campaigns/${SLUG}/settings`,
+            { credentials: "include", cache: "no-store" }
+          ),
         ]);
 
         if (
           !analyticsResponse.ok ||
           !listResponse.ok ||
-          !capacityResponse.ok
+          !capacityResponse.ok ||
+          !settingsResponse.ok
         ) {
           throw new Error("API");
         }
@@ -313,6 +322,14 @@ export default function GroupsAdmin() {
 
         const capacityPayload =
           await capacityResponse.json();
+        const settingsPayload = await settingsResponse.json();
+        const settings = settingsPayload.item || {};
+        setCampaignSettings({
+          status: settings.status || "DRAFT",
+          objectiveTravellers: settings.objectiveTravellers == null ? "" : String(settings.objectiveTravellers),
+          minimumTravellers: settings.minimumTravellers == null ? "" : String(settings.minimumTravellers),
+          decisionDeadline: toLocalInput(settings.decisionDeadline),
+        });
 
         const capacityMap = {};
         for (const item of capacityPayload.items || []) {
@@ -764,6 +781,33 @@ export default function GroupsAdmin() {
   }
 
 
+  async function saveCampaignSettings() {
+    setCampaignSaving(true);
+    setError("");
+    try {
+      const response = await fetch(
+        `${API}/api/group-campaigns/${SLUG}/settings`,
+        {
+          method: "PUT", credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            status: campaignSettings.status,
+            objectiveTravellers: campaignSettings.objectiveTravellers === "" ? null : Number(campaignSettings.objectiveTravellers),
+            minimumTravellers: campaignSettings.minimumTravellers === "" ? null : Number(campaignSettings.minimumTravellers),
+            decisionDeadline: toIso(campaignSettings.decisionDeadline),
+          }),
+        }
+      );
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Enregistrement du pilotage impossible.");
+      await loadData({ quiet: true });
+    } catch (campaignError) {
+      setError(campaignError.message || "Enregistrement du pilotage impossible.");
+    } finally {
+      setCampaignSaving(false);
+    }
+  }
+
   return (
     <main style={S.main}>
       <header style={S.header}>
@@ -824,6 +868,39 @@ export default function GroupsAdmin() {
 
       {analytics ? (
         <>
+
+      <section style={S.section}>
+        <div style={S.sectionHead}>
+          <div>
+            <h2 style={S.h2}>Pilotage de la campagne</h2>
+            <p style={S.help}>Objectif global, seuil de réalisation et alertes commerciales.</p>
+          </div>
+          <button type="button" style={S.secondaryButton} onClick={saveCampaignSettings} disabled={campaignSaving}>
+            {campaignSaving ? "Enregistrement…" : "Enregistrer le pilotage"}
+          </button>
+        </div>
+        <div style={S.secondaryMetrics}>
+          <Metric value={analytics?.campaignPilot?.confirmedTravellers || 0} label="Confirmés" />
+          <Metric value={analytics?.campaignPilot?.optionTravellers || 0} label="Options" />
+          <Metric value={analytics?.campaignPilot?.committedTravellers || 0} label="Engagés" />
+          <Metric value={analytics?.campaignPilot?.totalCapacity || 0} label="Capacité totale" />
+          <Metric value={analytics?.campaignPilot?.remainingCapacity || 0} label="Places restantes" />
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 10, marginTop: 16 }}>
+          <select style={S.input} value={campaignSettings.status} onChange={(e) => setCampaignSettings((v) => ({ ...v, status: e.target.value }))}>
+            {["DRAFT","OPEN","GUARANTEED","FULL","CLOSED"].map((value) => <option key={value} value={value}>{value}</option>)}
+          </select>
+          <input style={S.input} type="number" min="0" placeholder="Objectif voyageurs" value={campaignSettings.objectiveTravellers} onChange={(e) => setCampaignSettings((v) => ({ ...v, objectiveTravellers: e.target.value }))} />
+          <input style={S.input} type="number" min="0" placeholder="Seuil minimum" value={campaignSettings.minimumTravellers} onChange={(e) => setCampaignSettings((v) => ({ ...v, minimumTravellers: e.target.value }))} />
+          <input style={S.input} type="datetime-local" value={campaignSettings.decisionDeadline} onChange={(e) => setCampaignSettings((v) => ({ ...v, decisionDeadline: e.target.value }))} />
+        </div>
+        {(analytics?.campaignPilot?.alerts || []).length ? (
+          <div style={{ marginTop: 14 }}>
+            {(analytics.campaignPilot.alerts || []).map((alert) => <div key={alert.code} style={S.help}><strong>{alert.code}</strong> — {alert.message}</div>)}
+          </div>
+        ) : <p style={S.help}>Aucune alerte commerciale active.</p>}
+      </section>
+
           
       <section style={S.section}>
         <div style={S.sectionHead}>
