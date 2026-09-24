@@ -13,13 +13,40 @@ function rootPath(siteSlug) {
   return `/agence/${siteSlug}`;
 }
 
+
+function publicSeoAgencyName(site) {
+  const slug = String(site?.slug || "")
+    .trim()
+    .toLocaleLowerCase("fr-FR");
+
+  const city = String(
+    site?.agency?.city || site?.city || ""
+  )
+    .trim()
+    .toLocaleLowerCase("fr-FR");
+
+  if (
+    slug === "tui-store-melun" ||
+    city === "melun"
+  ) {
+    return "Mondescale Voyages";
+  }
+
+  return String(
+    site?.name ||
+    site?.agency?.name ||
+    "Mondescale Voyages"
+  ).trim();
+}
+
 export async function generateMetadata({ params }) {
   const resolved = await params;
   try {
     const site = await publicSiteApi.getSite(resolved.siteSlug);
+    const publicAgencyName = publicSeoAgencyName(site);
     if (!site) return { robots: { index: false, follow: false } };
     const city = String(site?.agency?.city || site?.city || "").trim();
-    const brand = String(site?.agency?.name || site?.name || "Mondescale Voyages").trim();
+    const brand = String(publicAgencyName || publicAgencyName || "Mondescale Voyages").trim();
     const canonical = `${PUBLIC_ORIGIN}${rootPath(resolved.siteSlug)}/voyages-en-groupe`;
     const title = city ? `Voyages en groupe à ${city} | ${brand}` : `Voyages en groupe | ${brand}`;
     const description = city
