@@ -102,6 +102,61 @@ function preferLocalOverride(value, site, fallback) {
     : fallback;
 }
 
+function siteSlug(site) {
+  return clean(site?.slug).toLocaleLowerCase("fr-FR");
+}
+
+function targetedSeoTitle({
+  site,
+  kind,
+  override,
+  fallback,
+}) {
+  const slug = siteSlug(site);
+  const candidate = clean(override);
+
+  /*
+   * MSE-25.256
+   *
+   * Lamorlaye:
+   * Search Console shows "mondescale lamorlaye" distributed across
+   * several secondary pages. The home must remain the strongest
+   * navigational/entity owner. Secondary pages therefore use their
+   * route-specific generated title instead of legacy CMS titles that
+   * repeat "Mondescale Lamorlaye".
+   *
+   * This does NOT change canonicals, indexation or page content.
+   */
+  if (
+    slug === "mondescale-lamorlaye" &&
+    kind !== "home"
+  ) {
+    return fallback;
+  }
+
+  /*
+   * Melun:
+   * The agency is transitioning away from TUI. Existing CMS metadata
+   * may still contain historical TUI wording. Do not propagate that
+   * wording into public metadata; use the neutral/local generated
+   * title instead.
+   *
+   * Historical URLs and current indexation remain untouched.
+   */
+  if (
+    slug === "tui-store-melun" &&
+    /\btui\b/i.test(candidate)
+  ) {
+    return fallback;
+  }
+
+  return preferLocalOverride(
+    candidate,
+    site,
+    fallback,
+  );
+}
+
 function titleForKind({ kind, city, brand, pageTitle }) {
   if (!city) {
     return pageTitle ? `${pageTitle} | ${brand}` : brand;
@@ -277,7 +332,12 @@ export function buildLocalPageSeo({ site, page, pageSlug }) {
     city,
     brand,
     heading: headingForKind({ kind, city, pageTitle }),
-    title: preferLocalOverride(page?.seoTitle, site, generatedTitle),
+    title: targetedSeoTitle({
+      site,
+      kind,
+      override: page?.seoTitle,
+      fallback: generatedTitle,
+    }),
     description: preferLocalOverride(
       page?.metaDescription || page?.seoDescription,
       site,
