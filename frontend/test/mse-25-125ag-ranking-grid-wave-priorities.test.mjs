@@ -10,9 +10,9 @@ const read = (relative) => fs.readFileSync(path.join(root, relative), "utf8");
 
 test("cockpit surfaces Wave 1 execution summary", () => {
   const tracker = read("app/ranking-grid/TerritorialActionTracker.js");
-  assert.match(tracker, /Vague 1 — actions à lancer maintenant/);
+  assert.match(tracker, /À faire maintenant/);
   assert.match(tracker, /Priorité V1/);
-  assert.match(tracker, /2 leviers par territoire critique/);
+  assert.match(tracker, /actions prioritaires sélectionnées pour leur impact et leur effort/);
 });
 
 test("Wave 1 and Wave 2 recommendations are marked from executionPlan", () => {
@@ -29,7 +29,7 @@ test("Wave prioritization never auto-creates tracked actions", () => {
   assert.match(tracker, /onClick=\{\(\) => create\(territory, recommendation\)\}/);
   assert.match(tracker, /onClick=\{createWave1\}/);
   assert.doesNotMatch(tracker, /useEffect\([^]*(?:create\(|createWave1\()/);
-  assert.match(tracker, /création uniquement après action explicite/);
+  assert.match(tracker, /aucun suivi n’est créé sans action explicite/);
 });
 
 test("Wave 1 card highlights expected low-effort action labels", () => {
