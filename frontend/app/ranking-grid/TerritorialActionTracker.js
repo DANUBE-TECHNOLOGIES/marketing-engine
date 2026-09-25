@@ -201,9 +201,9 @@ export default function TerritorialActionTracker({
         <div className="mt-5 rounded-xl border border-indigo-200 bg-indigo-50 p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <div className="text-sm font-black text-indigo-950">Vague 1 — actions à lancer maintenant</div>
+              <div className="text-sm font-black text-indigo-950">À faire maintenant</div>
               <p className="mt-1 text-xs text-indigo-900/80">
-                {wave1.length} actions prioritaires · 2 leviers par territoire critique · création uniquement après action explicite.
+                {wave1.length} actions prioritaires sélectionnées pour leur impact et leur effort · aucun suivi n’est créé sans action explicite.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -245,9 +245,31 @@ export default function TerritorialActionTracker({
       {plan ? (
         <div className="mt-5 space-y-4">
           {(plan.territories || []).map((territory) => (
-            <div key={territory.city} className="rounded-xl border border-slate-200 p-4">
-              <div className="font-bold text-slate-900">{territory.city}</div>
-              <div className="mt-3 grid gap-2 lg:grid-cols-2">
+            <details
+              key={territory.city}
+              className="group rounded-xl border border-slate-200 bg-white"
+            >
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-4">
+                <div>
+                  <div className="font-bold text-slate-900">{territory.city}</div>
+                  <div className="mt-1 text-xs text-slate-500">
+                    {(territory.actions || []).length} action(s) · P1 {territory.p1 || 0} · P2 {territory.p2 || 0} · moyenne #{territory.averageRank ?? "—"}
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-bold text-slate-500">
+                    Voir les actions
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className="text-lg font-black text-slate-400 transition-transform group-open:rotate-180"
+                  >
+                    ⌄
+                  </span>
+                </div>
+              </summary>
+
+              <div className="grid gap-2 border-t border-slate-100 p-4 lg:grid-cols-2">
                 {(territory.actions || []).map((recommendation) => {
                   const key = trackedKey(campaignId, territory.city, recommendation.code);
                   const execution = executionKey(territory.city, recommendation.code);
@@ -279,12 +301,35 @@ export default function TerritorialActionTracker({
                   );
                 })}
               </div>
-            </div>
+            </details>
           ))}
         </div>
       ) : null}
 
-      <div className="mt-5 space-y-3">
+      <details className="group mt-5 rounded-xl border border-slate-200 bg-white">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-4">
+          <div>
+            <div className="font-bold text-slate-900">
+              Actions déjà suivies
+            </div>
+            <div className="mt-1 text-xs text-slate-500">
+              {actions.length} action(s) · {summary.todo} à faire · {summary.inProgress} en cours · {summary.done} terminée(s)
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-bold text-slate-500">
+              Afficher le suivi détaillé
+            </span>
+            <span
+              aria-hidden="true"
+              className="text-lg font-black text-slate-400 transition-transform group-open:rotate-180"
+            >
+              ⌄
+            </span>
+          </div>
+        </summary>
+
+        <div className="space-y-3 border-t border-slate-100 p-4">
         {actions.length ? actions.map((row) => {
           const metadata = row.metadata || {};
           const draft = draftFor(row);
@@ -356,7 +401,8 @@ export default function TerritorialActionTracker({
             Aucune recommandation territoriale n’est encore suivie.
           </div>
         )}
-      </div>
+        </div>
+      </details>
     </div>
   );
 }
