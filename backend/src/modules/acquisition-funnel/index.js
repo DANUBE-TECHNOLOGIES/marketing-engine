@@ -29,7 +29,7 @@ const NETWORK_AGENCIES = Object.freeze([
   Object.freeze({publicSiteSlug:"dax",siteSlug:"ambassade-fram-mondescale-dax",agencyCity:"Dax"}),
   Object.freeze({publicSiteSlug:"lamorlaye",siteSlug:"mondescale-lamorlaye",agencyCity:"Lamorlaye"}),
   Object.freeze({publicSiteSlug:"amilly",siteSlug:"tui-store-amilly",agencyCity:"Amilly"}),
-  Object.freeze({publicSiteSlug:"melun",siteSlug:"tui-store-melun",agencyCity:"Melun"})
+  Object.freeze({publicSiteSlug:"melun",siteSlug:"ambassade-fram-mondescale-melun",agencyCity:"Melun"})
 ]);
 
 function createFunnel(agency){
