@@ -24,7 +24,7 @@ test(
 
     assert.match(
       source,
-      /"tui-store-melun"\s*:\s*\[/,
+      /"ambassade-fram-mondescale-melun"\s*:\s*\[/,
     );
 
     for (const city of expected) {

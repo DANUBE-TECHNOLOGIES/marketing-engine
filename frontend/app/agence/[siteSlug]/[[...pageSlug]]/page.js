@@ -61,6 +61,26 @@ const PAGE_ALIASES = Object.freeze({
   inspirations: "inspiration",
 });
 
+const SITE_ALIASES = Object.freeze({
+  "tui-store-melun": "ambassade-fram-mondescale-melun",
+});
+
+function normalizeSiteSlug(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function canonicalSiteSlug(value) {
+  const slug = normalizeSiteSlug(value);
+  return Object.prototype.hasOwnProperty.call(SITE_ALIASES, slug)
+    ? SITE_ALIASES[slug]
+    : slug;
+}
+
+function isAliasSite(value) {
+  const slug = normalizeSiteSlug(value);
+  return Object.prototype.hasOwnProperty.call(SITE_ALIASES, slug);
+}
+
 function normalizePageSlug(value) {
   return String(value || "").trim().toLowerCase();
 }
@@ -226,6 +246,16 @@ export default async function AgencySitePage({ params }) {
   const resolved = await params;
   if ((resolved.pageSlug?.length || 0) > 1) notFound();
   const pageSlug = resolved.pageSlug?.[0] || "";
+
+  if (isAliasSite(resolved.siteSlug)) {
+    permanentRedirect(
+      canonicalPath({
+        siteSlug: canonicalSiteSlug(resolved.siteSlug),
+        pageSlug,
+      })
+    );
+  }
+
   if (isAliasPage(pageSlug) || isNonCanonicalPageSlug(pageSlug)) {
     permanentRedirect(canonicalPath({ siteSlug: resolved.siteSlug, pageSlug }));
   }
@@ -341,12 +371,15 @@ export default async function AgencySitePage({ params }) {
 
 export {
   PAGE_ALIASES,
+  SITE_ALIASES,
+  canonicalSiteSlug,
   absoluteMetadataImage,
   canonicalPageSlug,
   canonicalPath,
   canonicalUrl,
   homeHeroSection,
   isAliasPage,
+  isAliasSite,
   isHomePage,
   isLegalPage,
   isNonCanonicalPageSlug,
