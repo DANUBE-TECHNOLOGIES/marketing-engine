@@ -5,7 +5,7 @@ const { preRolloutQualityReport } = require("./pre-rollout-quality");
 const { localPageProfile, stableVariant } = require("./local-differentiator");
 
 const INSTALLED = Symbol.for("mse-25.30.editorial-hardening-installed");
-const DEFAULT_EXCLUDED_SITE_SLUGS = Object.freeze(["tui-store-melun"]);
+const DEFAULT_EXCLUDED_SITE_SLUGS = Object.freeze(["ambassade-fram-mondescale-melun"]);
 const DIFFERENTIATED_PAGE_KINDS = new Set(["services", "engagements", "destinations"]);
 const VOWEL_INITIAL = /^[aeiouyhàâäéèêëîïôöùûüÿ]/i;
 
