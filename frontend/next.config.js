@@ -18,6 +18,21 @@ function backendOrigin() {
 }
 
 const nextConfig = {
+  async redirects() {
+    return [
+      {
+        source: "/agence/tui-store-melun",
+        destination: "/agence/ambassade-fram-mondescale-melun",
+        permanent: true,
+      },
+      {
+        source: "/agence/tui-store-melun/:path*",
+        destination: "/agence/ambassade-fram-mondescale-melun/:path*",
+        permanent: true,
+      },
+    ];
+  },
+
   allowedDevOrigins: [
     "192.168.1.101",
     "local-engine.local",
