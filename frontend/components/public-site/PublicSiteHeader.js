@@ -104,13 +104,24 @@ export default function PublicSiteHeader({ site, brand, brandRuntime, brandAsset
             aria-label={city ? `Accueil de l’agence de voyages ${site.name} à ${city}` : `Accueil ${site.name}`}
           >
             <span className="public-site-header-logo-wrap">
-              <PublicBrandLogo
+              {/* MELUN_TEMPORARY_TUI_LOGO — remove after TUI contract ends */}
+{site.slug === "ambassade-fram-mondescale-melun" ? (
+  <img
+    src="/partners/tui-official.webp"
+    alt="TUI"
+    className="public-brand-logo"
+    data-public-brand-logo="1"
+    data-public-brand-logo-source="melun-temporary-tui"
+  />
+) : (
+  <PublicBrandLogo
                 brand={resolvedPublicBrand}
                 brandAssets={resolvedPublicBrandAssets}
                 site={site}
                 agency={agency}
                 className="public-site-header__brand-logo"
               />
+)}
             </span>
             <span className="public-site-brand-copy">
               <strong>{site.name}</strong>
