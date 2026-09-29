@@ -79,3 +79,38 @@ test("MSE-25.258 contains no database mutation implementation", () => {
     /\.(update|updateMany|create|createMany|delete|deleteMany|upsert)\s*\(/
   );
 });
+
+test("MSE-25.260 metadata redirects legacy Melun before database-backed loading", () => {
+  const metadataStart = route.indexOf(
+    "export async function generateMetadata({ params })"
+  );
+
+  const pageStart = route.indexOf(
+    "export default async function AgencySitePage"
+  );
+
+  assert.ok(metadataStart >= 0, "generateMetadata must exist");
+  assert.ok(pageStart > metadataStart, "page component must follow generateMetadata");
+
+  const metadataSource = route.slice(metadataStart, pageStart);
+
+  const aliasGuard = metadataSource.indexOf(
+    "if (isAliasSite(resolved.siteSlug))"
+  );
+
+  const redirect = metadataSource.indexOf(
+    "permanentRedirect("
+  );
+
+  const siteLoad = metadataSource.indexOf(
+    "publicSiteApi.getSite(resolved.siteSlug)"
+  );
+
+  assert.ok(aliasGuard >= 0, "metadata must guard legacy site aliases");
+  assert.ok(redirect > aliasGuard, "metadata alias guard must redirect");
+  assert.ok(siteLoad >= 0, "metadata site load must exist");
+  assert.ok(
+    redirect < siteLoad,
+    "legacy Melun metadata redirect must occur before database-backed site loading"
+  );
+});

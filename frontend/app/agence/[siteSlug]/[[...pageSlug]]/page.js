@@ -180,6 +180,15 @@ function metadataImages(image) {
 
 export async function generateMetadata({ params }) {
   const resolved = await params;
+
+  if (isAliasSite(resolved.siteSlug)) {
+    permanentRedirect(
+      canonicalPath({
+        siteSlug: canonicalSiteSlug(resolved.siteSlug),
+        pageSlug: canonicalPageSlug(resolved.pageSlug?.[0] || ""),
+      })
+    );
+  }
   if ((resolved.pageSlug?.length || 0) > 1) {
     return { robots: { index: false, follow: false } };
   }
