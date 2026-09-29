@@ -89,6 +89,11 @@ const EXTENDED_LOCAL_AREA_BY_SITE_SLUG = Object.freeze({
     "Montigny-le-Bretonneux",
     "Rambouillet",
   ],
+  "ambassade-fram-mondescale-ozoir-la-ferriere": [
+    "Férolles-Attilly",
+    "Servon",
+    "Chevry-Cossigny",
+  ],
 });
 
 function configuredTargetCities(site) {
