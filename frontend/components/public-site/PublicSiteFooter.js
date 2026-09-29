@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { resolvePublicAgencyName } from "./melun-public-identity";
+
 function telephoneHref(phone) {
   return `tel:${String(phone || "").replace(/\s+/g, "")}`;
 }
@@ -119,7 +121,7 @@ export default function PublicSiteFooter({ site }) {
           <span className="public-site-footer-mark">M</span>
 
           <div>
-            <strong>{site.name}</strong>
+            <strong>{resolvePublicAgencyName(site)}</strong>
             <p>
               {city
                 ? `Votre agence de voyages à ${city} vous accompagne dans la création de voyages uniques, adaptés à vos envies.`
@@ -132,7 +134,7 @@ export default function PublicSiteFooter({ site }) {
           <h3>Votre agence</h3>
 
           <address className="public-site-footer-address">
-            <strong>{site.name}</strong>
+            <strong>{resolvePublicAgencyName(site)}</strong>
 
             {agency.address ? (
               <span>
@@ -195,7 +197,7 @@ export default function PublicSiteFooter({ site }) {
       </div>
 
       <div className="public-site-container public-site-footer-bottom">
-        <span>© {new Date().getFullYear()} {site.name}</span>
+        <span>© {new Date().getFullYear()} {resolvePublicAgencyName(site)}</span>
         <span>Voyages, conseils et accompagnement personnalisé</span>
       </div>
     </footer>
