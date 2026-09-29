@@ -35,10 +35,9 @@ test("local area fallback covers the principal Mondescale agencies", () => {
 
 test("visible local area links use the same resolved target cities as metadata", () => {
   assert.match(areaLinks, /resolvedTargetCities/);
-  assert.match(areaLinks, /\/services/);
-  assert.match(areaLinks, /\/destinations/);
-  assert.match(areaLinks, /\/inspiration/);
-  assert.match(areaLinks, /\/contact/);
+  assert.match(areaLinks, /publishedLocalNavigation/);
+  assert.match(areaLinks, /uniquePublishedNavigation/);
+  assert.match(areaLinks, /pageHref/);
 });
 
 test("TravelAgency structured data exposes resolved service areas", () => {
