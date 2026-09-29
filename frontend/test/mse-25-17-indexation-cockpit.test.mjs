@@ -78,7 +78,7 @@ test("MSE-25.17 cockpit is exposed in the internal navigation", () => {
   const layout = read("app/layout.js");
   const nav = read("components/AdminEngineNav.js");
 
-  assert.match(layout, /<AdminEngineNav\s*\/>/);
+  assert.match(layout, /<RouteAwareAdminEngineNav\s*\/>/);
   assert.match(nav, /["']\/indexation["']\s*,\s*["']Indexation["']/);
   assert.match(nav, /ADMIN_LINKS\.map/);
 });

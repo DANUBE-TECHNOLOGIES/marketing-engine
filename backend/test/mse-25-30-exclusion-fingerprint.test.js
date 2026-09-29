@@ -32,14 +32,14 @@ function rawNetworkPlan() {
   return {
     version: "mse-25.30",
     plans: [
-      agencyPlan({ agencyId: 8, siteSlug: "tui-store-melun", city: "Melun" }),
+      agencyPlan({ agencyId: 8, siteSlug: "ambassade-fram-mondescale-melun", city: "Melun" }),
       agencyPlan({ agencyId: 9, siteSlug: "tui-store-amilly", city: "Amilly" }),
     ],
     similarity: {},
     quality: {},
     sitemapReadiness: {
       sites: [
-        { siteSlug: "tui-store-melun", readyToSubmit: true },
+        { siteSlug: "ambassade-fram-mondescale-melun", readyToSubmit: true },
         { siteSlug: "tui-store-amilly", readyToSubmit: true },
       ],
       notReady: [],
@@ -89,7 +89,7 @@ test("MSE-25.30 le fingerprint refuse un changement du périmètre d'exclusion e
     const preview = await service.buildNetworkContentOptimization();
 
     assert.deepEqual(preview.plans.map((plan) => plan.siteSlug), ["tui-store-amilly"]);
-    assert.deepEqual(preview.excludedSiteSlugs, ["tui-store-melun"]);
+    assert.deepEqual(preview.excludedSiteSlugs, ["ambassade-fram-mondescale-melun"]);
     assert.match(preview.planFingerprint, /^[a-f0-9]{64}$/);
 
     process.env[EXCLUSION_ENV] = "";
@@ -133,7 +133,7 @@ test("MSE-25.30 autorise l'apply lorsque le périmètre d'exclusion est resté i
     assert.equal(applied.writes, true);
     assert.equal(applied.planFingerprint, preview.planFingerprint);
     assert.deepEqual(applied.plans.map((plan) => plan.siteSlug), ["tui-store-amilly"]);
-    assert.deepEqual(applied.excludedSiteSlugs, ["tui-store-melun"]);
+    assert.deepEqual(applied.excludedSiteSlugs, ["ambassade-fram-mondescale-melun"]);
   } finally {
     restoreEnv(previous);
   }
