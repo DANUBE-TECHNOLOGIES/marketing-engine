@@ -40,6 +40,7 @@ import {
   buildLocalPageSeo,
 } from "../../../../lib/seo/local-page-seo";
 import { absoluteUrl } from "../../../../lib/seo/site-url";
+import OzoirLocalExpansion from "../../../../components/public-site/OzoirLocalExpansion";
 
 const PUBLIC_ORIGIN = String(
   process.env.NEXT_PUBLIC_SITE_ORIGIN ||
