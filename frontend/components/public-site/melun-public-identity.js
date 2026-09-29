@@ -2,7 +2,7 @@ export const MELUN_CANONICAL_SLUG =
   "ambassade-fram-mondescale-melun";
 
 export const MELUN_POST_TUI_NAME =
-  "Mondescale Voyages – Melun";
+  "Ambassade FRAM – Mondescale – Melun";
 
 export function resolvePublicAgencyName(site) {
   if (site?.slug === MELUN_CANONICAL_SLUG) {

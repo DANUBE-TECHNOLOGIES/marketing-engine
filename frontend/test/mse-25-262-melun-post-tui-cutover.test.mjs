@@ -32,7 +32,7 @@ test("MSE-25.262 defines canonical post-TUI Melun identity", () => {
   );
 
   assert.equal(
-    identity.includes('"Mondescale Voyages – Melun"'),
+    identity.includes('"Ambassade FRAM – Mondescale – Melun"'),
     true
   );
 });
