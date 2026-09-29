@@ -5,6 +5,8 @@ import { getShowcaseUrl } from "../../lib/showcase-url";
 import PublicBrandLogo from "./PublicBrandLogo";
 import PublicOpeningStatus from "./PublicOpeningStatus";
 
+import { resolvePublicAgencyName } from "./melun-public-identity";
+
 const NAVIGATION_ALIASES = Object.freeze({
   home: "",
   accueil: "",
@@ -71,6 +73,7 @@ function isTuiShowcaseDisabled(site) {
   return name.includes("tui") && TUI_SHOWCASE_DISABLED_CITIES.has(city);
 }
 
+
 export default function PublicSiteHeader({ site, brand, brandRuntime, brandAssets }) {
   const resolvedPublicBrand =
     brand || brandRuntime?.runtime?.brand || site?.brand || site?.branding || site?.brandProfile || null;
@@ -101,30 +104,20 @@ export default function PublicSiteHeader({ site, brand, brandRuntime, brandAsset
           <Link
             href={`/agence/${site.slug}`}
             className="public-site-header-identity"
-            aria-label={city ? `Accueil de l’agence de voyages ${site.name} à ${city}` : `Accueil ${site.name}`}
+            aria-label={city ? `Accueil de l’agence de voyages ${resolvePublicAgencyName(site)} à ${city}` : `Accueil ${resolvePublicAgencyName(site)}`}
           >
             <span className="public-site-header-logo-wrap">
               {/* MELUN_TEMPORARY_TUI_LOGO — remove after TUI contract ends */}
-{site.slug === "ambassade-fram-mondescale-melun" ? (
-  <img
-    src="/partners/tui-official.webp"
-    alt="TUI"
-    className="public-brand-logo"
-    data-public-brand-logo="1"
-    data-public-brand-logo-source="melun-temporary-tui"
-  />
-) : (
-  <PublicBrandLogo
+<PublicBrandLogo
                 brand={resolvedPublicBrand}
                 brandAssets={resolvedPublicBrandAssets}
                 site={site}
                 agency={agency}
                 className="public-site-header__brand-logo"
               />
-)}
             </span>
             <span className="public-site-brand-copy">
-              <strong>{site.name}</strong>
+              <strong>{resolvePublicAgencyName(site)}</strong>
               {city ? <small>Agence de voyages à {city}</small> : null}
             </span>
           </Link>
