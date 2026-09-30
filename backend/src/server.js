@@ -62,6 +62,10 @@ const {
   resolveRankingTargetGeo,
   dataForSeoLocationCoordinate
 } = require("./lib/ranking-target-geo");
+const {
+  buildAgencyIntelligence,
+  buildNetworkIntelligence
+} = require("./lib/network-ranking-intelligence");
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL
@@ -6856,6 +6860,226 @@ app.use(
     prisma,
   })
 );
+
+
+// NETWORK RANKING INTELLIGENCE V4.5C
+// Strictly read-only. Existing RealRankingCheck rows only.
+
+async function loadNetworkRankingIntelligenceData() {
+
+  const agencies =
+    await prisma.agency.findMany({
+      orderBy:{
+        id:"asc"
+      },
+      select:{
+        id:true,
+        name:true,
+        city:true
+      }
+    });
+
+  const checks =
+    await prisma.realRankingCheck.findMany({
+      orderBy:[
+        {checkedAt:"asc"},
+        {id:"asc"}
+      ],
+      select:{
+        id:true,
+        agencyId:true,
+        keyword:true,
+        city:true,
+        found:true,
+        position:true,
+        absolutePosition:true,
+        rating:true,
+        reviews:true,
+        title:true,
+        url:true,
+        cost:true,
+        checkedAt:true
+      }
+    });
+
+  return {
+    agencies,
+    checks
+  };
+}
+
+
+app.get(
+  "/network-ranking/intelligence",
+  async (req,res)=>{
+
+    try{
+
+      const {
+        agencies,
+        checks
+      } =
+        await loadNetworkRankingIntelligenceData();
+
+      const intelligence =
+        buildNetworkIntelligence(
+          agencies,
+          checks
+        );
+
+      res.json({
+        version:"4.5",
+        mode:"read_only",
+        agencyCount:agencies.length,
+        rowCount:checks.length,
+        intelligence
+      });
+
+    }catch(e){
+
+      console.error(
+        "[NETWORK_RANKING_INTELLIGENCE]",
+        e
+      );
+
+      res.status(500).json({
+        error:
+          e.code ||
+          e.message ||
+          "NETWORK_RANKING_INTELLIGENCE_FAILED"
+      });
+
+    }
+
+  }
+);
+
+
+app.get(
+  "/network-ranking/intelligence/agencies/:agencyId",
+  async (req,res)=>{
+
+    try{
+
+      const agencyId =
+        Number(req.params.agencyId);
+
+      if(
+        !Number.isInteger(agencyId) ||
+        agencyId <= 0
+      ){
+        return res.status(400).json({
+          error:"RANKING_AGENCY_ID_REQUIRED"
+        });
+      }
+
+      const {
+        agencies,
+        checks
+      } =
+        await loadNetworkRankingIntelligenceData();
+
+      const agency =
+        agencies.find(
+          item=>item.id===agencyId
+        );
+
+      if(!agency){
+        return res.status(404).json({
+          error:"RANKING_AGENCY_NOT_FOUND"
+        });
+      }
+
+      const agencyChecks =
+        checks.filter(
+          row=>row.agencyId===agencyId
+        );
+
+      const intelligence =
+        buildAgencyIntelligence(
+          agency,
+          agencyChecks
+        );
+
+      res.json({
+        version:"4.5",
+        mode:"read_only",
+        agency,
+        rowCount:agencyChecks.length,
+        intelligence
+      });
+
+    }catch(e){
+
+      console.error(
+        "[NETWORK_RANKING_AGENCY_INTELLIGENCE]",
+        e
+      );
+
+      res.status(500).json({
+        error:
+          e.code ||
+          e.message ||
+          "NETWORK_RANKING_AGENCY_INTELLIGENCE_FAILED"
+      });
+
+    }
+
+  }
+);
+
+
+app.get(
+  "/network-ranking/opportunities",
+  async (req,res)=>{
+
+    try{
+
+      const {
+        agencies,
+        checks
+      } =
+        await loadNetworkRankingIntelligenceData();
+
+      const intelligence =
+        buildNetworkIntelligence(
+          agencies,
+          checks
+        );
+
+      const opportunities =
+        Array.isArray(
+          intelligence?.opportunities
+        )
+        ? intelligence.opportunities
+        : [];
+
+      res.json({
+        version:"4.5",
+        mode:"read_only",
+        count:opportunities.length,
+        opportunities
+      });
+
+    }catch(e){
+
+      console.error(
+        "[NETWORK_RANKING_OPPORTUNITIES]",
+        e
+      );
+
+      res.status(500).json({
+        error:
+          e.code ||
+          e.message ||
+          "NETWORK_RANKING_OPPORTUNITIES_FAILED"
+      });
+
+    }
+
+  }
+);
+
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log(
