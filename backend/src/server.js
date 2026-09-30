@@ -57,6 +57,8 @@ const dataForSeoConfig = require("./config/dataForSeo");
 const refreshGoogleAccessToken = require("./lib/googleAccessToken");
 const fetchGoogleReviews = require("./lib/googleReviews");
 const { Pool } = require("pg");
+const { isSameRankingTarget } = require("./lib/ranking-target-identity");
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL
 });
@@ -1833,13 +1835,22 @@ app.get("/real-rankings/check", async (req,res)=>{
       ?.result?.[0]
       ?.items || [];
 
+    const targetAgency =
+      agencyId
+      ? await prisma.agency.findUnique({
+          where:{ id:agencyId }
+        })
+      : null;
+
     const mondescale =
-      items.find(
-        i =>
-          (i.title || "")
-          .toLowerCase()
-          .includes("mondescale")
-      );
+      targetAgency
+      ? items.find(i =>
+          isSameRankingTarget({
+            agency:targetAgency,
+            result:i
+          })
+        )
+      : null;
 
     res.json({
       keyword,
@@ -1893,13 +1904,22 @@ app.post("/real-rankings/check-and-store", async (req,res)=>{
       ?.result?.[0]
       ?.items || [];
 
+    const targetAgency =
+      agencyId
+      ? await prisma.agency.findUnique({
+          where:{ id:agencyId }
+        })
+      : null;
+
     const mondescale =
-      items.find(
-        i =>
-          (i.title || "")
-          .toLowerCase()
-          .includes("mondescale")
-      );
+      targetAgency
+      ? items.find(i =>
+          isSameRankingTarget({
+            agency:targetAgency,
+            result:i
+          })
+        )
+      : null;
 
     const cost =
       result.raw?.tasks?.[0]?.cost ||
@@ -2036,27 +2056,12 @@ app.post("/real-rankings/batch-check", async (req,res)=>{
           ?.result?.[0]
           ?.items || [];
 
-        const needle =
-          (
-            agency.name ||
-            "mondescale"
-          )
-          .toLowerCase();
-
         const found =
-          items.find(
-            i =>
-              (i.title || "")
-              .toLowerCase()
-              .includes("mondescale")
-              ||
-              (i.domain || "")
-              .toLowerCase()
-              .includes("mondescale")
-              ||
-              (i.url || "")
-              .toLowerCase()
-              .includes("mondescale")
+          items.find(i =>
+            isSameRankingTarget({
+              agency,
+              result:i
+            })
           );
 
         const cost =
@@ -2258,13 +2263,29 @@ app.get("/rankings/check-real", async (req,res)=>{
       ?.result?.[0]
       ?.items || [];
 
+    const requestedAgencyId =
+      req.query.agencyId
+      ? Number(req.query.agencyId)
+      : null;
+
+    const targetAgency =
+      requestedAgencyId
+      ? await prisma.agency.findUnique({
+          where:{ id:requestedAgencyId }
+        })
+      : await prisma.agency.findFirst({
+          where:{ city }
+        });
+
     const mondescale =
-      items.find(
-        i =>
-          (i.title || "")
-          .toLowerCase()
-          .includes("mondescale")
-      );
+      targetAgency
+      ? items.find(i =>
+          isSameRankingTarget({
+            agency:targetAgency,
+            result:i
+          })
+        )
+      : null;
 
     res.json({
       keyword,
@@ -5235,15 +5256,11 @@ cron.schedule("0 3 * * *", async ()=>{
             ?.items || [];
 
           const found =
-            items.find(
-              i =>
-                (i.title || "")
-                .toLowerCase()
-                .includes("mondescale")
-                ||
-                (i.domain || "")
-                .toLowerCase()
-                .includes("mondescale")
+            items.find(i =>
+              isSameRankingTarget({
+                agency,
+                result:i
+              })
             );
 
           const cost =
