@@ -1765,12 +1765,15 @@ async function loadRealRankingGeoAgency(agencyId) {
         },
 
         rankingGridCampaigns: {
+          where: {
+            status: "completed"
+          },
           orderBy: {
             createdAt: "desc"
           },
-          take: 1,
           select: {
             id: true,
+            status: true,
             centerLat: true,
             centerLng: true,
             createdAt: true
