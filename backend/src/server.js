@@ -58,6 +58,10 @@ const refreshGoogleAccessToken = require("./lib/googleAccessToken");
 const fetchGoogleReviews = require("./lib/googleReviews");
 const { Pool } = require("pg");
 const { isSameRankingTarget } = require("./lib/ranking-target-identity");
+const {
+  resolveRankingTargetGeo,
+  dataForSeoLocationCoordinate
+} = require("./lib/ranking-target-geo");
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL
@@ -1723,7 +1727,104 @@ app.get("/dataforseo/status", (req, res) => {
 });
 
 
-async function callDataForSeoMaps(keyword, locationName) {
+
+async function loadRealRankingGeoAgency(agencyId) {
+  const numericAgencyId = Number(agencyId);
+
+  if (
+    !Number.isInteger(numericAgencyId) ||
+    numericAgencyId <= 0
+  ) {
+    const error =
+      new Error("RANKING_AGENCY_REQUIRED");
+
+    error.code =
+      "RANKING_AGENCY_REQUIRED";
+
+    throw error;
+  }
+
+  const agency =
+    await prisma.agency.findUnique({
+      where: {
+        id: numericAgencyId
+      },
+      select: {
+        id: true,
+        name: true,
+        city: true,
+        address: true,
+        postalCode: true,
+        googleReviewUrl: true,
+        googleLocationId: true,
+
+        profile: {
+          select: {
+            googleLocationData: true
+          }
+        },
+
+        rankingGridCampaigns: {
+          orderBy: {
+            createdAt: "desc"
+          },
+          take: 1,
+          select: {
+            id: true,
+            centerLat: true,
+            centerLng: true,
+            createdAt: true
+          }
+        }
+      }
+    });
+
+  if (!agency) {
+    const error =
+      new Error("RANKING_AGENCY_NOT_FOUND");
+
+    error.code =
+      "RANKING_AGENCY_NOT_FOUND";
+
+    throw error;
+  }
+
+  return agency;
+}
+
+async function resolveRealRankingGeoAgency(agencyId) {
+  const agency =
+    await loadRealRankingGeoAgency(agencyId);
+
+  const resolved =
+    resolveRankingTargetGeo(agency);
+
+  if (
+    !resolved ||
+    resolved.ready !== true ||
+    !resolved.coordinates
+  ) {
+    const reason =
+      resolved?.reason ||
+      "RANKING_TARGET_COORDINATES_REQUIRED";
+
+    const error =
+      new Error(reason);
+
+    error.code = reason;
+    error.agencyId = agency.id;
+
+    throw error;
+  }
+
+  return {
+    agency,
+    geo: resolved,
+    coordinates: resolved.coordinates
+  };
+}
+
+async function callDataForSeoMaps(keyword, locationName, coordinates) {
   const enabled = process.env.DATAFORSEO_ENABLED === "true";
 
   if (!enabled) {
@@ -1756,7 +1857,7 @@ async function callDataForSeoMaps(keyword, locationName) {
       body: JSON.stringify([
         {
           keyword,
-          location_coordinate: "46.9896,3.1590,10z",
+          location_coordinate: dataForSeoLocationCoordinate(coordinates),
           language_code: "fr",
           device: "desktop",
           os: "windows"
@@ -1777,14 +1878,43 @@ async function callDataForSeoMaps(keyword, locationName) {
 
 app.get("/dataforseo/maps-test", async (req, res) => {
   try {
-    const keyword = req.query.keyword || "agence de voyage";
-    const locationName = req.query.location || "Nevers, Bourgogne-Franche-Comté, France";
+    const keyword =
+      req.query.keyword ||
+      "agence de voyage";
 
-    const result = await callDataForSeoMaps(keyword, locationName);
+    const agencyId =
+      req.query.agencyId
+      ? Number(req.query.agencyId)
+      : null;
+
+    if (
+      !Number.isInteger(agencyId) ||
+      agencyId <= 0
+    ) {
+      return res.status(400).json({
+        error: "RANKING_AGENCY_ID_REQUIRED"
+      });
+    }
+
+    const target =
+      await resolveRealRankingGeoAgency(
+        agencyId
+      );
+
+    const result =
+      await callDataForSeoMaps(
+        keyword,
+        target.agency.city,
+        target.coordinates
+      );
 
     res.json(result);
   } catch (error) {
-    res.status(500).json({
+    res.status(
+      error.code === "RANKING_AGENCY_NOT_FOUND"
+        ? 404
+        : 500
+    ).json({
       error: error.message
     });
   }
@@ -1816,31 +1946,46 @@ app.get("/real-rankings/check", async (req,res)=>{
 
   try{
 
+    const agencyId =
+      req.query.agencyId
+      ? Number(req.query.agencyId)
+      : null;
+
+    if (
+      !Number.isInteger(agencyId) ||
+      agencyId <= 0
+    ) {
+      return res.status(400).json({
+        error:"RANKING_AGENCY_ID_REQUIRED"
+      });
+    }
+
     const keyword =
       req.query.keyword ||
       "agence de voyage";
 
+    const target =
+      await resolveRealRankingGeoAgency(
+        agencyId
+      );
+
+    const targetAgency =
+      target.agency;
+
     const city =
-      req.query.city ||
-      "Nevers";
+      targetAgency.city;
 
     const result =
       await callDataForSeoMaps(
         keyword,
-        city
+        city,
+        target.coordinates
       );
 
     const items =
       result.raw?.tasks?.[0]
       ?.result?.[0]
       ?.items || [];
-
-    const targetAgency =
-      agencyId
-      ? await prisma.agency.findUnique({
-          where:{ id:agencyId }
-        })
-      : null;
 
     const mondescale =
       targetAgency
@@ -1885,31 +2030,41 @@ app.post("/real-rankings/check-and-store", async (req,res)=>{
       ? Number(req.body.agencyId)
       : null;
 
+    if (
+      !Number.isInteger(agencyId) ||
+      agencyId <= 0
+    ) {
+      return res.status(400).json({
+        error:"RANKING_AGENCY_ID_REQUIRED"
+      });
+    }
+
     const keyword =
       req.body.keyword ||
       "agence de voyage";
 
+    const target =
+      await resolveRealRankingGeoAgency(
+        agencyId
+      );
+
+    const targetAgency =
+      target.agency;
+
     const city =
-      req.body.city ||
-      "Nevers";
+      targetAgency.city;
 
     const result =
       await callDataForSeoMaps(
         keyword,
-        city
+        city,
+        target.coordinates
       );
 
     const items =
       result.raw?.tasks?.[0]
       ?.result?.[0]
       ?.items || [];
-
-    const targetAgency =
-      agencyId
-      ? await prisma.agency.findUnique({
-          where:{ id:agencyId }
-        })
-      : null;
 
     const mondescale =
       targetAgency
@@ -2045,10 +2200,16 @@ app.post("/real-rankings/batch-check", async (req,res)=>{
           agency.city ||
           "France";
 
+        const target =
+          await resolveRealRankingGeoAgency(
+            agency.id
+          );
+
         const result =
           await callDataForSeoMaps(
             keyword,
-            city
+            city,
+            target.coordinates
           );
 
         const items =
@@ -2248,34 +2409,98 @@ app.get("/rankings/check-real", async (req,res)=>{
       req.query.keyword ||
       "agence de voyage";
 
+    const requestedAgencyId =
+      req.query.agencyId
+      ? Number(req.query.agencyId)
+      : null;
+
+    let targetAgency = null;
+
+    if (requestedAgencyId !== null) {
+
+      if (
+        !Number.isInteger(requestedAgencyId) ||
+        requestedAgencyId <= 0
+      ) {
+        return res.status(400).json({
+          error:"RANKING_AGENCY_ID_INVALID"
+        });
+      }
+
+      targetAgency =
+        await prisma.agency.findUnique({
+          where:{
+            id:requestedAgencyId
+          }
+        });
+
+    } else {
+
+      const requestedCity =
+        typeof req.query.city === "string"
+        ? req.query.city.trim()
+        : "";
+
+      if (!requestedCity) {
+        return res.status(400).json({
+          error:
+            "RANKING_AGENCY_ID_OR_CITY_REQUIRED"
+        });
+      }
+
+      const candidates =
+        await prisma.agency.findMany({
+          where:{
+            city:requestedCity
+          },
+          take:2
+        });
+
+      if (candidates.length === 0) {
+        return res.status(404).json({
+          error:"RANKING_AGENCY_NOT_FOUND"
+        });
+      }
+
+      if (candidates.length > 1) {
+        return res.status(400).json({
+          error:
+            "RANKING_AGENCY_CITY_AMBIGUOUS"
+        });
+      }
+
+      targetAgency =
+        candidates[0];
+    }
+
+    if (!targetAgency) {
+      return res.status(404).json({
+        error:"RANKING_AGENCY_NOT_FOUND"
+      });
+    }
+
+    const target =
+      await resolveRealRankingGeoAgency(
+        targetAgency.id
+      );
+
+    targetAgency =
+      target.agency;
+
     const city =
-      req.query.city ||
-      "Nevers";
+      targetAgency.city;
 
     const result =
       await callDataForSeoMaps(
         keyword,
-        city
+        city,
+        target.coordinates
       );
 
     const items =
       result.raw?.tasks?.[0]
       ?.result?.[0]
       ?.items || [];
-
-    const requestedAgencyId =
-      req.query.agencyId
-      ? Number(req.query.agencyId)
-      : null;
-
-    const targetAgency =
-      requestedAgencyId
-      ? await prisma.agency.findUnique({
-          where:{ id:requestedAgencyId }
-        })
-      : await prisma.agency.findFirst({
-          where:{ city }
-        });
 
     const mondescale =
       targetAgency
@@ -5244,10 +5469,16 @@ cron.schedule("0 3 * * *", async ()=>{
 
         try{
 
+          const target =
+            await resolveRealRankingGeoAgency(
+              agency.id
+            );
+
           const result =
             await callDataForSeoMaps(
               keyword,
-              agency.city
+              agency.city,
+              target.coordinates
             );
 
           const items =
