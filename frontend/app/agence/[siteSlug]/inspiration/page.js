@@ -14,6 +14,7 @@ import {
 import {
   resolvedTargetCities,
 } from "../../../../lib/seo/local-area-config";
+import { resolvePublicAgencyName } from "../../../../components/public-site/melun-public-identity";
 import "./inspiration-index.css";
 
 const PUBLIC_ORIGIN = String(
@@ -63,8 +64,8 @@ function inspirationIntroduction(site) {
   const city = String(site?.agency?.city || site?.city || "").trim();
   const nearby = resolvedTargetCities(site, { limit: 3 });
   const local = city
-    ? `Des idées de destinations, des conseils et des expériences sélectionnés par votre agence ${site.name} à ${city} pour préparer votre prochain voyage.`
-    : `Des idées de destinations, des conseils et des expériences sélectionnés par votre agence ${site.name} pour préparer votre prochain voyage.`;
+    ? `Des idées de destinations, des conseils et des expériences sélectionnés par votre agence ${resolvePublicAgencyName(site)} à ${city} pour préparer votre prochain voyage.`
+    : `Des idées de destinations, des conseils et des expériences sélectionnés par votre agence ${resolvePublicAgencyName(site)} pour préparer votre prochain voyage.`;
 
   return nearby.length
     ? `${local} Notre équipe accompagne aussi les voyageurs de ${nearby.join(", ")}.`
@@ -204,7 +205,7 @@ export async function generateMetadata({ params }) {
         url: canonical,
         type: "website",
         locale: "fr_FR",
-        siteName: site.name,
+        siteName: resolvePublicAgencyName(site),
         images: seo.image ? [{ url: seo.image }] : undefined,
       },
       twitter: {
@@ -283,7 +284,7 @@ export default async function InspirationIndexPage({ params }) {
       <section className="public-site-section">
         <div className="public-site-container public-site-prose">
           <nav aria-label="Fil d’Ariane" className="public-site-breadcrumb">
-            <Link href={homePath}>Accueil de {site.name}</Link>
+            <Link href={homePath}>Accueil de {resolvePublicAgencyName(site)}</Link>
             <span aria-hidden="true">›</span>
             <span>Inspirations voyage</span>
           </nav>
@@ -371,7 +372,7 @@ export default async function InspirationIndexPage({ params }) {
           )}
 
           <div className="public-site-related-links" aria-label="Liens utiles">
-            <Link href={homePath}>Découvrir votre agence {site.name}</Link>
+            <Link href={homePath}>Découvrir votre agence {resolvePublicAgencyName(site)}</Link>
             <Link href={destinationsPath}>Explorer nos destinations</Link>
             <Link href={servicesPath}>Découvrir nos services voyage</Link>
             <Link href={contactPath}>Parler de votre projet de voyage</Link>

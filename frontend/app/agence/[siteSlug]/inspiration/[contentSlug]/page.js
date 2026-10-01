@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 
 import JsonLd from "../../../../../components/JsonLd";
 import InspirationArticle from "../../../../../components/public-site/InspirationArticle";
+import { resolvePublicAgencyName } from "../../../../../components/public-site/melun-public-identity";
 import { publicSiteApi } from "../../../../../lib/public-site-api";
 import {
   buildBreadcrumbSchema,
@@ -179,7 +180,7 @@ export async function generateMetadata({ params }) {
       type: "article",
       url: canonical,
       locale: "fr_FR",
-      siteName: data.site.name,
+      siteName: resolvePublicAgencyName(data.site),
       publishedTime: dates.published,
       modifiedTime: dates.modified,
       ...(image ? { images: [{ url: image }] } : {}),
