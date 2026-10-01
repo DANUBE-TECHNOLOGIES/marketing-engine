@@ -6923,8 +6923,12 @@ app.get(
 
       const intelligence =
         buildNetworkIntelligence(
-          agencies,
-          checks
+          agencies.map((agency) => ({
+            agency,
+            rows: checks.filter(
+              (row) => row.agencyId === agency.id
+            )
+          }))
         );
 
       res.json({
@@ -6996,10 +7000,10 @@ app.get(
         );
 
       const intelligence =
-        buildAgencyIntelligence(
+        buildAgencyIntelligence({
           agency,
-          agencyChecks
-        );
+          rows: agencyChecks
+        });
 
       res.json({
         version:"4.5",
@@ -7043,8 +7047,12 @@ app.get(
 
       const intelligence =
         buildNetworkIntelligence(
-          agencies,
-          checks
+          agencies.map((agency) => ({
+            agency,
+            rows: checks.filter(
+              (row) => row.agencyId === agency.id
+            )
+          }))
         );
 
       const opportunities =
