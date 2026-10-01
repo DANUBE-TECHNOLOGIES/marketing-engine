@@ -361,6 +361,13 @@ export default async function AgencySitePage({ params }) {
               page={page}
               suppressHero={Boolean(sharedHero)}
             />
+
+            {!legalPage && isHomePage(pageSlug) ? (
+              <OzoirLocalExpansion
+                site={site}
+                pageSlug={pageSlug}
+              />
+            ) : null}
           </>
         )}
 
