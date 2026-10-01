@@ -49,14 +49,30 @@ export const OZOIR_LOCAL_EXPANSION = Object.freeze({
 
   cruise: Object.freeze({
     eyebrow: "Croisières",
+
     heading:
-      "Préparer une croisière avec votre agence de voyages près de Pontault-Combault",
+      "Votre agence de voyages pour préparer une croisière à Ozoir-la-Ferrière",
+
     introduction:
-      "Vous recherchez une croisière au départ de Pontault-Combault, Ozoir-la-Ferrière ou des environs ? L’équipe Mondescale vous accompagne dans la comparaison des itinéraires, compagnies, cabines, dates de départ et prestations afin de sélectionner une formule adaptée à votre projet.",
+      "Vous recherchez une agence de voyages pour organiser une croisière à Ozoir-la-Ferrière, Pontault-Combault ou dans les environs ? L’équipe Mondescale vous accompagne pour comparer les compagnies, les itinéraires, les dates de départ, les catégories de cabines et les prestations afin de construire un projet adapté à vos envies et à votre budget.",
+
     advice:
-      "Méditerranée, Europe du Nord, Caraïbes ou destinations plus lointaines : une croisière ne se résume pas au choix du navire. Acheminement, catégorie de cabine, excursions, assurances et conditions tarifaires peuvent également être étudiés avec votre conseiller.",
+      "Croisière en Méditerranée, Europe du Nord, Caraïbes, croisière fluviale ou voyage vers des destinations plus lointaines : votre conseiller peut étudier avec vous le choix du navire et de la cabine, mais aussi les vols, transferts, nuits avant ou après embarquement, excursions, assurances et prestations complémentaires.",
+
     local:
-      "L’agence physique se situe à Ozoir-la-Ferrière et accueille notamment les voyageurs de Pontault-Combault, Roissy-en-Brie, Gretz-Armainvilliers, Tournan-en-Brie et Lésigny. Votre projet peut également être préparé par téléphone ou à distance.",
+      "L’agence physique Mondescale est située à Ozoir-la-Ferrière. Elle accompagne également les voyageurs de Pontault-Combault, Roissy-en-Brie, Gretz-Armainvilliers, Tournan-en-Brie, Lésigny et des communes voisines qui recherchent une agence de voyages pour préparer leur croisière.",
+
+    expertise:
+      "Faire appel à une agence pour réserver une croisière permet de comparer plus facilement les itinéraires, les escales, les compagnies et les différentes catégories de cabines. L’équipe Mondescale vous accompagne également dans l’organisation de l’acheminement jusqu’au port d’embarquement et dans les différentes étapes de votre voyage.",
+
+    intents: Object.freeze([
+      "Croisières maritimes",
+      "Croisières fluviales",
+      "Croisières en Méditerranée",
+      "Croisières en Europe du Nord",
+      "Croisières dans les Caraïbes",
+      "Croisières et voyages d’expédition",
+    ]),
   }),
 
   pontault: Object.freeze({
