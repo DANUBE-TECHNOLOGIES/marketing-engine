@@ -2,9 +2,9 @@ const agencyDirectory = [
   {
     id: 1,
     code: "melun",
-    name: "Mondescale Melun",
+    name: "Ambassade FRAM – Mondescale – Melun",
     city: "Melun",
-    phone: "01 64 39 31 07",
+    phone: "01 30 62 41 91",
     email: "melun@mondescale.com",
     googleReviewUrl: "https://g.page/r/CV8ScMIhA7tzEBM/review",
 googleBusinessId: "",
