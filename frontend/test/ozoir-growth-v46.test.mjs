@@ -29,10 +29,12 @@ test("V4.6 strengthens Pontault-Combault acquisition intent", () => {
 test("V4.6 creates useful cruise intent content", () => {
   assert.match(
     config,
-    /Préparer une croisière avec votre agence de voyages près de Pontault-Combault/i
+    /Votre agence de voyages pour préparer une croisière à Ozoir-la-Ferrière/i
   );
 
-  assert.match(config, /itinéraires, compagnies, cabines/i);
+  assert.match(config, /itinéraires/i);
+  assert.match(config, /compagnies/i);
+  assert.match(config, /cabines/i);
   assert.match(component, /data\.cruise\.heading/);
 });
 
@@ -69,4 +71,19 @@ test("V4.6 keeps conversion paths", () => {
   assert.match(component, /contact/);
   assert.match(component, /services/);
   assert.match(component, /destinations/);
+});
+
+
+test("V4.7 exposes cruise acquisition intents", () => {
+  assert.match(
+    config,
+    /Votre agence de voyages pour préparer une croisière à Ozoir-la-Ferrière/i
+  );
+  assert.match(config, /Croisières maritimes/i);
+  assert.match(config, /Croisières fluviales/i);
+  assert.match(config, /Croisières en Méditerranée/i);
+  assert.match(config, /Croisières en Europe du Nord/i);
+  assert.match(config, /Croisières dans les Caraïbes/i);
+  assert.match(config, /Croisières et voyages d’expédition/i);
+  assert.match(config, /Pontault-Combault/i);
 });
