@@ -42,6 +42,24 @@ export default function OzoirLocalExpansion({ site }) {
           </article>
         </div>
 
+        <div className="public-content-grid">
+          <article>
+            <p className="public-eyebrow">{data.pontault.eyebrow}</p>
+            <h3>{data.pontault.heading}</h3>
+            <p>{data.pontault.introduction}</p>
+            <p>{data.pontault.service}</p>
+            <p>{data.pontault.truth}</p>
+          </article>
+
+          <article>
+            <p className="public-eyebrow">{data.cruise.eyebrow}</p>
+            <h3>{data.cruise.heading}</h3>
+            <p>{data.cruise.introduction}</p>
+            <p>{data.cruise.advice}</p>
+            <p>{data.cruise.local}</p>
+          </article>
+        </div>
+
         <div className="public-local-expansion-actions">
           <p>{data.cta}</p>
 
