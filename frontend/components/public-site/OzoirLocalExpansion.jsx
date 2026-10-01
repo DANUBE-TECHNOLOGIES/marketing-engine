@@ -57,6 +57,13 @@ export default function OzoirLocalExpansion({ site }) {
             <p>{data.cruise.introduction}</p>
             <p>{data.cruise.advice}</p>
             <p>{data.cruise.local}</p>
+            <p>{data.cruise.expertise}</p>
+
+            <ul>
+              {data.cruise.intents.map((intent) => (
+                <li key={intent}>{intent}</li>
+              ))}
+            </ul>
           </article>
         </div>
 
