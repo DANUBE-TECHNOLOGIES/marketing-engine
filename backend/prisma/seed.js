@@ -68,12 +68,13 @@ async function main() {
         website: "https://www.lamorlaye.mondescale.com/?utm_source=gmb"
       },
       {
-        name: "TUI STORE Melun",
+        name: "Ambassade FRAM – Mondescale – Melun",
         city: "Melun",
         address: "10 Rue Saint Etienne",
         postalCode: "77000",
-        phone: "01 64 39 31 07",
-        email: "agencemelun@tuifrance.com",        website: "https://www.tui.fr"
+        phone: "01 30 62 41 91",
+        email: "melun@mondescale.com",
+        website: "https://agences.mondescale.com/agence/ambassade-fram-mondescale-melun"
       }
     ],
     skipDuplicates: true
