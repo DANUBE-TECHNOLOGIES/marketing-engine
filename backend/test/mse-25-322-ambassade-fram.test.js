@@ -1,0 +1,4 @@
+const test=require("node:test"),assert=require("node:assert/strict");
+const {simulateLoyalty,validateOffer,publishedOffers,monthlyExclusives}=require("../src/modules/ambassade-fram/domain");
+test("FRAM loyalty tiers",()=>{for(const [euros,percent] of [[0,0],[3999,0],[4000,3],[6000,5],[10000,7],[15000,10]]) assert.equal(simulateLoyalty(euros).discountPercent,percent)});
+test("offer validation and publication",()=>{const offer={type:"EXCLUS_AMBASSADE",title:"Séjour",status:"PUBLISHED",startAt:"2026-10-01",endAt:"2026-11-01"};assert.equal(validateOffer(offer),true);assert.equal(publishedOffers([offer],new Date("2026-10-13")).length,1);assert.equal(monthlyExclusives(Array(6).fill(offer),new Date("2026-10-13")).length,4);assert.equal(publishedOffers([offer],new Date("2026-11-01")).length,0);assert.throws(()=>validateOffer({...offer,imageUrl:"http://example.com/a.jpg"}))});
