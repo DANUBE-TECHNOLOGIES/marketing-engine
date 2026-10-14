@@ -47,6 +47,11 @@ function createAdminService(prisma) {
       if (typeof existing.terms !== "string" || !existing.terms.trim()) throw new RangeError("Offer terms required before publication");
       if (new Date(existing.endAt).getTime() <= Date.now()) throw new RangeError("Expired offers cannot be published");
       if (existing.type === "EXCLUS_AMBASSADE") {
+        const monthStart = new Date(`${existing.campaignMonth}-01T00:00:00Z`);
+        const monthEnd = new Date(Date.UTC(monthStart.getUTCFullYear(),monthStart.getUTCMonth()+1,1));
+        if (new Date(existing.endAt) <= monthStart || new Date(existing.startAt) >= monthEnd) throw new RangeError("Exclusive dates must overlap campaign month");
+      }
+      if (existing.type === "EXCLUS_AMBASSADE") {
         const count = await prisma.framOffer.count({where:{type:"EXCLUS_AMBASSADE",status:"PUBLISHED",campaignMonth:existing.campaignMonth}});
         if (count >= 4) throw new RangeError("Maximum four monthly exclusives");
       }
