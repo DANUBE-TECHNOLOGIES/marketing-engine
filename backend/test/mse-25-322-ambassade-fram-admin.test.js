@@ -23,3 +23,15 @@ test("published offer cannot be overwritten through draft editor",async()=>{
  const service=createAdminService({framOffer:{findUnique:async()=>({status:"PUBLISHED"}),update:()=>{throw Error("must not update")}}});
  await assert.rejects(()=>service.replaceDraft("offer-1",draft));
 });
+
+test("accepts an integer price and HTTPS quote CTA",()=>{
+ const value=sanitizeOffer({...draft,priceCents:129900,quoteUrl:"https://www.mondescale.com/devis"});
+ assert.equal(value.priceCents,129900);
+ assert.equal(value.quoteUrl,"https://www.mondescale.com/devis");
+});
+test("rejects fractional, negative prices and unsafe quote URLs",()=>{
+ assert.throws(()=>sanitizeOffer({...draft,priceCents:12.5}));
+ assert.throws(()=>sanitizeOffer({...draft,priceCents:-1}));
+ assert.throws(()=>sanitizeOffer({...draft,quoteUrl:"javascript:alert(1)"}));
+ assert.throws(()=>sanitizeOffer({...draft,quoteUrl:"http://example.com"}));
+});
