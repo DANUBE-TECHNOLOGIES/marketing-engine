@@ -39,6 +39,7 @@ export default function OffresAmbassade({ agencyId, siteSlug }) {
   const renderOffer = offer => (
     <article key={offer.id}>
       <h3>{offer.title}</h3>
+      {typeof offer.imageUrl === "string" && /^https:\/\/[^\s]+$/i.test(offer.imageUrl) && <img src={offer.imageUrl} alt={offer.title} loading="lazy" decoding="async" style={{ maxWidth: "100%", height: "auto" }} />}
       {offer.description && <p>{offer.description}</p>}
       {Number.isSafeInteger(offer.priceCents) && <p>À partir de {(offer.priceCents / 100).toLocaleString("fr-FR", { style: "currency", currency: "EUR" })}</p>}
       {offer.terms && <p><small>{offer.terms}</small></p>}
