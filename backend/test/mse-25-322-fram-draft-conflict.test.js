@@ -2,7 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { createAdminService } = require("../src/modules/ambassade-fram/admin-service");
 const draft = {
-  type: "EXCLUS_AMBASSADE", status: "DRAFT", title: "Offre",
+  type: "EXCLUS_AMBASSADE", campaignMonth: "2026-11", status: "DRAFT", title: "Offre",
   startAt: "2026-11-01", endAt: "2026-12-01",
 };
 test("draft edit refuses a concurrent publication", async () => {
