@@ -1,16 +1,23 @@
 "use strict";
 const { validateOffer } = require("./domain");
 
-const writableFields = ["type","status","title","description","imageUrl","terms","startAt","endAt"];
+const writableFields = ["type","status","title","description","imageUrl","terms","startAt","endAt","priceCents","quoteUrl"];
 function sanitizeOffer(input) {
   if (!input || typeof input !== "object" || Array.isArray(input)) throw new TypeError("Offer payload required");
   const value = Object.fromEntries(writableFields.filter(k => Object.prototype.hasOwnProperty.call(input,k)).map(k=>[k,input[k]]));
   if (Object.keys(input).some(k=>!writableFields.includes(k))) throw new RangeError("Unknown offer field");
   validateOffer(value);
+  if (value.priceCents != null && (!Number.isSafeInteger(value.priceCents) || value.priceCents < 0)) throw new RangeError("Invalid price");
+  if (value.quoteUrl != null) {
+    if (typeof value.quoteUrl !== "string" || value.quoteUrl.length > 2048) throw new RangeError("Invalid quote URL");
+    let parsed;
+    try { parsed = new URL(value.quoteUrl); } catch { throw new RangeError("Invalid quote URL"); }
+    if (parsed.protocol !== "https:") throw new RangeError("HTTPS quote URL required");
+  }
   return {
     type:value.type, status:value.status, title:value.title.trim(),
     description:value.description ?? null, imageUrl:value.imageUrl ?? null,
-    terms:value.terms ?? null, startAt:new Date(value.startAt), endAt:new Date(value.endAt)
+    terms:value.terms ?? null, priceCents:value.priceCents ?? null, quoteUrl:value.quoteUrl ?? null, startAt:new Date(value.startAt), endAt:new Date(value.endAt)
   };
 }
 function createAdminService(prisma) {
