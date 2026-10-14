@@ -7,7 +7,7 @@ test("publication refuses absent terms",async()=>{
  await assert.rejects(service.publishOffer("o1"),RangeError);
 });
 test("publication refuses stale status",async()=>{
- const service=createAdminService({framOffer:{findUnique:async()=>offer,updateMany:async()=>({count:0})}});
+ const service=createAdminService({framOffer:{findUnique:async()=>offer,count:async()=>0,updateMany:async()=>({count:0})}});
  await assert.rejects(service.publishOffer("o1"),RangeError);
 });
 test("publication updates one draft",async()=>{
