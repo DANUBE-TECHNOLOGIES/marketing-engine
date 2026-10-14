@@ -47,7 +47,7 @@ function createAdminService(prisma) {
       if (typeof existing.terms !== "string" || !existing.terms.trim()) throw new RangeError("Offer terms required before publication");
       if (new Date(existing.endAt).getTime() <= Date.now()) throw new RangeError("Expired offers cannot be published");
       const result = await prisma.framOffer.updateMany({
-        where: { id, status: "DRAFT" },
+        where: { id, status: "DRAFT", terms: existing.terms, startAt: existing.startAt, endAt: existing.endAt },
         data: { status: "PUBLISHED" },
       });
       if (result.count !== 1) throw new RangeError("Offer publication conflict");
