@@ -23,6 +23,6 @@ test("publication rejects non-text terms",async()=>{
 });
 
 test("publication rejects expired offers",async()=>{
- const service=createAdminService({framOffer:{findUnique:async()=>({...offer,endAt:new Date("2026-01-01")})}});
+ const service=createAdminService({framOffer:{findUnique:async()=>({...offer,startAt:new Date("2025-12-01"),endAt:new Date("2026-01-01")})}});
  await assert.rejects(service.publishOffer("o1"),/Expired offers/);
 });
