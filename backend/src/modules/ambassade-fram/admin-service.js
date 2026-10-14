@@ -45,6 +45,7 @@ function createAdminService(prisma) {
       if (!existing || existing.status !== "DRAFT") throw new RangeError("Only drafts may be published");
       validateOffer({ ...existing, status: "PUBLISHED" });
       if (typeof existing.terms !== "string" || !existing.terms.trim()) throw new RangeError("Offer terms required before publication");
+      if (new Date(existing.endAt).getTime() <= Date.now()) throw new RangeError("Expired offers cannot be published");
       const result = await prisma.framOffer.updateMany({
         where: { id, status: "DRAFT" },
         data: { status: "PUBLISHED" },
