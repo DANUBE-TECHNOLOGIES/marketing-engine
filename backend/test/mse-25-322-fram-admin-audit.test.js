@@ -20,3 +20,22 @@ test("FRAM admin mutation audit is emitted only after successful publication",as
   assert.equal(logs[0].tenantId,"trusted");
  }finally{console.info=previous;}
 });
+
+test("audit sink failure cannot turn committed publication into an API error",async()=>{
+ const router=createAdminRoutes({prisma:{framOffer:{
+  findUnique:async()=>({id:"offer-2",status:"DRAFT",type:"VENTE_FLASH",title:"Flash",terms:"Conditions",startAt:new Date("2099-11-01"),endAt:new Date("2099-12-01"),updatedAt:new Date("2099-01-01")}),
+  updateMany:async()=>({count:1})
+ }},authorize:(_req,_res,next)=>next()});
+ const route=router.stack.find(layer=>layer.route?.path==="/admin/ambassade-fram/offers/:id/publish");
+ const originalInfo=console.info,originalError=console.error;
+ let sent=false,code=200;
+ console.info=()=>{throw Error("audit unavailable");};
+ console.error=()=>{};
+ try{
+  await route.route.stack[0].handle({params:{id:"offer-2"},tenantId:"trusted",user:{role:"admin"}},{
+   json:()=>{sent=true;},status(value){code=value;return this;}
+  });
+  assert.equal(sent,true);
+  assert.equal(code,200);
+ }finally{console.info=originalInfo;console.error=originalError;}
+});
