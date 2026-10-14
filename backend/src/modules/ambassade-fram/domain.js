@@ -13,8 +13,8 @@ function validateOffer(input) {
  if(!["DRAFT","PUBLISHED","ARCHIVED"].includes(input.status)) throw new RangeError("Invalid status");
  const start=new Date(input.startAt).getTime(),end=new Date(input.endAt).getTime();
  if(!Number.isFinite(start)||!Number.isFinite(end)||start>=end) throw new RangeError("Invalid dates");
- if(input.imageUrl){
-   if(typeof input.imageUrl!=="string"||input.imageUrl.length>2048) throw new RangeError("Invalid image URL");
+ if(input.imageUrl != null){
+   if(typeof input.imageUrl!=="string"||!input.imageUrl.trim()||input.imageUrl.length>2048) throw new RangeError("Invalid image URL");
    let u;try{u=new URL(input.imageUrl)}catch{throw new RangeError("Invalid image URL")}
    if(u.protocol!=="https:") throw new RangeError("HTTPS image required");
  }
