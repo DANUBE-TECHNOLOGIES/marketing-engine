@@ -51,7 +51,7 @@ function createAdminService(prisma) {
         if (count >= 4) throw new RangeError("Maximum four monthly exclusives");
       }
       const result = await prisma.framOffer.updateMany({
-        where: { id, status: "DRAFT", terms: existing.terms, campaignMonth: existing.campaignMonth, startAt: existing.startAt, endAt: existing.endAt },
+        where: { id, status: "DRAFT", updatedAt: existing.updatedAt, terms: existing.terms, campaignMonth: existing.campaignMonth, startAt: existing.startAt, endAt: existing.endAt },
         data: { status: "PUBLISHED" },
       });
       if (result.count !== 1) throw new RangeError("Offer publication conflict");
