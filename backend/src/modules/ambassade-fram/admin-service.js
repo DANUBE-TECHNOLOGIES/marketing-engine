@@ -37,6 +37,17 @@ function createAdminService(prisma) {
       if(!existing||existing.status!=="DRAFT") throw new RangeError("Only draft offers may be edited");
       return prisma.framOffer.update({where:{id},data});
     },
+    async publishOffer(id) {
+      if (typeof id !== "string" || !id.trim()) throw new RangeError("Invalid offer id");
+      const existing = await prisma.framOffer.findUnique({ where: { id } });
+      if (!existing || existing.status !== "DRAFT") throw new RangeError("Only drafts may be published");
+      validateOffer({ ...existing, status: "PUBLISHED" });
+      if (!existing.terms || !existing.terms.trim()) throw new RangeError("Offer terms required before publication");
+      return prisma.framOffer.update({
+        where: { id, status: "DRAFT" },
+        data: { status: "PUBLISHED" },
+      });
+    },
     async approveAgency(tenantId, agencyId) {
       if (!tenantId || !Number.isSafeInteger(agencyId) || agencyId <= 0) throw new RangeError("Invalid agency approval");
       const agency = await prisma.agency.findFirst({ where: { id: agencyId, tenantId }, select: { id: true } });
