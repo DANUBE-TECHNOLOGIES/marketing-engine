@@ -1,23 +1,9 @@
 "use client";
 import { useState } from "react";
 import { simulateFramLoyalty } from "../../lib/ambassade-fram/loyalty.mjs";
-
-export default function SimulateurFidelite() {
-  const [euros, setEuros] = useState("0");
-  const amount = Number(euros);
-  const valid = euros.trim() !== "" && Number.isFinite(amount) && amount >= 0 && amount <= 100000000;
-  const result = valid ? simulateFramLoyalty(amount) : null;
-  return (
-    <section aria-labelledby="fram-simulation">
-      <h2 id="fram-simulation">Simulateur indicatif de points</h2>
-      <label htmlFor="fram-euros">Montant cumulé éligible en euros</label>
-      <input id="fram-euros" type="number" min="0" max="100000000" step="0.01" value={euros}
-        onChange={event => setEuros(event.target.value)} />
-      {result ? (
-        <p role="status">{result.points} points estimés. Palier atteint : {result.discountPercent} %.
-          {result.nextTier ? ` Prochain palier : ${result.nextTier.points} points.` : ""}</p>
-      ) : <p role="alert">Saisissez un montant positif valide.</p>}
-      <p>Simulation non contractuelle. Les dépenses Plein Vent ne sont pas éligibles. Les conditions d’utilisation des remises sont à confirmer auprès de FRAM ou de votre agence.</p>
-    </section>
-  );
+import styles from "./AmbassadeFram.module.css";
+export default function SimulateurFidelite(){
+const [euros,setEuros]=useState("4000");const amount=Number(euros);const valid=euros.trim()!==""&&Number.isFinite(amount)&&amount>=0&&amount<=100000000;const result=valid?simulateFramLoyalty(amount):null;
+const current=result?.points??0;const target=result?.nextTier?.points??150;const previous=[0,40,60,100,150].filter(n=>n<=current).at(-1)??0;const progress=Math.max(0,Math.min(100,((current-previous)/(target-previous||1))*100));
+return <section className={styles.simulator} aria-label="Simulateur fidélité"><div className={styles.simLayout}><div><label className={styles.field} htmlFor="fram-euros">Montant cumulé de vos voyages éligibles (€)</label><input className={styles.input} id="fram-euros" type="number" min="0" max="100000000" step="0.01" value={euros} onChange={e=>setEuros(e.target.value)}/><p className={styles.small}>1 point pour 100 € dépensés sur les séjours et circuits FRAM éligibles.</p>{result?.nextTier&&<><div className={styles.progress} role="progressbar" aria-valuenow={Math.round(progress)} aria-valuemin={0} aria-valuemax={100} aria-label="Progression vers le prochain palier"><div className={styles.progressFill} style={{width:`${progress}%`}}/></div><p className={styles.small}>Prochain palier : <strong>{result.nextTier.points} points</strong></p></>}</div><div className={styles.result} role="status">{result?<><span>Votre estimation fidélité</span><strong>{result.points} points</strong><p>Palier atteint : <b>{result.discountPercent} %</b> d'avantage indicatif</p>{result.nextTier&&<p>Objectif suivant : {result.nextTier.points} points</p>}</>:<p role="alert">Saisissez un montant positif valide.</p>}</div></div><p className={styles.small}>Simulation non contractuelle. Plein Vent exclu. Les conditions d'utilisation des remises doivent être confirmées auprès de FRAM ou de votre agence.</p></section>;
 }
