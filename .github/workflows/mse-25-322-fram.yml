@@ -52,7 +52,10 @@ jobs:
       - run: npm ci
       - run: npx prisma validate
       - run: npx prisma generate
-      - run: npx prisma migrate deploy
+      # The legacy migration chain cannot bootstrap an empty database (missing Destination).
+      # Validate the current schema and the FRAM trigger in a disposable database instead.
+      - run: npx prisma db push --skip-generate
+      - run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f prisma/migrations/20261014123000_fram_monthly_limit/migration.sql
       - run: node test/mse-25-322-fram-db-smoke.js
       - run: node --test test/mse-25-322-*.test.js
 
