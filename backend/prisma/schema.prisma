@@ -73,6 +73,7 @@ model Agency {
   brandProfiles        BrandProfile[]
   brandAssets          BrandAsset[]
   legalProfiles        LegalProfile[]
+  framAmbassador       FramAmbassadorAgency?
 
   @@unique([tenantId, name, city])
   @@index([tenantId])
@@ -1683,4 +1684,30 @@ model GroupCampaignSettings {
 
   @@index([status])
   @@index([decisionDeadline])
+}
+
+model FramAmbassadorAgency {
+  id         String   @id @default(cuid())
+  agencyId   Int      @unique
+  enabled    Boolean  @default(false)
+  approvedAt DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  agency     Agency   @relation(fields: [agencyId], references: [id], onDelete: Restrict)
+}
+
+model FramOffer {
+  id          String   @id @default(cuid())
+  type        String
+  status      String   @default("DRAFT")
+  title       String   @db.VarChar(160)
+  description String?
+  imageUrl    String?
+  terms       String?
+  startAt     DateTime
+  endAt       DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([status, type, startAt, endAt], map: "FramOffer_public_idx")
 }
