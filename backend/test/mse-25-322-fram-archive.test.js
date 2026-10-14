@@ -24,3 +24,9 @@ test("withdrawal refuses a stale offer",async()=>{
  }});
  await assert.rejects(service.archiveOffer("o1"),/Archive conflict/);
 });
+
+test("withdrawal rejects missing identifiers before database access",async()=>{
+ const service=createAdminService({framOffer:{findUnique:async()=>{throw Error("Unexpected database access");}}});
+ await assert.rejects(service.archiveOffer(""),/Invalid offer id/);
+ await assert.rejects(service.archiveOffer(null),/Invalid offer id/);
+});
