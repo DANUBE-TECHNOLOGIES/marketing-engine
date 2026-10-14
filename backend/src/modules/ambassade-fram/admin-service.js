@@ -46,6 +46,10 @@ function createAdminService(prisma) {
       validateOffer({ ...existing, status: "PUBLISHED" });
       if (typeof existing.terms !== "string" || !existing.terms.trim()) throw new RangeError("Offer terms required before publication");
       if (new Date(existing.endAt).getTime() <= Date.now()) throw new RangeError("Expired offers cannot be published");
+      if (existing.type === "EXCLUS_AMBASSADE") {
+        const count = await prisma.framOffer.count({where:{type:"EXCLUS_AMBASSADE",status:"PUBLISHED",campaignMonth:existing.campaignMonth}});
+        if (count >= 4) throw new RangeError("Maximum four monthly exclusives");
+      }
       const result = await prisma.framOffer.updateMany({
         where: { id, status: "DRAFT", terms: existing.terms, campaignMonth: existing.campaignMonth, startAt: existing.startAt, endAt: existing.endAt },
         data: { status: "PUBLISHED" },
