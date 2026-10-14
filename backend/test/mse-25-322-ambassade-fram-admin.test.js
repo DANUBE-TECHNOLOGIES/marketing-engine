@@ -40,3 +40,7 @@ test("rejects malformed image URL as a validation error", () => {
  assert.throws(() => sanitizeOffer({...draft,imageUrl:"not a URL"}), RangeError);
  assert.throws(() => sanitizeOffer({...draft,imageUrl:"http://example.com/image.jpg"}), RangeError);
 });
+
+test("rejects blank image URL",()=>{
+ assert.throws(()=>sanitizeOffer({...draft,imageUrl:""}),RangeError);
+});
