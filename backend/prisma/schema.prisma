@@ -1715,3 +1715,14 @@ model FramOffer {
   @@index([status, type, startAt, endAt], map: "FramOffer_public_idx")
   @@index([campaignMonth, status], map: "FramOffer_campaign_month_idx")
 }
+
+model FramAdminAudit {
+  id         String   @id @default(cuid())
+  action     String   @db.VarChar(64)
+  target     String   @db.VarChar(160)
+  tenantId   String   @db.VarChar(160)
+  actorType  String   @db.VarChar(80)
+  createdAt  DateTime @default(now())
+
+  @@index([tenantId, createdAt], map: "FramAdminAudit_tenant_time_idx")
+}
