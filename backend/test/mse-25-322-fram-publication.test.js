@@ -21,3 +21,8 @@ test("publication rejects non-text terms",async()=>{
  const service=createAdminService({framOffer:{findUnique:async()=>({...offer,terms:123})}});
  await assert.rejects(service.publishOffer("o1"),RangeError);
 });
+
+test("publication rejects expired offers",async()=>{
+ const service=createAdminService({framOffer:{findUnique:async()=>({...offer,endAt:new Date("2026-01-01")})}});
+ await assert.rejects(service.publishOffer("o1"),/Expired offers/);
+});
