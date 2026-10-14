@@ -14,7 +14,7 @@ test("publication updates one draft",async()=>{
  let filter;
  const service=createAdminService({framOffer:{findUnique:async()=>offer,updateMany:async args=>{filter=args.where;return {count:1}}}});
  await service.publishOffer("o1");
- assert.deepEqual(filter,{id:"o1",status:"DRAFT"});
+ assert.deepEqual(filter,{id:"o1",status:"DRAFT",terms:offer.terms,startAt:offer.startAt,endAt:offer.endAt});
 });
 
 test("publication rejects non-text terms",async()=>{
