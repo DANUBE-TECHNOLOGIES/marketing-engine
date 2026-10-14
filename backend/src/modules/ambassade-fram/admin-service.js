@@ -1,7 +1,7 @@
 "use strict";
 const { validateOffer } = require("./domain");
 
-const writableFields = ["type","status","title","description","imageUrl","terms","startAt","endAt","priceCents","quoteUrl"];
+const writableFields = ["type","status","title","description","imageUrl","terms","startAt","endAt","priceCents","quoteUrl","campaignMonth"];
 function sanitizeOffer(input) {
   if (!input || typeof input !== "object" || Array.isArray(input)) throw new TypeError("Offer payload required");
   const value = Object.fromEntries(writableFields.filter(k => Object.prototype.hasOwnProperty.call(input,k)).map(k=>[k,input[k]]));
@@ -17,7 +17,7 @@ function sanitizeOffer(input) {
   return {
     type:value.type, status:value.status, title:value.title.trim(),
     description:value.description ?? null, imageUrl:value.imageUrl ?? null,
-    terms:value.terms ?? null, priceCents:value.priceCents ?? null, quoteUrl:value.quoteUrl ?? null, startAt:new Date(value.startAt), endAt:new Date(value.endAt)
+    terms:value.terms ?? null, priceCents:value.priceCents ?? null, quoteUrl:value.quoteUrl ?? null, campaignMonth:value.campaignMonth ?? null, startAt:new Date(value.startAt), endAt:new Date(value.endAt)
   };
 }
 function createAdminService(prisma) {
@@ -47,7 +47,7 @@ function createAdminService(prisma) {
       if (typeof existing.terms !== "string" || !existing.terms.trim()) throw new RangeError("Offer terms required before publication");
       if (new Date(existing.endAt).getTime() <= Date.now()) throw new RangeError("Expired offers cannot be published");
       const result = await prisma.framOffer.updateMany({
-        where: { id, status: "DRAFT", terms: existing.terms, startAt: existing.startAt, endAt: existing.endAt },
+        where: { id, status: "DRAFT", terms: existing.terms, campaignMonth: existing.campaignMonth, startAt: existing.startAt, endAt: existing.endAt },
         data: { status: "PUBLISHED" },
       });
       if (result.count !== 1) throw new RangeError("Offer publication conflict");
