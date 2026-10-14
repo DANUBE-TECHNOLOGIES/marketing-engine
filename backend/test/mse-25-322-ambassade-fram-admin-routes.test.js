@@ -18,7 +18,7 @@ test("FRAM admin rejects an unverified administrator context", async () => {
     req.user = { role: "admin" };
     next();
   } });
-  const guard = router.stack.find(layer => layer.name === "<anonymous>" && !layer.route && layer.handle.length === 3);
+  const guard = router.stack.find(layer => !layer.route && layer.handle.length === 3 && layer.handle.toString().includes("framAdminAuthenticated"));
   assert.ok(guard);
   let statusCode;
   const res = { status(code) { statusCode = code; return this; }, json() {} };
