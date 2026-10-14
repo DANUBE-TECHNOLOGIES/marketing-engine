@@ -26,3 +26,10 @@ test("admin auth binds server tenant and admin role, not client headers",()=>{
  assert.equal(req.user.role,"admin");
  assert.equal(req.framAdminAuthenticated,true);
 });
+
+test("admin auth refuses bearer token with a trailing newline",()=>{
+ const gate=createFramAdminAuth({token,tenantId:"trusted"});
+ const res=makeResponse();
+ gate({get:()=> "Bearer "+token+"\\n"},res,()=>{throw Error("unexpected authorization");});
+ assert.equal(res.code,401);
+});
