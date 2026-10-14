@@ -14,7 +14,14 @@ module.exports = function createFramRoutes({ prisma }) {
     try {
       const tenantSlug = String(req.headers["x-tenant-slug"] || "mondescale").trim().toLowerCase();
       const site = await prisma.agencySite.findFirst({
-        where: { slug: siteSlug, status: "published", agency: { tenant: { slug: tenantSlug } } },
+        where: {
+          slug: siteSlug,
+          OR: [
+            { status: { in: ["published", "publish", "live", "online", "active"] } },
+            { publishedAt: { not: null } },
+          ],
+          agency: { tenant: { slug: tenantSlug } },
+        },
         select: { agencyId: true },
       });
       if (!site) return res.status(404).json({ error: "Not found" });
