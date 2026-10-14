@@ -17,7 +17,12 @@ module.exports = function createFramAdminRoutes({ prisma, authorize }) {
     next();
   });
   const audit = (action, target, req) => {
-    console.info(JSON.stringify({ event: "fram_admin_mutation", action, target: String(target), tenantId: req.tenantId, actorType: req.user?.authType || "unknown", at: new Date().toISOString() }));
+    try {
+      console.info(JSON.stringify({ event: "fram_admin_mutation", action, target: String(target), tenantId: req.tenantId, actorType: req.user?.authType || "unknown", at: new Date().toISOString() }));
+    } catch (error) {
+      // An already committed mutation must not be reported as failed because logging failed.
+      try { console.error("FRAM audit logging unavailable", error?.message); } catch { /* logging unavailable */ }
+    }
   };
   const handle = fn => async (req, res) => {
     try { await fn(req, res); }
