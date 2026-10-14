@@ -19,6 +19,20 @@ on:
 jobs:
   fram-backend:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: fram
+          POSTGRES_PASSWORD: fram
+          POSTGRES_DB: fram
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fram -d fram"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     defaults:
       run:
         working-directory: backend
@@ -34,6 +48,7 @@ jobs:
       - run: npm ci
       - run: npx prisma validate
       - run: npx prisma generate
+      - run: npx prisma migrate deploy
       - run: node --test test/mse-25-322-*.test.js
 
   fram-frontend:
