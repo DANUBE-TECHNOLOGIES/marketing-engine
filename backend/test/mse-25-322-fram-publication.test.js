@@ -26,3 +26,12 @@ test("publication rejects expired offers",async()=>{
  const service=createAdminService({framOffer:{findUnique:async()=>({...offer,startAt:new Date("2025-12-01"),endAt:new Date("2026-01-01")})}});
  await assert.rejects(service.publishOffer("o1"),/Expired offers/);
 });
+
+test("publication refuses a fifth monthly exclusive",async()=>{
+ const service=createAdminService({framOffer:{
+  findUnique:async()=>offer,
+  count:async()=>4,
+  updateMany:async()=>{throw Error("Must not publish fifth offer");}
+ }});
+ await assert.rejects(service.publishOffer("o1"),/Maximum four monthly exclusives/);
+});
