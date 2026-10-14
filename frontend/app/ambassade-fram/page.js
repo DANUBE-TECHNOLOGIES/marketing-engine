@@ -1,25 +1,11 @@
 import SimulateurFidelite from "./SimulateurFidelite";
 import { FRAM_LOYALTY_THRESHOLDS } from "../../lib/ambassade-fram/loyalty.mjs";
-
-export const metadata = {
-  title: "Ambassade FRAM | Mondescale Voyages",
-  description: "Fidélité, offres exclusives et accompagnement dans les agences Ambassade FRAM Mondescale Voyages.",
-  robots: { index: false, follow: false },
-};
-
-export default function Page() {
-  return (
-    <main style={{maxWidth: 900, margin: "auto", padding: 32}}>
-      <h1>Les avantages Ambassade FRAM</h1>
-      <p>Dans les agences Mondescale Voyages éligibles, découvrez les avantages du programme Ambassade FRAM.</p>
-      <h2>Carte de fidélité</h2>
-      <p>Gratuite, valable cinq années civiles. Pour les séjours et circuits FRAM éligibles, 100 euros dépensés correspondent à un point. Plein Vent est exclu.</p>
-      <ul>{FRAM_LOYALTY_THRESHOLDS.map(t => <li key={t.points}>{t.points} points : {t.discountPercent} % de remise selon les conditions du programme.</li>)}</ul>
-      <SimulateurFidelite />
-      <h2>Offres exclusives</h2>
-      <p>Quatre offres Exclus Ambassade FRAM sont sélectionnées chaque mois, sous réserve de disponibilité et des conditions de vente. Des ventes flash peuvent également être proposées.</p>
-      <p>Consultez votre agence pour confirmer les conditions et les offres en cours.</p>
-      <small>Mondescale Voyages est un réseau indépendant. Ambassade FRAM ne signifie pas agence FRAM en propre.</small>
-    </main>
-  );
-}
+import styles from "./AmbassadeFram.module.css";
+export const metadata = {title:"Ambassade FRAM | Mondescale Voyages",description:"Programme fidélité gratuit, avantages et offres exclusives des agences Ambassade FRAM Mondescale Voyages.",robots:{index:false,follow:false}};
+export default function Page(){return <main className={styles.page}>
+<section className={styles.hero}><span className={styles.eyebrow}>MONDESCALE VOYAGES · AMBASSADE FRAM</span><h1>Vos voyages méritent des avantages exclusifs.</h1><p>Voyagez, cumulez des points et découvrez les privilèges réservés aux clients de nos agences Ambassade FRAM.</p><div className={styles.actions}><a className={styles.button} href="#fidelite">Découvrir mes avantages ↓</a><a className={styles.buttonLight} href="#fonctionnement">Comment ça marche ?</a></div></section>
+<section className={styles.wrap} id="fidelite"><div className={styles.kicker}>Un programme qui récompense vos voyages</div><h2 className={styles.heading}>Votre fidélité a de la valeur.</h2><p className={styles.lead}>Une carte gratuite valable cinq années civiles. Sur les séjours et circuits FRAM éligibles, chaque tranche de 100 € dépensés vous permet de cumuler 1 point. Les produits Plein Vent sont exclus.</p><div className={styles.grid}>{FRAM_LOYALTY_THRESHOLDS.map(t=><article className={styles.tier} key={t.points}><div className={styles.tierLabel}>{t.points} POINTS</div><strong>{t.discountPercent}<span> %</span></strong><p>Avantage fidélité selon les conditions du programme.</p></article>)}</div></section>
+<section className={styles.sectionTint}><div className={styles.wrap}><div className={styles.kicker}>Faites le calcul</div><h2 className={styles.heading}>Et vous, où en êtes-vous ?</h2><p className={styles.lead}>Estimez vos points et visualisez le prochain palier de fidélité.</p><SimulateurFidelite/></div></section>
+<section className={styles.wrap} id="offres"><div className={styles.kicker}>Des privilèges à découvrir</div><h2 className={styles.heading}>Les Exclus Ambassade FRAM</h2><p className={styles.lead}>Jusqu’à quatre offres exclusives sélectionnées chaque mois, ainsi que des ventes flash ponctuelles. Renseignez-vous auprès de votre agence pour connaître les offres disponibles.</p><div className={styles.empty}><strong>De belles découvertes arrivent bientôt.</strong><p>Les prochaines offres seront présentées ici dès leur publication. Votre conseillère peut déjà vous accompagner dans la préparation de votre voyage.</p></div></section>
+<section className={styles.sectionTint} id="fonctionnement"><div className={styles.wrap}><div className={styles.kicker}>Simple et gratuit</div><h2 className={styles.heading}>Comment profiter du programme ?</h2><div className={styles.steps}><article className={styles.step}><b>01</b><strong>Rendez-vous en agence</strong><p>Échangez avec une conseillère de votre agence Ambassade FRAM participante.</p></article><article className={styles.step}><b>02</b><strong>Voyagez avec FRAM</strong><p>Cumulez des points sur vos séjours et circuits FRAM éligibles.</p></article><article className={styles.step}><b>03</b><strong>Profitez de vos avantages</strong><p>Découvrez les paliers et vérifiez les conditions applicables auprès de votre agence.</p></article></div></div></section>
+<footer className={styles.disclaimer}>Simulation et pourcentages présentés à titre indicatif, sous réserve des conditions d'utilisation et de validation FRAM. Plein Vent exclu. Mondescale Voyages est un réseau indépendant partenaire Ambassade FRAM, et non une agence FRAM en propre.</footer></main>}
