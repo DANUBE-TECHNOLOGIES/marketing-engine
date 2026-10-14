@@ -35,3 +35,8 @@ test("rejects fractional, negative prices and unsafe quote URLs",()=>{
  assert.throws(()=>sanitizeOffer({...draft,quoteUrl:"javascript:alert(1)"}));
  assert.throws(()=>sanitizeOffer({...draft,quoteUrl:"http://example.com"}));
 });
+
+test("rejects malformed image URL as a validation error", () => {
+ assert.throws(() => sanitizeOffer({...draft,imageUrl:"not a URL"}), RangeError);
+ assert.throws(() => sanitizeOffer({...draft,imageUrl:"http://example.com/image.jpg"}), RangeError);
+});
