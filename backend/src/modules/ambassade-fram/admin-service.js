@@ -35,7 +35,9 @@ function createAdminService(prisma) {
       if(data.status!=="DRAFT") throw new RangeError("Draft editing cannot publish");
       const existing=await prisma.framOffer.findUnique({where:{id}});
       if(!existing||existing.status!=="DRAFT") throw new RangeError("Only draft offers may be edited");
-      return prisma.framOffer.update({where:{id},data});
+      const result = await prisma.framOffer.updateMany({where:{id,status:"DRAFT"},data});
+      if(result.count!==1) throw new RangeError("Draft editing conflict");
+      return prisma.framOffer.findUnique({where:{id}});
     },
     async publishOffer(id) {
       if (typeof id !== "string" || !id.trim()) throw new RangeError("Invalid offer id");
