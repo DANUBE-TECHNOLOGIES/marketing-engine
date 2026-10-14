@@ -12,10 +12,11 @@
 - Integrate a trusted, per-request authenticated identity and server-verified tenant and FRAM network administrator permission.
 - Set framAdminAuthenticated only after trusted verification; do not accept client-supplied role, tenant ID, or authentication flag.
 - Test 401/403, cross-tenant access, CSRF protection for browser-based mutations, and audit logging of publish/approve/disable actions.
+- The `FramAdminAudit` table is implemented, but current writes are not atomic with business mutations. Before activation, require a single database transaction for each sensitive mutation and its audit record; failures must roll back both. A best-effort log is not sufficient as an authoritative approval history.
 
 ## Release checks
 1. Run backend npm ci, Prisma validate/generate and all MSE-25.322 tests.
-2. Review migrations 20261013150000, 20261014120000, 20261014123000 and verify order against a disposable PostgreSQL 16 database.
+2. Review migrations 20261013150000, 20261014120000, 20261014123000 and 20261014160000 and verify order against a disposable PostgreSQL 16 database.
 3. Test concurrent attempts to publish the fifth exclusive for the same month; PostgreSQL must reject excess publications.
 4. Validate image URLs, quote links, pricing, campaign boundaries and visibility on one approved and one unapproved agency.
 5. Build frontend, confirm noindex remains until content and legal review.
