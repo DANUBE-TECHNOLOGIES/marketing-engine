@@ -9,6 +9,11 @@ on:
       - 'backend/test/mse-25-322-*.test.js'
       - 'backend/prisma/**'
       - 'backend/package*.json'
+      - 'frontend/app/ambassade-fram/**'
+      - 'frontend/app/agence/[siteSlug]/ambassade-fram/**'
+      - 'frontend/lib/ambassade-fram/**'
+      - 'frontend/test/mse-25-322-*.test.mjs'
+      - 'frontend/package*.json'
       - '.github/workflows/mse-25-322-fram.yml'
   workflow_dispatch:
 jobs:
