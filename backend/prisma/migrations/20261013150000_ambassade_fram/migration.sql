@@ -16,10 +16,13 @@ CREATE TABLE "FramOffer" (
  "description" TEXT,
  "imageUrl" TEXT,
  "terms" TEXT,
+ "priceCents" INTEGER,
+ "quoteUrl" TEXT,
  "startAt" TIMESTAMP(3) NOT NULL,
  "endAt" TIMESTAMP(3) NOT NULL,
  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
  "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ CONSTRAINT "FramOffer_price_check" CHECK ("priceCents" IS NULL OR "priceCents" >= 0),
  CONSTRAINT "FramOffer_date_check" CHECK ("endAt" > "startAt"),
  CONSTRAINT "FramOffer_type_check" CHECK ("type" IN ('EXCLUS_AMBASSADE','VENTE_FLASH')),
  CONSTRAINT "FramOffer_status_check" CHECK ("status" IN ('DRAFT','PUBLISHED','ARCHIVED'))
