@@ -62,6 +62,13 @@ function createAdminService(prisma) {
       if (result.count !== 1) throw new RangeError("Offer publication conflict");
       return prisma.framOffer.findUnique({ where: { id } });
     },
+    async archiveOffer(id) {
+      const existing = await prisma.framOffer.findUnique({where:{id}});
+      if (!existing || existing.status === "ARCHIVED") throw new RangeError("Cannot archive offer");
+      const result = await prisma.framOffer.updateMany({where:{id,status:existing.status,updatedAt:existing.updatedAt},data:{status:"ARCHIVED"}});
+      if (result.count !== 1) throw new RangeError("Archive conflict");
+      return prisma.framOffer.findUnique({where:{id}});
+    },
     async approveAgency(tenantId, agencyId) {
       if (!tenantId || !Number.isSafeInteger(agencyId) || agencyId <= 0) throw new RangeError("Invalid agency approval");
       const agency = await prisma.agency.findFirst({ where: { id: agencyId, tenantId }, select: { id: true } });
