@@ -2,40 +2,26 @@
 const test=require("node:test");
 const assert=require("node:assert/strict");
 const createAdminRoutes=require("../src/modules/ambassade-fram/admin-routes");
-test("FRAM admin mutation audit is emitted only after successful publication",async()=>{
- const router=createAdminRoutes({prisma:{framOffer:{
-  findUnique:async()=>({id:"offer-1",status:"DRAFT",type:"VENTE_FLASH",title:"Flash",terms:"Conditions",startAt:new Date("2099-11-01"),endAt:new Date("2099-12-01"),updatedAt:new Date("2099-01-01")}),
-  updateMany:async()=>({count:1})
- }},authorize:(_req,_res,next)=>next()});
+const offer={id:"offer-1",status:"DRAFT",type:"VENTE_FLASH",title:"Flash",terms:"Conditions",startAt:new Date("2099-11-01"),endAt:new Date("2099-12-01"),updatedAt:new Date("2099-01-01")};
+function fixture(write){
+ const prisma={framOffer:{findUnique:async()=>offer,updateMany:async()=>({count:1})},framAdminAudit:{create:write}};
+ const router=createAdminRoutes({prisma,authorize:(_req,_res,next)=>next()});
  const route=router.stack.find(layer=>layer.route?.path==="/admin/ambassade-fram/offers/:id/publish");
- assert.ok(route);
- const logs=[];const previous=console.info;
- console.info=value=>logs.push(JSON.parse(value));
- try{
-  const req={params:{id:"offer-1"},tenantId:"trusted",user:{role:"admin",authType:"fram-service-token"}};
-  const res={json:()=>{},status(){return this;}};
-  await route.route.stack[0].handle(req,res);
-  assert.equal(logs.length,1);
-  assert.equal(logs[0].action,"publish_offer");
-  assert.equal(logs[0].tenantId,"trusted");
- }finally{console.info=previous;}
+ return route.route.stack[0].handle;
+}
+test("FRAM publication writes a durable audit event",async()=>{
+ const events=[];
+ const handler=fixture(async input=>{events.push(input.data);});
+ await handler({params:{id:"offer-1"},tenantId:"trusted",user:{role:"admin",authType:"fram-service-token"}},{json:()=>{},status(){return this;}});
+ assert.equal(events.length,1);
+ assert.deepEqual(events[0],{action:"publish_offer",target:"offer-1",tenantId:"trusted",actorType:"fram-service-token"});
 });
-
-test("audit sink failure cannot turn committed publication into an API error",async()=>{
- const router=createAdminRoutes({prisma:{framOffer:{
-  findUnique:async()=>({id:"offer-2",status:"DRAFT",type:"VENTE_FLASH",title:"Flash",terms:"Conditions",startAt:new Date("2099-11-01"),endAt:new Date("2099-12-01"),updatedAt:new Date("2099-01-01")}),
-  updateMany:async()=>({count:1})
- }},authorize:(_req,_res,next)=>next()});
- const route=router.stack.find(layer=>layer.route?.path==="/admin/ambassade-fram/offers/:id/publish");
- const originalInfo=console.info,originalError=console.error;
+test("audit database failure cannot turn committed publication into an API error",async()=>{
+ const handler=fixture(async()=>{throw Error("database unavailable");});
+ const previous=console.error;console.error=()=>{};
  let sent=false,code=200;
- console.info=()=>{throw Error("audit unavailable");};
- console.error=()=>{};
  try{
-  await route.route.stack[0].handle({params:{id:"offer-2"},tenantId:"trusted",user:{role:"admin"}},{
-   json:()=>{sent=true;},status(value){code=value;return this;}
-  });
-  assert.equal(sent,true);
-  assert.equal(code,200);
- }finally{console.info=originalInfo;console.error=originalError;}
+  await handler({params:{id:"offer-1"},tenantId:"trusted",user:{role:"admin"}},{json:()=>{sent=true;},status(value){code=value;return this;}});
+  assert.equal(sent,true);assert.equal(code,200);
+ }finally{console.error=previous;}
 });
