@@ -17,7 +17,7 @@ export default function SimulateurFidelite() {
         <p role="status">{result.points} points estimés. Palier atteint : {result.discountPercent} %.
           {result.nextTier ? ` Prochain palier : ${result.nextTier.points} points.` : ""}</p>
       ) : <p role="alert">Saisissez un montant positif valide.</p>}
-      <p>Simulation non contractuelle. Les dépenses Plein Vent ne sont pas éligibles. Les conditions d'utilisation des remises sont à confirmer auprès de FRAM ou de votre agence.</p>
+      <p>Simulation non contractuelle. Les dépenses Plein Vent ne sont pas éligibles. Les conditions d’utilisation des remises sont à confirmer auprès de FRAM ou de votre agence.</p>
     </section>
   );
 }
