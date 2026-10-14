@@ -19,7 +19,7 @@ test("draft edit is conditional on DRAFT status", async () => {
   let where;
   const service = createAdminService({
     framOffer: {
-      findUnique: async () => ({ ...draft, id: "offer-1" }),
+      findUnique: async () => ({ ...draft, id: "offer-1", updatedAt: lastModified }),
       updateMany: async input => { where = input.where; return { count: 1 }; },
     },
   });
