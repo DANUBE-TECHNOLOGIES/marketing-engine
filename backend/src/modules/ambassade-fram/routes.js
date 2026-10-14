@@ -12,6 +12,9 @@ module.exports = function createFramRoutes({ prisma }) {
     const agencyId = Number(req.params.agencyId);
     if (!Number.isSafeInteger(agencyId) || agencyId <= 0) return res.status(400).json({ error: "Invalid agency" });
     try {
+      const tenantSlug = String(req.headers["x-tenant-slug"] || "mondescale").trim().toLowerCase();
+      const agency = await prisma.agency.findFirst({ where: { id: agencyId, tenant: { slug: tenantSlug } }, select: { id: true } });
+      if (!agency) return res.status(404).json({ error: "Not found" });
       const membership = await prisma.framAmbassadorAgency.findUnique({ where: { agencyId } });
       if (!membership?.enabled || !membership.approvedAt) return res.status(404).json({ error: "Not found" });
       const offers = await prisma.framOffer.findMany({
@@ -20,10 +23,12 @@ module.exports = function createFramRoutes({ prisma }) {
         take: 100,
       });
       const now = new Date();
+      const publicFields = offer => ({ id: offer.id, type: offer.type, title: offer.title, description: offer.description, imageUrl: offer.imageUrl, terms: offer.terms, priceCents: offer.priceCents, quoteUrl: offer.quoteUrl, startAt: offer.startAt, endAt: offer.endAt });
+      res.set("Cache-Control", "public, max-age=60");
       return res.json({
         agencyId,
-        monthlyExclusives: monthlyExclusives(offers, now),
-        flashSales: publishedOffers(offers, now).filter(o => o.type === "VENTE_FLASH"),
+        monthlyExclusives: monthlyExclusives(offers, now).map(publicFields),
+        flashSales: publishedOffers(offers, now).filter(o => o.type === "VENTE_FLASH").map(publicFields),
       });
     } catch (error) {
       console.error("FRAM public offers failed", error?.message);
