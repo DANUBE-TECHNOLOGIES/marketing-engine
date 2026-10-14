@@ -11,3 +11,10 @@ test("monthly exclusives never leak across months",()=>{
  assert.equal(monthlyExclusives(offers,new Date("2026-12-15")).length,0);
  assert.throws(()=>validateOffer({...base}),/campaign month/);
 });
+
+test("monthly exclusives switch at midnight in mainland France",()=>{
+ const base={type:"EXCLUS_AMBASSADE",status:"PUBLISHED",title:"Offre",startAt:"2026-10-01",endAt:"2026-12-01"};
+ const offers=[{...base,campaignMonth:"2026-10"},{...base,campaignMonth:"2026-11"}];
+ assert.equal(monthlyExclusives(offers,new Date("2026-10-31T22:59:00Z"))[0].campaignMonth,"2026-10");
+ assert.equal(monthlyExclusives(offers,new Date("2026-10-31T23:01:00Z"))[0].campaignMonth,"2026-11");
+});
