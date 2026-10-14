@@ -49,6 +49,7 @@ jobs:
       - run: npx prisma validate
       - run: npx prisma generate
       - run: npx prisma migrate deploy
+      - run: node test/mse-25-322-fram-db-smoke.js
       - run: node --test test/mse-25-322-*.test.js
 
   fram-frontend:
