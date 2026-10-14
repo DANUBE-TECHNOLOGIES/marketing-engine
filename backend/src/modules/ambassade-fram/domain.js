@@ -27,6 +27,7 @@ function publishedOffers(offers, now=new Date()) {
  return offers.filter(o=>{try{validateOffer(o);return o.status==="PUBLISHED"&&new Date(o.startAt).getTime()<=t&&t<new Date(o.endAt).getTime()}catch{return false}});
 }
 function monthlyExclusives(offers,now=new Date()){
+ if (!(now instanceof Date) || !Number.isFinite(now.getTime())) throw new RangeError("Invalid clock");
  const parts=new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Paris",year:"numeric",month:"2-digit"}).formatToParts(now);
  const month=`${parts.find(p=>p.type==="year").value}-${parts.find(p=>p.type==="month").value}`;
  return publishedOffers(offers,now).filter(o=>o.type==="EXCLUS_AMBASSADE"&&o.campaignMonth===month).slice(0,4);
