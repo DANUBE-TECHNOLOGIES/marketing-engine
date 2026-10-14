@@ -1,16 +1,21 @@
 "use client";
 import { useEffect, useState } from "react";
 
-export default function OffresAmbassade({ agencyId }) {
+export default function OffresAmbassade({ agencyId, siteSlug }) {
   const [state, setState] = useState({ loading: true, offers: [], flash: [], error: "" });
   useEffect(() => {
-    if (!Number.isSafeInteger(agencyId) || agencyId <= 0) {
+    const validAgency = Number.isSafeInteger(agencyId) && agencyId > 0;
+    const validSite = typeof siteSlug === "string" && /^[a-z0-9][a-z0-9-]{0,119}$/.test(siteSlug);
+    if (!validAgency && !validSite) {
       setState({ loading: false, offers: [], flash: [], error: "Agence non sélectionnée." });
       return;
     }
     const controller = new AbortController();
     setState({ loading: true, offers: [], flash: [], error: "" });
-    fetch(`/api/public/ambassade-fram/agencies/${agencyId}/offers`, { signal: controller.signal })
+    const endpoint = validSite
+      ? `/api/public/ambassade-fram/sites/${encodeURIComponent(siteSlug)}/offers`
+      : `/api/public/ambassade-fram/agencies/${agencyId}/offers`;
+    fetch(endpoint, { signal: controller.signal })
       .then(async response => {
         if (!response.ok) throw new Error("Offres indisponibles");
         return response.json();
@@ -27,7 +32,7 @@ export default function OffresAmbassade({ agencyId }) {
         if (!controller.signal.aborted) setState({ loading: false, offers: [], flash: [], error: "Offres indisponibles actuellement." });
       });
     return () => controller.abort();
-  }, [agencyId]);
+  }, [agencyId, siteSlug]);
   if (state.loading) return <p>Chargement des offres…</p>;
   if (state.error) return <p role="status">{state.error}</p>;
   if (!state.offers.length && !state.flash.length) return <p>Aucune offre publiée actuellement pour cette agence.</p>;
