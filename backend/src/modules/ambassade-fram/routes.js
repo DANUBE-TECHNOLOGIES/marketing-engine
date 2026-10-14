@@ -25,7 +25,6 @@ module.exports = function createFramRoutes({ prisma }) {
       const offers = await prisma.framOffer.findMany({
         where: { status: "PUBLISHED", startAt: { lte: now }, endAt: { gt: now } },
         orderBy: [{ startAt: "desc" }, { id: "asc" }],
-        take: 100,
       });
       const publicFields = offer => ({
         id: offer.id, type: offer.type, title: offer.title, description: offer.description,
@@ -51,12 +50,12 @@ module.exports = function createFramRoutes({ prisma }) {
       if (!agency) return res.status(404).json({ error: "Not found" });
       const membership = await prisma.framAmbassadorAgency.findUnique({ where: { agencyId } });
       if (!membership?.enabled || !membership.approvedAt) return res.status(404).json({ error: "Not found" });
+      const now = new Date();
       const offers = await prisma.framOffer.findMany({
-        where: { status: "PUBLISHED", startAt: { lte: new Date() }, endAt: { gt: new Date() } },
+        where: { status: "PUBLISHED", startAt: { lte: now }, endAt: { gt: now } },
         orderBy: [{ startAt: "desc" }, { id: "asc" }],
         take: 100,
       });
-      const now = new Date();
       const publicFields = offer => ({ id: offer.id, type: offer.type, title: offer.title, description: offer.description, imageUrl: offer.imageUrl, terms: offer.terms, priceCents: offer.priceCents, quoteUrl: offer.quoteUrl, startAt: offer.startAt, endAt: offer.endAt });
       res.set("Cache-Control", "public, max-age=60");
       return res.json({
