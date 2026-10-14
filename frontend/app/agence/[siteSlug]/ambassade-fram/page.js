@@ -1,41 +1,17 @@
 import { notFound } from "next/navigation";
 import SimulateurFidelite from "../../../ambassade-fram/SimulateurFidelite";
 import OffresAmbassade from "../../../ambassade-fram/OffresAmbassade";
-
-const ORIGIN = String(process.env.BACKEND_INTERNAL_URL || process.env.MONDESCALE_BACKEND_URL || "http://backend:4000").replace(/\/+$/, "");
-
-async function eligibility(siteSlug) {
-  if (!/^[a-z0-9][a-z0-9-]{0,119}$/.test(siteSlug)) return false;
-  try {
-    const response = await fetch(`${ORIGIN}/api/public/ambassade-fram/sites/${encodeURIComponent(siteSlug)}/offers`, {
-      cache: "no-store",
-      headers: { "x-tenant-slug": "mondescale" },
-    });
-    return response.ok;
-  } catch { return false; }
-}
-
-export async function generateMetadata({ params }) {
-  const { siteSlug } = await params;
-  return {
-    title: "Offres Ambassade FRAM | Mondescale Voyages",
-    description: "Découvrez les offres exclusives et les avantages fidélité de votre agence Ambassade FRAM.",
-    robots: { index: false, follow: false },
-    alternates: { canonical: `/agence/${siteSlug}/ambassade-fram` },
-  };
-}
-
-export default async function Page({ params }) {
-  const { siteSlug } = await params;
-  if (!(await eligibility(siteSlug))) notFound();
-  return (
-    <main style={{ maxWidth: 900, margin: "auto", padding: 32 }}>
-      <nav aria-label="Fil d'Ariane"><a href={`/agence/${siteSlug}`}>Votre agence</a> / Ambassade FRAM</nav>
-      <h1>Offres et avantages Ambassade FRAM</h1>
-      <p>Découvrez les offres FRAM réservées aux agences participantes, sous réserve des conditions de chaque produit.</p>
-      <OffresAmbassade siteSlug={siteSlug} />
-      <SimulateurFidelite />
-      <small>Mondescale Voyages est un réseau indépendant, partenaire Ambassade FRAM.</small>
-    </main>
-  );
-}
+import { FRAM_LOYALTY_THRESHOLDS } from "../../../../lib/ambassade-fram/loyalty.mjs";
+import styles from "../../../ambassade-fram/AmbassadeFram.module.css";
+const ORIGIN=String(process.env.BACKEND_INTERNAL_URL||process.env.MONDESCALE_BACKEND_URL||"http://backend:4000").replace(/\/+$/,"");
+async function eligibility(siteSlug){if(!/^[a-z0-9][a-z0-9-]{0,119}$/.test(siteSlug))return false;try{const r=await fetch(`${ORIGIN}/api/public/ambassade-fram/sites/${encodeURIComponent(siteSlug)}/offers`,{cache:"no-store",headers:{"x-tenant-slug":"mondescale"}});return r.ok;}catch{return false;}}
+export async function generateMetadata({params}){const {siteSlug}=await params;return{title:"Avantages et offres Ambassade FRAM | Mondescale Voyages",description:"Retrouvez les privilèges fidélité et offres FRAM de votre agence Mondescale participante.",robots:{index:false,follow:false},alternates:{canonical:`/agence/${siteSlug}/ambassade-fram`}};}
+export default async function Page({params}){const {siteSlug}=await params;if(!(await eligibility(siteSlug)))notFound();return <main className={styles.page}>
+<nav className={styles.breadcrumb} aria-label="Fil d'Ariane"><a href={`/agence/${siteSlug}`}>Votre agence</a> / Ambassade FRAM</nav>
+<section className={styles.hero}><span className={styles.eyebrow}>VOTRE AGENCE MONDESCALE · AMBASSADE FRAM</span><h1>Des voyages inoubliables. Des privilèges en plus.</h1><p>Votre agence Ambassade FRAM vous accompagne dans vos projets de voyage et vous fait découvrir un programme fidélité gratuit et des offres réservées.</p><div className={styles.actions}><a className={styles.button} href="#offres-fram">Découvrir les offres ↓</a><a className={styles.buttonLight} href="#simulateur-fram">Estimer mes points</a></div></section>
+<section className={styles.wrap}><div className={styles.kicker}>Vos avantages fidélité</div><h2 className={styles.heading}>Plus vous voyagez, plus vous profitez.</h2><p className={styles.lead}>Pour les séjours et circuits FRAM éligibles : 1 point par tranche de 100 € dépensés. Votre carte fidélité est gratuite et valable cinq années civiles. Plein Vent est exclu.</p><div className={styles.grid}>{FRAM_LOYALTY_THRESHOLDS.map(t=><article className={styles.tier} key={t.points}><div className={styles.tierLabel}>{t.points} POINTS</div><strong>{t.discountPercent}<span> %</span></strong><p>Avantage selon les conditions du programme.</p></article>)}</div></section>
+<section className={styles.sectionTint} id="simulateur-fram"><div className={styles.wrap}><div className={styles.kicker}>Votre progression</div><h2 className={styles.heading}>Simulez vos points fidélité</h2><p className={styles.lead}>Une estimation simple pour visualiser vos prochains avantages.</p><SimulateurFidelite/></div></section>
+<section className={styles.wrap} id="offres-fram"><div className={styles.kicker}>Sélection de votre agence</div><h2 className={styles.heading}>Vos offres exclusives Ambassade FRAM</h2><p className={styles.lead}>Découvrez les sélections mensuelles et les ventes flash lorsqu'elles sont publiées par votre agence.</p><OffresAmbassade siteSlug={siteSlug}/></section>
+<section className={styles.sectionTint}><div className={styles.wrap}><h2 className={styles.heading}>Envie de préparer votre prochain voyage ?</h2><p className={styles.lead}>Notre équipe est à votre écoute pour vous conseiller et vérifier les conditions des avantages.</p><div className={styles.actions}><a className={styles.button} href={`/agence/${siteSlug}`}>Retrouver mon agence →</a></div></div></section>
+<footer className={styles.disclaimer}>Simulations non contractuelles. Conditions des remises à confirmer auprès de FRAM ou de votre agence. Plein Vent exclu. Mondescale Voyages est un réseau indépendant partenaire Ambassade FRAM.</footer>
+</main>;}
