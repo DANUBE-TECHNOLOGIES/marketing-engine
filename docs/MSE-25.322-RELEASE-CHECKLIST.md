@@ -7,8 +7,8 @@
 - Loyalty programme: 100 EUR eligible FRAM spend = 1 point; Plein Vent excluded. Redemption terms must be approved before marketing claims.
 
 ## Security — mandatory before exposing admin routes
-- Admin router is intentionally **not mounted**. Do not use the demonstrative global /session state for authorization.
-- A separate, optional server-to-server bearer-token middleware is implemented in `backend/src/modules/ambassade-fram/admin-auth.js` and has dedicated tests. It is **not wired to the server**; configure a unique secret (minimum 32 characters), a server-verified tenant, secret rotation and audit logging before any activation. Do not place the token in browser JavaScript or expose it through frontend environment variables.
+- Admin router is **disabled by default**. Registration is conditional on `FRAM_ADMIN_TOKEN` and `FRAM_ADMIN_TENANT_ID` being set server-side; missing either while the other is configured fails startup. Do not use the demonstrative global /session state for authorization.
+- A separate, optional server-to-server bearer-token middleware is implemented in `backend/src/modules/ambassade-fram/admin-auth.js` and has dedicated tests. It is wired only under explicit server-side configuration; configure a unique secret (minimum 32 characters), a server-verified tenant, secret rotation and audit logging before any activation. Do not place the token in browser JavaScript or expose it through frontend environment variables.
 - Integrate a trusted, per-request authenticated identity and server-verified tenant and FRAM network administrator permission.
 - Set framAdminAuthenticated only after trusted verification; do not accept client-supplied role, tenant ID, or authentication flag.
 - Test 401/403, cross-tenant access, CSRF protection for browser-based mutations, and audit logging of publish/approve/disable actions.
