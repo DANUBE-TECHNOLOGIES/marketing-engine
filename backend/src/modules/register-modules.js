@@ -46,12 +46,18 @@ const acquisitionFunnel = require("./acquisition-funnel");
 const webCallback = require("./web-callback");
 const groupPreRegistration = require("./group-pre-registration");
 const createFramRoutes = require("./ambassade-fram/routes");
+const createFramAdminRoutes = require("./ambassade-fram/admin-routes");
+const { createFramAdminAuth } = require("./ambassade-fram/admin-auth");
 
 module.exports = function registerModules(app, { prisma }) {
   if (tenantCore.routes) app.use(tenantCore.routes({ prisma }));
   const tenantService = new tenantCore.TenantService(new tenantCore.TenantRepository(prisma));
   app.use(tenantCore.createTenantMiddleware(tenantService));
   app.use(createSearchConsoleOAuthRoutes(prisma));
+  if (process.env.FRAM_ADMIN_TOKEN || process.env.FRAM_ADMIN_TENANT_ID) {
+    const authorize = createFramAdminAuth({ token: process.env.FRAM_ADMIN_TOKEN, tenantId: process.env.FRAM_ADMIN_TENANT_ID });
+    app.use(createFramAdminRoutes({ prisma, authorize }));
+  }
   app.use(createPublicLeadsRoutes(prisma));
   app.use(createLeadAttentionRoutes(prisma));
   if (brand.routes) app.use(brand.routes({ prisma }));
