@@ -30,3 +30,12 @@ Implement centralized Ambassade FRAM editorial content and offers, with agency o
 
 ## Initial implementation
 The standalone, dependency-free loyalty and offer-filtering functions are in frontend/lib/ambassade-fram and have node:test coverage. They do **not** alter production routing or data.
+
+## Monthly editorial ownership — confirmed 14 October 2026
+- The network director personally supplies the monthly Exclus Ambassade FRAM offers **before the start of the relevant month**.
+- One campaign per calendar month (Europe/Paris), with up to four supplied offers.
+- No automated sourcing, invention, or selection of commercial offers.
+- Offers are entered as drafts and published only after explicit director approval.
+- Publishing a future month's approved offer schedules its visibility automatically for its campaign month and its configured validity interval; no manual switch at midnight is needed.
+- Flash sales remain independent of monthly exclusives, and require their own approved content.
+- If no offers are supplied and approved for a month, the monthly section remains empty; do not reuse a previous campaign.
