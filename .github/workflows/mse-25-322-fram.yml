@@ -1,5 +1,8 @@
 name: MSE-25.322 FRAM validation
 on:
+  push:
+    branches:
+      - feature/mse-25-322-ambassade-fram
   pull_request:
     paths:
       - 'backend/src/modules/ambassade-fram/**'
