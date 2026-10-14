@@ -35,3 +35,25 @@ test("publication refuses a fifth monthly exclusive",async()=>{
  }});
  await assert.rejects(service.publishOffer("o1"),/Maximum four monthly exclusives/);
 });
+
+test("publication permits a fourth monthly exclusive",async()=>{
+ let updated=false;
+ const service=createAdminService({framOffer:{
+  findUnique:async()=>offer,
+  count:async()=>3,
+  updateMany:async()=>{updated=true;return {count:1};}
+ }});
+ await service.publishOffer("o1");
+ assert.equal(updated,true);
+});
+test("flash sales do not consume monthly exclusive capacity",async()=>{
+ const flash={...offer,type:"VENTE_FLASH",campaignMonth:null};
+ let updated=false;
+ const service=createAdminService({framOffer:{
+  findUnique:async()=>flash,
+  count:async()=>{throw Error("Flash must not check monthly capacity");},
+  updateMany:async()=>{updated=true;return {count:1};}
+ }});
+ await service.publishOffer("o1");
+ assert.equal(updated,true);
+});
