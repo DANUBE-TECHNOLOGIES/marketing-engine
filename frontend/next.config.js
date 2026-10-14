@@ -51,6 +51,10 @@ const nextConfig = {
         destination: `${origin}/media/brand-assets/:path*`,
       },
       {
+        source: "/api/public/ambassade-fram/:path*",
+        destination: `${origin}/api/public/ambassade-fram/:path*`,
+      },
+      {
         source: "/api/public/acquisition-funnels/:path*",
         destination: `${origin}/api/public/acquisition-funnels/:path*`,
       },
