@@ -13,7 +13,7 @@ module.exports = function createFramAdminRoutes({ prisma, authorize }) {
   const service = createAdminService(prisma);
   router.use(authorize);
   router.use((req, res, next) => {
-    if (!req.tenantId || !req.user) return res.status(403).json({ error: "Administrator context required" });
+    if (!req.tenantId || !req.user || req.user.role !== "admin") return res.status(403).json({ error: "Administrator context required" });
     next();
   });
   const handle = fn => async (req, res) => {
