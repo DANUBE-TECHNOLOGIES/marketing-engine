@@ -18,3 +18,7 @@ test("monthly exclusives switch at midnight in mainland France",()=>{
  assert.equal(monthlyExclusives(offers,new Date("2026-10-31T22:59:00Z"))[0].campaignMonth,"2026-10");
  assert.equal(monthlyExclusives(offers,new Date("2026-10-31T23:01:00Z"))[0].campaignMonth,"2026-11");
 });
+
+test("monthly campaign rejects invalid clock",()=>{
+ assert.throws(()=>monthlyExclusives([],new Date("invalid")),RangeError);
+});
