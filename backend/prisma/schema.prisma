@@ -1713,4 +1713,5 @@ model FramOffer {
   updatedAt   DateTime @updatedAt
 
   @@index([status, type, startAt, endAt], map: "FramOffer_public_idx")
+  @@index([campaignMonth, status], map: "FramOffer_campaign_month_idx")
 }
