@@ -1697,6 +1697,7 @@ model FramAmbassadorAgency {
 }
 
 model FramOffer {
+  campaignMonth String? @db.VarChar(7)
   id          String   @id @default(cuid())
   type        String
   status      String   @default("DRAFT")
