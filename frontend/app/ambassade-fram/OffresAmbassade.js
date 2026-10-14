@@ -6,12 +6,8 @@ export default function OffresAmbassade({ agencyId, siteSlug }) {
   useEffect(() => {
     const validAgency = Number.isSafeInteger(agencyId) && agencyId > 0;
     const validSite = typeof siteSlug === "string" && /^[a-z0-9][a-z0-9-]{0,119}$/.test(siteSlug);
-    if (!validAgency && !validSite) {
-      setState({ loading: false, offers: [], flash: [], error: "Agence non sélectionnée." });
-      return;
-    }
+    if (!validAgency && !validSite) return;
     const controller = new AbortController();
-    setState({ loading: true, offers: [], flash: [], error: "" });
     const endpoint = validSite
       ? `/api/public/ambassade-fram/sites/${encodeURIComponent(siteSlug)}/offers`
       : `/api/public/ambassade-fram/agencies/${agencyId}/offers`;
@@ -33,6 +29,8 @@ export default function OffresAmbassade({ agencyId, siteSlug }) {
       });
     return () => controller.abort();
   }, [agencyId, siteSlug]);
+  const validSelection = (Number.isSafeInteger(agencyId) && agencyId > 0) || (typeof siteSlug === "string" && /^[a-z0-9][a-z0-9-]{0,119}$/.test(siteSlug));
+  if (!validSelection) return <p role="status">Agence non sélectionnée.</p>;
   if (state.loading) return <p>Chargement des offres…</p>;
   if (state.error) return <p role="status">{state.error}</p>;
   if (!state.offers.length && !state.flash.length) return <p>Aucune offre publiée actuellement pour cette agence.</p>;
