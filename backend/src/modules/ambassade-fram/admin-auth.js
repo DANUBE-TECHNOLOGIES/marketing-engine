@@ -20,6 +20,9 @@ function createFramAdminAuth({ token, tenantId }) {
       return res.status(401).json({ error: "Authentication required" });
     }
     const candidate = authorization.slice(7);
+    if (!/^[\\x21-\\x7E]+$/.test(candidate)) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
     if (candidate.length < 32 || candidate.length > 4096) {
       return res.status(401).json({ error: "Authentication required" });
     }
