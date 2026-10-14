@@ -44,7 +44,7 @@ function createAdminService(prisma) {
       const existing = await prisma.framOffer.findUnique({ where: { id } });
       if (!existing || existing.status !== "DRAFT") throw new RangeError("Only drafts may be published");
       validateOffer({ ...existing, status: "PUBLISHED" });
-      if (!existing.terms || !existing.terms.trim()) throw new RangeError("Offer terms required before publication");
+      if (typeof existing.terms !== "string" || !existing.terms.trim()) throw new RangeError("Offer terms required before publication");
       const result = await prisma.framOffer.updateMany({
         where: { id, status: "DRAFT" },
         data: { status: "PUBLISHED" },
