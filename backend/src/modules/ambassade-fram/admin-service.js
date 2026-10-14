@@ -37,6 +37,22 @@ function createAdminService(prisma) {
       if(!existing||existing.status!=="DRAFT") throw new RangeError("Only draft offers may be edited");
       return prisma.framOffer.update({where:{id},data});
     },
+    async approveAgency(tenantId, agencyId) {
+      if (!tenantId || !Number.isSafeInteger(agencyId) || agencyId <= 0) throw new RangeError("Invalid agency approval");
+      const agency = await prisma.agency.findFirst({ where: { id: agencyId, tenantId }, select: { id: true } });
+      if (!agency) throw new RangeError("Agency not found in tenant");
+      return prisma.framAmbassadorAgency.upsert({
+        where: { agencyId },
+        create: { agencyId, enabled: true, approvedAt: new Date() },
+        update: { enabled: true, approvedAt: new Date() },
+      });
+    },
+    async disableAgency(tenantId, agencyId) {
+      if (!tenantId || !Number.isSafeInteger(agencyId) || agencyId <= 0) throw new RangeError("Invalid agency");
+      const agency = await prisma.agency.findFirst({ where: { id: agencyId, tenantId }, select: { id: true } });
+      if (!agency) throw new RangeError("Agency not found in tenant");
+      return prisma.framAmbassadorAgency.updateMany({ where: { agencyId }, data: { enabled: false } });
+    },
     async listAgencies(tenantId) {
       if(!tenantId) throw new RangeError("Tenant required");
       return prisma.agency.findMany({where:{tenantId},include:{framAmbassador:true}});
