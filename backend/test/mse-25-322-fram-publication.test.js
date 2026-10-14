@@ -16,3 +16,8 @@ test("publication updates one draft",async()=>{
  await service.publishOffer("o1");
  assert.deepEqual(filter,{id:"o1",status:"DRAFT"});
 });
+
+test("publication rejects non-text terms",async()=>{
+ const service=createAdminService({framOffer:{findUnique:async()=>({...offer,terms:123})}});
+ await assert.rejects(service.publishOffer("o1"),RangeError);
+});
