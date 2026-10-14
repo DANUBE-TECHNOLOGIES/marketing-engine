@@ -45,6 +45,7 @@ const flexiblePaymentExperience = require("./flexible-payment-experience");
 const acquisitionFunnel = require("./acquisition-funnel");
 const webCallback = require("./web-callback");
 const groupPreRegistration = require("./group-pre-registration");
+const createFramRoutes = require("./ambassade-fram/routes");
 
 module.exports = function registerModules(app, { prisma }) {
   if (tenantCore.routes) app.use(tenantCore.routes({ prisma }));
@@ -105,4 +106,5 @@ module.exports = function registerModules(app, { prisma }) {
   if (acquisitionFunnel.routes) app.use(acquisitionFunnel.routes({ prisma }));
   if (webCallback.routes) app.use(webCallback.routes({ prisma }));
   if (groupPreRegistration.routes) app.use(groupPreRegistration.routes({ prisma }));
+  app.use(createFramRoutes({ prisma }));
 };
