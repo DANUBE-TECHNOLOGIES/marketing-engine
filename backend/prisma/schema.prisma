@@ -1704,6 +1704,8 @@ model FramOffer {
   description String?
   imageUrl    String?
   terms       String?
+  priceCents  Int?
+  quoteUrl    String?
   startAt     DateTime
   endAt       DateTime
   createdAt   DateTime @default(now())
