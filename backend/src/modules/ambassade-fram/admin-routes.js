@@ -16,12 +16,17 @@ module.exports = function createFramAdminRoutes({ prisma, authorize }) {
     if (!req.tenantId || !req.user || req.user.role !== "admin" || req.framAdminAuthenticated !== true) return res.status(403).json({ error: "Administrator context required" });
     next();
   });
-  const audit = (action, target, req) => {
+  const audit = async (action, target, req) => {
+    const event = { action, target: String(target), tenantId: req.tenantId, actorType: req.user?.authType || "unknown" };
+    if (!prisma.framAdminAudit?.create) {
+      console.error("FRAM persistent audit storage unavailable");
+      return;
+    }
     try {
-      console.info(JSON.stringify({ event: "fram_admin_mutation", action, target: String(target), tenantId: req.tenantId, actorType: req.user?.authType || "unknown", at: new Date().toISOString() }));
+      await prisma.framAdminAudit.create({ data: event });
     } catch (error) {
-      // An already committed mutation must not be reported as failed because logging failed.
-      try { console.error("FRAM audit logging unavailable", error?.message); } catch { /* logging unavailable */ }
+      // A completed business mutation cannot be rolled back by logging failure.
+      console.error("FRAM persistent audit write failed", error?.message);
     }
   };
   const handle = fn => async (req, res) => {
@@ -35,10 +40,10 @@ module.exports = function createFramAdminRoutes({ prisma, authorize }) {
   router.get("/admin/ambassade-fram/offers", handle(async (_req, res) => res.json(await service.listOffers())));
   router.post("/admin/ambassade-fram/offers", handle(async (req, res) => res.status(201).json(await service.createOffer(req.body))));
   router.put("/admin/ambassade-fram/offers/:id/draft", handle(async (req, res) => res.json(await service.replaceDraft(req.params.id, req.body))));
-  router.post("/admin/ambassade-fram/offers/:id/publish", handle(async (req, res) => res.json(await service.publishOffer(req.params.id).then(result => { audit("publish_offer", req.params.id, req); return result; }))));
+  router.post("/admin/ambassade-fram/offers/:id/publish", handle(async (req, res) => res.json(await service.publishOffer(req.params.id).then(async result => { await audit("publish_offer", req.params.id, req); return result; }))));
   router.get("/admin/ambassade-fram/agencies", handle(async (req, res) => res.json(await service.listAgencies(req.tenantId))));
-  router.post("/admin/ambassade-fram/agencies/:agencyId/approve", handle(async (req, res) => res.json(await service.approveAgency(req.tenantId, Number(req.params.agencyId)).then(result => { audit("approve_agency", req.params.agencyId, req); return result; }))));
-  router.post("/admin/ambassade-fram/agencies/:agencyId/disable", handle(async (req, res) => res.json(await service.disableAgency(req.tenantId, Number(req.params.agencyId)).then(result => { audit("disable_agency", req.params.agencyId, req); return result; }))));
-  router.post("/admin/ambassade-fram/offers/:id/archive", handle(async (req, res) => res.json(await service.archiveOffer(req.params.id).then(result => { audit("archive_offer", req.params.id, req); return result; }))));
+  router.post("/admin/ambassade-fram/agencies/:agencyId/approve", handle(async (req, res) => res.json(await service.approveAgency(req.tenantId, Number(req.params.agencyId)).then(async result => { await audit("approve_agency", req.params.agencyId, req); return result; }))));
+  router.post("/admin/ambassade-fram/agencies/:agencyId/disable", handle(async (req, res) => res.json(await service.disableAgency(req.tenantId, Number(req.params.agencyId)).then(async result => { await audit("disable_agency", req.params.agencyId, req); return result; }))));
+  router.post("/admin/ambassade-fram/offers/:id/archive", handle(async (req, res) => res.json(await service.archiveOffer(req.params.id).then(async result => { await audit("archive_offer", req.params.id, req); return result; }))));
   return router;
 };
