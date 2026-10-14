@@ -63,6 +63,7 @@ function createAdminService(prisma) {
       return prisma.framOffer.findUnique({ where: { id } });
     },
     async archiveOffer(id) {
+      if (typeof id !== "string" || !id.trim()) throw new RangeError("Invalid offer id");
       const existing = await prisma.framOffer.findUnique({where:{id}});
       if (!existing || existing.status === "ARCHIVED") throw new RangeError("Cannot archive offer");
       const result = await prisma.framOffer.updateMany({where:{id,status:existing.status,updatedAt:existing.updatedAt},data:{status:"ARCHIVED"}});
