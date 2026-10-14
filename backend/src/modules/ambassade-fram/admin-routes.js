@@ -27,6 +27,7 @@ module.exports = function createFramAdminRoutes({ prisma, authorize }) {
   router.get("/admin/ambassade-fram/offers", handle(async (_req, res) => res.json(await service.listOffers())));
   router.post("/admin/ambassade-fram/offers", handle(async (req, res) => res.status(201).json(await service.createOffer(req.body))));
   router.put("/admin/ambassade-fram/offers/:id/draft", handle(async (req, res) => res.json(await service.replaceDraft(req.params.id, req.body))));
+  router.post("/admin/ambassade-fram/offers/:id/publish", handle(async (req, res) => res.json(await service.publishOffer(req.params.id))));
   router.get("/admin/ambassade-fram/agencies", handle(async (req, res) => res.json(await service.listAgencies(req.tenantId))));
   router.post("/admin/ambassade-fram/agencies/:agencyId/approve", handle(async (req, res) => res.json(await service.approveAgency(req.tenantId, Number(req.params.agencyId)))));
   router.post("/admin/ambassade-fram/agencies/:agencyId/disable", handle(async (req, res) => res.json(await service.disableAgency(req.tenantId, Number(req.params.agencyId)))));
