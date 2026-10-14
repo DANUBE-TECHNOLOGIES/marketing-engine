@@ -57,3 +57,8 @@ test("flash sales do not consume monthly exclusive capacity",async()=>{
  await service.publishOffer("o1");
  assert.equal(updated,true);
 });
+
+test("publication rejects an exclusive outside its campaign month",async()=>{
+ const service=createAdminService({framOffer:{findUnique:async()=>({...offer,startAt:new Date("2099-10-01"),endAt:new Date("2099-10-15")})}});
+ await assert.rejects(service.publishOffer("o1"),/overlap campaign month/);
+});
