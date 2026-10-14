@@ -1,3 +1,4 @@
+import SimulateurFidelite from "./SimulateurFidelite";
 import { FRAM_LOYALTY_THRESHOLDS } from "../../lib/ambassade-fram/loyalty.mjs";
 
 export const metadata = {
@@ -14,6 +15,7 @@ export default function Page() {
       <h2>Carte de fidélité</h2>
       <p>Gratuite, valable cinq années civiles. Pour les séjours et circuits FRAM éligibles, 100 euros dépensés correspondent à un point. Plein Vent est exclu.</p>
       <ul>{FRAM_LOYALTY_THRESHOLDS.map(t => <li key={t.points}>{t.points} points : {t.discountPercent} % de remise selon les conditions du programme.</li>)}</ul>
+      <SimulateurFidelite />
       <h2>Offres exclusives</h2>
       <p>Quatre offres Exclus Ambassade FRAM sont sélectionnées chaque mois, sous réserve de disponibilité et des conditions de vente. Des ventes flash peuvent également être proposées.</p>
       <p>Consultez votre agence pour confirmer les conditions et les offres en cours.</p>
