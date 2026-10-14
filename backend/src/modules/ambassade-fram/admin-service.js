@@ -44,7 +44,7 @@ function createAdminService(prisma) {
       return prisma.framAmbassadorAgency.upsert({
         where: { agencyId },
         create: { agencyId, enabled: true, approvedAt: new Date() },
-        update: { enabled: true, approvedAt: new Date() },
+        update: { enabled: true },
       });
     },
     async disableAgency(tenantId, agencyId) {
