@@ -1,7 +1,7 @@
 const test=require("node:test");
 const assert=require("node:assert/strict");
 const {sanitizeOffer,createAdminService}=require("../src/modules/ambassade-fram/admin-service");
-const draft={type:"EXCLUS_AMBASSADE",status:"DRAFT",title:" Offre ",startAt:"2026-10-01",endAt:"2026-11-01"};
+const draft={type:"EXCLUS_AMBASSADE",campaignMonth:"2026-10",status:"DRAFT",title:" Offre ",startAt:"2026-10-01",endAt:"2026-11-01"};
 test("sanitize draft and reject injected fields",()=>{
  const clean=sanitizeOffer(draft);
  assert.equal(clean.title,"Offre");
