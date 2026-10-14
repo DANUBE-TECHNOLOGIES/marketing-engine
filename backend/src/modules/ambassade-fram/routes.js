@@ -1,0 +1,34 @@
+"use strict";
+const express = require("express");
+const { publishedOffers, monthlyExclusives } = require("./domain");
+
+/**
+ * Public read-only routes. Agency eligibility is always checked server-side.
+ * No offer is exposed to an agency until its status is explicitly enabled.
+ */
+module.exports = function createFramRoutes({ prisma }) {
+  const router = express.Router();
+  router.get("/api/public/ambassade-fram/agencies/:agencyId/offers", async (req, res) => {
+    const agencyId = Number(req.params.agencyId);
+    if (!Number.isSafeInteger(agencyId) || agencyId <= 0) return res.status(400).json({ error: "Invalid agency" });
+    try {
+      const membership = await prisma.framAmbassadorAgency.findUnique({ where: { agencyId } });
+      if (!membership?.enabled || !membership.approvedAt) return res.status(404).json({ error: "Not found" });
+      const offers = await prisma.framOffer.findMany({
+        where: { status: "PUBLISHED", startAt: { lte: new Date() }, endAt: { gt: new Date() } },
+        orderBy: [{ startAt: "desc" }, { id: "asc" }],
+        take: 100,
+      });
+      const now = new Date();
+      return res.json({
+        agencyId,
+        monthlyExclusives: monthlyExclusives(offers, now),
+        flashSales: publishedOffers(offers, now).filter(o => o.type === "VENTE_FLASH"),
+      });
+    } catch (error) {
+      console.error("FRAM public offers failed", error?.message);
+      return res.status(503).json({ error: "Offers unavailable" });
+    }
+  });
+  return router;
+};
