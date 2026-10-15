@@ -1,0 +1,14 @@
+"use client";
+import { useEffect,useState } from "react";
+import styles from "./AmbassadeFram.module.css";
+export default function OffresAmbassade({agencyId,siteSlug}){
+const [state,setState]=useState({loading:true,offers:[],flash:[],error:""});
+const validAgency=Number.isSafeInteger(agencyId)&&agencyId>0;
+const validSite=typeof siteSlug==="string"&&/^[a-z0-9][a-z0-9-]{0,119}$/.test(siteSlug);
+useEffect(()=>{if(!validAgency&&!validSite)return;const controller=new AbortController();const endpoint=validSite?`/api/public/ambassade-fram/sites/${encodeURIComponent(siteSlug)}/offers`:`/api/public/ambassade-fram/agencies/${agencyId}/offers`;fetch(endpoint,{signal:controller.signal}).then(async r=>{if(!r.ok)throw new Error("Offres indisponibles");return r.json()}).then(data=>{if(!controller.signal.aborted)setState({loading:false,offers:Array.isArray(data.monthlyExclusives)?data.monthlyExclusives:[],flash:Array.isArray(data.flashSales)?data.flashSales:[],error:""})}).catch(()=>{if(!controller.signal.aborted)setState({loading:false,offers:[],flash:[],error:"Offres temporairement indisponibles."})});return()=>controller.abort()},[agencyId,siteSlug,validAgency,validSite]);
+if(!validAgency&&!validSite)return <div className={styles.empty}><strong>Votre agence vous accompagne</strong><p>Choisissez une agence Ambassade FRAM participante pour consulter sa sélection.</p></div>;
+if(state.loading)return <div className={styles.empty} role="status"><strong>Nous préparons votre sélection…</strong></div>;
+if(state.error||(!state.offers.length&&!state.flash.length))return <div className={styles.empty} role="status"><strong>Vos prochaines escapades se préparent.</strong><p>Les offres exclusives de votre agence seront présentées ici dès leur publication. Contactez votre conseillère pour découvrir les voyages disponibles et leurs conditions.</p></div>;
+const renderOffer=offer=><article className={styles.offer} key={offer.id}>{typeof offer.imageUrl==="string"&&offer.imageUrl.startsWith("https://")&&<img src={offer.imageUrl} alt={offer.title} loading="lazy" decoding="async"/>}<div className={styles.offerBody}><h3>{offer.title}</h3>{offer.description&&<p>{offer.description}</p>}{Number.isSafeInteger(offer.priceCents)&&<p><strong>À partir de {(offer.priceCents/100).toLocaleString("fr-FR",{style:"currency",currency:"EUR"})}</strong></p>}{offer.terms&&<p className={styles.small}>{offer.terms}</p>}{typeof offer.quoteUrl==="string"&&offer.quoteUrl.startsWith("https://")&&<a className={styles.button} href={offer.quoteUrl} rel="noopener noreferrer">Demander un devis →</a>}</div></article>;
+return <section aria-label="Offres Ambassade FRAM">{state.offers.length>0&&<div className={styles.offerGrid}>{state.offers.map(renderOffer)}</div>}{state.flash.length>0&&<><h3 className={styles.heading}>Ventes flash FRAM</h3><div className={styles.offerGrid}>{state.flash.map(renderOffer)}</div></>}</section>;
+}

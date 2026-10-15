@@ -1,0 +1,79 @@
+name: MSE-25.322 FRAM validation
+on:
+  push:
+    branches:
+      - feature/mse-25-322-ambassade-fram
+  pull_request:
+    paths:
+      - 'backend/src/modules/ambassade-fram/**'
+      - 'backend/test/mse-25-322-*.test.js'
+      - 'backend/test/mse-25-322-fram-db-smoke.js'
+      - 'backend/test/mse-25-322-fram-audit-db-smoke.js'
+      - 'backend/prisma/**'
+      - 'backend/package*.json'
+      - 'frontend/app/ambassade-fram/**'
+      - 'frontend/app/agence/[siteSlug]/ambassade-fram/**'
+      - 'frontend/lib/ambassade-fram/**'
+      - 'frontend/test/mse-25-322-*.test.mjs'
+      - 'frontend/package*.json'
+      - '.github/workflows/mse-25-322-fram.yml'
+  workflow_dispatch:
+concurrency:
+  group: fram-validation-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  fram-backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: fram
+          POSTGRES_PASSWORD: fram
+          POSTGRES_DB: fram
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fram -d fram"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DATABASE_URL: postgresql://fram:fram@localhost:5432/fram?schema=public
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npx prisma validate
+      - run: npx prisma generate
+      # The legacy migration chain cannot bootstrap an empty database (missing Destination).
+      # Validate the current schema and the FRAM trigger in a disposable database instead.
+      - run: npx prisma db push --skip-generate
+      - run: PGPASSWORD=fram psql -h localhost -U fram -d fram -v ON_ERROR_STOP=1 -f prisma/migrations/20261014123000_fram_monthly_limit/migration.sql
+      - run: node test/mse-25-322-fram-db-smoke.js
+      - run: node test/mse-25-322-fram-audit-db-smoke.js
+      - run: node --test test/mse-25-322-*.test.js
+
+  fram-frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: node --test test/mse-25-322-ambassade-fram.test.mjs
+      - run: npx eslint app/ambassade-fram/OffresAmbassade.js app/ambassade-fram/SimulateurFidelite.js
+      - run: npm run build
