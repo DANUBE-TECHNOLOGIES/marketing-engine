@@ -387,9 +387,7 @@ export default async function AgencySitePage({ params }) {
               site={site}
               page={page}
               suppressHero={Boolean(sharedHero)}
-            />
-
-            {!legalPage && isHomePage(pageSlug) && showFramHomeCta ? (
+              afterHero={{!legalPage && isHomePage(pageSlug) && showFramHomeCta ? (
               <section className="public-site-section" aria-label="Vos avantages Ambassade FRAM" style={{ padding: "32px 20px", background: "#f3f8fb" }}>
                 <div className="public-site-container" style={{ maxWidth: 1100, margin: "0 auto", textAlign: "center" }}>
                   <p style={{ margin: "0 0 8px", fontSize: 13, fontWeight: 800, letterSpacing: "0.08em", color: "#123a60" }}>VOTRE AGENCE AMBASSADE FRAM</p>
@@ -403,7 +401,8 @@ export default async function AgencySitePage({ params }) {
                   </a>
                 </div>
               </section>
-            ) : null}
+            ) : null}}
+            />
 
             {!legalPage && isHomePage(pageSlug) ? (
               <OzoirLocalExpansion
