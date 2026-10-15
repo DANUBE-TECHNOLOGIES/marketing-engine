@@ -170,6 +170,29 @@ async function loadPage({ siteSlug, pageSlug }) {
   return publicSiteApi.getPage(siteSlug, slug);
 }
 
+const FRAM_BACKEND_ORIGIN = String(
+  process.env.BACKEND_INTERNAL_URL ||
+    process.env.MONDESCALE_BACKEND_URL ||
+    "http://backend:4000"
+).replace(/\/+$/g, "");
+
+async function isFramAmbassadorSite(siteSlug) {
+  if (!/^[a-z0-9][a-z0-9-]{0,119}$/.test(siteSlug)) return false;
+  try {
+    const response = await fetch(
+      `${FRAM_BACKEND_ORIGIN}/api/public/ambassade-fram/sites/${encodeURIComponent(siteSlug)}/offers`,
+      {
+        cache: "no-store",
+        headers: { "x-tenant-slug": "mondescale" },
+        signal: AbortSignal.timeout(3000),
+      }
+    );
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
 function absoluteMetadataImage(image) {
   return image ? absoluteUrl(image) : null;
 }
@@ -285,6 +308,10 @@ export default async function AgencySitePage({ params }) {
   }
   if (!site || !page) notFound();
 
+  const showFramHomeCta = isHomePage(pageSlug)
+    ? await isFramAmbassadorSite(resolved.siteSlug)
+    : false;
+
   const homePath = canonicalPath({ siteSlug: resolved.siteSlug, pageSlug: "" });
   const currentPath = canonicalPath({ siteSlug: resolved.siteSlug, pageSlug });
   const homeUrl = canonicalUrl({ siteSlug: resolved.siteSlug, pageSlug: "" });
@@ -361,6 +388,22 @@ export default async function AgencySitePage({ params }) {
               page={page}
               suppressHero={Boolean(sharedHero)}
             />
+
+            {!legalPage && isHomePage(pageSlug) && showFramHomeCta ? (
+              <section className="public-site-section" aria-label="Vos avantages Ambassade FRAM" style={{ padding: "32px 20px", background: "#f3f8fb" }}>
+                <div className="public-site-container" style={{ maxWidth: 1100, margin: "0 auto", textAlign: "center" }}>
+                  <p style={{ margin: "0 0 8px", fontSize: 13, fontWeight: 800, letterSpacing: "0.08em", color: "#123a60" }}>VOTRE AGENCE AMBASSADE FRAM</p>
+                  <h2 style={{ margin: "0 0 12px", color: "#123a60", fontSize: "clamp(22px, 3vw, 32px)" }}>Les avantages Ambassade FRAM de votre agence</h2>
+                  <p style={{ margin: "0 auto 20px", maxWidth: 680, color: "#44576a", lineHeight: 1.6 }}>Offres exclusives, fidélité récompensée et privilèges réservés à nos voyageurs.</p>
+                  <a
+                    href={`/agence/${resolved.siteSlug}/ambassade-fram`}
+                    style={{ display: "inline-block", padding: "15px 25px", borderRadius: 10, background: "#d51d36", color: "#fff", fontWeight: 800, textDecoration: "none" }}
+                  >
+                    Découvrez vos avantages Ambassade FRAM →
+                  </a>
+                </div>
+              </section>
+            ) : null}
 
             {!legalPage && isHomePage(pageSlug) ? (
               <OzoirLocalExpansion
